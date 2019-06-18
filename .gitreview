@@ -1,0 +1,7 @@
+[gerrit]
+host=gerrit.oran-osc.org
+#port=29418
+project=ric-plt/submgr
+defaultbranch=master
+defaultremote=origin
+

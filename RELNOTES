@@ -1,0 +1,4 @@
+### v0.1.0
+* Receives and Forwards RMR Subscription Requests
+* Introduces RCO (Stub xApp) and E2T (Stub Platform Component) for testing purposes
+* Builder and Deployer scripts and manifests 
