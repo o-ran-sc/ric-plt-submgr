@@ -37,7 +37,7 @@ spec:
     spec:
       containers:
       - name: submgr
-        image: cmaster:5000/submgr:0.1.0
+        image: cmaster:5000/submgr:0.1.0i
         command: ["/run_submgr.sh"]
         env:
         - name: DBAAS_SERVICE_HOST

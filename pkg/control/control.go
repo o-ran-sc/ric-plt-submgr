@@ -67,21 +67,29 @@ func (c *Control) rmrSend(datagram *RmrDatagram) (err error) {
 }
 
 func (c *Control) handleSubscriptionRequest(datagram *RmrDatagram) ( err error) {
+  /* TODO: removed to being able to integrate with UEMGR
   content, err := c.e2ap.GetPayloadContent(datagram.Payload)
-  xapp.Logger.Info("Subscription Request received: %v", content)
+  */
+  xapp.Logger.Info("Subscription Request Message received with ID: %v", datagram.SubscriptionId)
   new_sub_id := c.registry.GetSubscriptionId()
+  /* TODO: removed to being able to integrate with UEMGR
   payload, err := c.e2ap.SetSubscriptionSequenceNumber(datagram.Payload, new_sub_id)
   if err != nil {
     xapp.Logger.Error("Unable to set Subscription Sequence Number in Payload due to: "+ err.Error())
     return
   }
-  xapp.Logger.Info("New Subscription Accepted, Forwarding to E2T")
-  c.rmrSend(&RmrDatagram{C.RIC_SUB_REQ , new_sub_id, payload})
+  */
+  xapp.Logger.Info("New Subscription Registered, forwarding to E2T")
+  c.rmrSend(&RmrDatagram{C.RIC_SUB_REQ , new_sub_id, datagram.Payload})
   return
 }
 
 func (c *Control) handleSubscriptionResponse(datagram *RmrDatagram) ( err error) {
+  /* TODO: removed to being able to integrate with UEMGR
   content, err := c.e2ap.GetPayloadContent(datagram.Payload)
-  xapp.Logger.Info("Subscription Response received: %v", content)
+  */
+  xapp.Logger.Info("Subscription Response Message received with ID: %v", datagram.SubscriptionId)
+  xapp.Logger.Info("Subscription Response Registered, forwarding to Requestor")
+  c.rmrSend(&RmrDatagram{C.RIC_SUB_RESP , datagram.SubscriptionId, datagram.Payload})
   return
 }
