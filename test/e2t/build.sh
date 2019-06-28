@@ -23,7 +23,5 @@
 #	Date:		28 May 2019
 #
 
-cp -Rf ${PWD}/e2t ${PWD}/e2t.yaml ${PWD}/container/
-
 echo 'Creating E2T container'
-docker build --no-cache --tag=e2t:builder ${PWD}/container/
+docker build --no-cache --tag=e2t:builder  -f container/Dockerfile  ../..

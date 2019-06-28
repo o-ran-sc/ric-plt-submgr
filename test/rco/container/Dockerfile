@@ -21,10 +21,28 @@
 #  	Date:		28 May 2019
 #
 
-FROM ubuntu
+FROM nexus3.o-ran-sc.org:10004/bldr-ubuntu18-c-go:1-u18.04-nng1.1.1 as submgrbuild
 
-COPY rco /
-COPY rco.yaml /
-COPY run_rco.sh /
-COPY usr/ /usr/
+# Install RMr shared library
+RUN wget --content-disposition https://packagecloud.io/o-ran-sc/master/packages/debian/stretch/rmr_1.0.36_amd64.deb/download.deb && dpkg -i rmr_1.0.36_amd64.deb
+# Install RMr development header files
+RUN wget --content-disposition https://packagecloud.io/o-ran-sc/master/packages/debian/stretch/rmr-dev_1.0.36_amd64.deb/download.deb && dpkg -i rmr-dev_1.0.36_amd64.deb
+
+# "PULLING LOG and COMPILING LOG"
+RUN git clone "https://gerrit.o-ran-sc.org/r/com/log" /opt/log && cd /opt/log && \
+ ./autogen.sh && ./configure && make install && ldconfig
+
+COPY . /opt/submgr
+RUN mkdir -p /opt/bin && cd /opt/submgr && \
+ /usr/local/go/bin/go get && \
+   /usr/local/go/bin/go build -o /opt/test/rco/rco ./test/rco/rco.go && \
+    mkdir -p /opt/test/rco/container/usr/local
+
+FROM ubuntu:18.04
+
+COPY --from=submgrbuild /opt/test/rco/rco /
+COPY  test/rco/rco.yaml test/rco/container/run_rco.sh /
+COPY --from=submgrbuild /usr/local/include /usr/local/include
+COPY --from=submgrbuild /usr/local/lib /usr/local/lib
+
 RUN ldconfig

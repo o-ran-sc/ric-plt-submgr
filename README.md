@@ -43,10 +43,10 @@ Check the separated `RELNOTES` file.
 ## Installation guide
 
 ### Compiling code
-Enter the project root and execute `./build.sh` script.
-The build script has two main phases. First is the code compilation, where it creates a temporary container for downloading all dependencies then compiles the code. In the second phase it builds the production ready container and taggs it to `submgr:builder`
+Enter the project root and execute ` docker build -t submgr:tag .`.
+The Dockerfile has two main phases. First is the code compilation, where it creates an intermediate container for downloading all dependencies then compiles the code. In the second phase it builds the production ready container.
 
-**NOTE:** The script puts a copy of the binary into the `./bin` folder for further use cases
+**NOTE:** If you are behind proxy, see this guide: https://docs.docker.com/network/proxy/#configure-the-docker-client
 
 ### Installing Subscription Manager
 #### Preparing environment
