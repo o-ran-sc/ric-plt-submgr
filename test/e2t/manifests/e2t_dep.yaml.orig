@@ -17,14 +17,36 @@
 #==================================================================================
 #
 #
-#	Abstract:	Builds the Subscription Manager's production ready container image
-#  	Date:		28 May 2019
+#   Abstract: E2T Stub Plaform component Kubernetes manifest
+#   Date:	28 May 2019
 #
-
-FROM ubuntu
-
-COPY submgr /
-COPY submgr.yaml /
-COPY run_submgr.sh /
-COPY usr/ /usr/
-RUN ldconfig
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: e2t
+  namespace: example
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: e2t
+  template:
+    metadata:
+      labels:
+        app: e2t
+    spec:
+      containers:
+      - name: e2t
+<<<<<<< HEAD
+        image: cmaster:5000/e2t:builder
+=======
+        image: cmaster:5000/e2t:0.0.1
+>>>>>>> Fix findings in build scripts and deploy manifests
+        command: ["/run_e2t.sh"]
+        env:
+        - name: DBAAS_SERVICE_HOST
+          value: dbaas
+        ports:
+        - containerPort: 8080
+        - containerPort: 4560
+        - containerPort: 4561
