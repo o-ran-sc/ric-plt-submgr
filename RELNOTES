@@ -1,3 +1,5 @@
+### v0.1.1
+* Dockerfile updates
 ### v0.1.0i
 * Receives and Forwards RMR Subscription Requests
 * Introduces RCO (Stub xApp) and E2T (Stub Platform Component) for testing purposes
