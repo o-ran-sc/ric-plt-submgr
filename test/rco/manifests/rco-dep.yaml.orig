@@ -1,4 +1,3 @@
-#!/bin/sh -e
 #
 #==================================================================================
 #   Copyright (c) 2019 AT&T Intellectual Property.
@@ -18,22 +17,36 @@
 #==================================================================================
 #
 #
-#	Mnemonic:	build.sh
-#	Abstract:	Compiles the Subscription Manager's source and builds the docker container
-#	Date:		28 May 2019
+#   Abstract: RCO Stub xApp Kubernetes manifest
+#   Date: 28 May 2019
 #
-
-echo 'Creating compiler container'
-docker build --no-cache --tag=submgr_compiler:0.1 $PWD/build/binary/
-
-echo 'Running submgr compiler'
-docker run --rm -v ${PWD}:/opt submgr_compiler:0.1
-
-echo 'Cleaning up compiler container'
-docker rmi -f submgr_compiler:0.1
-
-echo 'submgr binary successfully built!'
-
-echo 'Creating submgr container'
-docker build --no-cache --tag=submgr:builder ${PWD}/build/container/
-
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rco
+  namespace: example
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rco
+  template:
+    metadata:
+      labels:
+        app: rco
+    spec:
+      containers:
+      - name: rco
+<<<<<<< HEAD
+        image: cmaster:5000/rco:builder
+=======
+        image: cmaster:5000/rco:0.0.1
+>>>>>>> Fix findings in build scripts and deploy manifests
+        command: ["/run_rco.sh"]
+        env:
+        - name: DBAAS_SERVICE_HOST
+          value: dbaas
+        ports:
+        - containerPort: 8080
+        - containerPort: 4560
+        - containerPort: 4561

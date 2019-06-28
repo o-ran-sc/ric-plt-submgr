@@ -23,7 +23,7 @@
 #	Date:		28 May 2019
 #
 
-cp -Rf ${PWD}/rco ${PWD}/rco.yaml ${PWD}/container/
+cd ../..
 
 echo 'Creating RCO container'
-docker build --no-cache --tag=rco:builder ${PWD}/container/
+docker build --no-cache --tag=rco:builder  -f test/rco/container/Dockerfile  .
