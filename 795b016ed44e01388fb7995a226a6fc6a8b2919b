@@ -135,6 +135,30 @@
     },
     {
       "key": {
+        "uuid": "a84b166d_e6324eed",
+        "filename": "Dockerfile",
+        "patchSetId": 1
+      },
+      "lineNbr": 38,
+      "author": {
+        "id": 1000014
+      },
+      "writtenOn": "2019-07-02T11:58:20Z",
+      "side": 1,
+      "message": "For R1, Ubuntu 16.04.  For R2, Ubuntu 18.04.",
+      "parentUuid": "56afbff4_124bd17b",
+      "range": {
+        "startLine": 38,
+        "startChar": 5,
+        "endLine": 38,
+        "endChar": 11
+      },
+      "revId": "795b016ed44e01388fb7995a226a6fc6a8b2919b",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": true
+    },
+    {
+      "key": {
         "uuid": "a6cb60a5_7fc51964",
         "filename": "Dockerfile",
         "patchSetId": 1
