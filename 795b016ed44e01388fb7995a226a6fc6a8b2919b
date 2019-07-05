@@ -25,6 +25,30 @@
     },
     {
       "key": {
+        "uuid": "eb05f41f_a6bc1d3a",
+        "filename": "Dockerfile",
+        "patchSetId": 1
+      },
+      "lineNbr": 23,
+      "author": {
+        "id": 1000043
+      },
+      "writtenOn": "2019-07-05T12:45:35Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "f65d1bad_67f2cd64",
+      "range": {
+        "startLine": 23,
+        "startChar": 5,
+        "endLine": 23,
+        "endChar": 16
+      },
+      "revId": "795b016ed44e01388fb7995a226a6fc6a8b2919b",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "0374cd52_142b745a",
         "filename": "Dockerfile",
         "patchSetId": 1
@@ -39,6 +63,24 @@
       "revId": "795b016ed44e01388fb7995a226a6fc6a8b2919b",
       "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "3f0f9d0b_de09c326",
+        "filename": "Dockerfile",
+        "patchSetId": 1
+      },
+      "lineNbr": 25,
+      "author": {
+        "id": 1000043
+      },
+      "writtenOn": "2019-07-05T12:45:35Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "0374cd52_142b745a",
+      "revId": "795b016ed44e01388fb7995a226a6fc6a8b2919b",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": false
     },
     {
       "key": {
@@ -65,6 +107,30 @@
     },
     {
       "key": {
+        "uuid": "36fcb3f2_ddaa340b",
+        "filename": "Dockerfile",
+        "patchSetId": 1
+      },
+      "lineNbr": 29,
+      "author": {
+        "id": 1000043
+      },
+      "writtenOn": "2019-07-05T12:45:35Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "582ff44c_3fc80fa9",
+      "range": {
+        "startLine": 29,
+        "startChar": 0,
+        "endLine": 29,
+        "endChar": 2
+      },
+      "revId": "795b016ed44e01388fb7995a226a6fc6a8b2919b",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "860679c4_ae4d9be1",
         "filename": "Dockerfile",
         "patchSetId": 1
@@ -85,6 +151,30 @@
       "revId": "795b016ed44e01388fb7995a226a6fc6a8b2919b",
       "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "810ed2f1_76fb732c",
+        "filename": "Dockerfile",
+        "patchSetId": 1
+      },
+      "lineNbr": 33,
+      "author": {
+        "id": 1000043
+      },
+      "writtenOn": "2019-07-05T12:45:35Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "860679c4_ae4d9be1",
+      "range": {
+        "startLine": 33,
+        "startChar": 50,
+        "endLine": 33,
+        "endChar": 55
+      },
+      "revId": "795b016ed44e01388fb7995a226a6fc6a8b2919b",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": false
     },
     {
       "key": {
@@ -159,6 +249,30 @@
     },
     {
       "key": {
+        "uuid": "4a78cdf7_76ff175d",
+        "filename": "Dockerfile",
+        "patchSetId": 1
+      },
+      "lineNbr": 38,
+      "author": {
+        "id": 1000043
+      },
+      "writtenOn": "2019-07-05T12:45:35Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "a84b166d_e6324eed",
+      "range": {
+        "startLine": 38,
+        "startChar": 5,
+        "endLine": 38,
+        "endChar": 11
+      },
+      "revId": "795b016ed44e01388fb7995a226a6fc6a8b2919b",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "a6cb60a5_7fc51964",
         "filename": "Dockerfile",
         "patchSetId": 1
@@ -179,6 +293,30 @@
       "revId": "795b016ed44e01388fb7995a226a6fc6a8b2919b",
       "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "b3ea3417_335e3dd4",
+        "filename": "Dockerfile",
+        "patchSetId": 1
+      },
+      "lineNbr": 43,
+      "author": {
+        "id": 1000043
+      },
+      "writtenOn": "2019-07-05T12:45:35Z",
+      "side": 1,
+      "message": "Yes, I have, the executable executes and libs are in place:\nroot@8e3a3a66da9a:/# ls /usr/local/lib/lib*\n/usr/local/lib/libmdclog.a   /usr/local/lib/libmdclog.so.0      /usr/local/lib/libnng.so.1      /usr/local/lib/librmr.so         /usr/local/lib/librmr_nng.a     /usr/local/lib/librmr_nng.so.1.0.36\n/usr/local/lib/libmdclog.la  /usr/local/lib/libmdclog.so.0.0.2  /usr/local/lib/libnng.so.1.1.0  /usr/local/lib/librmr.so.1       /usr/local/lib/librmr_nng.so\n/usr/local/lib/libmdclog.so  /usr/local/lib/libnng.so           /usr/local/lib/librmr.a         /usr/local/lib/librmr.so.1.0.36  /usr/local/lib/librmr_nng.so.1",
+      "parentUuid": "a6cb60a5_7fc51964",
+      "range": {
+        "startLine": 43,
+        "startChar": 0,
+        "endLine": 43,
+        "endChar": 2
+      },
+      "revId": "795b016ed44e01388fb7995a226a6fc6a8b2919b",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": false
     }
   ]
 }
