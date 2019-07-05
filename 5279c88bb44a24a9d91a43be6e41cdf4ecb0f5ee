@@ -2,6 +2,29 @@
   "comments": [
     {
       "key": {
+        "uuid": "d9b2d6d3_e14b2ed0",
+        "filename": "Dockerfile",
+        "patchSetId": 2
+      },
+      "lineNbr": 34,
+      "author": {
+        "id": 1000014
+      },
+      "writtenOn": "2019-07-05T20:18:34Z",
+      "side": 1,
+      "message": "missing backslash \\ at the end of line 34 :(",
+      "range": {
+        "startLine": 34,
+        "startChar": 57,
+        "endLine": 34,
+        "endChar": 59
+      },
+      "revId": "5279c88bb44a24a9d91a43be6e41cdf4ecb0f5ee",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": true
+    },
+    {
+      "key": {
         "uuid": "f9428c7b_0677d632",
         "filename": "Dockerfile",
         "patchSetId": 2
