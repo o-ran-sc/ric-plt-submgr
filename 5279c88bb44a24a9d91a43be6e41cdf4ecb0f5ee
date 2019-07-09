@@ -25,6 +25,30 @@
     },
     {
       "key": {
+        "uuid": "96f98e1c_1679f7e1",
+        "filename": "Dockerfile",
+        "patchSetId": 2
+      },
+      "lineNbr": 34,
+      "author": {
+        "id": 1000043
+      },
+      "writtenOn": "2019-07-09T12:43:05Z",
+      "side": 1,
+      "message": "Now separate steps, unapplicable",
+      "parentUuid": "d9b2d6d3_e14b2ed0",
+      "range": {
+        "startLine": 34,
+        "startChar": 57,
+        "endLine": 34,
+        "endChar": 59
+      },
+      "revId": "5279c88bb44a24a9d91a43be6e41cdf4ecb0f5ee",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "f9428c7b_0677d632",
         "filename": "Dockerfile",
         "patchSetId": 2
@@ -48,6 +72,30 @@
     },
     {
       "key": {
+        "uuid": "e06fa748_db82045f",
+        "filename": "Dockerfile",
+        "patchSetId": 2
+      },
+      "lineNbr": 36,
+      "author": {
+        "id": 1000043
+      },
+      "writtenOn": "2019-07-09T12:43:05Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "f9428c7b_0677d632",
+      "range": {
+        "startLine": 36,
+        "startChar": 0,
+        "endLine": 36,
+        "endChar": 1
+      },
+      "revId": "5279c88bb44a24a9d91a43be6e41cdf4ecb0f5ee",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "74780f8d_d262fa34",
         "filename": "Dockerfile",
         "patchSetId": 2
@@ -68,6 +116,30 @@
       "revId": "5279c88bb44a24a9d91a43be6e41cdf4ecb0f5ee",
       "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "785f9d02_c9a0b001",
+        "filename": "Dockerfile",
+        "patchSetId": 2
+      },
+      "lineNbr": 43,
+      "author": {
+        "id": 1000043
+      },
+      "writtenOn": "2019-07-09T12:43:05Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "74780f8d_d262fa34",
+      "range": {
+        "startLine": 41,
+        "startChar": 7,
+        "endLine": 43,
+        "endChar": 91
+      },
+      "revId": "5279c88bb44a24a9d91a43be6e41cdf4ecb0f5ee",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": false
     }
   ]
 }
