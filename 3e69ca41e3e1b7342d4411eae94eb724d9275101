@@ -1,0 +1,210 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "de1c57fb_04025503",
+        "filename": "README.md",
+        "patchSetId": 4
+      },
+      "lineNbr": 46,
+      "author": {
+        "id": 1000014
+      },
+      "writtenOn": "2019-07-09T15:45:23Z",
+      "side": 1,
+      "message": "this does not assign any name or tag to the resulting image.  Maybe use this example command?\n\n    docker build -t imagename:imagetag .",
+      "range": {
+        "startLine": 46,
+        "startChar": 37,
+        "endLine": 46,
+        "endChar": 52
+      },
+      "revId": "3e69ca41e3e1b7342d4411eae94eb724d9275101",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "f6f8ecec_77b2b139",
+        "filename": "README.md",
+        "patchSetId": 4
+      },
+      "lineNbr": 49,
+      "author": {
+        "id": 1000014
+      },
+      "writtenOn": "2019-07-09T15:45:23Z",
+      "side": 1,
+      "message": "Please don\u0027t coach people to enter proxies in the Dockerfile.  They can use the approac documented here for proxies:\n\n    https://docs.docker.com/network/proxy/#configure-the-docker-client",
+      "range": {
+        "startLine": 49,
+        "startChar": 10,
+        "endLine": 49,
+        "endChar": 136
+      },
+      "revId": "3e69ca41e3e1b7342d4411eae94eb724d9275101",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "91c07710_9b6da0d1",
+        "filename": "container-tag.yaml",
+        "patchSetId": 4
+      },
+      "lineNbr": 5,
+      "author": {
+        "id": 1000014
+      },
+      "writtenOn": "2019-07-09T15:45:23Z",
+      "side": 1,
+      "message": "This is slightly unusual semantic versioning.  Major, minor, patch is the usual triple.  What is the \"i\" suffix?",
+      "range": {
+        "startLine": 5,
+        "startChar": 5,
+        "endLine": 5,
+        "endChar": 11
+      },
+      "revId": "3e69ca41e3e1b7342d4411eae94eb724d9275101",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "721c07d6_d9313334",
+        "filename": "test/e2t/container/Dockerfile",
+        "patchSetId": 4
+      },
+      "lineNbr": 23,
+      "author": {
+        "id": 1000014
+      },
+      "writtenOn": "2019-07-09T15:45:23Z",
+      "side": 1,
+      "message": "What is the purpose of THIS dockerfile?  Maybe a comment more than \"stub\" ?  How does this differ from the main Dockerfile, they look very similar.",
+      "revId": "3e69ca41e3e1b7342d4411eae94eb724d9275101",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "dd1dd8c0_182b9e73",
+        "filename": "test/e2t/manifests/e2t_dep.yaml.orig",
+        "patchSetId": 4
+      },
+      "lineNbr": 1,
+      "author": {
+        "id": 1000014
+      },
+      "writtenOn": "2019-07-09T15:45:23Z",
+      "side": 1,
+      "message": "This .orig file probably is left over from a rebase and should not have been committed?",
+      "revId": "3e69ca41e3e1b7342d4411eae94eb724d9275101",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "912b19a1_958ce0cd",
+        "filename": "test/e2t/manifests/e2t_dep.yaml.orig",
+        "patchSetId": 4
+      },
+      "lineNbr": 44,
+      "author": {
+        "id": 1000014
+      },
+      "writtenOn": "2019-07-09T15:45:23Z",
+      "side": 1,
+      "message": "Please clean lingering merge conflict if this file must remain.",
+      "range": {
+        "startLine": 40,
+        "startChar": 0,
+        "endLine": 44,
+        "endChar": 58
+      },
+      "revId": "3e69ca41e3e1b7342d4411eae94eb724d9275101",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "2663656b_e844db14",
+        "filename": "test/rco/build.sh",
+        "patchSetId": 4
+      },
+      "lineNbr": 26,
+      "author": {
+        "id": 1000014
+      },
+      "writtenOn": "2019-07-09T15:45:23Z",
+      "side": 1,
+      "message": "This is a strange command to start a shell script",
+      "range": {
+        "startLine": 26,
+        "startChar": 0,
+        "endLine": 26,
+        "endChar": 2
+      },
+      "revId": "3e69ca41e3e1b7342d4411eae94eb724d9275101",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "8e512bf9_d0eb8c5a",
+        "filename": "test/rco/container/Dockerfile",
+        "patchSetId": 4
+      },
+      "lineNbr": 23,
+      "author": {
+        "id": 1000014
+      },
+      "writtenOn": "2019-07-09T15:45:23Z",
+      "side": 1,
+      "message": "How is this Dockerfile different from the other two?",
+      "revId": "3e69ca41e3e1b7342d4411eae94eb724d9275101",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "6a0093f9_75a88aee",
+        "filename": "test/rco/manifests/rco-dep.yaml.orig",
+        "patchSetId": 4
+      },
+      "lineNbr": 1,
+      "author": {
+        "id": 1000014
+      },
+      "writtenOn": "2019-07-09T15:45:23Z",
+      "side": 1,
+      "message": "Possibly another artifact from git rebase, that should not have been committed?",
+      "revId": "3e69ca41e3e1b7342d4411eae94eb724d9275101",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "fecf1c0a_a40cce3f",
+        "filename": "test/rco/manifests/rco-dep.yaml.orig",
+        "patchSetId": 4
+      },
+      "lineNbr": 44,
+      "author": {
+        "id": 1000014
+      },
+      "writtenOn": "2019-07-09T15:45:23Z",
+      "side": 1,
+      "message": "Conflict?",
+      "range": {
+        "startLine": 40,
+        "startChar": 0,
+        "endLine": 44,
+        "endChar": 58
+      },
+      "revId": "3e69ca41e3e1b7342d4411eae94eb724d9275101",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": true
+    }
+  ]
+}
