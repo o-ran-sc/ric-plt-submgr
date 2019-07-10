@@ -25,6 +25,30 @@
     },
     {
       "key": {
+        "uuid": "6cd8514c_1e3a4f91",
+        "filename": "README.md",
+        "patchSetId": 4
+      },
+      "lineNbr": 46,
+      "author": {
+        "id": 1000043
+      },
+      "writtenOn": "2019-07-10T12:49:48Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "de1c57fb_04025503",
+      "range": {
+        "startLine": 46,
+        "startChar": 37,
+        "endLine": 46,
+        "endChar": 52
+      },
+      "revId": "3e69ca41e3e1b7342d4411eae94eb724d9275101",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "f6f8ecec_77b2b139",
         "filename": "README.md",
         "patchSetId": 4
@@ -45,6 +69,30 @@
       "revId": "3e69ca41e3e1b7342d4411eae94eb724d9275101",
       "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "57b47183_d7a6abd2",
+        "filename": "README.md",
+        "patchSetId": 4
+      },
+      "lineNbr": 49,
+      "author": {
+        "id": 1000043
+      },
+      "writtenOn": "2019-07-10T12:49:48Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "f6f8ecec_77b2b139",
+      "range": {
+        "startLine": 49,
+        "startChar": 10,
+        "endLine": 49,
+        "endChar": 136
+      },
+      "revId": "3e69ca41e3e1b7342d4411eae94eb724d9275101",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": false
     },
     {
       "key": {
@@ -71,6 +119,30 @@
     },
     {
       "key": {
+        "uuid": "38f04906_170168d5",
+        "filename": "container-tag.yaml",
+        "patchSetId": 4
+      },
+      "lineNbr": 5,
+      "author": {
+        "id": 1000043
+      },
+      "writtenOn": "2019-07-10T12:49:48Z",
+      "side": 1,
+      "message": "\"i\" was for integration version. But I updated to a less ambiguous versioning.",
+      "parentUuid": "91c07710_9b6da0d1",
+      "range": {
+        "startLine": 5,
+        "startChar": 5,
+        "endLine": 5,
+        "endChar": 11
+      },
+      "revId": "3e69ca41e3e1b7342d4411eae94eb724d9275101",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": true
+    },
+    {
+      "key": {
         "uuid": "721c07d6_d9313334",
         "filename": "test/e2t/container/Dockerfile",
         "patchSetId": 4
@@ -82,6 +154,24 @@
       "writtenOn": "2019-07-09T15:45:23Z",
       "side": 1,
       "message": "What is the purpose of THIS dockerfile?  Maybe a comment more than \"stub\" ?  How does this differ from the main Dockerfile, they look very similar.",
+      "revId": "3e69ca41e3e1b7342d4411eae94eb724d9275101",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "5a51d00d_e6d2c0e8",
+        "filename": "test/e2t/container/Dockerfile",
+        "patchSetId": 4
+      },
+      "lineNbr": 23,
+      "author": {
+        "id": 1000043
+      },
+      "writtenOn": "2019-07-10T12:49:48Z",
+      "side": 1,
+      "message": "This builds a stub for testing purposes. The contents differ in the end, it\u0027s just many of the requirements are the same.",
+      "parentUuid": "721c07d6_d9313334",
       "revId": "3e69ca41e3e1b7342d4411eae94eb724d9275101",
       "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
       "unresolved": true
@@ -128,6 +218,54 @@
     },
     {
       "key": {
+        "uuid": "362fffff_8bc20117",
+        "filename": "test/e2t/manifests/e2t_dep.yaml.orig",
+        "patchSetId": 4
+      },
+      "lineNbr": 44,
+      "author": {
+        "id": 1000043
+      },
+      "writtenOn": "2019-07-10T12:49:48Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "912b19a1_958ce0cd",
+      "range": {
+        "startLine": 40,
+        "startChar": 0,
+        "endLine": 44,
+        "endChar": 58
+      },
+      "revId": "3e69ca41e3e1b7342d4411eae94eb724d9275101",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "a33dc435_87a154fe",
+        "filename": "test/e2t/manifests/e2t_dep.yaml.orig",
+        "patchSetId": 4
+      },
+      "lineNbr": 44,
+      "author": {
+        "id": 1000043
+      },
+      "writtenOn": "2019-07-10T12:49:48Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "912b19a1_958ce0cd",
+      "range": {
+        "startLine": 40,
+        "startChar": 0,
+        "endLine": 44,
+        "endChar": 58
+      },
+      "revId": "3e69ca41e3e1b7342d4411eae94eb724d9275101",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "2663656b_e844db14",
         "filename": "test/rco/build.sh",
         "patchSetId": 4
@@ -151,6 +289,30 @@
     },
     {
       "key": {
+        "uuid": "6cbdf70d_9081e9d1",
+        "filename": "test/rco/build.sh",
+        "patchSetId": 4
+      },
+      "lineNbr": 26,
+      "author": {
+        "id": 1000043
+      },
+      "writtenOn": "2019-07-10T12:49:48Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "2663656b_e844db14",
+      "range": {
+        "startLine": 26,
+        "startChar": 0,
+        "endLine": 26,
+        "endChar": 2
+      },
+      "revId": "3e69ca41e3e1b7342d4411eae94eb724d9275101",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "8e512bf9_d0eb8c5a",
         "filename": "test/rco/container/Dockerfile",
         "patchSetId": 4
@@ -162,6 +324,24 @@
       "writtenOn": "2019-07-09T15:45:23Z",
       "side": 1,
       "message": "How is this Dockerfile different from the other two?",
+      "revId": "3e69ca41e3e1b7342d4411eae94eb724d9275101",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "084f7229_f1e304a3",
+        "filename": "test/rco/container/Dockerfile",
+        "patchSetId": 4
+      },
+      "lineNbr": 23,
+      "author": {
+        "id": 1000043
+      },
+      "writtenOn": "2019-07-10T12:49:48Z",
+      "side": 1,
+      "message": "This builds a stub for testing purposes. The executables included differ in the end.",
+      "parentUuid": "8e512bf9_d0eb8c5a",
       "revId": "3e69ca41e3e1b7342d4411eae94eb724d9275101",
       "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
       "unresolved": true
@@ -205,6 +385,30 @@
       "revId": "3e69ca41e3e1b7342d4411eae94eb724d9275101",
       "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "dafd3276_4583a655",
+        "filename": "test/rco/manifests/rco-dep.yaml.orig",
+        "patchSetId": 4
+      },
+      "lineNbr": 44,
+      "author": {
+        "id": 1000043
+      },
+      "writtenOn": "2019-07-10T12:49:48Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "fecf1c0a_a40cce3f",
+      "range": {
+        "startLine": 40,
+        "startChar": 0,
+        "endLine": 44,
+        "endChar": 58
+      },
+      "revId": "3e69ca41e3e1b7342d4411eae94eb724d9275101",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": false
     }
   ]
 }
