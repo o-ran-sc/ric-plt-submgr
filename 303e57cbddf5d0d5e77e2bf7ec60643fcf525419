@@ -1,0 +1,9 @@
+Verified+1: ORAN Jobbuilder <releng+oran-jobbuilder@linuxfoundation.org>
+Code-Review+1: Peter Szilagyi <peter.3.szilagyi@nokia.com>
+Code-Review+2: Kálmán Nagy <kalman.nagy@nokia.com>
+Verified+1: Kálmán Nagy <kalman.nagy@nokia.com>
+Submitted-by: Kálmán Nagy <kalman.nagy@nokia.com>
+Submitted-at: Thu, 11 Jul 2019 11:29:11 +0000
+Reviewed-on: https://gerrit.o-ran-sc.org/r/c/ric-plt/submgr/+/432
+Project: ric-plt/submgr
+Branch: refs/heads/master
