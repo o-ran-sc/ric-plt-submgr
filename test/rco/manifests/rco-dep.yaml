@@ -42,6 +42,10 @@ spec:
         env:
         - name: DBAAS_SERVICE_HOST
           value: dbaas
+        - name: RCO_RAWDATA
+          value: 000003ea7e000500aaaaccccea6300020000ea81000e00045465737400ea6b0003000100
+        - name: RCO_SEED_SN
+          value: "9999"
         ports:
         - containerPort: 8080
         - containerPort: 4560

@@ -23,6 +23,13 @@
 
 FROM nexus3.o-ran-sc.org:10004/bldr-ubuntu18-c-go:1-u18.04-nng1.1.1 as submgrbuild
 
+ENV HTTP_PROXY=http://10.144.1.10:8080
+ENV HTTPS_PROXY=http://10.144.1.10:8080
+RUN echo 'use_proxy=yes \n http_proxy=http://10.144.1.10:8080 \n https_proxy=http://10.144.1.10:8080' > /etc/wgetrc
+RUN echo 'Acquire::http::Proxy "http://87.254.212.121:8080/";' > /etc/apt/apt.conf
+
+COPY . /opt/submgr
+
 # Install RMr shared library
 RUN wget --content-disposition https://packagecloud.io/o-ran-sc/master/packages/debian/stretch/rmr_1.0.36_amd64.deb/download.deb && dpkg -i rmr_1.0.36_amd64.deb
 # Install RMr development header files
@@ -32,7 +39,14 @@ RUN wget --content-disposition https://packagecloud.io/o-ran-sc/master/packages/
 RUN git clone "https://gerrit.o-ran-sc.org/r/com/log" /opt/log && cd /opt/log && \
  ./autogen.sh && ./configure && make install && ldconfig
 
-COPY . /opt/submgr
+# "COMPILING E2AP Wrapper"
+RUN cd /opt/submgr/e2ap && \
+ gcc -c -fPIC -Iheaders/ lib/*.c wrapper.c && \
+ gcc *.o -shared -o libwrapper.so && \
+ cp libwrapper.so /usr/local/lib/ && \
+ cp wrapper.h headers/*.h /usr/local/include/ && \
+ ldconfig
+
 RUN mkdir -p /opt/bin && cd /opt/submgr && \
  /usr/local/go/bin/go get && \
    /usr/local/go/bin/go build -o /opt/test/e2t/e2t ./test/e2t/e2t.go && \

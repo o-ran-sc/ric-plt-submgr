@@ -19,66 +19,57 @@
 
 package control
 
+/*
+#include <wrapper.h>
+
+#cgo LDFLAGS: -lwrapper
+*/
+import "C"
+
 import (
-  "encoding/gob"
-  "bytes"
-  "errors"
+	"errors"
+	"unsafe"
 )
 
 type E2ap struct {
 }
 
-func (c *E2ap) GetSubscriptionSequenceNumber(payload []byte) (int, error) {
-  asn1 := new(Asn1)
-  message, err := asn1.Decode(payload)
-  if err != nil {
-    return 0, errors.New("Unable to decode payload due to "+ err.Error()) 
-  }
-  return message.SubscriptionId, nil
+func (c *E2ap) GetSubscriptionRequestSequenceNumber(payload []byte) (sub_id uint16, err error) {
+	cptr := unsafe.Pointer(&payload[0])
+	cret := C.e2ap_get_ric_subscription_request_sequence_number(cptr, C.size_t(len(payload)))
+	if cret < 0 {
+		return 0, errors.New("e2ap wrapper is unable to get Subscirption Request Sequence Number due to wrong or invalid payload")
+	}
+	sub_id = uint16(cret)
+	return
 }
 
-func (c *E2ap) SetSubscriptionSequenceNumber(payload []byte, newSubscriptionid int) ([]byte ,error) {
-  asn1 := new(Asn1)
-  message, err := asn1.Decode(payload)
-  if err != nil {
-    return make([]byte,0), errors.New("Unable to decode payload due to "+ err.Error()) 
-  }
-  message.SubscriptionId = newSubscriptionid
-  payload, err = asn1.Encode(message)
-  if err != nil {
-    return make([]byte,0), errors.New("Unable to encode message due to "+ err.Error()) 
-  }
-  return payload, nil
+func (c *E2ap) SetSubscriptionRequestSequenceNumber(payload []byte, newSubscriptionid uint16) (new_payload []byte, err error) {
+	cptr := unsafe.Pointer(&payload[0])
+	size := C.e2ap_set_ric_subscription_request_sequence_number(cptr, C.size_t(len(payload)), C.long(newSubscriptionid))
+	if size < 0 {
+		return make([]byte, 0), errors.New("e2ap wrapper is unable to set Subscirption Request Sequence Number due to wrong or invalid payload")
+	}
+	new_payload = C.GoBytes(cptr, C.int(size))
+	return
 }
 
-
-func (c *E2ap) GetPayloadContent(payload []byte) (content string, err error) {
-  asn1 := new(Asn1)
-  message, err := asn1.Decode(payload)
-  content = message.Content
-  return
-}
-/*
-Serialize and Deserialize message using this until real ASN1 GO wrapper is not in place
-*/
-type Asn1 struct {
+func (c *E2ap) GetSubscriptionResponseSequenceNumber(payload []byte) (sub_id uint16, err error) {
+	cptr := unsafe.Pointer(&payload[0])
+	cret := C.e2ap_get_ric_subscription_response_sequence_number(cptr, C.size_t(len(payload)))
+	if cret < 0 {
+		return 0, errors.New("e2ap wrapper is unable to get Subscirption Response Sequence Number due to wrong or invalid payload")
+	}
+	sub_id = uint16(cret)
+	return
 }
 
-func (a *Asn1) Encode(message RmrPayload) ([]byte, error) {
-	buffer := new(bytes.Buffer)
-	asn1 := gob.NewEncoder(buffer)
-	if err := asn1.Encode(message); err != nil {
-		return nil, err
-  }
-	return buffer.Bytes(), nil
-}
-
-func (a *Asn1) Decode(data []byte) (RmrPayload, error) {
-  message := new(RmrPayload)
-  buffer := bytes.NewBuffer(data)
-	asn1 := gob.NewDecoder(buffer)
-	if err := asn1.Decode(message); err != nil {
-		return RmrPayload{}, err
-  }
-	return *message, nil
+func (c *E2ap) SetSubscriptionResponseSequenceNumber(payload []byte, newSubscriptionid uint16) (new_payload []byte, err error) {
+	cptr := unsafe.Pointer(&payload[0])
+	size := C.e2ap_set_ric_subscription_response_sequence_number(cptr, C.size_t(len(payload)), C.long(newSubscriptionid))
+	if size < 0 {
+		return make([]byte, 0), errors.New("e2ap wrapper is unable to set Subscirption Reponse Sequence Number due to wrong or invalid payload")
+	}
+	new_payload = C.GoBytes(cptr, C.int(size))
+	return
 }

@@ -1,6 +1,22 @@
+### v0.5.0
+* Introduces ASN1-C generated E2AP encode/decode
+* Introduces RCO_RAWDATA and E2T_RAWDATA env variables on order to inject initial encoded messge in hex format into stub component for testing purposes
+* Receives and validates Subscription Response type messages
+* Improved request and response error handling (invalid or malformed messages in sunny day cases)
+* Introduces RCO_SEED_SN env variable
+
+### v0.4.0
+
+### v0.3.0
+* Introduces SUBMGR_SEED_SN env variable to initialize the sequence
+* Stores Subscription ID as uint16
+
+### v0.2.0
+
 ### v0.1.1
 * Dockerfile updates
-### v0.1.0i
+
+### v0.1.0
 * Receives and Forwards RMR Subscription Requests
 * Introduces RCO (Stub xApp) and E2T (Stub Platform Component) for testing purposes
 * Builder and Deployer scripts and manifests 

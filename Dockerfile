@@ -33,6 +33,14 @@ RUN wget --content-disposition https://packagecloud.io/o-ran-sc/master/packages/
 RUN git clone "https://gerrit.o-ran-sc.org/r/com/log" /opt/log && cd /opt/log && \
  ./autogen.sh && ./configure && make install && ldconfig
 
+# "COMPILING E2AP Wrapper"
+RUN cd /opt/submgr/e2ap && \
+ gcc -c -fPIC -Iheaders/ lib/*.c wrapper.c && \
+ gcc *.o -shared -o libwrapper.so && \
+ cp libwrapper.so /usr/local/lib/ && \
+ cp wrapper.h headers/*.h /usr/local/include/ && \
+ ldconfig
+
 # "COMPILING Subscription manager"
 RUN mkdir -p /opt/bin && cd /opt/submgr && \
  /usr/local/go/bin/go get && \

@@ -37,11 +37,13 @@ spec:
     spec:
       containers:
       - name: submgr
-        image: cmaster:5000/submgr:0.1.1
+        image: cmaster:5000/submgr:builder
         command: ["/run_submgr.sh"]
         env:
         - name: DBAAS_SERVICE_HOST
           value: dbaas
+        - name: SUBMGR_SEED_SN
+          value: "1"
         ports:
         - containerPort: 8080
         - containerPort: 4560

@@ -19,15 +19,45 @@
 
 package control
 
+import "gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
+
 type Registry struct {
-  counter int
+	register map[uint16]bool
+	counter  uint16
 }
 
-func (r *Registry) GetSubscriptionId() int {
-  return r.generateId()
+// This method should run as a constructor
+func (r *Registry) Initialize(seedsn uint16) {
+	r.register = make(map[uint16]bool)
+	r.counter = seedsn
 }
 
-func (r *Registry) generateId() int {
-  r.counter += 1
-  return r.counter
+// Reserves and returns the next free sequence number
+func (r *Registry) ReserveSequenceNumber() uint16 {
+	sequenceNumber := r.counter
+	r.register[sequenceNumber] = false
+	r.shift()
+	return sequenceNumber
+}
+
+// This function checks the validity of the given subscription id
+func (r *Registry) IsValidSequenceNumber(sn uint16) bool {
+	xapp.Logger.Debug("Registry map: %v", r.register)
+	if _, ok := r.register[sn]; ok {
+		return true
+	}
+	return false
+}
+
+// This function sets the give id as confirmed in the register
+func (r *Registry) setSubscriptionToConfirmed(sn uint16) {
+	r.register[sn] = true
+}
+
+func (r *Registry) shift() {
+	if r.counter == 65535 {
+		r.counter = 0
+	} else {
+		r.counter++
+	}
 }

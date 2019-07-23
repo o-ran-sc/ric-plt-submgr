@@ -19,14 +19,8 @@
 
 package control
 
-type RmrPayload struct {
-	MessageType int
-	SubscriptionId int
-	Content string 
-}
-
 type RmrDatagram struct {
-  MessageType int
-	SubscriptionId int
-	Payload []byte 
+	MessageType    int
+	SubscriptionId uint16
+	Payload        []byte
 }

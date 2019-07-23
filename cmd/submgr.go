@@ -23,7 +23,7 @@ import (
 	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/control"
 )
 
-func main(){
+func main() {
 	c := control.NewControl()
 	c.Run()
 }
