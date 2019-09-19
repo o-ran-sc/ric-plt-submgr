@@ -1,0 +1,9 @@
+Verified+1: ORAN Jobbuilder <releng+oran-jobbuilder@linuxfoundation.org>
+Code-Review+1: Viktor Bekesi <viktor.bekesi@nokia.com>
+Code-Review+1: Balint Uveges <balint.uveges@nokia.com>
+Code-Review+2: Kálmán Nagy <kalman.nagy@nokia.com>
+Submitted-by: Kálmán Nagy <kalman.nagy@nokia.com>
+Submitted-at: Thu, 19 Sep 2019 12:13:29 +0000
+Reviewed-on: https://gerrit.o-ran-sc.org/r/c/ric-plt/submgr/+/974
+Project: ric-plt/submgr
+Branch: refs/heads/master
