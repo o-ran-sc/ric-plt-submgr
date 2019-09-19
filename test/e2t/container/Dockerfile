@@ -30,10 +30,11 @@ RUN echo 'Acquire::http::Proxy "http://87.254.212.121:8080/";' > /etc/apt/apt.co
 
 COPY . /opt/submgr
 
-# Install RMr shared library
-RUN wget --content-disposition https://packagecloud.io/o-ran-sc/master/packages/debian/stretch/rmr_1.0.36_amd64.deb/download.deb && dpkg -i rmr_1.0.36_amd64.deb
-# Install RMr development header files
-RUN wget --content-disposition https://packagecloud.io/o-ran-sc/master/packages/debian/stretch/rmr-dev_1.0.36_amd64.deb/download.deb && dpkg -i rmr-dev_1.0.36_amd64.deb
+ARG RMRVERSION=1.3.0
+
+RUN wget --content-disposition https://packagecloud.io/o-ran-sc/master/packages/debian/stretch/rmr_${RMRVERSION}_amd64.deb/download.deb && dpkg -i rmr_${RMRVERSION}_amd64.deb
+RUN wget --content-disposition https://packagecloud.io/o-ran-sc/master/packages/debian/stretch/rmr-dev_${RMRVERSION}_amd64.deb/download.deb && dpkg -i rmr-dev_${RMRVERSION}_amd64.deb
+RUN rm -f rmr_${RMRVERSION}_amd64.deb rmr-dev_${RMRVERSION}_amd64.deb
 
 # "PULLING LOG and COMPILING LOG"
 RUN git clone "https://gerrit.o-ran-sc.org/r/com/log" /opt/log && cd /opt/log && \
@@ -46,6 +47,21 @@ RUN cd /opt/submgr/e2ap && \
  cp libwrapper.so /usr/local/lib/ && \
  cp wrapper.h headers/*.h /usr/local/include/ && \
  ldconfig
+
+# "Installing Swagger"
+RUN cd /usr/local/go/bin \
+    && wget --quiet https://github.com/go-swagger/go-swagger/releases/download/v0.19.0/swagger_linux_amd64 \
+    && mv swagger_linux_amd64 swagger \
+    && chmod +x swagger
+
+# "Getting and generating routing managers api client"
+RUN cd /opt/submgr \
+    && git clone "https://gerrit.o-ran-sc.org/r/ric-plt/rtmgr" \
+    && cp rtmgr/api/routing_manager.yaml api/ \
+    && rm -rf rtmgr
+RUN cd /opt/submgr \
+    && mkdir -p /root/go \
+    && /usr/local/go/bin/swagger generate client -f api/routing_manager.yaml -t pkg/ -m rtmgr_models -c rtmgr_client
 
 RUN mkdir -p /opt/bin && cd /opt/submgr && \
  /usr/local/go/bin/go get && \
@@ -60,3 +76,5 @@ COPY --from=submgrbuild /usr/local/include /usr/local/include
 COPY --from=submgrbuild /usr/local/lib /usr/local/lib
 
 RUN ldconfig
+
+RUN chmod 755 /run_e2t.sh

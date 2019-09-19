@@ -24,7 +24,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: e2t
-  namespace: example
+  namespace: ricplt
 spec:
   replicas: 1
   selector:
@@ -37,7 +37,7 @@ spec:
     spec:
       containers:
       - name: e2t
-        image: cmaster:5000/e2t:builder
+        image: jenkins:5000/e2t:test
         command: ["/run_e2t.sh"]
         env:
         - name: DBAAS_SERVICE_HOST

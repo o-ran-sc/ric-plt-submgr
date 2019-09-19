@@ -34,28 +34,37 @@ type Rco struct {
 }
 
 var c chan submgr.RmrDatagram = make(chan submgr.RmrDatagram, 1)
+var params *xapp.RMRParams
 
-var RAWDATA string
+var REQUESTRAWDATA string
+var DELETERAWDATA string
 var SEEDSN uint16
+var DELETESEEDSN uint16
 
 func init() {
 	viper.AutomaticEnv()
 	viper.SetEnvPrefix("rco")
 	viper.AllowEmptyEnv(true)
-	RAWDATA = viper.GetString("rawdata")
-	if RAWDATA == "" {
-		RAWDATA = "000003ea7e000500aaaaccccea6300020000ea81000e00045465737400ea6b0003000100"
+	REQUESTRAWDATA = viper.GetString("rawdata")
+	if REQUESTRAWDATA == "" {
+		REQUESTRAWDATA = "000003ea7e000500aaaaccccea6300020000ea81000e00045465737400ea6b0003000100"
 	}
-	xapp.Logger.Info("Initial RAW DATA: %v", RAWDATA)
+	DELETERAWDATA = viper.GetString("deleterawdata")
+	if DELETERAWDATA == "" {
+		DELETERAWDATA = "000002ea7e000500aaaabbbbea6300020000"
+	}
+	xapp.Logger.Info("Initial RAW DATA: %v", REQUESTRAWDATA)
+	xapp.Logger.Info("Initial DELETE RAW DATA: %v", DELETERAWDATA)
 	SEEDSN = uint16(viper.GetInt("seed_sn"))
 	if SEEDSN == 0 || SEEDSN > 65535 {
 		SEEDSN = 12345
 	}
+	DELETESEEDSN = SEEDSN
 	xapp.Logger.Info("Initial SEQUENCE NUMBER: %v", SEEDSN)
 }
 
 func (r *Rco) GeneratePayload(sub_id uint16) (payload []byte, err error) {
-	skeleton, err := hex.DecodeString(RAWDATA)
+	skeleton, err := hex.DecodeString(REQUESTRAWDATA)
 	if err != nil {
 		return make([]byte, 0), errors.New("Unable to decode data provided in RCO_RAWDATA environment variable")
 	}
@@ -63,17 +72,33 @@ func (r *Rco) GeneratePayload(sub_id uint16) (payload []byte, err error) {
 	return
 }
 
-func (r Rco) Consume(mtype, sub_id int, len int, payload []byte) (err error) {
-	payload_seq_num, err := r.GetSubscriptionResponseSequenceNumber(payload)
+func (r *Rco) GenerateDeletePayload(sub_id uint16) (payload []byte, err error) {
+	skeleton, err := hex.DecodeString(DELETERAWDATA)
 	if err != nil {
-		xapp.Logger.Error("Unable to get Subscription Sequence Number from Payload due to: " + err.Error())	
+		return make([]byte, 0), errors.New("Unable to decode data provided in RCO_DELETE RAWDATA environment variable")
 	}
-	xapp.Logger.Info("Message Received: RMR SUBSCRIPTION_ID: %v | PAYLOAD SEQUENCE_NUMBER: %v", sub_id, payload_seq_num)
+	xapp.Logger.Info("SetSubscriptionDeleteRequestSequenceNumber1")
+	payload, err = r.SetSubscriptionDeleteRequestSequenceNumber(skeleton, sub_id)
+	xapp.Logger.Info("SetSubscriptionDeleteRequestSequenceNumber2")
 	return
 }
 
-func (r *Rco) SendSubscriptionRequests() (err error) {
+func (r Rco) Consume(params *xapp.RMRParams) (err error) {
+	payload_seq_num, err := r.GetSubscriptionResponseSequenceNumber(params.Payload)
+	if err != nil {
+		xapp.Logger.Error("Unable to get Subscription Sequence Number from Payload due to: " + err.Error())	
+	}
+	xapp.Logger.Info("Message Received: RMR SUBSCRIPTION_ID: %v | PAYLOAD SEQUENCE_NUMBER: %v", params.SubId, payload_seq_num)
+	return
+}
+
+func (r *Rco) SendRequests() (err error) {
 	message, err := r.GeneratePayload(SEEDSN)
+	if err != nil {
+		xapp.Logger.Debug(err.Error())
+		return
+	}
+	deletemessage, err := r.GenerateDeletePayload(DELETESEEDSN)
 	if err != nil {
 		xapp.Logger.Debug(err.Error())
 		return
@@ -81,6 +106,9 @@ func (r *Rco) SendSubscriptionRequests() (err error) {
 	for {
 		time.Sleep(2 * time.Second)
 		c <- submgr.RmrDatagram{12010, SEEDSN, message}
+		time.Sleep(2 * time.Second)
+		c <- submgr.RmrDatagram{12020, DELETESEEDSN, deletemessage}
+		DELETESEEDSN++
 	}
 	return
 }
@@ -92,8 +120,12 @@ func (r *Rco) Run() {
 		if err != nil {
 			xapp.Logger.Debug("Unable to get Subscription Sequence Number from Payload due to: " + err.Error())	
 		}
+		params.SubId = int(message.SubscriptionId)
+		params.Mtype = message.MessageType
+		params.PayloadLen = len(message.Payload)
+		params.Payload = message.Payload
 		xapp.Logger.Info("Sending Message: TYPE: %v | RMR SUBSCRIPTION_ID: %v | PAYLOAD SEQUENCE_NUMBER: %v)", message.MessageType, message.SubscriptionId, payload_seq_num)
-		xapp.Rmr.Send(message.MessageType, int(message.SubscriptionId), len(message.Payload), message.Payload)
+		xapp.Rmr.Send(params, false)
 	}
 }
 
@@ -111,7 +143,7 @@ func main() {
 	go xapp.Rmr.Start(rco)
 	go rco.Run()
 	go rco.sendInvalidTestMessages()
-	err := rco.SendSubscriptionRequests()
+	err := rco.SendRequests()
 	if err != nil {
 		os.Exit(1)
 	}

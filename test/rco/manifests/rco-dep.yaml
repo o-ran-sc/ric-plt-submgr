@@ -24,7 +24,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: rco
-  namespace: example
+  namespace: ricplt
 spec:
   replicas: 1
   selector:
@@ -37,7 +37,7 @@ spec:
     spec:
       containers:
       - name: rco
-        image: cmaster:5000/rco:builder
+        image: rco:builder
         command: ["/run_rco.sh"]
         env:
         - name: DBAAS_SERVICE_HOST
@@ -46,7 +46,11 @@ spec:
           value: 000003ea7e000500aaaaccccea6300020000ea81000e00045465737400ea6b0003000100
         - name: RCO_SEED_SN
           value: "9999"
+        - name: RMR_SEED_RT
+          value: uta_rtg.rt
+
         ports:
         - containerPort: 8080
         - containerPort: 4560
         - containerPort: 4561
+        imagePullPolicy: Always

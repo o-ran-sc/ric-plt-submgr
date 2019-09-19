@@ -24,7 +24,7 @@ kind: Service
 apiVersion: v1
 metadata:
   name: dbaas
-  namespace: example
+  namespace: ricplt
 spec:
   selector:
     app: dbaas

@@ -24,3 +24,24 @@ type RmrDatagram struct {
 	SubscriptionId uint16
 	Payload        []byte
 }
+
+type subRouteInfo struct {
+	Command  Action
+	Address  string
+	Port     uint16
+	SubID    uint16
+}
+
+type Action int
+
+type Transaction_key struct {
+	SubID      uint16
+	trans_type Action
+}
+
+type Transaction struct {
+//	Xapp_address          string
+	Xapp_instance_address string
+	Xapp_port             uint16
+	Ric_sub_req           []byte
+}

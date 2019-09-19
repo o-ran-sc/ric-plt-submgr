@@ -1,0 +1,181 @@
+#
+#==================================================================================
+#   Copyright (c) 2019 AT&T Intellectual Property.
+#   Copyright (c) 2019 Nokia
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+#==================================================================================
+#
+#
+#   Abstract:   Routing Manager's RESTful API definition
+#   Date:	29 March 2019
+#
+swagger: "2.0"
+info:
+  title: Routing Manager
+  description: "This is the Swagger/OpenAPI 2.0 definition of Routing Manager's Northbound API."
+  version: "0.3.0"
+  license:
+    name: "Apache 2.0"
+    url: "http://www.apache.org/licenses/LICENSE-2.0.html"
+host: "rtmgr"
+basePath: "/ric/v1"
+tags:
+- name: "handle"
+  description: "Available handles"
+#  externalDocs:
+#    description: "Find out more"
+#    url: "http://127.0.0.1"
+- name: "health"
+  description: "Health of the system"
+schemes:
+#- "https"
+- "http"
+paths:
+  /health:
+    get:
+      tags:
+      - "health"
+      summary: "Retrive the health of Routing Manager"
+      description: "By performing a GET method on the health resource, the API caller is able to retrieve the health of Routing Manager"
+      operationId: "get_health"
+      consumes:
+      - "application/json"
+#      - "application/yaml"
+      produces:
+      - "application/json"
+#      - "application/yaml"
+      responses:
+        200:
+          description: "The health of the system"
+          schema:
+            "$ref": "#/definitions/health-status"
+  /handles:
+    get:
+      tags:
+      - "handle"
+      summary: "Placeholder for further usage"
+      description: "Placeholder for further usage."
+      operationId: "get_handles"
+      consumes:
+      - "application/json"
+#      - "application/yaml"
+      produces:
+      - "application/json"
+#      - "application/yaml"
+      responses:
+        200:
+          description: "Dummy response"
+  /handles/xapp-handle:
+    post:
+      tags:
+      - "handle"
+      summary: "Provide callback"
+      description: "By performing a POST method on the xapp-handle resource, the API caller is able to perform a callback on Routing Manager."
+      operationId: "provide_xapp_handle"
+      consumes:
+      - "application/json"
+#      - "application/yaml"
+      produces:
+      - "application/json"
+#      - "application/yaml"
+      parameters:
+      - in: "body"
+        name: "xapp-callback-data"
+        description: "xApp related callback data"
+        required: true
+        schema:
+          $ref: "#/definitions/xapp-callback-data"
+      responses:
+        400:
+          description: "Invalid data"
+        201:
+          description: "Callback received"
+  /handles/xapp-subscription-handle:
+    post:
+      tags:
+      - "handle"
+      summary: "API for updating about new xapp subscription"
+      description: "By performing a POST method on the xapp-subscription-handle resource, the API caller is able to update the Routing manager about the creation of new subscription by an Xapp instance."
+      operationId: "provide_xapp_subscription_handle"
+      consumes:
+      - "application/json"
+#      - "application/yaml"
+      produces:
+      - "application/json"
+#      - "application/yaml"
+      parameters:
+      - in: "body"
+        name: "xapp-subscription-data"
+        description: "xApp related subscription data"
+        required: true
+        schema:
+          $ref: "#/definitions/xapp-subscription-data"
+      responses:
+        400:
+          description: "Invalid data"
+        201:
+          description: "Xapp Subscription data received"
+          schema:
+            $ref: "#/definitions/xapp-subscription-data-response"
+definitions:
+  health-status:
+    type: "object"
+    properties:
+      status:
+        type: string
+        enum:
+        - healthy
+        - unhealthy
+  xapp-callback-data:
+    type: "object"
+    properties:
+      id:
+        type: "integer"
+        format: "int64"
+      event:
+        type: "string"
+      version:
+        type: "integer"
+        format: "int64"
+      xApps:
+        type: "string" #This should be a JSON object, array of xapps
+  xapp-subscription-data:
+    type: "object"
+    required:
+      - "address"
+      - "port"
+      - "subscription_id"
+    properties:
+      address:
+        type: "string" #This is the xapp instance hostname or ip address
+      port: #xapp instance port address
+        type: "integer"
+        format: "uint16"
+        minimum: 0
+        maximum: 65535
+      subscription_id: #subscription sequence number
+        type: "integer"
+        format: "int32" 
+  xapp-subscription-data-response:
+    type: "object"
+    required:
+      - "location"
+    properties:
+      location:
+        type: "string"
+
+externalDocs:
+  description: "Routing Manager"
+  url: "http://placeholder"
+

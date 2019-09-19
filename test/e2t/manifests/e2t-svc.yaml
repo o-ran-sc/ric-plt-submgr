@@ -24,7 +24,7 @@ kind: Service
 apiVersion: v1
 metadata:
   name: e2t
-  namespace: example
+  namespace: ricplt
 spec:
   selector:
     app: e2t

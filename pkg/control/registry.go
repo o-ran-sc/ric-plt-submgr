@@ -34,6 +34,9 @@ func (r *Registry) Initialize(seedsn uint16) {
 
 // Reserves and returns the next free sequence number
 func (r *Registry) ReserveSequenceNumber() uint16 {
+	if r.IsValidSequenceNumber(r.counter){
+
+	}
 	sequenceNumber := r.counter
 	r.register[sequenceNumber] = false
 	r.shift()
@@ -61,3 +64,13 @@ func (r *Registry) shift() {
 		r.counter++
 	}
 }
+
+//This function sets the given id as unused in the register
+func (r *Registry) deleteSubscription(sn uint16) {
+	r.register[sn] = false
+}
+
+//This function releases the given id as unused in the register
+//func (r *Registry) releaseSequenceNumber(sn uint16) {
+//	delete(r.register, sn)
+//}
