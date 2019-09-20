@@ -92,12 +92,15 @@ func NewControl() Control {
 	registry := new(Registry)
 	registry.Initialize(SEEDSN)
 
+	tracker := new(Tracker)
+	tracker.Init()
+
 	transport := httptransport.New(viper.GetString("rtmgr.HostAddr") + ":" + viper.GetString("rtmgr.port"), viper.GetString("rtmgr.baseUrl"), []string{"http"})
 	client := rtmgrclient.New(transport, strfmt.Default)
 	handle := rtmgrhandle.NewProvideXappSubscriptionHandleParamsWithTimeout(10 * time.Second)
 	rtmgrClient := RtmgrClient{client, handle}
 
-	return Control{new(E2ap), registry, &rtmgrClient, new(Tracker)}
+	return Control{new(E2ap), registry, &rtmgrClient, tracker}
 }
 
 func (c *Control) Run() {
@@ -151,7 +154,7 @@ func (c *Control) handleSubscriptionRequest(params *xapp.RMRParams) (err error) 
 	/* Create transatcion records for every subscription request */
 	xact_key := Transaction_key{new_sub_id, CREATE}
 	xact_value := Transaction{*src_addr, *src_port, params.Payload}
-	err = c.tracker.Track_transaction(xact_key, &xact_value)
+	err = c.tracker.Track_transaction(xact_key, xact_value)
 	if err != nil {
 		xapp.Logger.Error("Failed to create a transaction record due to %v", err)
 		return

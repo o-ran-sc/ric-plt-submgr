@@ -1,3 +1,17 @@
+### v0.7.2
+* Correction for E2AP PDU handling
+* Correction for Transaction Table handling
+
+### v0.7.1
+* Verification of RICsubscriptionDeleteRequest message handling
+
+### v0.7.0
+* Handle RICsubscriptionDeleteRequest message
+
+### v0.6.0
+* Capability to track and retrieve transactions
+* Signal subscription related route creation towards Rtmgr
+
 ### v0.5.0
 * Introduces ASN1-C generated E2AP encode/decode
 * Introduces RCO_RAWDATA and E2T_RAWDATA env variables on order to inject initial encoded messge in hex format into stub component for testing purposes

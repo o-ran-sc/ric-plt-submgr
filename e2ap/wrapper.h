@@ -5,9 +5,13 @@
 #include "RICsubscriptionResponse.h"
 #include "RICsubscriptionDeleteRequest.h"
 #include "RICsubscriptionDeleteResponse.h"
+#include "E2AP-PDU.h"
+#include "InitiatingMessageE2.h"
 #include "ProtocolIE-Container.h"
 #include "ProtocolIE-Field.h"
 
+size_t encode_E2AP_PDU(E2AP_PDU_t* pdu, void* buffer, size_t buf_size);
+E2AP_PDU_t* decode_E2AP_PDU(const void* buffer, size_t buf_size);
 
 /* RICsubscriptionRequest */
 ssize_t encode_RIC_subscription_request(RICsubscriptionRequest_t* pdu, void* buffer, size_t buf_size);
