@@ -71,6 +71,11 @@ func (r *Registry) deleteSubscription(sn uint16) {
 }
 
 //This function releases the given id as unused in the register
-//func (r *Registry) releaseSequenceNumber(sn uint16) {
-//	delete(r.register, sn)
-//}
+func (r *Registry) releaseSequenceNumber(sn uint16) bool {
+	if r.register[sn] {
+		return false
+	} else {
+		delete(r.register, sn)
+		return true
+	}
+}

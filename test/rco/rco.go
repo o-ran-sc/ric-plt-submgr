@@ -59,7 +59,11 @@ func init() {
 	if SEEDSN == 0 || SEEDSN > 65535 {
 		SEEDSN = 12345
 	}
-	DELETESEEDSN = SEEDSN
+	DELETESEEDSN = uint16(viper.GetInt("delete_seed_sn"))
+	if DELETESEEDSN == 0 || DELETESEEDSN > 65535 {
+		DELETESEEDSN = SEEDSN
+	}
+
 	xapp.Logger.Info("Initial SEQUENCE NUMBER: %v", SEEDSN)
 }
 
@@ -77,9 +81,7 @@ func (r *Rco) GenerateDeletePayload(sub_id uint16) (payload []byte, err error) {
 	if err != nil {
 		return make([]byte, 0), errors.New("Unable to decode data provided in RCO_DELETE RAWDATA environment variable")
 	}
-	xapp.Logger.Info("SetSubscriptionDeleteRequestSequenceNumber1")
 	payload, err = r.SetSubscriptionDeleteRequestSequenceNumber(skeleton, sub_id)
-	xapp.Logger.Info("SetSubscriptionDeleteRequestSequenceNumber2")
 	return
 }
 
@@ -106,6 +108,7 @@ func (r *Rco) SendRequests() (err error) {
 	for {
 		time.Sleep(2 * time.Second)
 		c <- submgr.RmrDatagram{12010, SEEDSN, message}
+		SEEDSN++
 		time.Sleep(2 * time.Second)
 		c <- submgr.RmrDatagram{12020, DELETESEEDSN, deletemessage}
 		DELETESEEDSN++
@@ -118,7 +121,7 @@ func (r *Rco) Run() {
 		message := <-c
 		payload_seq_num, err := r.GetSubscriptionRequestSequenceNumber(message.Payload)
 		if err != nil {
-			xapp.Logger.Debug("Unable to get Subscription Sequence Number from Payload due to: " + err.Error())	
+			xapp.Logger.Debug("Unable to get Subscription Sequence Number from Payload due to: " + err.Error())
 		}
 		params.SubId = int(message.SubscriptionId)
 		params.Mtype = message.MessageType

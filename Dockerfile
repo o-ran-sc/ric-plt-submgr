@@ -22,24 +22,16 @@
 #
 FROM nexus3.o-ran-sc.org:10004/bldr-ubuntu18-c-go:1-u18.04-nng1.1.1 as submgrbuild
 
-COPY . /opt/submgr
+WORKDIR /tmp
 
 # Install RMr shared library
-RUN wget --content-disposition https://packagecloud.io/o-ran-sc/staging/packages/debian/stretch/rmr_1.6.0_amd64.deb/download.deb && dpkg -i rmr_1.6.0_amd64.deb
+RUN wget --content-disposition https://packagecloud.io/o-ran-sc/staging/packages/debian/stretch/rmr_1.6.0_amd64.deb/download.deb && dpkg -i rmr_1.6.0_amd64.deb && rm -rf rmr_1.6.0_amd64.deb
 # Install RMr development header files
-RUN wget --content-disposition https://packagecloud.io/o-ran-sc/staging/packages/debian/stretch/rmr-dev_1.6.0_amd64.deb/download.deb && dpkg -i rmr-dev_1.6.0_amd64.deb
+RUN wget --content-disposition https://packagecloud.io/o-ran-sc/staging/packages/debian/stretch/rmr-dev_1.6.0_amd64.deb/download.deb && dpkg -i rmr-dev_1.6.0_amd64.deb && rm -rf rmr-dev_1.6.0_amd64.deb
 
 # "PULLING LOG and COMPILING LOG"
 RUN git clone "https://gerrit.o-ran-sc.org/r/com/log" /opt/log && cd /opt/log && \
  ./autogen.sh && ./configure && make install && ldconfig
-
-# "COMPILING E2AP Wrapper"
-RUN cd /opt/submgr/e2ap && \
- gcc -c -fPIC -Iheaders/ lib/*.c wrapper.c && \
- gcc *.o -shared -o libwrapper.so && \
- cp libwrapper.so /usr/local/lib/ && \
- cp wrapper.h headers/*.h /usr/local/include/ && \
- ldconfig
 
 # "Installing Swagger"
 RUN cd /usr/local/go/bin \
@@ -47,21 +39,49 @@ RUN cd /usr/local/go/bin \
     && mv swagger_linux_amd64 swagger \
     && chmod +x swagger
 
+
+WORKDIR /opt/submgr
+COPY e2ap e2ap
+
+# "COMPILING E2AP Wrapper"
+RUN cd e2ap && \
+    gcc -c -fPIC -Iheaders/ lib/*.c wrapper.c && \
+    gcc *.o -shared -o libwrapper.so && \
+    cp libwrapper.so /usr/local/lib/ && \
+    cp wrapper.h headers/*.h /usr/local/include/ && \
+    ldconfig
+
+COPY api api
+
 # "Getting and generating routing managers api client"
-RUN cd /opt/submgr \
-    && git clone "https://gerrit.o-ran-sc.org/r/ric-plt/rtmgr" \
+RUN git clone "https://gerrit.o-ran-sc.org/r/ric-plt/rtmgr" \
     && cp rtmgr/api/routing_manager.yaml api/ \
     && rm -rf rtmgr
 
-RUN cd /opt/submgr \
-    && mkdir -p /root/go \
-    && /usr/local/go/bin/swagger generate client -f api/routing_manager.yaml -t pkg/ -m rtmgr_models -c rtmgr_client
+RUN mkdir pkg
+
+COPY go.mod go.mod
+
+RUN mkdir -p /root/go && \
+    /usr/local/go/bin/swagger generate client -f api/routing_manager.yaml -t pkg/ -m rtmgr_models -c rtmgr_client
+
+
+COPY pkg pkg
+COPY cmd cmd
+
+RUN /usr/local/go/bin/go mod tidy
+
+RUN git clone -b v0.0.8 "https://gerrit.o-ran-sc.org/r/ric-plt/xapp-frame" /tmp/xapp-frame
+COPY tmp/rmr.go /tmp/xapp-frame/pkg/xapp/rmr.go
+
+RUN /usr/local/go/bin/go mod edit -replace "gerrit.o-ran-sc.org/r/ric-plt/xapp-frame"="/tmp/xapp-frame"
 
 # "COMPILING Subscription manager"
-RUN mkdir -p /opt/bin && cd /opt/submgr && \
- /usr/local/go/bin/go get && \
-  /usr/local/go/bin/go build -o /opt/bin/submgr ./cmd/submgr.go && \
+RUN mkdir -p /opt/bin && \
+  /usr/local/go/bin/go build -o /opt/bin/submgr cmd/submgr.go && \
      mkdir -p /opt/build/container/usr/local
+
+COPY config config
 
 FROM ubuntu:18.04
 
@@ -72,3 +92,4 @@ COPY --from=submgrbuild /usr/local/lib /usr/local/lib
 RUN ldconfig
 
 RUN chmod 755 /run_submgr.sh
+CMD /run_submgr.sh

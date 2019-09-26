@@ -19,6 +19,10 @@
 
 package control
 
+import (
+	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
+)
+
 type RmrDatagram struct {
 	MessageType    int
 	SubscriptionId uint16
@@ -44,4 +48,5 @@ type Transaction struct {
 	Xapp_instance_address string
 	Xapp_port             uint16
 	Ric_sub_req           []byte
+	Mbuf                  *xapp.RMRMbuf
 }

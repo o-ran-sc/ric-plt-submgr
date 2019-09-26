@@ -21,7 +21,6 @@ package control
 
 import (
 	"fmt"
-//	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 )
 
 /*
@@ -53,6 +52,21 @@ func (t *Tracker) Track_transaction(key Transaction_key, xact Transaction) error
 Retreives the transaction table entry for the given request.
 Returns error in case the transaction cannot be found.
 */
+func (t *Tracker) Update_transaction(SubID uint16, trans_type Action, xact Transaction) error{
+	key := Transaction_key{SubID, trans_type}
+	if _, ok := t.transaction_table[key]; ok {
+		// TODO: Implement merge related check here. If the key is same but the value is different.
+		err := fmt.Errorf("Transaction tracker: Similar transaction with sub id %d and type %s is ongoing", key.SubID, key.trans_type )
+		return err
+	}
+	t.transaction_table[key] = xact
+	return nil
+}
+
+/*
+Retreives the transaction table entry for the given request.
+Returns error in case the transaction cannot be found.
+*/
 func (t *Tracker) Retrive_transaction(subID uint16, act Action) (Transaction, error){
 	key := Transaction_key{subID, act}
 	var xact Transaction
@@ -67,14 +81,13 @@ func (t *Tracker) Retrive_transaction(subID uint16, act Action) (Transaction, er
 Deletes the transaction table entry for the given request and returns the deleted xapp's address and port for reference.
 Returns error in case the transaction cannot be found.
 */
-func (t *Tracker) complete_transaction(subID uint16, act Action) (string, uint16, error){
+func (t *Tracker) complete_transaction(subID uint16, act Action) (Transaction, error){
 	key := Transaction_key{subID, act}
-	var empty_address string
-	var empty_port uint16
+	var empty_transaction Transaction
 	if xact, ok := t.transaction_table[key]; ok {
 		delete(t.transaction_table, key)
-		return xact.Xapp_instance_address, xact.Xapp_port, nil
+		return xact, nil
 	}
 	err := fmt.Errorf("Tranaction record for Subscription ID %d and action %s does not exist", subID, act)
-	return empty_address, empty_port, err
+	return empty_transaction, err
 }

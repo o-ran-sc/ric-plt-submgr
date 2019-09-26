@@ -24,41 +24,22 @@ E2AP_PDU_t* decode_E2AP_PDU(const void* buffer, size_t buf_size)
     }
 }
 
-ssize_t encode_RIC_subscription_request(RICsubscriptionRequest_t* pdu, void* buffer, size_t buf_size)
-{
-    asn_enc_rval_t encode_result;
-    encode_result = aper_encode_to_buffer(&asn_DEF_RICsubscriptionRequest, NULL, pdu, buffer, buf_size);
-    if(encode_result.encoded == -1) {
-        return -1;
-    }
-    return encode_result.encoded;
-}
-
-RICsubscriptionRequest_t* decode_RIC_subscription_request(const void *buffer, size_t buf_size)
-{
-    asn_dec_rval_t decode_result;
-    RICsubscriptionRequest_t *pdu = 0;
-    decode_result = aper_decode_complete(NULL, &asn_DEF_RICsubscriptionRequest, (void **)&pdu, buffer, buf_size);
-    if(decode_result.code == RC_OK) {
-        return pdu;
-    } else {
-        ASN_STRUCT_FREE(asn_DEF_RICsubscriptionRequest, pdu);
-        return 0;
-    }
-}
-
 long e2ap_get_ric_subscription_request_sequence_number(void *buffer, size_t buf_size)
 {
     E2AP_PDU_t *pdu = decode_E2AP_PDU(buffer, buf_size);
     if ( pdu != NULL && pdu->present == E2AP_PDU_PR_initiatingMessage)
     {
         InitiatingMessageE2_t* initiatingMessage = pdu->choice.initiatingMessage;
-        RICsubscriptionRequest_t *ric_subscription_request = &(initiatingMessage->value.choice.RICsubscriptionRequest);
-        for (int i = 0; i < ric_subscription_request->protocolIEs.list.count; ++i )
+        if ( initiatingMessage->procedureCode == ProcedureCode_id_ricSubscription
+            && initiatingMessage->value.present == InitiatingMessageE2__value_PR_RICsubscriptionRequest)
         {
-            if ( ric_subscription_request->protocolIEs.list.array[i]->id == ProtocolIE_ID_id_RICrequestID )
+            RICsubscriptionRequest_t *ric_subscription_request = &(initiatingMessage->value.choice.RICsubscriptionRequest);
+            for (int i = 0; i < ric_subscription_request->protocolIEs.list.count; ++i )
             {
-                return ric_subscription_request->protocolIEs.list.array[i]->value.choice.RICrequestID.ricRequestSequenceNumber;
+                if ( ric_subscription_request->protocolIEs.list.array[i]->id == ProtocolIE_ID_id_RICrequestID )
+                {
+                    return ric_subscription_request->protocolIEs.list.array[i]->value.choice.RICrequestID.ricRequestSequenceNumber;
+                }
             }
         }
     }
@@ -71,13 +52,17 @@ ssize_t  e2ap_set_ric_subscription_request_sequence_number(void *buffer, size_t 
     if ( pdu != NULL && pdu->present == E2AP_PDU_PR_initiatingMessage)
     {
         InitiatingMessageE2_t* initiatingMessage = pdu->choice.initiatingMessage;
-        RICsubscriptionRequest_t *ric_subscription_request = &(initiatingMessage->value.choice.RICsubscriptionRequest);
-        for (int i = 0; i < ric_subscription_request->protocolIEs.list.count; ++i )
+        if ( initiatingMessage->procedureCode == ProcedureCode_id_ricSubscription
+            && initiatingMessage->value.present == InitiatingMessageE2__value_PR_RICsubscriptionRequest)
         {
-            if ( ric_subscription_request->protocolIEs.list.array[i]->id == ProtocolIE_ID_id_RICrequestID )
+            RICsubscriptionRequest_t *ricSubscriptionRequest = &initiatingMessage->value.choice.RICsubscriptionRequest;
+            for (int i = 0; i < ricSubscriptionRequest->protocolIEs.list.count; ++i )
             {
-                ric_subscription_request->protocolIEs.list.array[i]->value.choice.RICrequestID.ricRequestSequenceNumber = sequence_number;
-                return encode_E2AP_PDU(pdu, buffer, buf_size);
+                if ( ricSubscriptionRequest->protocolIEs.list.array[i]->id == ProtocolIE_ID_id_RICrequestID )
+                {
+                    ricSubscriptionRequest->protocolIEs.list.array[i]->value.choice.RICrequestID.ricRequestSequenceNumber = sequence_number;
+                    return encode_E2AP_PDU(pdu, buffer, buf_size);
+                }
             }
         }
     }
@@ -85,40 +70,22 @@ ssize_t  e2ap_set_ric_subscription_request_sequence_number(void *buffer, size_t 
 }
 
 /* RICsubscriptionResponse */
-ssize_t encode_RIC_subscription_response(RICsubscriptionResponse_t* pdu, void* buffer, size_t buf_size)
-{
-    asn_enc_rval_t encode_result;
-    encode_result = aper_encode_to_buffer(&asn_DEF_RICsubscriptionResponse, NULL, pdu, buffer, buf_size);
-    if(encode_result.encoded == -1) {
-        return -1;
-    }
-    return encode_result.encoded;
-}
-
-RICsubscriptionResponse_t* decode_RIC_subscription_response(const void *buffer, size_t buf_size)
-{
-    asn_dec_rval_t decode_result;
-    RICsubscriptionResponse_t *pdu = 0;
-    decode_result = aper_decode_complete(NULL, &asn_DEF_RICsubscriptionResponse, (void **)&pdu, buffer, buf_size);
-    if(decode_result.code == RC_OK) {
-        fprintf(stdout, "decoded bytes: %ld\n", decode_result.consumed);
-        return pdu;
-    } else {
-        ASN_STRUCT_FREE(asn_DEF_RICsubscriptionResponse, pdu);
-        return 0;
-    }
-}
-
 long e2ap_get_ric_subscription_response_sequence_number(void *buffer, size_t buf_size)
 {
-    RICsubscriptionResponse_t *pdu = decode_RIC_subscription_response(buffer, buf_size);
-    if ( pdu != NULL )
+    E2AP_PDU_t *pdu = decode_E2AP_PDU(buffer, buf_size);
+    if ( pdu != NULL && pdu->present == E2AP_PDU_PR_successfulOutcome )
     {
-        for (int i = 0; i < pdu->protocolIEs.list.count; ++i )
+        SuccessfulOutcomeE2_t* successfulOutcome = pdu->choice.successfulOutcome;
+        if ( successfulOutcome->procedureCode == ProcedureCode_id_ricSubscription
+            && successfulOutcome->value.present == SuccessfulOutcomeE2__value_PR_RICsubscriptionResponse)
         {
-            if ( pdu->protocolIEs.list.array[i]->id == ProtocolIE_ID_id_RICrequestID )
+            RICsubscriptionResponse_t *ricSubscriptionResponse = &successfulOutcome->value.choice.RICsubscriptionResponse;
+            for (int i = 0; i < ricSubscriptionResponse->protocolIEs.list.count; ++i )
             {
-                return pdu->protocolIEs.list.array[i]->value.choice.RICrequestID.ricRequestSequenceNumber;
+                if ( ricSubscriptionResponse->protocolIEs.list.array[i]->id == ProtocolIE_ID_id_RICrequestID )
+                {
+                    return ricSubscriptionResponse->protocolIEs.list.array[i]->value.choice.RICrequestID.ricRequestSequenceNumber;
+                }
             }
         }
     }
@@ -127,15 +94,21 @@ long e2ap_get_ric_subscription_response_sequence_number(void *buffer, size_t buf
 
 ssize_t  e2ap_set_ric_subscription_response_sequence_number(void *buffer, size_t buf_size, long sequence_number)
 {
-    RICsubscriptionResponse_t *pdu = decode_RIC_subscription_response(buffer, buf_size);
-    if ( pdu != NULL )
+    E2AP_PDU_t *pdu = decode_E2AP_PDU(buffer, buf_size);
+    if ( pdu != NULL && pdu->present == E2AP_PDU_PR_successfulOutcome )
     {
-        for (int i = 0; i < pdu->protocolIEs.list.count; ++i )
+        SuccessfulOutcomeE2_t* successfulOutcome = pdu->choice.successfulOutcome;
+        if ( successfulOutcome->procedureCode == ProcedureCode_id_ricSubscription
+            && successfulOutcome->value.present == SuccessfulOutcomeE2__value_PR_RICsubscriptionResponse)
         {
-            if ( pdu->protocolIEs.list.array[i]->id == ProtocolIE_ID_id_RICrequestID )
+            RICsubscriptionResponse_t *ricSubscriptionResponse = &successfulOutcome->value.choice.RICsubscriptionResponse;
+            for (int i = 0; i < ricSubscriptionResponse->protocolIEs.list.count; ++i )
             {
-                pdu->protocolIEs.list.array[i]->value.choice.RICrequestID.ricRequestSequenceNumber = sequence_number;
-                return encode_RIC_subscription_response(pdu, buffer, buf_size);
+                if ( ricSubscriptionResponse->protocolIEs.list.array[i]->id == ProtocolIE_ID_id_RICrequestID )
+                {
+                    ricSubscriptionResponse->protocolIEs.list.array[i]->value.choice.RICrequestID.ricRequestSequenceNumber = sequence_number;
+                    return encode_E2AP_PDU(pdu, buffer, buf_size);
+                }
             }
         }
     }
@@ -143,41 +116,22 @@ ssize_t  e2ap_set_ric_subscription_response_sequence_number(void *buffer, size_t
 }
 
 /* RICsubscriptionDeleteRequest */
-ssize_t encode_RIC_subscription_delete_request(RICsubscriptionDeleteRequest_t* pdu, void* buffer, size_t buf_size)
-{
-    asn_enc_rval_t encode_result;
-    encode_result = aper_encode_to_buffer(&asn_DEF_RICsubscriptionDeleteRequest, NULL, pdu, buffer, buf_size);
-    if(encode_result.encoded == -1) {
-        return -1;
-    }
-    return encode_result.encoded;
-}
-
-RICsubscriptionDeleteRequest_t* decode_RIC_subscription_delete_request(const void *buffer, size_t buf_size)
-{
-    asn_dec_rval_t decode_result;
-    RICsubscriptionDeleteRequest_t *pdu = 0;
-    decode_result = aper_decode_complete(NULL, &asn_DEF_RICsubscriptionDeleteRequest, (void **)&pdu, buffer, buf_size);
-    if(decode_result.code == RC_OK) {
-        fprintf(stdout, "decoded bytes: %ld\n", decode_result.consumed);
-        return pdu;
-    } else {
-        ASN_STRUCT_FREE(asn_DEF_RICsubscriptionDeleteRequest, pdu);
-        return 0;
-    }
-}
-
 long e2ap_get_ric_subscription_delete_request_sequence_number(void *buffer, size_t buf_size)
 {
-    RICsubscriptionDeleteRequest_t *pdu = decode_RIC_subscription_delete_request(buffer, buf_size);
-    if ( pdu != NULL )
+    E2AP_PDU_t *pdu = decode_E2AP_PDU(buffer, buf_size);
+    if ( pdu != NULL && pdu->present == E2AP_PDU_PR_initiatingMessage )
     {
-        for (int i = 0; i < pdu->protocolIEs.list.count; ++i )
+        InitiatingMessageE2_t* initiatingMessage = pdu->choice.initiatingMessage;
+        if ( initiatingMessage->procedureCode == ProcedureCode_id_ricSubscriptionDelete
+            && initiatingMessage->value.present == InitiatingMessageE2__value_PR_RICsubscriptionDeleteRequest )
         {
-            /* TODO */
-            if ( pdu->protocolIEs.list.array[i]->id == ProtocolIE_ID_id_RICrequestID )
+            RICsubscriptionDeleteRequest_t *subscriptionDeleteRequest = &initiatingMessage->value.choice.RICsubscriptionDeleteRequest;
+            for (int i = 0; i < subscriptionDeleteRequest->protocolIEs.list.count; ++i )
             {
-                return pdu->protocolIEs.list.array[i]->value.choice.RICrequestID.ricRequestSequenceNumber;
+                if ( subscriptionDeleteRequest->protocolIEs.list.array[i]->id == ProtocolIE_ID_id_RICrequestID )
+                {
+                    return subscriptionDeleteRequest->protocolIEs.list.array[i]->value.choice.RICrequestID.ricRequestSequenceNumber;
+                }
             }
         }
     }
@@ -186,16 +140,21 @@ long e2ap_get_ric_subscription_delete_request_sequence_number(void *buffer, size
 
 ssize_t  e2ap_set_ric_subscription_delete_request_sequence_number(void *buffer, size_t buf_size, long sequence_number)
 {
-    RICsubscriptionDeleteRequest_t *pdu = decode_RIC_subscription_delete_request(buffer, buf_size);
-    if ( pdu != NULL )
+    E2AP_PDU_t *pdu = decode_E2AP_PDU(buffer, buf_size);
+    if ( pdu != NULL && pdu->present == E2AP_PDU_PR_initiatingMessage )
     {
-        for (int i = 0; i < pdu->protocolIEs.list.count; ++i )
+        InitiatingMessageE2_t* initiatingMessage = pdu->choice.initiatingMessage;
+        if ( initiatingMessage->procedureCode == ProcedureCode_id_ricSubscriptionDelete
+            && initiatingMessage->value.present == InitiatingMessageE2__value_PR_RICsubscriptionDeleteRequest )
         {
-            /* TODO */
-            if ( pdu->protocolIEs.list.array[i]->id == ProtocolIE_ID_id_RICrequestID )
+            RICsubscriptionDeleteRequest_t* subscriptionDeleteRequest = &initiatingMessage->value.choice.RICsubscriptionDeleteRequest;
+            for (int i = 0; i < subscriptionDeleteRequest->protocolIEs.list.count; ++i )
             {
-                pdu->protocolIEs.list.array[i]->value.choice.RICrequestID.ricRequestSequenceNumber = sequence_number;
-                return encode_RIC_subscription_delete_request(pdu, buffer, buf_size);
+                if ( subscriptionDeleteRequest->protocolIEs.list.array[i]->id == ProtocolIE_ID_id_RICrequestID )
+                {
+                    subscriptionDeleteRequest->protocolIEs.list.array[i]->value.choice.RICrequestID.ricRequestSequenceNumber = sequence_number;
+                    return encode_E2AP_PDU(pdu, buffer, buf_size);
+                }
             }
         }
     }
@@ -203,41 +162,22 @@ ssize_t  e2ap_set_ric_subscription_delete_request_sequence_number(void *buffer, 
 }
 
 /* RICsubscriptionDeleteResponse */
-ssize_t encode_RIC_subscription_delete_response(RICsubscriptionDeleteResponse_t* pdu, void* buffer, size_t buf_size)
-{
-    asn_enc_rval_t encode_result;
-    encode_result = aper_encode_to_buffer(&asn_DEF_RICsubscriptionDeleteResponse, NULL, pdu, buffer, buf_size);
-    if(encode_result.encoded == -1) {
-        return -1;
-    }
-    return encode_result.encoded;
-}
-
-RICsubscriptionDeleteResponse_t* decode_RIC_subscription_delete_response(const void *buffer, size_t buf_size)
-{
-    asn_dec_rval_t decode_result;
-    RICsubscriptionDeleteResponse_t *pdu = 0;
-    decode_result = aper_decode_complete(NULL, &asn_DEF_RICsubscriptionDeleteResponse, (void **)&pdu, buffer, buf_size);
-    if(decode_result.code == RC_OK) {
-        fprintf(stdout, "decoded bytes: %ld\n", decode_result.consumed);
-        return pdu;
-    } else {
-        ASN_STRUCT_FREE(asn_DEF_RICsubscriptionDeleteResponse, pdu);
-        return 0;
-    }
-}
-
 long e2ap_get_ric_subscription_delete_response_sequence_number(void *buffer, size_t buf_size)
 {
-    RICsubscriptionDeleteResponse_t *pdu = decode_RIC_subscription_delete_response(buffer, buf_size);
-    if ( pdu != NULL )
+    E2AP_PDU_t *pdu = decode_E2AP_PDU(buffer, buf_size);
+    if ( pdu != NULL && pdu->present == E2AP_PDU_PR_successfulOutcome )
     {
-        for (int i = 0; i < pdu->protocolIEs.list.count; ++i )
+        SuccessfulOutcomeE2_t* successfulOutcome = pdu->choice.successfulOutcome;
+        if ( successfulOutcome->procedureCode == ProcedureCode_id_ricSubscriptionDelete
+            && successfulOutcome->value.present == SuccessfulOutcomeE2__value_PR_RICsubscriptionDeleteResponse )
         {
-            if ( pdu->protocolIEs.list.array[i]->id == ProtocolIE_ID_id_RICrequestID )
+            RICsubscriptionDeleteResponse_t* subscriptionDeleteResponse = &successfulOutcome->value.choice.RICsubscriptionDeleteResponse;
+            for (int i = 0; i < subscriptionDeleteResponse->protocolIEs.list.count; ++i )
             {
-                /* TODO */
-                return pdu->protocolIEs.list.array[i]->value.choice.RICrequestID.ricRequestSequenceNumber;
+                if ( subscriptionDeleteResponse->protocolIEs.list.array[i]->id == ProtocolIE_ID_id_RICrequestID )
+                {
+                    return subscriptionDeleteResponse->protocolIEs.list.array[i]->value.choice.RICrequestID.ricRequestSequenceNumber;
+                }
             }
         }
     }
@@ -246,16 +186,21 @@ long e2ap_get_ric_subscription_delete_response_sequence_number(void *buffer, siz
 
 ssize_t  e2ap_set_ric_subscription_delete_response_sequence_number(void *buffer, size_t buf_size, long sequence_number)
 {
-    RICsubscriptionDeleteResponse_t *pdu = decode_RIC_subscription_delete_response(buffer, buf_size);
-    if ( pdu != NULL )
+    E2AP_PDU_t *pdu = decode_E2AP_PDU(buffer, buf_size);
+    if ( pdu != NULL && pdu->present == E2AP_PDU_PR_successfulOutcome )
     {
-        for (int i = 0; i < pdu->protocolIEs.list.count; ++i )
+        SuccessfulOutcomeE2_t* successfulOutcome = pdu->choice.successfulOutcome;
+        if ( successfulOutcome->procedureCode == ProcedureCode_id_ricSubscriptionDelete
+            && successfulOutcome->value.present == SuccessfulOutcomeE2__value_PR_RICsubscriptionDeleteResponse )
         {
-            if ( pdu->protocolIEs.list.array[i]->id == ProtocolIE_ID_id_RICrequestID )
+            RICsubscriptionDeleteResponse_t* subscriptionDeleteResponse;
+            for (int i = 0; i < subscriptionDeleteResponse->protocolIEs.list.count; ++i )
             {
-                /* todo */
-                pdu->protocolIEs.list.array[i]->value.choice.RICrequestID.ricRequestSequenceNumber = sequence_number;
-                return encode_RIC_subscription_delete_response(pdu, buffer, buf_size);
+                if ( subscriptionDeleteResponse->protocolIEs.list.array[i]->id == ProtocolIE_ID_id_RICrequestID )
+                {
+                    subscriptionDeleteResponse->protocolIEs.list.array[i]->value.choice.RICrequestID.ricRequestSequenceNumber = sequence_number;
+                    return encode_E2AP_PDU(pdu, buffer, buf_size);
+                }
             }
         }
     }

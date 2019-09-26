@@ -32,6 +32,7 @@ import (
 type RtmgrClient struct {
 	rtClient         *rtmgrclient.RoutingManager
 	xappHandleParams *rtmgrhandle.ProvideXappSubscriptionHandleParams
+	xappDeleteParams *rtmgrhandle.DeleteXappSubscriptionHandleParams
 }
 
 func (rc *RtmgrClient) SubscriptionRequestUpdate() error {
@@ -52,6 +53,15 @@ func (rc *RtmgrClient) SubscriptionRequestUpdate() error {
 			return postErr
 		} else {
 			xapp.Logger.Info("Succesfully updated routing manager about the subscription: %d", subID)
+			return nil
+		}
+	case DELETE:
+		_, _, deleteErr := rc.rtClient.Handle.DeleteXappSubscriptionHandle(rc.xappDeleteParams.WithXappSubscriptionData(&xappSubReq))
+		if deleteErr != nil && !(strings.Contains(deleteErr.Error(), "status 200"))  {
+			xapp.Logger.Error("Deleting subscription id = %d  in routing manager, failed with error: %v", subID, deleteErr)
+			return deleteErr
+		} else {
+			xapp.Logger.Info("Succesfully deleted subscription: %d in routing manager.", subID)
 			return nil
 		}
 	default:
