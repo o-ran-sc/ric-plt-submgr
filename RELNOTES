@@ -1,3 +1,12 @@
+### v0.10.3
+* The following tools made available in the final docker image: iputils-ping, net-tools, curl and tcpdump
+
+### v0.10.2
+* Taking in use the most recent RMr version
+
+### v0.10.1
+* Sequential execution of message handling to avoid parallel read/write of internal hash maps
+
 ### v0.10.0
 * Tracking Mbuf in transaction table
 
