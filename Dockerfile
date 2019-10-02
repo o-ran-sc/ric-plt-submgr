@@ -25,9 +25,9 @@ FROM nexus3.o-ran-sc.org:10004/bldr-ubuntu18-c-go:1-u18.04-nng1.1.1 as submgrbui
 WORKDIR /tmp
 
 # Install RMr shared library
-RUN wget --content-disposition https://packagecloud.io/o-ran-sc/staging/packages/debian/stretch/rmr_1.6.0_amd64.deb/download.deb && dpkg -i rmr_1.6.0_amd64.deb && rm -rf rmr_1.6.0_amd64.deb
+RUN wget --content-disposition https://packagecloud.io/o-ran-sc/staging/packages/debian/stretch/rmr_1.9.0_amd64.deb/download.deb && dpkg -i rmr_1.9.0_amd64.deb && rm -rf rmr_1.9.0_amd64.deb
 # Install RMr development header files
-RUN wget --content-disposition https://packagecloud.io/o-ran-sc/staging/packages/debian/stretch/rmr-dev_1.6.0_amd64.deb/download.deb && dpkg -i rmr-dev_1.6.0_amd64.deb && rm -rf rmr-dev_1.6.0_amd64.deb
+RUN wget --content-disposition https://packagecloud.io/o-ran-sc/staging/packages/debian/stretch/rmr-dev_1.9.0_amd64.deb/download.deb && dpkg -i rmr-dev_1.9.0_amd64.deb && rm -rf rmr-dev_1.9.0_amd64.deb
 
 # "PULLING LOG and COMPILING LOG"
 RUN git clone "https://gerrit.o-ran-sc.org/r/com/log" /opt/log && cd /opt/log && \
@@ -66,10 +66,10 @@ RUN mkdir -p /root/go && \
     /usr/local/go/bin/swagger generate client -f api/routing_manager.yaml -t pkg/ -m rtmgr_models -c rtmgr_client
 
 
+RUN /usr/local/go/bin/go mod tidy
 COPY pkg pkg
 COPY cmd cmd
 
-RUN /usr/local/go/bin/go mod tidy
 
 RUN git clone -b v0.0.8 "https://gerrit.o-ran-sc.org/r/ric-plt/xapp-frame" /tmp/xapp-frame
 COPY tmp/rmr.go /tmp/xapp-frame/pkg/xapp/rmr.go
@@ -84,6 +84,8 @@ RUN mkdir -p /opt/bin && \
 COPY config config
 
 FROM ubuntu:18.04
+
+RUN apt update && apt install -y iputils-ping net-tools curl tcpdump
 
 COPY --from=submgrbuild /opt/bin/submgr /opt/submgr/config/submgr.yaml /
 COPY run_submgr.sh /
