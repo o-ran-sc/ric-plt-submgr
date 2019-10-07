@@ -1,3 +1,6 @@
+### v0.10.4
+* Configmap usage introduced for K8s based deployments
+
 ### v0.10.3
 * The following tools made available in the final docker image: iputils-ping, net-tools, curl and tcpdump
 
