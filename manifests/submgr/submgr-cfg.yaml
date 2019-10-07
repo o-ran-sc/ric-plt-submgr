@@ -1,4 +1,3 @@
-#!/bin/sh -e
 #
 #==================================================================================
 #   Copyright (c) 2019 AT&T Intellectual Property.
@@ -18,8 +17,27 @@
 #==================================================================================
 #
 #
-#	Mnemonic:	run_submgr.sh
-#	Abstract:	Starts the submgr service
-#	Date:		28 May 2019
+#   Abstract:           Configuration values for the Subscription Manager
+#   Date:               4 Oct 2019
 #
-exec ./submgr -f $CFGFILE
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: submgrcfg
+  namespace: ricplt
+data:
+  # FQDN and port info of rtmgr
+  submgrcfg: |
+    "local":
+      "host": ":8080"
+    "logger":
+      "level": 3
+      "rmr":
+        "protPort": "tcp:4560"
+        "maxSize": 2072
+        "numWorkers": 1
+        "rtmgr":
+        "hostAddr": "rtmgr"
+        "port"    : 8888
+        "baseUrl" : "/ric/v1"
+
