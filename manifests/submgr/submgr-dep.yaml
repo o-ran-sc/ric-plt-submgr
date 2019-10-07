@@ -40,11 +40,25 @@ spec:
         image: jenkins:5000/submgr:test
         command: ["/run_submgr.sh"]
         env:
-        - name: DBAAS_SERVICE_HOST
-          value: service-ricplt-dbaas-tcp
-        - name: SUBMGR_SEED_SN
-          value: "1"
+          - name: DBAAS_SERVICE_HOST
+            value: service-ricplt-dbaas-tcp
+          - name: SUBMGR_SEED_SN
+            value: "1"
+          - name: CFGFILE
+            value: /cfg/submgr-config.yaml
         ports:
-        - containerPort: 8080
-        - containerPort: 4560
-        - containerPort: 4561
+          - containerPort: 8080
+          - containerPort: 4560
+          - containerPort: 4561
+        volumeMounts:
+          - mountPath: /cfg
+            name: submgrcfg
+            readOnly: true
+      volumes:
+        - name: submgrcfg
+          configMap:
+            name: submgrcfg
+            items:
+              - key: submgrcfg
+                path: submgr-config.yaml
+                mode: 0644
