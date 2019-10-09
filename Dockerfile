@@ -86,6 +86,7 @@ FROM ubuntu:18.04
 RUN apt update && apt install -y iputils-ping net-tools curl tcpdump
 
 COPY run_submgr.sh /
+COPY --from=submgrbuild /opt/bin/submgr /
 COPY --from=submgrbuild /usr/local/include /usr/local/include
 COPY --from=submgrbuild /usr/local/lib /usr/local/lib
 RUN ldconfig

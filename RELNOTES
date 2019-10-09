@@ -1,3 +1,6 @@
+### v0.10.5
+* Dockerfile correction, main binary not copied
+
 ### v0.10.4
 * Configmap usage introduced for K8s based deployments
 
