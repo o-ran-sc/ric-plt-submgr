@@ -25,101 +25,115 @@ import (
 	submgr "gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/control"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"github.com/spf13/viper"
-	"time"
 	"os"
+	"strconv"
+	"time"
 )
 
 type Rco struct {
 	submgr.E2ap
 }
 
-var c chan submgr.RmrDatagram = make(chan submgr.RmrDatagram, 1)
-var params *xapp.RMRParams
+var c = make(chan submgr.RmrDatagram, 1)
+var params xapp.RMRParams
 
-var REQUESTRAWDATA string
-var DELETERAWDATA string
-var SEEDSN uint16
-var DELETESEEDSN uint16
+var requestRawData string
+var deleteRawData string
+var seedSN uint16
+var deleteSeedSN uint16
 
 func init() {
 	viper.AutomaticEnv()
 	viper.SetEnvPrefix("rco")
 	viper.AllowEmptyEnv(true)
-	REQUESTRAWDATA = viper.GetString("rawdata")
-	if REQUESTRAWDATA == "" {
-		REQUESTRAWDATA = "000003ea7e000500aaaaccccea6300020000ea81000e00045465737400ea6b0003000100"
+	requestRawData = viper.GetString("rawdata")
+	if requestRawData == "" {
+		requestRawData = "00c90020000003ea7e00050000010002ea6300020003ea81000a000000ea6b4003000440"
 	}
-	DELETERAWDATA = viper.GetString("deleterawdata")
-	if DELETERAWDATA == "" {
-		DELETERAWDATA = "000002ea7e000500aaaabbbbea6300020000"
+	deleteRawData = viper.GetString("deleterawdata")
+	if deleteRawData == "" {
+		deleteRawData = "00ca0012000002ea7e00050000010002ea6300020003"
 	}
-	xapp.Logger.Info("Initial RAW DATA: %v", REQUESTRAWDATA)
-	xapp.Logger.Info("Initial DELETE RAW DATA: %v", DELETERAWDATA)
-	SEEDSN = uint16(viper.GetInt("seed_sn"))
-	if SEEDSN == 0 || SEEDSN > 65535 {
-		SEEDSN = 12345
+	xapp.Logger.Info("Initial RAW DATA: %v", requestRawData)
+	xapp.Logger.Info("Initial DELETE RAW DATA: %v", deleteRawData)
+	seedSN = uint16(viper.GetInt("seed_sn"))
+	if seedSN == 0 || seedSN > 65535 {
+		seedSN = 12345
 	}
-	DELETESEEDSN = uint16(viper.GetInt("delete_seed_sn"))
-	if DELETESEEDSN == 0 || DELETESEEDSN > 65535 {
-		DELETESEEDSN = SEEDSN
+	deleteSeedSN = uint16(viper.GetInt("delete_seed_sn"))
+	if deleteSeedSN == 0 || deleteSeedSN > 65535 {
+		deleteSeedSN = seedSN
 	}
 
-	xapp.Logger.Info("Initial SEQUENCE NUMBER: %v", SEEDSN)
+	xapp.Logger.Info("Initial SEQUENCE NUMBER: %v", seedSN)
 }
 
-func (r *Rco) GeneratePayload(sub_id uint16) (payload []byte, err error) {
-	skeleton, err := hex.DecodeString(REQUESTRAWDATA)
+func (r *Rco) GeneratePayload(subId uint16) (payload []byte, err error) {
+	skeleton, err := hex.DecodeString(requestRawData)
 	if err != nil {
-		return make([]byte, 0), errors.New("Unable to decode data provided in RCO_RAWDATA environment variable")
+		return make([]byte, 0), errors.New("nable to decode data provided in \"RCO_RAWDATA\" environment variable")
 	}
-	payload, err = r.SetSubscriptionRequestSequenceNumber(skeleton, sub_id)
+	payload, err = r.SetSubscriptionRequestSequenceNumber(skeleton, subId)
 	return
 }
 
-func (r *Rco) GenerateDeletePayload(sub_id uint16) (payload []byte, err error) {
-	skeleton, err := hex.DecodeString(DELETERAWDATA)
+func (r *Rco) GenerateDeletePayload(subId uint16) (payload []byte, err error) {
+	skeleton, err := hex.DecodeString(deleteRawData)
 	if err != nil {
-		return make([]byte, 0), errors.New("Unable to decode data provided in RCO_DELETE RAWDATA environment variable")
+		return make([]byte, 0), errors.New("unable to decode data provided in \"RCO_DELETERAWDATA\" environment variable")
 	}
-	payload, err = r.SetSubscriptionDeleteRequestSequenceNumber(skeleton, sub_id)
+	payload, err = r.SetSubscriptionDeleteRequestSequenceNumber(skeleton, subId)
 	return
 }
 
 func (r Rco) Consume(params *xapp.RMRParams) (err error) {
-	payload_seq_num, err := r.GetSubscriptionResponseSequenceNumber(params.Payload)
-	if err != nil {
-		xapp.Logger.Error("Unable to get Subscription Sequence Number from Payload due to: " + err.Error())	
+	switch params.Mtype {
+	case xapp.RICMessageTypes["RIC_SUB_RESP"]:
+		payloadSeqNum, err := r.GetSubscriptionResponseSequenceNumber(params.Payload)
+		if err != nil {
+			xapp.Logger.Error("SUBRESP: Unable to get Subscription Sequence Number from Payload due to: " + err.Error())
+		}
+		xapp.Logger.Info("Subscription Response Message Received: RMR SUBSCRIPTION_ID: %v | PAYLOAD SEQUENCE_NUMBER: %v", params.SubId, payloadSeqNum)
+		return err
+	case xapp.RICMessageTypes["RIC_SUB_DEL_RESP"]:
+		payloadSeqNum, err := r.GetSubscriptionDeleteResponseSequenceNumber(params.Payload)
+		if err != nil {
+			xapp.Logger.Error("DELRESP: Unable to get Subscription Sequence Number from Payload due to: " + err.Error())
+		}
+		xapp.Logger.Info("Subscription Delete Response Message Received: RMR SUBSCRIPTION_ID: %v | PAYLOAD SEQUENCE_NUMBER: %v", params.SubId, payloadSeqNum)
+		return err
+	default:
+		err = errors.New("Message Type " + strconv.Itoa(params.Mtype) + " is discarded")
+		xapp.Logger.Error("Unknown message type: %v", err)
+		return
 	}
-	xapp.Logger.Info("Message Received: RMR SUBSCRIPTION_ID: %v | PAYLOAD SEQUENCE_NUMBER: %v", params.SubId, payload_seq_num)
-	return
 }
 
 func (r *Rco) SendRequests() (err error) {
-	message, err := r.GeneratePayload(SEEDSN)
+	message, err := r.GeneratePayload(seedSN)
 	if err != nil {
 		xapp.Logger.Debug(err.Error())
 		return
 	}
-	deletemessage, err := r.GenerateDeletePayload(DELETESEEDSN)
+	deletemessage, err := r.GenerateDeletePayload(deleteSeedSN)
 	if err != nil {
 		xapp.Logger.Debug(err.Error())
 		return
 	}
 	for {
-		time.Sleep(2 * time.Second)
-		c <- submgr.RmrDatagram{12010, SEEDSN, message}
-		SEEDSN++
-		time.Sleep(2 * time.Second)
-		c <- submgr.RmrDatagram{12020, DELETESEEDSN, deletemessage}
-		DELETESEEDSN++
+		time.Sleep(5 * time.Second)
+		c <- submgr.RmrDatagram{MessageType: 12010, SubscriptionId: seedSN, Payload: message}
+		seedSN++
+		time.Sleep(5 * time.Second)
+		c <- submgr.RmrDatagram{MessageType: 12020, SubscriptionId: deleteSeedSN, Payload: deletemessage}
+		deleteSeedSN++
 	}
-	return
 }
 
 func (r *Rco) Run() {
 	for {
 		message := <-c
-		payload_seq_num, err := r.GetSubscriptionRequestSequenceNumber(message.Payload)
+		payloadSeqNum, err := r.GetSubscriptionRequestSequenceNumber(message.Payload)
 		if err != nil {
 			xapp.Logger.Debug("Unable to get Subscription Sequence Number from Payload due to: " + err.Error())
 		}
@@ -127,17 +141,17 @@ func (r *Rco) Run() {
 		params.Mtype = message.MessageType
 		params.PayloadLen = len(message.Payload)
 		params.Payload = message.Payload
-		xapp.Logger.Info("Sending Message: TYPE: %v | RMR SUBSCRIPTION_ID: %v | PAYLOAD SEQUENCE_NUMBER: %v)", message.MessageType, message.SubscriptionId, payload_seq_num)
-		xapp.Rmr.Send(params, false)
+		xapp.Logger.Info("Sending Message: TYPE: %v | RMR SUBSCRIPTION_ID: %v | PAYLOAD SEQUENCE_NUMBER: %v)", message.MessageType, message.SubscriptionId, payloadSeqNum)
+		xapp.Rmr.Send(&params, false)
 	}
 }
 
-func (r *Rco) sendInvalidTestMessages(){
+func (r *Rco) sendInvalidTestMessages() {
 	for {
 		time.Sleep(7 * time.Second)
-		c <- submgr.RmrDatagram{10000, 0, make([]byte, 1)}
+		c <- submgr.RmrDatagram{MessageType: 10000, SubscriptionId: 0, Payload: make([]byte, 1)}
 		time.Sleep(7 * time.Second)
-		c <- submgr.RmrDatagram{12010, 0, make([]byte, 1)}
+		c <- submgr.RmrDatagram{MessageType: 12010, SubscriptionId: 0, Payload: make([]byte, 1)}
 	}
 }
 
@@ -148,6 +162,7 @@ func main() {
 	go rco.sendInvalidTestMessages()
 	err := rco.SendRequests()
 	if err != nil {
+		xapp.Logger.Info("Error: %v", err)
 		os.Exit(1)
 	}
 }

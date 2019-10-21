@@ -29,24 +29,22 @@ type RmrDatagram struct {
 	Payload        []byte
 }
 
-type subRouteInfo struct {
-	Command  Action
-	Address  string
-	Port     uint16
-	SubID    uint16
+type SubRouteInfo struct {
+	Command Action
+	Address string
+	Port    uint16
+	SubID   uint16
 }
 
 type Action int
 
-type Transaction_key struct {
-	SubID      uint16
-	trans_type Action
+type TransactionKey struct {
+	SubID     uint16
+	transType Action
 }
 
 type Transaction struct {
-//	Xapp_address          string
-	Xapp_instance_address string
-	Xapp_port             uint16
-	Ric_sub_req           []byte
-	Mbuf                  *xapp.RMRMbuf
+	XappInstanceAddress string
+	XappPort            uint16
+	OrigParams          *xapp.RMRParams
 }

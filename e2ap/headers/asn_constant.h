@@ -11,8 +11,6 @@ extern "C" {
 
 #define maxofRANfunctionID (256)
 #define maxofRICactionID (16)
-#define maxofInterfaceProtocolIE (15)
-#define maxofActionParameters (255)
 #define maxPrivateIEs (65535)
 #define maxProtocolExtensions (65535)
 #define maxProtocolIEs (65535)

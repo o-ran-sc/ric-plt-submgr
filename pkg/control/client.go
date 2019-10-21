@@ -20,13 +20,13 @@
 package control
 
 import (
+	"errors"
 	rtmgrclient "gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/rtmgr_client"
 	rtmgrhandle "gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/rtmgr_client/handle"
 	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/rtmgr_models"
-	"strings"
-	"strconv"
-	"errors"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
+	"strconv"
+	"strings"
 )
 
 type RtmgrClient struct {
@@ -48,7 +48,7 @@ func (rc *RtmgrClient) SubscriptionRequestUpdate() error {
 	switch subRouteAction.Command {
 	case CREATE:
 		_, postErr := rc.rtClient.Handle.ProvideXappSubscriptionHandle(rc.xappHandleParams.WithXappSubscriptionData(&xappSubReq))
-		if postErr != nil && !(strings.Contains(postErr.Error(), "status 200"))  {
+		if postErr != nil && !(strings.Contains(postErr.Error(), "status 200")) {
 			xapp.Logger.Error("Updating routing manager about subscription id = %d failed with error: %v", subID, postErr)
 			return postErr
 		} else {
@@ -57,7 +57,7 @@ func (rc *RtmgrClient) SubscriptionRequestUpdate() error {
 		}
 	case DELETE:
 		_, _, deleteErr := rc.rtClient.Handle.DeleteXappSubscriptionHandle(rc.xappDeleteParams.WithXappSubscriptionData(&xappSubReq))
-		if deleteErr != nil && !(strings.Contains(deleteErr.Error(), "status 200"))  {
+		if deleteErr != nil && !(strings.Contains(deleteErr.Error(), "status 200")) {
 			xapp.Logger.Error("Deleting subscription id = %d  in routing manager, failed with error: %v", subID, deleteErr)
 			return deleteErr
 		} else {
@@ -72,11 +72,11 @@ func (rc *RtmgrClient) SubscriptionRequestUpdate() error {
 func (rc *RtmgrClient) SplitSource(src string) (*string, *uint16, error) {
 	tcpSrc := strings.Split(src, ":")
 	if len(tcpSrc) != 2 {
-		err := errors.New("Unable to get the source details of the xapp. Check the source string received from the rmr.")
+		err := errors.New("unable to get the source details of the xapp - check the source string received from the rmr")
 		return nil, nil, err
 	}
 	srcAddr := tcpSrc[0]
-	xapp.Logger.Info("---Debugging Inside splitsource tcpsrc[0] = %s and tcpsrc[1]= %s ", tcpSrc[0], tcpSrc[1])
+	xapp.Logger.Debug("---Debugging Inside splitsource tcpsrc[0] = %s and tcpsrc[1]= %s ", tcpSrc[0], tcpSrc[1])
 	srcPort, err := strconv.ParseUint(tcpSrc[1], 10, 16)
 	if err != nil {
 		return nil, nil, err

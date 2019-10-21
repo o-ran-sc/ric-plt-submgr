@@ -34,9 +34,7 @@ func (r *Registry) Initialize(seedsn uint16) {
 
 // Reserves and returns the next free sequence number
 func (r *Registry) ReserveSequenceNumber() uint16 {
-	if r.IsValidSequenceNumber(r.counter){
-
-	}
+	if r.IsValidSequenceNumber(r.counter) {	}
 	sequenceNumber := r.counter
 	r.register[sequenceNumber] = false
 	r.shift()

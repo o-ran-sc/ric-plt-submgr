@@ -29,9 +29,9 @@ long e2ap_get_ric_subscription_request_sequence_number(void *buffer, size_t buf_
     E2AP_PDU_t *pdu = decode_E2AP_PDU(buffer, buf_size);
     if ( pdu != NULL && pdu->present == E2AP_PDU_PR_initiatingMessage)
     {
-        InitiatingMessageE2_t* initiatingMessage = pdu->choice.initiatingMessage;
+        InitiatingMessage_t* initiatingMessage = pdu->choice.initiatingMessage;
         if ( initiatingMessage->procedureCode == ProcedureCode_id_ricSubscription
-            && initiatingMessage->value.present == InitiatingMessageE2__value_PR_RICsubscriptionRequest)
+            && initiatingMessage->value.present == InitiatingMessage__value_PR_RICsubscriptionRequest)
         {
             RICsubscriptionRequest_t *ric_subscription_request = &(initiatingMessage->value.choice.RICsubscriptionRequest);
             for (int i = 0; i < ric_subscription_request->protocolIEs.list.count; ++i )
@@ -51,9 +51,9 @@ ssize_t  e2ap_set_ric_subscription_request_sequence_number(void *buffer, size_t 
     E2AP_PDU_t *pdu = decode_E2AP_PDU(buffer, buf_size);
     if ( pdu != NULL && pdu->present == E2AP_PDU_PR_initiatingMessage)
     {
-        InitiatingMessageE2_t* initiatingMessage = pdu->choice.initiatingMessage;
+        InitiatingMessage_t* initiatingMessage = pdu->choice.initiatingMessage;
         if ( initiatingMessage->procedureCode == ProcedureCode_id_ricSubscription
-            && initiatingMessage->value.present == InitiatingMessageE2__value_PR_RICsubscriptionRequest)
+            && initiatingMessage->value.present == InitiatingMessage__value_PR_RICsubscriptionRequest)
         {
             RICsubscriptionRequest_t *ricSubscriptionRequest = &initiatingMessage->value.choice.RICsubscriptionRequest;
             for (int i = 0; i < ricSubscriptionRequest->protocolIEs.list.count; ++i )
@@ -75,9 +75,9 @@ long e2ap_get_ric_subscription_response_sequence_number(void *buffer, size_t buf
     E2AP_PDU_t *pdu = decode_E2AP_PDU(buffer, buf_size);
     if ( pdu != NULL && pdu->present == E2AP_PDU_PR_successfulOutcome )
     {
-        SuccessfulOutcomeE2_t* successfulOutcome = pdu->choice.successfulOutcome;
+        SuccessfulOutcome_t* successfulOutcome = pdu->choice.successfulOutcome;
         if ( successfulOutcome->procedureCode == ProcedureCode_id_ricSubscription
-            && successfulOutcome->value.present == SuccessfulOutcomeE2__value_PR_RICsubscriptionResponse)
+            && successfulOutcome->value.present == SuccessfulOutcome__value_PR_RICsubscriptionResponse)
         {
             RICsubscriptionResponse_t *ricSubscriptionResponse = &successfulOutcome->value.choice.RICsubscriptionResponse;
             for (int i = 0; i < ricSubscriptionResponse->protocolIEs.list.count; ++i )
@@ -97,9 +97,9 @@ ssize_t  e2ap_set_ric_subscription_response_sequence_number(void *buffer, size_t
     E2AP_PDU_t *pdu = decode_E2AP_PDU(buffer, buf_size);
     if ( pdu != NULL && pdu->present == E2AP_PDU_PR_successfulOutcome )
     {
-        SuccessfulOutcomeE2_t* successfulOutcome = pdu->choice.successfulOutcome;
+        SuccessfulOutcome_t* successfulOutcome = pdu->choice.successfulOutcome;
         if ( successfulOutcome->procedureCode == ProcedureCode_id_ricSubscription
-            && successfulOutcome->value.present == SuccessfulOutcomeE2__value_PR_RICsubscriptionResponse)
+            && successfulOutcome->value.present == SuccessfulOutcome__value_PR_RICsubscriptionResponse)
         {
             RICsubscriptionResponse_t *ricSubscriptionResponse = &successfulOutcome->value.choice.RICsubscriptionResponse;
             for (int i = 0; i < ricSubscriptionResponse->protocolIEs.list.count; ++i )
@@ -121,9 +121,9 @@ long e2ap_get_ric_subscription_delete_request_sequence_number(void *buffer, size
     E2AP_PDU_t *pdu = decode_E2AP_PDU(buffer, buf_size);
     if ( pdu != NULL && pdu->present == E2AP_PDU_PR_initiatingMessage )
     {
-        InitiatingMessageE2_t* initiatingMessage = pdu->choice.initiatingMessage;
+        InitiatingMessage_t* initiatingMessage = pdu->choice.initiatingMessage;
         if ( initiatingMessage->procedureCode == ProcedureCode_id_ricSubscriptionDelete
-            && initiatingMessage->value.present == InitiatingMessageE2__value_PR_RICsubscriptionDeleteRequest )
+            && initiatingMessage->value.present == InitiatingMessage__value_PR_RICsubscriptionDeleteRequest )
         {
             RICsubscriptionDeleteRequest_t *subscriptionDeleteRequest = &initiatingMessage->value.choice.RICsubscriptionDeleteRequest;
             for (int i = 0; i < subscriptionDeleteRequest->protocolIEs.list.count; ++i )
@@ -143,9 +143,9 @@ ssize_t  e2ap_set_ric_subscription_delete_request_sequence_number(void *buffer, 
     E2AP_PDU_t *pdu = decode_E2AP_PDU(buffer, buf_size);
     if ( pdu != NULL && pdu->present == E2AP_PDU_PR_initiatingMessage )
     {
-        InitiatingMessageE2_t* initiatingMessage = pdu->choice.initiatingMessage;
+        InitiatingMessage_t* initiatingMessage = pdu->choice.initiatingMessage;
         if ( initiatingMessage->procedureCode == ProcedureCode_id_ricSubscriptionDelete
-            && initiatingMessage->value.present == InitiatingMessageE2__value_PR_RICsubscriptionDeleteRequest )
+            && initiatingMessage->value.present == InitiatingMessage__value_PR_RICsubscriptionDeleteRequest )
         {
             RICsubscriptionDeleteRequest_t* subscriptionDeleteRequest = &initiatingMessage->value.choice.RICsubscriptionDeleteRequest;
             for (int i = 0; i < subscriptionDeleteRequest->protocolIEs.list.count; ++i )
@@ -167,9 +167,9 @@ long e2ap_get_ric_subscription_delete_response_sequence_number(void *buffer, siz
     E2AP_PDU_t *pdu = decode_E2AP_PDU(buffer, buf_size);
     if ( pdu != NULL && pdu->present == E2AP_PDU_PR_successfulOutcome )
     {
-        SuccessfulOutcomeE2_t* successfulOutcome = pdu->choice.successfulOutcome;
+        SuccessfulOutcome_t* successfulOutcome = pdu->choice.successfulOutcome;
         if ( successfulOutcome->procedureCode == ProcedureCode_id_ricSubscriptionDelete
-            && successfulOutcome->value.present == SuccessfulOutcomeE2__value_PR_RICsubscriptionDeleteResponse )
+            && successfulOutcome->value.present == SuccessfulOutcome__value_PR_RICsubscriptionDeleteResponse )
         {
             RICsubscriptionDeleteResponse_t* subscriptionDeleteResponse = &successfulOutcome->value.choice.RICsubscriptionDeleteResponse;
             for (int i = 0; i < subscriptionDeleteResponse->protocolIEs.list.count; ++i )
@@ -189,11 +189,11 @@ ssize_t  e2ap_set_ric_subscription_delete_response_sequence_number(void *buffer,
     E2AP_PDU_t *pdu = decode_E2AP_PDU(buffer, buf_size);
     if ( pdu != NULL && pdu->present == E2AP_PDU_PR_successfulOutcome )
     {
-        SuccessfulOutcomeE2_t* successfulOutcome = pdu->choice.successfulOutcome;
+        SuccessfulOutcome_t* successfulOutcome = pdu->choice.successfulOutcome;
         if ( successfulOutcome->procedureCode == ProcedureCode_id_ricSubscriptionDelete
-            && successfulOutcome->value.present == SuccessfulOutcomeE2__value_PR_RICsubscriptionDeleteResponse )
+            && successfulOutcome->value.present == SuccessfulOutcome__value_PR_RICsubscriptionDeleteResponse )
         {
-            RICsubscriptionDeleteResponse_t* subscriptionDeleteResponse;
+            RICsubscriptionDeleteResponse_t* subscriptionDeleteResponse = &successfulOutcome->value.choice.RICsubscriptionDeleteResponse;
             for (int i = 0; i < subscriptionDeleteResponse->protocolIEs.list.count; ++i )
             {
                 if ( subscriptionDeleteResponse->protocolIEs.list.array[i]->id == ProtocolIE_ID_id_RICrequestID )

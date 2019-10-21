@@ -6,8 +6,8 @@
 #include "RICsubscriptionDeleteRequest.h"
 #include "RICsubscriptionDeleteResponse.h"
 #include "E2AP-PDU.h"
-#include "InitiatingMessageE2.h"
-#include "SuccessfulOutcomeE2.h"
+#include "InitiatingMessage.h"
+#include "SuccessfulOutcome.h"
 #include "ProtocolIE-Container.h"
 #include "ProtocolIE-Field.h"
 

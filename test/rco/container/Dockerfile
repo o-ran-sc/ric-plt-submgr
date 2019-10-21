@@ -28,7 +28,6 @@ ENV HTTPS_PROXY=http://10.144.1.10:8080
 RUN echo 'use_proxy=yes \n http_proxy=http://10.144.1.10:8080 \n https_proxy=http://10.144.1.10:8080' > /etc/wgetrc
 RUN echo 'Acquire::http::Proxy "http://87.254.212.121:8080/";' > /etc/apt/apt.conf
 
-COPY . /opt/submgr
 # Install RMr shared library
 RUN wget --content-disposition https://packagecloud.io/o-ran-sc/staging/packages/debian/stretch/rmr_1.6.0_amd64.deb/download.deb && dpkg -i rmr_1.6.0_amd64.deb
 # Install RMr development header files
@@ -38,8 +37,11 @@ RUN wget --content-disposition https://packagecloud.io/o-ran-sc/staging/packages
 RUN git clone "https://gerrit.o-ran-sc.org/r/com/log" /opt/log && cd /opt/log && \
  ./autogen.sh && ./configure && make install && ldconfig
 
+WORKDIR /opt/submgr
+
 # "COMPILING E2AP Wrapper"
-RUN cd /opt/submgr/e2ap && \
+COPY e2ap e2ap
+RUN cd e2ap && \
  gcc -c -fPIC -Iheaders/ lib/*.c wrapper.c && \
  gcc *.o -shared -o libwrapper.so && \
  cp libwrapper.so /usr/local/lib/ && \
@@ -53,17 +55,28 @@ RUN cd /usr/local/go/bin \
     && chmod +x swagger
 
 # "Getting and generating routing managers api client"
-RUN cd /opt/submgr \
-    && git clone "https://gerrit.o-ran-sc.org/r/ric-plt/rtmgr" \
+COPY api api
+RUN git clone "https://gerrit.o-ran-sc.org/r/ric-plt/rtmgr" \
     && cp rtmgr/api/routing_manager.yaml api/ \
     && rm -rf rtmgr
-RUN cd /opt/submgr \
-    && mkdir -p /root/go \
-    && /usr/local/go/bin/swagger generate client -f api/routing_manager.yaml -t pkg/ -m rtmgr_models -c rtmgr_client
 
+RUN mkdir pkg
 
-RUN mkdir -p /opt/bin && cd /opt/submgr && \
- /usr/local/go/bin/go get && \
+COPY go.mod go.mod
+
+RUN mkdir -p /root/go && \
+    /usr/local/go/bin/swagger generate client -f api/routing_manager.yaml -t pkg/ -m rtmgr_models -c rtmgr_client
+
+COPY go.mod go.mod
+
+RUN /usr/local/go/bin/go mod tidy
+
+#Compiling RCO
+COPY pkg pkg
+COPY cmd cmd
+COPY test test
+
+RUN mkdir -p /opt/bin && \
    /usr/local/go/bin/go build -o /opt/test/rco/rco ./test/rco/rco.go && \
     mkdir -p /opt/test/rco/container/usr/local
 

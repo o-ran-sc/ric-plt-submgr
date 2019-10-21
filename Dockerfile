@@ -20,7 +20,7 @@
 #	Abstract:	Builds a container to compile Subscription Manager's code
 #	Date:		28 May 2019
 #
-FROM nexus3.o-ran-sc.org:10004/bldr-ubuntu18-c-go:1-u18.04-nng1.1.1 as submgrbuild
+FROM nexus3.o-ran-sc.org:10004/bldr-ubuntu18-c-go:2-u18.04-nng as submgrbuild
 
 WORKDIR /tmp
 
@@ -69,12 +69,6 @@ RUN mkdir -p /root/go && \
 RUN /usr/local/go/bin/go mod tidy
 COPY pkg pkg
 COPY cmd cmd
-
-
-RUN git clone -b v0.0.8 "https://gerrit.o-ran-sc.org/r/ric-plt/xapp-frame" /tmp/xapp-frame
-COPY tmp/rmr.go /tmp/xapp-frame/pkg/xapp/rmr.go
-
-RUN /usr/local/go/bin/go mod edit -replace "gerrit.o-ran-sc.org/r/ric-plt/xapp-frame"="/tmp/xapp-frame"
 
 # "COMPILING Subscription manager"
 RUN mkdir -p /opt/bin && \

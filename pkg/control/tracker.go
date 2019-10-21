@@ -27,24 +27,24 @@ import (
 Implements a record of ongoing transactions and helper functions to CRUD the records.
 */
 type Tracker struct {
-	transaction_table map[Transaction_key]Transaction
+	transactionTable map[TransactionKey]Transaction
 }
 
 func (t *Tracker) Init() {
-	t.transaction_table = make(map[Transaction_key]Transaction)
+	t.transactionTable = make(map[TransactionKey]Transaction)
 }
 
 /*
 Checks if a tranascation with similar type has been ongoing. If not then creates one.
 Returns error if there is similar transatcion ongoing.
 */
-func (t *Tracker) Track_transaction(key Transaction_key, xact Transaction) error{
-	if _, ok := t.transaction_table[key]; ok {
+func (t *Tracker) TrackTransaction(key TransactionKey, xact Transaction) error {
+	if _, ok := t.transactionTable[key]; ok {
 		// TODO: Implement merge related check here. If the key is same but the value is different.
-		err := fmt.Errorf("Transaction tracker: Similar transaction with sub id %d and type %s is ongoing", key.SubID, key.trans_type )
+		err := fmt.Errorf("transaction tracker: Similar transaction with sub id %d and type %s is ongoing", key.SubID, key.transType)
 		return err
 	}
-	t.transaction_table[key] = xact
+	t.transactionTable[key] = xact
 	return nil
 }
 
@@ -52,14 +52,14 @@ func (t *Tracker) Track_transaction(key Transaction_key, xact Transaction) error
 Retreives the transaction table entry for the given request.
 Returns error in case the transaction cannot be found.
 */
-func (t *Tracker) Update_transaction(SubID uint16, trans_type Action, xact Transaction) error{
-	key := Transaction_key{SubID, trans_type}
-	if _, ok := t.transaction_table[key]; ok {
+func (t *Tracker) UpdateTransaction(SubID uint16, transType Action, xact Transaction) error {
+	key := TransactionKey{SubID, transType}
+	if _, ok := t.transactionTable[key]; ok {
 		// TODO: Implement merge related check here. If the key is same but the value is different.
-		err := fmt.Errorf("Transaction tracker: Similar transaction with sub id %d and type %s is ongoing", key.SubID, key.trans_type )
+		err := fmt.Errorf("transaction tracker: Similar transaction with sub id %d and type %v is ongoing", key.SubID, key.transType)
 		return err
 	}
-	t.transaction_table[key] = xact
+	t.transactionTable[key] = xact
 	return nil
 }
 
@@ -67,13 +67,13 @@ func (t *Tracker) Update_transaction(SubID uint16, trans_type Action, xact Trans
 Retreives the transaction table entry for the given request.
 Returns error in case the transaction cannot be found.
 */
-func (t *Tracker) Retrive_transaction(subID uint16, act Action) (Transaction, error){
-	key := Transaction_key{subID, act}
+func (t *Tracker) RetriveTransaction(subID uint16, act Action) (Transaction, error) {
+	key := TransactionKey{subID, act}
 	var xact Transaction
-	if xact, ok := t.transaction_table[key]; ok {
+	if xact, ok := t.transactionTable[key]; ok {
 		return xact, nil
 	}
-	err := fmt.Errorf("Tranaction record for Subscription ID %d and action %s does not exist", subID, act)
+	err := fmt.Errorf("transaction record for Subscription ID %d and action %s does not exist", subID, act)
 	return xact, err
 }
 
@@ -81,13 +81,13 @@ func (t *Tracker) Retrive_transaction(subID uint16, act Action) (Transaction, er
 Deletes the transaction table entry for the given request and returns the deleted xapp's address and port for reference.
 Returns error in case the transaction cannot be found.
 */
-func (t *Tracker) complete_transaction(subID uint16, act Action) (Transaction, error){
-	key := Transaction_key{subID, act}
-	var empty_transaction Transaction
-	if xact, ok := t.transaction_table[key]; ok {
-		delete(t.transaction_table, key)
+func (t *Tracker) completeTransaction(subID uint16, act Action) (Transaction, error) {
+	key := TransactionKey{subID, act}
+	var emptyTransaction Transaction
+	if xact, ok := t.transactionTable[key]; ok {
+		delete(t.transactionTable, key)
 		return xact, nil
 	}
-	err := fmt.Errorf("Tranaction record for Subscription ID %d and action %s does not exist", subID, act)
-	return empty_transaction, err
+	err := fmt.Errorf("transaction record for Subscription ID %d and action %s does not exist", subID, act)
+	return emptyTransaction, err
 }
