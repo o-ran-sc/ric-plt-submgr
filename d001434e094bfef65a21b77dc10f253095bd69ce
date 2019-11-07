@@ -1,0 +1,11 @@
+Verified+1: ORAN Jobbuilder <releng+oran-jobbuilder@linuxfoundation.org>
+Code-Review+1: Juha Hyttinen <juha.hyttinen@nokia.com>
+Code-Review+1: Anssi Mannila <anssi.mannila@nokia.com>
+Code-Review+1: Balint Uveges <balint.uveges@nokia.com>
+Code-Review+2: Kálmán Nagy <kalman.nagy@nokia.com>
+Code-Review+1: Balazs Baksa <balazs.baksa@nokia.com>
+Submitted-by: Zoltán Koczka <zoltan.koczka@nokia.com>
+Submitted-at: Thu, 07 Nov 2019 13:08:32 +0000
+Reviewed-on: https://gerrit.o-ran-sc.org/r/c/ric-plt/submgr/+/1396
+Project: ric-plt/submgr
+Branch: refs/heads/master
