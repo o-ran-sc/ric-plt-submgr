@@ -4,7 +4,7 @@ container_release_tag: 0.10.7
 container_pull_registry: nexus3.o-ran-sc.org:10004
 container_push_registry: nexus3.o-ran-sc.org:10002
 project: ric-plt/submgr
-ref: 7da859b7f9c3deaea8c099f2b3f2186bb438f3e5
+ref: d9673c002a30e08897f170adf1d66e6ca85c5c6a
 containers:
     - name: ric-plt-submgr
       version: 0.10.7
