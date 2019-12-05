@@ -19,7 +19,12 @@
 
 package control
 
-import "gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
+import (
+	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
+	"sync"
+)
+
+var registryMutex = &sync.Mutex{}
 
 type Registry struct {
 	register map[uint16]bool
@@ -33,16 +38,30 @@ func (r *Registry) Initialize(seedsn uint16) {
 }
 
 // Reserves and returns the next free sequence number
-func (r *Registry) ReserveSequenceNumber() uint16 {
-	if r.IsValidSequenceNumber(r.counter) {	}
+func (r *Registry) ReserveSequenceNumber() (uint16, bool) {
+	// Check is current SequenceNumber valid
+	registryMutex.Lock()
+	defer registryMutex.Unlock()
 	sequenceNumber := r.counter
+	if _, ok := r.register[sequenceNumber]; ok {
+		xapp.Logger.Error("Invalid SeqenceNumber sequenceNumber: %v",sequenceNumber)
+		return sequenceNumber, false
+	}
 	r.register[sequenceNumber] = false
-	r.shift()
-	return sequenceNumber
+
+	// Allocate next SequenceNumber value
+	if r.counter == 65535 {
+		r.counter = 0
+	} else {
+		r.counter++
+	}
+	return sequenceNumber, true
 }
 
 // This function checks the validity of the given subscription id
 func (r *Registry) IsValidSequenceNumber(sn uint16) bool {
+	registryMutex.Lock()
+	defer registryMutex.Unlock()
 	xapp.Logger.Debug("Registry map: %v", r.register)
 	if _, ok := r.register[sn]; ok {
 		return true
@@ -52,27 +71,25 @@ func (r *Registry) IsValidSequenceNumber(sn uint16) bool {
 
 // This function sets the give id as confirmed in the register
 func (r *Registry) setSubscriptionToConfirmed(sn uint16) {
+	registryMutex.Lock()
+	defer registryMutex.Unlock()
 	r.register[sn] = true
-}
-
-func (r *Registry) shift() {
-	if r.counter == 65535 {
-		r.counter = 0
-	} else {
-		r.counter++
-	}
 }
 
 //This function sets the given id as unused in the register
 func (r *Registry) deleteSubscription(sn uint16) {
+	registryMutex.Lock()
+	defer registryMutex.Unlock()
 	r.register[sn] = false
 }
 
 //This function releases the given id as unused in the register
 func (r *Registry) releaseSequenceNumber(sn uint16) bool {
+	registryMutex.Lock()
+	defer registryMutex.Unlock()
 	if r.register[sn] {
 		return false
-	} else {
+		} else {
 		delete(r.register, sn)
 		return true
 	}

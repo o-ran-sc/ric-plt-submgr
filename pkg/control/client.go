@@ -35,14 +35,10 @@ type RtmgrClient struct {
 	xappDeleteParams *rtmgrhandle.DeleteXappSubscriptionHandleParams
 }
 
-func (rc *RtmgrClient) SubscriptionRequestUpdate() error {
+func (rc *RtmgrClient) SubscriptionRequestUpdate(subRouteAction SubRouteInfo) error {
 	xapp.Logger.Debug("SubscriptionRequestUpdate() invoked")
-	subRouteAction := <-SubscriptionReqChan
-	// Routing manager handles subscription id as int32 to accomodate -1 and uint16 values
 	subID := int32(subRouteAction.SubID)
-
-	xapp.Logger.Debug("Subscription action details received: ", subRouteAction)
-
+	xapp.Logger.Debug("Subscription action details received. subRouteAction.Command: %v, Address %s, Port %v, subID %v", int16(subRouteAction.Command), subRouteAction.Address, subRouteAction.Port, subID)
 	xappSubReq := rtmgr_models.XappSubscriptionData{&subRouteAction.Address, &subRouteAction.Port, &subID}
 
 	switch subRouteAction.Command {
@@ -65,6 +61,7 @@ func (rc *RtmgrClient) SubscriptionRequestUpdate() error {
 			return nil
 		}
 	default:
+		xapp.Logger.Debug("Unknown subRouteAction.Command: %v, subID: %v", subRouteAction.Command, subRouteAction.Address, subRouteAction.Port, subID)
 		return nil
 	}
 }

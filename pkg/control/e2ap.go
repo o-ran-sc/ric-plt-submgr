@@ -117,3 +117,49 @@ func (c *E2ap) SetSubscriptionDeleteResponseSequenceNumber(payload []byte, newSu
 	newPayload = C.GoBytes(cptr, C.int(size))
 	return
 }
+
+/* RICsubscriptionRequestFailure */
+
+func (c *E2ap) GetSubscriptionFailureSequenceNumber(payload []byte) (subId uint16, err error) {
+	cptr := unsafe.Pointer(&payload[0])
+	cret := C.e2ap_get_ric_subscription_failure_sequence_number(cptr, C.size_t(len(payload)))
+	if cret < 0 {
+		return 0, errors.New("e2ap wrapper is unable to get Subscirption Failure Sequence Number due to wrong or invalid payload")
+	}
+	subId = uint16(cret)
+	return
+}
+
+// This function is not used currently. Can be deleted if not needed
+func (c *E2ap) SetSubscriptionFailureSequenceNumber(payload []byte, newSubscriptionid uint16) (newPayload []byte, err error) {
+	cptr := unsafe.Pointer(&payload[0])
+	size := C.e2ap_set_ric_subscription_failure_sequence_number(cptr, C.size_t(len(payload)), C.long(newSubscriptionid))
+	if size < 0 {
+		return make([]byte, 0), errors.New("e2ap wrapper is unable to set Subscription Failure Sequence Number due to wrong or invalid payload")
+	}
+	newPayload = C.GoBytes(cptr, C.int(size))
+	return
+}
+
+/* RICsubscriptionDeleteFailure */
+
+func (c *E2ap) GetSubscriptionDeleteFailureSequenceNumber(payload []byte) (subId uint16, err error) {
+	cptr := unsafe.Pointer(&payload[0])
+	cret := C.e2ap_get_ric_subscription_delete_failure_sequence_number(cptr, C.size_t(len(payload)))
+	if cret < 0 {
+		return 0, errors.New("e2ap wrapper is unable to get Subscirption Delete Failure Sequence Number due to wrong or invalid payload")
+	}
+	subId = uint16(cret)
+	return
+}
+
+// This function is not used currently. Can be deleted if not needed
+func (c *E2ap) SetSubscriptionDeleteFailureSequenceNumber(payload []byte, newSubscriptionid uint16) (newPayload []byte, err error) {
+	cptr := unsafe.Pointer(&payload[0])
+	size := C.e2ap_set_ric_subscription_delete_failure_sequence_number(cptr, C.size_t(len(payload)), C.long(newSubscriptionid))
+	if size < 0 {
+		return make([]byte, 0), errors.New("e2ap wrapper is unable to set Subscription Delete Failure Sequence Number due to wrong or invalid payload")
+	}
+	newPayload = C.GoBytes(cptr, C.int(size))
+	return
+}

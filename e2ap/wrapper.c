@@ -206,3 +206,95 @@ ssize_t  e2ap_set_ric_subscription_delete_response_sequence_number(void *buffer,
     }
     return -1;
 }
+
+// This function is not used currently. Can be deleted if not needed
+ssize_t  e2ap_set_ric_subscription_failure_sequence_number(void *buffer, size_t buf_size, long sequence_number)
+{
+    E2AP_PDU_t *pdu = decode_E2AP_PDU(buffer, buf_size);
+    if ( pdu != NULL && pdu->present == E2AP_PDU_PR_unsuccessfulOutcome )
+    {
+        UnsuccessfulOutcome_t* unsuccessfulOutcome = pdu->choice.unsuccessfulOutcome;
+        if ( unsuccessfulOutcome->procedureCode == ProcedureCode_id_ricSubscription
+            && unsuccessfulOutcome->value.present == UnsuccessfulOutcome__value_PR_RICsubscriptionFailure )
+        {
+            RICsubscriptionFailure_t* subscriptionFailure = &unsuccessfulOutcome->value.choice.RICsubscriptionFailure;
+            for (int i = 0; i < subscriptionFailure->protocolIEs.list.count; ++i )
+            {
+                if ( subscriptionFailure->protocolIEs.list.array[i]->id == ProtocolIE_ID_id_RICrequestID )
+                {
+                    subscriptionFailure->protocolIEs.list.array[i]->value.choice.RICrequestID.ricRequestSequenceNumber = sequence_number;
+                    return encode_E2AP_PDU(pdu, buffer, buf_size);
+                }
+            }
+        }
+    }
+    return -1;
+}
+
+long e2ap_get_ric_subscription_failure_sequence_number(void *buffer, size_t buf_size)
+{
+    E2AP_PDU_t *pdu = decode_E2AP_PDU(buffer, buf_size);
+    if ( pdu != NULL && pdu->present == E2AP_PDU_PR_unsuccessfulOutcome )
+    {
+        UnsuccessfulOutcome_t* unsuccessfulOutcome = pdu->choice.unsuccessfulOutcome;
+        if ( unsuccessfulOutcome->procedureCode == ProcedureCode_id_ricSubscription
+            && unsuccessfulOutcome->value.present == UnsuccessfulOutcome__value_PR_RICsubscriptionFailure )
+        {
+            RICsubscriptionFailure_t* subscriptionFailure = &unsuccessfulOutcome->value.choice.RICsubscriptionFailure;;
+            for (int i = 0; i < subscriptionFailure->protocolIEs.list.count; ++i )
+            {
+                if ( subscriptionFailure->protocolIEs.list.array[i]->id == ProtocolIE_ID_id_RICrequestID )
+                {
+                    return subscriptionFailure->protocolIEs.list.array[i]->value.choice.RICrequestID.ricRequestSequenceNumber;
+                }
+            }
+        }
+    }
+    return -1;
+}
+
+// This function is not used currently. Can be deleted if not needed
+ssize_t  e2ap_set_ric_subscription_delete_failure_sequence_number(void *buffer, size_t buf_size, long sequence_number)
+{
+    E2AP_PDU_t *pdu = decode_E2AP_PDU(buffer, buf_size);
+    if ( pdu != NULL && pdu->present == E2AP_PDU_PR_unsuccessfulOutcome )
+    {
+        UnsuccessfulOutcome_t* unsuccessfulOutcome = pdu->choice.unsuccessfulOutcome;
+        if ( unsuccessfulOutcome->procedureCode == ProcedureCode_id_ricSubscriptionDelete
+            && unsuccessfulOutcome->value.present == UnsuccessfulOutcome__value_PR_RICsubscriptionDeleteFailure )
+        {
+            RICsubscriptionDeleteFailure_t* subscriptionDeleteFailure = &unsuccessfulOutcome->value.choice.RICsubscriptionDeleteFailure;
+            for (int i = 0; i < subscriptionDeleteFailure->protocolIEs.list.count; ++i )
+            {
+                if ( subscriptionDeleteFailure->protocolIEs.list.array[i]->id == ProtocolIE_ID_id_RICrequestID )
+                {
+                    subscriptionDeleteFailure->protocolIEs.list.array[i]->value.choice.RICrequestID.ricRequestSequenceNumber = sequence_number;
+                    return encode_E2AP_PDU(pdu, buffer, buf_size);
+                }
+            }
+        }
+    }
+    return -1;
+}
+
+long e2ap_get_ric_subscription_delete_failure_sequence_number(void *buffer, size_t buf_size)
+{
+    E2AP_PDU_t *pdu = decode_E2AP_PDU(buffer, buf_size);
+    if ( pdu != NULL && pdu->present == E2AP_PDU_PR_unsuccessfulOutcome )
+    {
+        UnsuccessfulOutcome_t* unsuccessfulOutcome = pdu->choice.unsuccessfulOutcome;
+        if ( unsuccessfulOutcome->procedureCode == ProcedureCode_id_ricSubscriptionDelete
+            && unsuccessfulOutcome->value.present == UnsuccessfulOutcome__value_PR_RICsubscriptionDeleteFailure )
+        {
+            RICsubscriptionDeleteFailure_t* subscriptionDeleteFailure = &unsuccessfulOutcome->value.choice.RICsubscriptionDeleteFailure;;
+            for (int i = 0; i < subscriptionDeleteFailure->protocolIEs.list.count; ++i )
+            {
+                if ( subscriptionDeleteFailure->protocolIEs.list.array[i]->id == ProtocolIE_ID_id_RICrequestID )
+                {
+                    return subscriptionDeleteFailure->protocolIEs.list.array[i]->value.choice.RICrequestID.ricRequestSequenceNumber;
+                }
+            }
+        }
+    }
+    return -1;
+}

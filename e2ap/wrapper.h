@@ -5,9 +5,12 @@
 #include "RICsubscriptionResponse.h"
 #include "RICsubscriptionDeleteRequest.h"
 #include "RICsubscriptionDeleteResponse.h"
+#include "RICsubscriptionFailure.h"
+#include "RICsubscriptionDeleteFailure.h"
 #include "E2AP-PDU.h"
 #include "InitiatingMessage.h"
 #include "SuccessfulOutcome.h"
+#include "UnsuccessfulOutcome.h"
 #include "ProtocolIE-Container.h"
 #include "ProtocolIE-Field.h"
 
@@ -30,6 +33,14 @@ ssize_t  e2ap_set_ric_subscription_delete_request_sequence_number(void *buffer, 
 long e2ap_get_ric_subscription_delete_response_sequence_number(void *buffer, size_t buf_size);
 ssize_t  e2ap_set_ric_subscription_delete_response_sequence_number(void *buffer, size_t buf_size, long sequence_number);
 
+/* RICsubscriptionFailure */
+long e2ap_get_ric_subscription_failure_sequence_number(void *buffer, size_t buf_size);
+// This function is not used currently. Can be deleted if not needed
+ssize_t  e2ap_set_ric_subscription_failure_sequence_number(void *buffer, size_t buf_size, long sequence_number);
 
+/* RICsubscriptionFailure */
+long e2ap_get_ric_subscription_delete_failure_sequence_number(void *buffer, size_t buf_size);
+// This function is not used currently. Can be deleted if not needed
+ssize_t  e2ap_set_ric_subscription_delete_failure_sequence_number(void *buffer, size_t buf_size, long sequence_number);
 
 #endif /* _WRAPPER_H_ */
