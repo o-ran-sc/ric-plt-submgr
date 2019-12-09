@@ -172,7 +172,7 @@ func (c *Control) handleSubscriptionRequest(params *xapp.RMRParams) (err error) 
 		return 
 	}
 
-	_, err = c.e2ap.SetSubscriptionRequestSequenceNumber(params.Payload, newSubId)
+	err = c.e2ap.SetSubscriptionRequestSequenceNumber(params.Payload, newSubId)
 	if err != nil {
 		err = errors.New("Unable to set Subscription Sequence Number in Payload due to: " + err.Error())
 		return
@@ -214,7 +214,7 @@ func (c *Control) handleSubscriptionRequest(params *xapp.RMRParams) (err error) 
 }
 
 func (c *Control) handleSubscriptionResponse(params *xapp.RMRParams) (err error) {
-	xapp.Logger.Info("Subscription Response Received from Src: %s, Mtype: %v, SubId: %v, Meid: %v",params.Src, params.Mtype, params.SubId, params.Xid, params.Meid)
+	xapp.Logger.Info("Subscription Response Received from Src: %s, Mtype: %v, SubId: %v, Meid: %v",params.Src, params.Mtype, params.SubId, params.Meid)
 	xapp.Rmr.Free(params.Mbuf)
 	params.Mbuf = nil
 
@@ -297,7 +297,7 @@ func (c *Control) handleSubscriptionFailure(params *xapp.RMRParams) (err error) 
 	time.Sleep(3 * time.Second)
 
 	xapp.Logger.Info("Starting routing manager update")
-	subRouteAction := SubRouteInfo{DELETE, transaction.XappInstanceAddress, transaction.XappPort, payloadSeqNum}
+	subRouteAction := SubRouteInfo{CREATE, transaction.XappInstanceAddress, transaction.XappPort, payloadSeqNum}
 	c.rtmgrClient.SubscriptionRequestUpdate(subRouteAction)
 
 	xapp.Logger.Info("Deleting trancaction record")
