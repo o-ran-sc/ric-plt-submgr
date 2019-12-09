@@ -61,7 +61,7 @@ func (rc *RtmgrClient) SubscriptionRequestUpdate(subRouteAction SubRouteInfo) er
 			return nil
 		}
 	default:
-		xapp.Logger.Debug("Unknown subRouteAction.Command: %v, subID: %v", subRouteAction.Command, subRouteAction.Address, subRouteAction.Port, subID)
+		xapp.Logger.Debug("Unknown subRouteAction.Command: %v, Address %s, Port %v, subID: %v", subRouteAction.Command, subRouteAction.Address, subRouteAction.Port, subID)
 		return nil
 	}
 }

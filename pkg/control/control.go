@@ -214,7 +214,7 @@ func (c *Control) handleSubscriptionRequest(params *xapp.RMRParams) (err error) 
 }
 
 func (c *Control) handleSubscriptionResponse(params *xapp.RMRParams) (err error) {
-	xapp.Logger.Info("Subscription Response Received from Src: %s, Mtype: %v, SubId: %v, Meid: %v",params.Src, params.Mtype, params.SubId, params.Xid, params.Meid)
+	xapp.Logger.Info("Subscription Response Received from Src: %s, Mtype: %v, SubId: %v, Meid: %v",params.Src, params.Mtype, params.SubId, params.Meid)
 	xapp.Rmr.Free(params.Mbuf)
 	params.Mbuf = nil
 
