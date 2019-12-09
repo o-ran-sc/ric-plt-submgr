@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "16081f9e_2d5c649c",
+        "filename": "pkg/control/client.go",
+        "patchSetId": 1
+      },
+      "lineNbr": 64,
+      "author": {
+        "id": 1000011
+      },
+      "writtenOn": "2019-12-09T09:46:03Z",
+      "side": 1,
+      "message": "Four arguments but only two in fmt.",
+      "revId": "2e99e2f4c89b1c232b3d1765197db44e3cced5b8",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "a06d8959_6b5c2ae9",
+        "filename": "pkg/control/control.go",
+        "patchSetId": 1
+      },
+      "lineNbr": 217,
+      "author": {
+        "id": 1000011
+      },
+      "writtenOn": "2019-12-09T09:46:03Z",
+      "side": 1,
+      "message": "5 arguments but only 4 in fmt",
+      "revId": "2e99e2f4c89b1c232b3d1765197db44e3cced5b8",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": true
+    }
+  ]
+}
