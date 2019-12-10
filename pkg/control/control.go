@@ -111,9 +111,10 @@ func (c *Control) Consume(rp *xapp.RMRParams) (err error) {
 func (c *Control) rmrSend(params *xapp.RMRParams) (err error) {
 	status := false
 	i := 1
-	rmrSendMutex.Lock()
 	for ; i <= 10 && status == false; i++ { 
+		rmrSendMutex.Lock()
 		status = xapp.Rmr.Send(params, false)
+		rmrSendMutex.Unlock()
 		if status == false {
 			xapp.Logger.Info("rmr.Send() failed. Retry count %v, Mtype: %v, SubId: %v, Xid %s",i, params.Mtype, params.SubId, params.Xid)
 			time.Sleep(500 * time.Millisecond)
@@ -123,7 +124,6 @@ func (c *Control) rmrSend(params *xapp.RMRParams) (err error) {
 		err = errors.New("rmr.Send() failed")
 		xapp.Rmr.Free(params.Mbuf)
 	}
-	rmrSendMutex.Unlock()
 	
 	/*
 	if !xapp.Rmr.Send(params, false) {
