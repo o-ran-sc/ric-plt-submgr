@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "979ad1d5_ffdb6652",
+        "filename": "pkg/control/e2ap.go",
+        "patchSetId": 2
+      },
+      "lineNbr": 55,
+      "author": {
+        "id": 1000011
+      },
+      "writtenOn": "2019-12-10T07:43:54Z",
+      "side": 1,
+      "message": "Where this error goes? There is no return for generated error.",
+      "revId": "5d71a98bfd7570cf9fe9faf46645398e64d429bb",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "527e21d2_287d7f5d",
+        "filename": "pkg/control/e2ap.go",
+        "patchSetId": 2
+      },
+      "lineNbr": 65,
+      "author": {
+        "id": 1000011
+      },
+      "writtenOn": "2019-12-10T07:43:54Z",
+      "side": 1,
+      "message": "Add cret into error string?",
+      "revId": "5d71a98bfd7570cf9fe9faf46645398e64d429bb",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": true
+    }
+  ]
+}
