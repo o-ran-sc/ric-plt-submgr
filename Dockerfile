@@ -22,6 +22,8 @@
 #
 FROM nexus3.o-ran-sc.org:10004/bldr-ubuntu18-c-go:2-u18.04-nng as submgrbuild
 
+RUN apt update && apt install -y iputils-ping net-tools curl tcpdump gdb
+
 WORKDIR /tmp
 
 # Install RMr shared library
@@ -30,8 +32,8 @@ RUN wget --content-disposition https://packagecloud.io/o-ran-sc/staging/packages
 RUN wget --content-disposition https://packagecloud.io/o-ran-sc/staging/packages/debian/stretch/rmr-dev_1.10.0_amd64.deb/download.deb && dpkg -i rmr-dev_1.10.0_amd64.deb && rm -rf rmr-dev_1.10.0_amd64.deb
 
 # "PULLING LOG and COMPILING LOG"
-RUN git clone "https://gerrit.o-ran-sc.org/r/com/log" /opt/log && cd /opt/log && \
- ./autogen.sh && ./configure && make install && ldconfig
+#RUN git clone "https://gerrit.o-ran-sc.org/r/com/log" /opt/log && cd /opt/log && \
+# ./autogen.sh && ./configure && make install && ldconfig
 
 # "Installing Swagger"
 RUN cd /usr/local/go/bin \
@@ -41,16 +43,52 @@ RUN cd /usr/local/go/bin \
 
 
 WORKDIR /opt/submgr
-COPY e2ap e2ap
 
-# "COMPILING E2AP Wrapper"
-RUN cd e2ap && \
-    gcc -c -fPIC -Iheaders/ lib/*.c wrapper.c && \
-    gcc *.o -shared -o libwrapper.so && \
-    cp libwrapper.so /usr/local/lib/ && \
-    cp wrapper.h headers/*.h /usr/local/include/ && \
+RUN mkdir pkg
+
+#
+#
+#
+ENV CFLAGS="-DASN_DISABLE_OER_SUPPORT"
+ENV CGO_CFLAGS="-DASN_DISABLE_OER_SUPPORT"
+
+COPY 3rdparty 3rdparty
+RUN cd 3rdparty/libe2ap && \
+    gcc -c ${CFLAGS} -I. -fPIC *.c  && \
+    gcc *.o -shared -o libe2ap.so && \
+    cp libe2ap.so /usr/local/lib/ && \
+    cp *.h /usr/local/include/ && \
     ldconfig
 
+COPY e2ap e2ap
+RUN cd e2ap/libe2ap_wrapper && \
+    gcc -c ${CFLAGS} -fPIC *.c  && \
+    gcc *.o -shared -o libe2ap_wrapper.so && \
+    cp libe2ap_wrapper.so /usr/local/lib/ && \
+    cp *.h /usr/local/include/ && \
+    ldconfig
+
+# unittest
+RUN cd e2ap && /usr/local/go/bin/go test -v ./pkg/conv
+RUN cd e2ap && /usr/local/go/bin/go test -v ./pkg/e2ap_wrapper
+
+# test formating (not important)
+RUN cd e2ap && test -z "$(/usr/local/go/bin/gofmt -l pkg/conv/*.go)"
+RUN cd e2ap && test -z "$(/usr/local/go/bin/gofmt -l pkg/e2ap_wrapper/*.go)"
+RUN cd e2ap && test -z "$(/usr/local/go/bin/gofmt -l pkg/e2ap/*.go)"
+RUN cd e2ap && test -z "$(/usr/local/go/bin/gofmt -l pkg/e2ap/e2ap_tests/*.go)"
+
+#
+#
+#
+COPY go.mod go.mod
+COPY go.sum go.sum
+
+RUN /usr/local/go/bin/go mod download
+
+#
+#
+#
 COPY api api
 
 # "Getting and generating routing managers api client"
@@ -58,23 +96,33 @@ RUN git clone "https://gerrit.o-ran-sc.org/r/ric-plt/rtmgr" \
     && cp rtmgr/api/routing_manager.yaml api/ \
     && rm -rf rtmgr
 
-RUN mkdir pkg
-
-COPY go.mod go.mod
-
 RUN mkdir -p /root/go && \
     /usr/local/go/bin/swagger generate client -f api/routing_manager.yaml -t pkg/ -m rtmgr_models -c rtmgr_client
 
-
-RUN /usr/local/go/bin/go mod tidy
+#
+#
+#
 COPY pkg pkg
 COPY cmd cmd
 
-# "COMPILING Subscription manager"
 RUN mkdir -p /opt/bin && \
-  /usr/local/go/bin/go build -o /opt/bin/submgr cmd/submgr.go && \
-     mkdir -p /opt/build/container/usr/local
+    /usr/local/go/bin/go build -o /opt/bin/submgr cmd/submgr.go && \
+    mkdir -p /opt/build/container/usr/local
 
+
+RUN /usr/local/go/bin/go mod tidy
+
+# unittest
+COPY test/config-file.json test/config-file.json
+ENV CFG_FILE=/opt/submgr/test/config-file.json
+RUN /usr/local/go/bin/go test -count=1 -v ./pkg/control
+
+# test formating (not important)
+RUN test -z "$(/usr/local/go/bin/gofmt -l pkg/control/*.go)"
+
+#
+#
+#
 FROM ubuntu:18.04
 
 RUN apt update && apt install -y iputils-ping net-tools curl tcpdump

@@ -29,7 +29,7 @@ Implements a record of ongoing transactions and helper functions to CRUD the rec
 */
 type Tracker struct {
 	transactionTable map[TransactionKey]Transaction
-	mutex sync.Mutex
+	mutex            sync.Mutex
 }
 
 func (t *Tracker) Init() {

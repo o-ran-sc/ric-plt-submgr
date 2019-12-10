@@ -22,13 +22,13 @@ package control
 /*
 #include <wrapper.h>
 
-#cgo LDFLAGS: -lwrapper
+#cgo LDFLAGS: -le2ap_wrapper -le2ap
 */
 import "C"
 
 import (
-	"unsafe"
 	"fmt"
+	"unsafe"
 )
 
 type E2ap struct {
@@ -41,7 +41,7 @@ func (c *E2ap) GetSubscriptionRequestSequenceNumber(payload []byte) (subId uint1
 	cptr := unsafe.Pointer(&payload[0])
 	cret := C.e2ap_get_ric_subscription_request_sequence_number(cptr, C.size_t(len(payload)))
 	if cret < 0 {
-		return 0, fmt.Errorf("e2ap wrapper is unable to get Subscirption Request Sequence Number due to wrong or invalid payload. ErrorCode: %v",cret)
+		return 0, fmt.Errorf("e2ap wrapper is unable to get Subscirption Request Sequence Number due to wrong or invalid payload. ErrorCode: %v", cret)
 	}
 	subId = uint16(cret)
 	return
@@ -52,7 +52,7 @@ func (c *E2ap) SetSubscriptionRequestSequenceNumber(payload []byte, newSubscript
 	cptr := unsafe.Pointer(&payload[0])
 	size := C.e2ap_set_ric_subscription_request_sequence_number(cptr, C.size_t(len(payload)), C.long(newSubscriptionid))
 	if size < 0 {
-		return fmt.Errorf("e2ap wrapper is unable to set Subscription Request Sequence Number due to wrong or invalid payload. ErrorCode: %v",size)
+		return fmt.Errorf("e2ap wrapper is unable to set Subscription Request Sequence Number due to wrong or invalid payload. ErrorCode: %v", size)
 	}
 	return
 }
@@ -62,18 +62,18 @@ func (c *E2ap) GetSubscriptionResponseSequenceNumber(payload []byte) (subId uint
 	cptr := unsafe.Pointer(&payload[0])
 	cret := C.e2ap_get_ric_subscription_response_sequence_number(cptr, C.size_t(len(payload)))
 	if cret < 0 {
-		return 0, fmt.Errorf("e2ap wrapper is unable to get Subscirption Response Sequence Number due to wrong or invalid payload. ErrorCode: %v",cret)
+		return 0, fmt.Errorf("e2ap wrapper is unable to get Subscirption Response Sequence Number due to wrong or invalid payload. ErrorCode: %v", cret)
 	}
 	subId = uint16(cret)
 	return
 }
 
 // Used by e2t test stub
-func (c *E2ap) SetSubscriptionResponseSequenceNumber(payload []byte, newSubscriptionid uint16) (err error)  {
+func (c *E2ap) SetSubscriptionResponseSequenceNumber(payload []byte, newSubscriptionid uint16) (err error) {
 	cptr := unsafe.Pointer(&payload[0])
 	size := C.e2ap_set_ric_subscription_response_sequence_number(cptr, C.size_t(len(payload)), C.long(newSubscriptionid))
 	if size < 0 {
-		return fmt.Errorf("e2ap wrapper is unable to set Subscription Response Sequence Number due to wrong or invalid payload. ErrorCode: %v",size)
+		return fmt.Errorf("e2ap wrapper is unable to set Subscription Response Sequence Number due to wrong or invalid payload. ErrorCode: %v", size)
 	}
 	return
 }
@@ -85,18 +85,18 @@ func (c *E2ap) GetSubscriptionDeleteRequestSequenceNumber(payload []byte) (subId
 	cptr := unsafe.Pointer(&payload[0])
 	cret := C.e2ap_get_ric_subscription_delete_request_sequence_number(cptr, C.size_t(len(payload)))
 	if cret < 0 {
-		return 0, fmt.Errorf("e2ap wrapper is unable to get Subscirption Delete Request Sequence Number due to wrong or invalid payload. ErrorCode: %v",cret)
+		return 0, fmt.Errorf("e2ap wrapper is unable to get Subscirption Delete Request Sequence Number due to wrong or invalid payload. ErrorCode: %v", cret)
 	}
 	subId = uint16(cret)
 	return
 }
 
 // Used by rco test stub
-func (c *E2ap) SetSubscriptionDeleteRequestSequenceNumber(payload []byte, newSubscriptionid uint16) (err error)  {
+func (c *E2ap) SetSubscriptionDeleteRequestSequenceNumber(payload []byte, newSubscriptionid uint16) (err error) {
 	cptr := unsafe.Pointer(&payload[0])
 	size := C.e2ap_set_ric_subscription_delete_request_sequence_number(cptr, C.size_t(len(payload)), C.long(newSubscriptionid))
 	if size < 0 {
-		return fmt.Errorf("e2ap wrapper is unable to set Subscription Delete Request Sequence Number due to wrong or invalid payload. ErrorCode: %v",size)
+		return fmt.Errorf("e2ap wrapper is unable to set Subscription Delete Request Sequence Number due to wrong or invalid payload. ErrorCode: %v", size)
 	}
 	return
 }
@@ -108,18 +108,18 @@ func (c *E2ap) GetSubscriptionDeleteResponseSequenceNumber(payload []byte) (subI
 	cptr := unsafe.Pointer(&payload[0])
 	cret := C.e2ap_get_ric_subscription_delete_response_sequence_number(cptr, C.size_t(len(payload)))
 	if cret < 0 {
-		return 0, fmt.Errorf("e2ap wrapper is unable to get Subscirption Delete Response Sequence Number due to wrong or invalid payload. ErrorCode: %v",cret)
+		return 0, fmt.Errorf("e2ap wrapper is unable to get Subscirption Delete Response Sequence Number due to wrong or invalid payload. ErrorCode: %v", cret)
 	}
 	subId = uint16(cret)
 	return
 }
 
 // Used by e2t test stub
-func (c *E2ap) SetSubscriptionDeleteResponseSequenceNumber(payload []byte, newSubscriptionid uint16) (err error)  {
+func (c *E2ap) SetSubscriptionDeleteResponseSequenceNumber(payload []byte, newSubscriptionid uint16) (err error) {
 	cptr := unsafe.Pointer(&payload[0])
 	size := C.e2ap_set_ric_subscription_delete_response_sequence_number(cptr, C.size_t(len(payload)), C.long(newSubscriptionid))
 	if size < 0 {
-		return fmt.Errorf("e2ap wrapper is unable to set Subscription Delete Response Sequence Number due to wrong or invalid payload. ErrorCode: %v",size)
+		return fmt.Errorf("e2ap wrapper is unable to set Subscription Delete Response Sequence Number due to wrong or invalid payload. ErrorCode: %v", size)
 	}
 	return
 }
@@ -131,18 +131,18 @@ func (c *E2ap) GetSubscriptionFailureSequenceNumber(payload []byte) (subId uint1
 	cptr := unsafe.Pointer(&payload[0])
 	cret := C.e2ap_get_ric_subscription_failure_sequence_number(cptr, C.size_t(len(payload)))
 	if cret < 0 {
-		return 0, fmt.Errorf("e2ap wrapper is unable to get Subscirption Failure Sequence Number due to wrong or invalid payload. ErrorCode: %v",cret)
+		return 0, fmt.Errorf("e2ap wrapper is unable to get Subscirption Failure Sequence Number due to wrong or invalid payload. ErrorCode: %v", cret)
 	}
 	subId = uint16(cret)
 	return
 }
 
 // Used by submgr
-func (c *E2ap) SetSubscriptionFailureSequenceNumber(payload []byte, newSubscriptionid uint16) (err error)  {
+func (c *E2ap) SetSubscriptionFailureSequenceNumber(payload []byte, newSubscriptionid uint16) (err error) {
 	cptr := unsafe.Pointer(&payload[0])
 	size := C.e2ap_set_ric_subscription_failure_sequence_number(cptr, C.size_t(len(payload)), C.long(newSubscriptionid))
 	if size < 0 {
-		return fmt.Errorf("e2ap wrapper is unable to set Subscription Failure Sequence Number due to wrong or invalid payload. ErrorCode: %v",size)
+		return fmt.Errorf("e2ap wrapper is unable to set Subscription Failure Sequence Number due to wrong or invalid payload. ErrorCode: %v", size)
 	}
 	return
 }
@@ -154,17 +154,18 @@ func (c *E2ap) GetSubscriptionDeleteFailureSequenceNumber(payload []byte) (subId
 	cptr := unsafe.Pointer(&payload[0])
 	cret := C.e2ap_get_ric_subscription_delete_failure_sequence_number(cptr, C.size_t(len(payload)))
 	if cret < 0 {
-		return 0, fmt.Errorf("e2ap wrapper is unable to get Subscirption Delete Failure Sequence Number due to wrong or invalid payload. ErrorCode: %v",cret)
+		return 0, fmt.Errorf("e2ap wrapper is unable to get Subscirption Delete Failure Sequence Number due to wrong or invalid payload. ErrorCode: %v", cret)
 	}
 	subId = uint16(cret)
 	return
 }
+
 // Used by submgr
-func (c *E2ap) SetSubscriptionDeleteFailureSequenceNumber(payload []byte, newSubscriptionid uint16) (err error)  {
+func (c *E2ap) SetSubscriptionDeleteFailureSequenceNumber(payload []byte, newSubscriptionid uint16) (err error) {
 	cptr := unsafe.Pointer(&payload[0])
 	size := C.e2ap_set_ric_subscription_delete_failure_sequence_number(cptr, C.size_t(len(payload)), C.long(newSubscriptionid))
 	if size < 0 {
-		return fmt.Errorf("e2ap wrapper is unable to set Subscription Delete Failure Sequence Number due to wrong or invalid payload. ErrorCode: %v",size)
+		return fmt.Errorf("e2ap wrapper is unable to set Subscription Delete Failure Sequence Number due to wrong or invalid payload. ErrorCode: %v", size)
 	}
 	return
 }

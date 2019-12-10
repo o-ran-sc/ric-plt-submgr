@@ -24,11 +24,10 @@ import (
 	"sync"
 )
 
-
 type Registry struct {
 	register map[uint16]bool
 	counter  uint16
-	mutex sync.Mutex
+	mutex    sync.Mutex
 }
 
 // This method should run as a constructor
@@ -44,7 +43,7 @@ func (r *Registry) ReserveSequenceNumber() (uint16, bool) {
 	defer r.mutex.Unlock()
 	sequenceNumber := r.counter
 	if _, ok := r.register[sequenceNumber]; ok {
-		xapp.Logger.Error("Invalid SeqenceNumber sequenceNumber: %v",sequenceNumber)
+		xapp.Logger.Error("Invalid SeqenceNumber sequenceNumber: %v", sequenceNumber)
 		return sequenceNumber, false
 	}
 	r.register[sequenceNumber] = false
