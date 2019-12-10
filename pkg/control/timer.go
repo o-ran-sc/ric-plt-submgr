@@ -54,7 +54,7 @@ Timer takes four parameters:
 		subId := 123
 		timerMap.StartTimer("RIC_SUB_REQ", int(subId), subReqTime, handleSubscriptionRequestTimer)
 		timerMap.StopTimer("RIC_SUB_REQ", int(subId))
-		
+
 	2)
 		subReqTime := 2 * time.Second
 		strId := "1UHSUwNqxiVgUWXvC4zFaatpZFF"
@@ -82,29 +82,29 @@ import (
 )
 
 type TimerKey struct {
-	strId  string
-	nbrId  int
+	strId string
+	nbrId int
 }
 
 type TimerInfo struct {
-	timerAddress *time.Timer	
+	timerAddress         *time.Timer
 	timerFunctionAddress func()
 }
 
 type TimerMap struct {
-	timer map[TimerKey] TimerInfo
+	timer map[TimerKey]TimerInfo
 	mutex sync.Mutex
 }
 
 // This method should run as a constructor
 func (t *TimerMap) Init() {
-	t.timer = make(map[TimerKey] TimerInfo)
+	t.timer = make(map[TimerKey]TimerInfo)
 }
 
 func (t *TimerMap) StartTimer(strId string, nbrId int, expireAfterTime time.Duration, timerFunction func(srtId string, nbrId int)) bool {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
-	if (timerFunction == nil) {
+	if timerFunction == nil {
 		xapp.Logger.Error("StartTimer() timerFunc == nil\n")
 		return false
 	}
@@ -120,8 +120,8 @@ func (t *TimerMap) StartTimer(strId string, nbrId int, expireAfterTime time.Dura
 	}
 
 	// Store in timerMap in-build Go "timer", timer function executor, and the function to be executed when the timer expires
-	t.timer[timerKey] = TimerInfo{timerAddress: time.AfterFunc(expireAfterTime, func(){t.timerFunctionExecutor(strId,nbrId)}),
-					    timerFunctionAddress: func(){timerFunction(strId,nbrId)}}
+	t.timer[timerKey] = TimerInfo{timerAddress: time.AfterFunc(expireAfterTime, func() { t.timerFunctionExecutor(strId, nbrId) }),
+		timerFunctionAddress: func() { timerFunction(strId, nbrId) }}
 	return true
 }
 
