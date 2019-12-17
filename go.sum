@@ -11,6 +11,7 @@ gerrit.o-ran-sc.org/r/ric-plt/sdlgo.git v0.2.0 h1:7edCLIQtk9xCwxTtLRUlXr8wQ6nmr/
 gerrit.o-ran-sc.org/r/ric-plt/sdlgo.git v0.2.0/go.mod h1:2Y8gw2jqj9urI8VFqFQn7BX0J3A852+YrXVV9V8gOt4=
 gerrit.o-ran-sc.org/r/ric-plt/xapp-frame.git v0.0.20 h1:qf/oWdgXq5iCB38rHO/NfHgD21DOGpKELPgkmvpDExA=
 gerrit.o-ran-sc.org/r/ric-plt/xapp-frame.git v0.0.20/go.mod h1:WHzMFLWFYnKZzAT76Lu8wXqcM9MQ9hHM0sxlV45icSw=
+gerrit.o-ran-sc.org/r/ric-plt/xapp-frame.git v0.0.23 h1:T8Q6dtYFsTXg60Xyz4GhsmEHsi9TdPbgc44caQpVgXY=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
 github.com/PuerkitoBio/purell v1.1.0/go.mod h1:c11w/QuzBsJSee3cPx9rAFu61PvFxuPbtSwDGJws/X0=
