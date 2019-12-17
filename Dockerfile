@@ -25,9 +25,9 @@ FROM nexus3.o-ran-sc.org:10004/bldr-ubuntu18-c-go:2-u18.04-nng as submgrbuild
 WORKDIR /tmp
 
 # Install RMr shared library
-RUN wget --content-disposition https://packagecloud.io/o-ran-sc/staging/packages/debian/stretch/rmr_1.9.0_amd64.deb/download.deb && dpkg -i rmr_1.9.0_amd64.deb && rm -rf rmr_1.9.0_amd64.deb
+RUN wget --content-disposition https://packagecloud.io/o-ran-sc/staging/packages/debian/stretch/rmr_1.10.0_amd64.deb/download.deb && dpkg -i rmr_1.10.0_amd64.deb && rm -rf rmr_1.10.0_amd64.deb
 # Install RMr development header files
-RUN wget --content-disposition https://packagecloud.io/o-ran-sc/staging/packages/debian/stretch/rmr-dev_1.9.0_amd64.deb/download.deb && dpkg -i rmr-dev_1.9.0_amd64.deb && rm -rf rmr-dev_1.9.0_amd64.deb
+RUN wget --content-disposition https://packagecloud.io/o-ran-sc/staging/packages/debian/stretch/rmr-dev_1.10.0_amd64.deb/download.deb && dpkg -i rmr-dev_1.10.0_amd64.deb && rm -rf rmr-dev_1.10.0_amd64.deb
 
 # "PULLING LOG and COMPILING LOG"
 RUN git clone "https://gerrit.o-ran-sc.org/r/com/log" /opt/log && cd /opt/log && \
