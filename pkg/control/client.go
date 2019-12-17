@@ -73,7 +73,7 @@ func (rc *RtmgrClient) SplitSource(src string) (*string, *uint16, error) {
 		return nil, nil, err
 	}
 	srcAddr := tcpSrc[0]
-	xapp.Logger.Debug("---Debugging Inside splitsource tcpsrc[0] = %s and tcpsrc[1]= %s ", tcpSrc[0], tcpSrc[1])
+	xapp.Logger.Debug("Debugging Inside splitsource tcpsrc[0] = %s and tcpsrc[1]= %s ", tcpSrc[0], tcpSrc[1])
 	srcPort, err := strconv.ParseUint(tcpSrc[1], 10, 16)
 	if err != nil {
 		return nil, nil, err
