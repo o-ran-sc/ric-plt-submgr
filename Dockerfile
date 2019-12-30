@@ -20,7 +20,7 @@
 #	Abstract:	Builds a container to compile Subscription Manager's code
 #	Date:		28 May 2019
 #
-FROM nexus3.o-ran-sc.org:10004/bldr-ubuntu18-c-go:2-u18.04-nng as submgrbuild
+FROM nexus3.o-ran-sc.org:10004/bldr-ubuntu18-c-go:3-u18.04-nng as submgrbuild
 
 RUN apt update && apt install -y iputils-ping net-tools curl tcpdump gdb
 
