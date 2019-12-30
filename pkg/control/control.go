@@ -164,20 +164,22 @@ func (c *Control) handleSubscriptionRequest(params *xapp.RMRParams) {
 	err := c.e2ap.SetSubscriptionRequestSequenceNumber(params.Payload, newSubId)
 	if err != nil {
 		xapp.Logger.Error("SubReq: Unable to set Sequence Number in Payload. Dropping this msg. Err: %v, SubId: %v, Xid: %s", err, params.SubId, params.Xid)
+		c.registry.releaseSequenceNumber(newSubId)
 		return
 	}
 
 	srcAddr, srcPort, err := c.rtmgrClient.SplitSource(params.Src)
 	if err != nil {
+		c.registry.releaseSequenceNumber(newSubId)
 		xapp.Logger.Error("SubReq: Failed to update routing-manager. Dropping this msg. Err: %s, SubId: %v, Xid: %s", err, params.SubId, params.Xid)
 		return
 	}
 
 	/* Create transatcion records for every subscription request */
-	xactKey := TransactionKey{newSubId, CREATE}
 	xactValue := Transaction{*srcAddr, *srcPort, params}
-	err = c.tracker.TrackTransaction(xactKey, xactValue)
+	err = c.tracker.TrackTransaction(newSubId, CREATE, xactValue)
 	if err != nil {
+		c.registry.releaseSequenceNumber(newSubId)
 		xapp.Logger.Error("SubReq: Failed to create transaction record. Dropping this msg. Err: %v SubId: %v, Xid: %s", err, params.SubId, params.Xid)
 		return
 	}
@@ -434,9 +436,8 @@ func (c *Control) trackDeleteTransaction(params *xapp.RMRParams, payloadSeqNum u
 	if err != nil {
 		xapp.Logger.Error("SubDelReq: Failed to update routing-manager. Err: %s, SubId: %v, Xid: %s", err, params.SubId, params.Xid)
 	}
-	xactKey := TransactionKey{payloadSeqNum, DELETE}
 	xactValue := Transaction{*srcAddr, *srcPort, params}
-	err = c.tracker.TrackTransaction(xactKey, xactValue)
+	err = c.tracker.TrackTransaction(payloadSeqNum, DELETE, xactValue)
 	return
 }
 
