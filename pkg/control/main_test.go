@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"testing"
 	"time"
@@ -130,30 +131,35 @@ func TestMain(m *testing.M) {
 	//Cfg creation won't work like this as xapp-frame reads it during init.
 	//
 	/*
-	     cfgstr:=`{
-	       "local": {
-	           "host": ":8080"
-	       },
-	       "logger": {
-	           "level": 4
-	       },
-	       "rmr": {
-	          "protPort": "tcp:14560",
-	          "maxSize": 4096,
-	          "numWorkers": 1,
-	          "txMessages": ["RIC_SUB_REQ", "RIC_SUB_DEL_REQ"],
-	          "rxMessages": ["RIC_SUB_RESP", "RIC_SUB_FAILURE", "RIC_SUB_DEL_RESP", "RIC_SUB_DEL_FAILURE", "RIC_INDICATION"]
-	       },
-	       "db": {
-	           "host": "localhost",
-	           "port": 6379,
-	           "namespaces": ["sdl", "rnib"]
-	       }
-	   }`
+	    cfgstr:=`{
+	      "local": {
+	          "host": ":8080"
+	      },
+	      "logger": {
+	          "level": 4
+	      },
+	      "rmr": {
+	         "protPort": "tcp:14560",
+	         "maxSize": 4096,
+	         "numWorkers": 1,
+	         "txMessages": ["RIC_SUB_REQ", "RIC_SUB_DEL_REQ"],
+	         "rxMessages": ["RIC_SUB_RESP", "RIC_SUB_FAILURE", "RIC_SUB_DEL_RESP", "RIC_SUB_DEL_FAILURE", "RIC_INDICATION"]
+	      },
+	      "db": {
+	          "host": "localhost",
+	          "port": 6379,
+	          "namespaces": ["sdl", "rnib"]
+	      },
+	         "rtmgr" : {
+	           "HostAddr" : "localhost",
+	           "port" : "8989",
+	           "baseUrl" : "/"
+	         }
+	   `
 
-	     cfgfilename,_ := testCreateTmpFile(cfgstr)
-	     defer os.Remove(cfgfilename)
-	     os.Setenv("CFG_FILE", cfgfilename)
+	   cfgfilename,_ := testCreateTmpFile(cfgstr)
+	   defer os.Remove(cfgfilename)
+	   os.Setenv("CFG_FILE", cfgfilename)
 	*/
 	xapp.Logger.Info("Using cfg file %s", os.Getenv("CFG_FILE"))
 
@@ -189,7 +195,6 @@ newrt|end
 
 	os.Setenv("RMR_SRC_ID", "localhost:14560")
 	c := NewControl()
-	c.skipRouteUpdate = true
 	xapp.SetReadyCB(mainCtrl.ReadyCB, nil)
 	go xapp.RunWithParams(c, false)
 	<-mainCtrl.syncChan
@@ -232,6 +237,22 @@ newrt|end
 	defer os.Remove(e2termrtfilename)
 	e2termConn = createNewRmrControl("e2termConn", e2termrtfilename, "15560", "RMRE2TERMSTUB")
 
+	//---------------------------------
+	//
+	//---------------------------------
+	http_handler := func(w http.ResponseWriter, r *http.Request) {
+		xapp.Logger.Info("(http handler) handling")
+		w.WriteHeader(200)
+	}
+
+	go func() {
+		http.HandleFunc("/", http_handler)
+		http.ListenAndServe("localhost:8989", nil)
+	}()
+
+	//---------------------------------
+	//
+	//---------------------------------
 	code := m.Run()
 	os.Exit(code)
 }

@@ -16,5 +16,10 @@
         "host": "localhost",
         "port": 6379,
         "namespaces": ["sdl", "rnib"]
+    },
+    "rtmgr" : {
+      "HostAddr" : "localhost",
+      "port" : "8989",
+      "baseUrl" : "/"
     }
 }

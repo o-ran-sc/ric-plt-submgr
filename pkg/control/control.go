@@ -38,13 +38,12 @@ var subReqTime time.Duration = 5 * time.Second
 var SubDelReqTime time.Duration = 5 * time.Second
 
 type Control struct {
-	e2ap            *E2ap
-	registry        *Registry
-	rtmgrClient     *RtmgrClient
-	tracker         *Tracker
-	timerMap        *TimerMap
-	rmrSendMutex    sync.Mutex
-	skipRouteUpdate bool // temp solution to skip routeupdate in unittests
+	e2ap         *E2ap
+	registry     *Registry
+	rtmgrClient  *RtmgrClient
+	tracker      *Tracker
+	timerMap     *TimerMap
+	rmrSendMutex sync.Mutex
 }
 
 type RMRMeid struct {
@@ -95,11 +94,10 @@ func NewControl() *Control {
 	rtmgrClient := RtmgrClient{client, handle, deleteHandle}
 
 	return &Control{e2ap: new(E2ap),
-		registry:        registry,
-		rtmgrClient:     &rtmgrClient,
-		tracker:         tracker,
-		timerMap:        timerMap,
-		skipRouteUpdate: false,
+		registry:    registry,
+		rtmgrClient: &rtmgrClient,
+		tracker:     tracker,
+		timerMap:    timerMap,
 	}
 }
 
@@ -188,12 +186,10 @@ func (c *Control) handleSubscriptionRequest(params *xapp.RMRParams) {
 	subRouteAction := SubRouteInfo{CREATE, *srcAddr, *srcPort, newSubId}
 	xapp.Logger.Info("SubReq: Starting routing manager update. SubId: %v, Xid: %s", params.SubId, params.Xid)
 
-	if c.skipRouteUpdate == false {
-		err = c.rtmgrClient.SubscriptionRequestUpdate(subRouteAction)
-		if err != nil {
-			xapp.Logger.Error("SubReq: Failed to update routing manager. Dropping this SubReq msg. Err: %v, SubId: %v, Xid: %s", err, params.SubId, params.Xid)
-			return
-		}
+	err = c.rtmgrClient.SubscriptionRequestUpdate(subRouteAction)
+	if err != nil {
+		xapp.Logger.Error("SubReq: Failed to update routing manager. Dropping this SubReq msg. Err: %v, SubId: %v, Xid: %s", err, params.SubId, params.Xid)
+		return
 	}
 
 	// Setting new subscription ID in the RMR header
@@ -288,13 +284,11 @@ func (c *Control) handleSubscriptionFailure(params *xapp.RMRParams) {
 
 	time.Sleep(3 * time.Second)
 
-	if c.skipRouteUpdate == false {
-		xapp.Logger.Info("SubFail: Starting routing manager update. SubId: %v, Xid: %s", params.SubId, params.Xid)
-		subRouteAction := SubRouteInfo{CREATE, transaction.XappInstanceAddress, transaction.XappPort, payloadSeqNum}
-		err = c.rtmgrClient.SubscriptionRequestUpdate(subRouteAction)
-		if err != nil {
-			xapp.Logger.Error("SubFail: Failed to update routing manager. Err: %v, SubId: %v, Xid: %s", err, params.SubId, params.Xid)
-		}
+	xapp.Logger.Info("SubFail: Starting routing manager update. SubId: %v, Xid: %s", params.SubId, params.Xid)
+	subRouteAction := SubRouteInfo{CREATE, transaction.XappInstanceAddress, transaction.XappPort, payloadSeqNum}
+	err = c.rtmgrClient.SubscriptionRequestUpdate(subRouteAction)
+	if err != nil {
+		xapp.Logger.Error("SubFail: Failed to update routing manager. Err: %v, SubId: %v, Xid: %s", err, params.SubId, params.Xid)
 	}
 
 	xapp.Logger.Info("SubFail: Deleting transaction record. SubId: %v, Xid: %s", params.SubId, params.Xid)
@@ -479,14 +473,12 @@ func (c *Control) handleSubscriptionDeleteResponse(params *xapp.RMRParams) (err 
 
 	time.Sleep(3 * time.Second)
 
-	if c.skipRouteUpdate == false {
-		xapp.Logger.Info("SubDelResp: Starting routing manager update. SubId: %v, Xid: %s", params.SubId, params.Xid)
-		subRouteAction := SubRouteInfo{DELETE, transaction.XappInstanceAddress, transaction.XappPort, payloadSeqNum}
-		err = c.rtmgrClient.SubscriptionRequestUpdate(subRouteAction)
-		if err != nil {
-			xapp.Logger.Error("SubDelResp: Failed to update routing manager. Err: %v, SubId: %v, Xid: %s", err, params.SubId, params.Xid)
-			return
-		}
+	xapp.Logger.Info("SubDelResp: Starting routing manager update. SubId: %v, Xid: %s", params.SubId, params.Xid)
+	subRouteAction := SubRouteInfo{DELETE, transaction.XappInstanceAddress, transaction.XappPort, payloadSeqNum}
+	err = c.rtmgrClient.SubscriptionRequestUpdate(subRouteAction)
+	if err != nil {
+		xapp.Logger.Error("SubDelResp: Failed to update routing manager. Err: %v, SubId: %v, Xid: %s", err, params.SubId, params.Xid)
+		return
 	}
 
 	xapp.Logger.Info("SubDelResp: Deleting transaction record. SubId: %v, Xid: %s", params.SubId, params.Xid)
@@ -536,14 +528,12 @@ func (c *Control) handleSubscriptionDeleteFailure(params *xapp.RMRParams) {
 
 	time.Sleep(3 * time.Second)
 
-	if c.skipRouteUpdate == false {
-		xapp.Logger.Info("SubDelFail: Starting routing manager update. SubId: %v, Xid: %s", params.SubId, params.Xid)
-		subRouteAction := SubRouteInfo{DELETE, transaction.XappInstanceAddress, transaction.XappPort, payloadSeqNum}
-		c.rtmgrClient.SubscriptionRequestUpdate(subRouteAction)
-		if err != nil {
-			xapp.Logger.Error("SubDelFail: Failed to update routing manager. Err: %v, SubId: %v, Xid: %s", err, params.SubId, params.Xid)
-			return
-		}
+	xapp.Logger.Info("SubDelFail: Starting routing manager update. SubId: %v, Xid: %s", params.SubId, params.Xid)
+	subRouteAction := SubRouteInfo{DELETE, transaction.XappInstanceAddress, transaction.XappPort, payloadSeqNum}
+	c.rtmgrClient.SubscriptionRequestUpdate(subRouteAction)
+	if err != nil {
+		xapp.Logger.Error("SubDelFail: Failed to update routing manager. Err: %v, SubId: %v, Xid: %s", err, params.SubId, params.Xid)
+		return
 	}
 
 	xapp.Logger.Info("SubDelFail: Deleting transaction record. SubId: %v, Xid: %s", params.SubId, params.Xid)
