@@ -21,83 +21,101 @@ package control
 
 import (
 	"fmt"
+	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"sync"
 )
+
+type TransactionKey struct {
+	SubID     uint16 // subscription id / sequence number
+	TransType Action // action ongoing (CREATE/DELETE etc)
+}
+
+type TransactionXappKey struct {
+	Addr string // xapp addr
+	Port uint16 // xapp port
+	Xid  string // xapp xid in req
+}
+
+type Transaction struct {
+	tracker    *Tracker           // tracker instance
+	Key        TransactionKey     // action key
+	Xappkey    TransactionXappKey // transaction key
+	OrigParams *xapp.RMRParams    // request orginal params
+}
+
+func (t *Transaction) SubRouteInfo() SubRouteInfo {
+	return SubRouteInfo{t.Key.TransType, t.Xappkey.Addr, t.Xappkey.Port, t.Key.SubID}
+}
 
 /*
 Implements a record of ongoing transactions and helper functions to CRUD the records.
 */
 type Tracker struct {
-	transactionTable map[TransactionKey]Transaction
-	mutex            sync.Mutex
+	transactionTable     map[TransactionKey]*Transaction
+	transactionXappTable map[TransactionXappKey]*Transaction
+	mutex                sync.Mutex
 }
 
 func (t *Tracker) Init() {
-	t.transactionTable = make(map[TransactionKey]Transaction)
+	t.transactionTable = make(map[TransactionKey]*Transaction)
+	t.transactionXappTable = make(map[TransactionXappKey]*Transaction)
 }
 
 /*
 Checks if a tranascation with similar type has been ongoing. If not then creates one.
 Returns error if there is similar transatcion ongoing.
 */
-func (t *Tracker) TrackTransaction(key TransactionKey, xact Transaction) error {
+func (t *Tracker) TrackTransaction(subID uint16, act Action, addr string, port uint16, params *xapp.RMRParams) (*Transaction, error) {
+	key := TransactionKey{subID, act}
+	xappkey := TransactionXappKey{addr, port, params.Xid}
+	trans := &Transaction{t, key, xappkey, params}
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 	if _, ok := t.transactionTable[key]; ok {
 		// TODO: Implement merge related check here. If the key is same but the value is different.
-		err := fmt.Errorf("transaction tracker: Similar transaction with sub id %d and type %s is ongoing", key.SubID, key.transType)
-		return err
+		err := fmt.Errorf("transaction tracker: Similar transaction with sub id %d and type %s is ongoing", key.SubID, key.TransType)
+		return nil, err
 	}
-	t.transactionTable[key] = xact
-	return nil
+	if _, ok := t.transactionXappTable[xappkey]; ok {
+		// TODO: Implement merge related check here. If the key is same but the value is different.
+		err := fmt.Errorf("transaction tracker: Similar transaction with xapp key %v is ongoing", xappkey)
+		return nil, err
+	}
+	t.transactionTable[key] = trans
+	t.transactionXappTable[xappkey] = trans
+	return trans, nil
 }
 
 /*
 Retreives the transaction table entry for the given request.
 Returns error in case the transaction cannot be found.
 */
-func (t *Tracker) UpdateTransaction(SubID uint16, transType Action, xact Transaction) error {
-	key := TransactionKey{SubID, transType}
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
-	if _, ok := t.transactionTable[key]; ok {
-		// TODO: Implement merge related check here. If the key is same but the value is different.
-		err := fmt.Errorf("transaction tracker: Similar transaction with sub id %d and type %v is ongoing", key.SubID, key.transType)
-		return err
-	}
-	t.transactionTable[key] = xact
-	return nil
-}
-
-/*
-Retreives the transaction table entry for the given request.
-Returns error in case the transaction cannot be found.
-*/
-func (t *Tracker) RetriveTransaction(subID uint16, act Action) (Transaction, error) {
+func (t *Tracker) RetriveTransaction(subID uint16, act Action) (*Transaction, error) {
 	key := TransactionKey{subID, act}
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
-	var xact Transaction
-	if xact, ok := t.transactionTable[key]; ok {
-		return xact, nil
+	if trans, ok := t.transactionTable[key]; ok {
+		return trans, nil
 	}
 	err := fmt.Errorf("transaction record for Subscription ID %d and action %s does not exist", subID, act)
-	return xact, err
+	return nil, err
 }
 
 /*
 Deletes the transaction table entry for the given request and returns the deleted xapp's address and port for reference.
 Returns error in case the transaction cannot be found.
 */
-func (t *Tracker) completeTransaction(subID uint16, act Action) (Transaction, error) {
+func (t *Tracker) completeTransaction(subID uint16, act Action) (*Transaction, error) {
 	key := TransactionKey{subID, act}
-	var emptyTransaction Transaction
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
-	if xact, ok := t.transactionTable[key]; ok {
+	if trans, ok1 := t.transactionTable[key]; ok1 {
+		if _, ok2 := t.transactionXappTable[trans.Xappkey]; ok2 {
+			delete(t.transactionXappTable, trans.Xappkey)
+		}
 		delete(t.transactionTable, key)
-		return xact, nil
+		return trans, nil
 	}
 	err := fmt.Errorf("transaction record for Subscription ID %d and action %s does not exist", subID, act)
-	return emptyTransaction, err
+	return nil, err
 }
