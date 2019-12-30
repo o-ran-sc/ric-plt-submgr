@@ -34,9 +34,9 @@ import (
 
 var e2asnpacker e2ap.E2APPackerIf = e2ap_wrapper.NewAsn1E2Packer()
 
+//-----------------------------------------------------------------------------
 //
-//
-//
+//-----------------------------------------------------------------------------
 func createSubsReq() *e2ap.E2APSubscriptionRequest {
 	req := &e2ap.E2APSubscriptionRequest{}
 
@@ -69,9 +69,9 @@ func createSubsReq() *e2ap.E2APSubscriptionRequest {
 	return req
 }
 
+//-----------------------------------------------------------------------------
 //
-//
-//
+//-----------------------------------------------------------------------------
 func createSubsResp(req *e2ap.E2APSubscriptionRequest) *e2ap.E2APSubscriptionResponse {
 
 	resp := &e2ap.E2APSubscriptionResponse{}
@@ -96,9 +96,9 @@ func createSubsResp(req *e2ap.E2APSubscriptionRequest) *e2ap.E2APSubscriptionRes
 	return resp
 }
 
+//-----------------------------------------------------------------------------
 //
-//
-//
+//-----------------------------------------------------------------------------
 func createSubsDelReq(e2SubsId uint32) *e2ap.E2APSubscriptionDeleteRequest {
 	req := &e2ap.E2APSubscriptionDeleteRequest{}
 	req.RequestId.Id = 1
@@ -107,9 +107,9 @@ func createSubsDelReq(e2SubsId uint32) *e2ap.E2APSubscriptionDeleteRequest {
 	return req
 }
 
+//-----------------------------------------------------------------------------
 //
-//
-//
+//-----------------------------------------------------------------------------
 func createSubsDelResp(req *e2ap.E2APSubscriptionDeleteRequest) *e2ap.E2APSubscriptionDeleteResponse {
 	resp := &e2ap.E2APSubscriptionDeleteResponse{}
 	resp.RequestId.Id = req.RequestId.Id
@@ -119,7 +119,303 @@ func createSubsDelResp(req *e2ap.E2APSubscriptionDeleteRequest) *e2ap.E2APSubscr
 }
 
 //-----------------------------------------------------------------------------
-// TestSubRequestSubResponseOk
+//
+//-----------------------------------------------------------------------------
+func handle_xapp_subs_req(t *testing.T) {
+	xapp.Logger.Info("handle_xapp_subs_req start")
+	e2SubsReq := e2asnpacker.NewPackerSubscriptionRequest()
+
+	//---------------------------------
+	// xapp activity: Send Subs Req
+	//---------------------------------
+	//select {
+	//case <-time.After(1 * time.Second):
+	xapp.Logger.Info("(xappConn) Send Subs Req")
+	req := createSubsReq()
+	e2SubsReq.Set(req)
+	xapp.Logger.Debug("%s", e2SubsReq.String())
+	err, packedMsg := e2SubsReq.Pack(nil)
+	if err != nil {
+		testError(t, "(xappConn) pack NOK %s", err.Error())
+	}
+
+	params := &xapp.RMRParams{}
+	params.Mtype = xapp.RIC_SUB_REQ
+	params.SubId = -1
+	params.Payload = packedMsg.Buf
+	params.Meid = &xapp.RMRMeid{RanName: "RAN_NAME_1"}
+	params.Xid = "XID_1"
+	params.Mbuf = nil
+
+	snderr := xappConn.RmrSend(params)
+	if snderr != nil {
+		testError(t, "(xappConn) RMR SEND FAILED: %s", snderr.Error())
+	}
+	//}
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+func handle_e2term_subs_req(t *testing.T) (*e2ap.E2APSubscriptionRequest, *xapp.RMRParams) {
+	xapp.Logger.Info("handle_e2term_subs_req start")
+	e2SubsReq := e2asnpacker.NewPackerSubscriptionRequest()
+
+	//---------------------------------
+	// e2term activity: Recv Subs Req
+	//---------------------------------
+	select {
+	case msg := <-e2termConn.rmrConChan:
+		if msg.Mtype != xapp.RICMessageTypes["RIC_SUB_REQ"] {
+			testError(t, "(e2termConn) Received non RIC_SUB_REQ message")
+		} else {
+			xapp.Logger.Info("(e2termConn) Recv Subs Req")
+			packedData := &packer.PackedData{}
+			packedData.Buf = msg.Payload
+			unpackerr := e2SubsReq.UnPack(packedData)
+			if unpackerr != nil {
+				testError(t, "(e2termConn) RIC_SUB_REQ unpack failed err: %s", unpackerr.Error())
+			}
+			geterr, req := e2SubsReq.Get()
+			if geterr != nil {
+				testError(t, "(e2termConn) RIC_SUB_REQ get failed err: %s", geterr.Error())
+			}
+			return req, msg
+		}
+	case <-time.After(15 * time.Second):
+		testError(t, "(e2termConn) Not Received RIC_SUB_REQ within 15 secs")
+	}
+	return nil, nil
+}
+
+func handle_e2term_subs_resp(t *testing.T, req *e2ap.E2APSubscriptionRequest, msg *xapp.RMRParams) {
+	xapp.Logger.Info("handle_e2term_subs_resp start")
+	e2SubsResp := e2asnpacker.NewPackerSubscriptionResponse()
+
+	//---------------------------------
+	// e2term activity: Send Subs Resp
+	//---------------------------------
+	xapp.Logger.Info("(e2termConn) Send Subs Resp")
+	resp := createSubsResp(req)
+	e2SubsResp.Set(resp)
+	xapp.Logger.Debug("%s", e2SubsResp.String())
+	packerr, packedMsg := e2SubsResp.Pack(nil)
+	if packerr != nil {
+		testError(t, "(e2termConn) pack NOK %s", packerr.Error())
+	}
+
+	params := &xapp.RMRParams{}
+	params.Mtype = xapp.RIC_SUB_RESP
+	params.SubId = msg.SubId
+	params.Payload = packedMsg.Buf
+	params.Meid = msg.Meid
+	params.Xid = msg.Xid
+	params.Mbuf = nil
+
+	snderr := e2termConn.RmrSend(params)
+	if snderr != nil {
+		testError(t, "(e2termConn) RMR SEND FAILED: %s", snderr.Error())
+	}
+}
+
+func handle_e2term_subs_reqandresp(t *testing.T) {
+	req, msg := handle_e2term_subs_req(t)
+	handle_e2term_subs_resp(t, req, msg)
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+func handle_xapp_subs_resp(t *testing.T) int {
+	xapp.Logger.Info("handle_xapp_subs_resp start")
+	e2SubsResp := e2asnpacker.NewPackerSubscriptionResponse()
+	var e2SubsId int
+
+	//---------------------------------
+	// xapp activity: Recv Subs Resp
+	//---------------------------------
+	select {
+	case msg := <-xappConn.rmrConChan:
+		if msg.Mtype != xapp.RICMessageTypes["RIC_SUB_RESP"] {
+			testError(t, "(xappConn) Received non RIC_SUB_RESP message")
+		} else {
+			xapp.Logger.Info("(xappConn) Recv Subs Resp")
+
+			packedData := &packer.PackedData{}
+			packedData.Buf = msg.Payload
+			e2SubsId = msg.SubId
+			unpackerr := e2SubsResp.UnPack(packedData)
+
+			if unpackerr != nil {
+				testError(t, "(xappConn) RIC_SUB_RESP unpack failed err: %s", unpackerr.Error())
+			}
+			geterr, _ := e2SubsResp.Get()
+			if geterr != nil {
+				testError(t, "(xappConn) RIC_SUB_RESP get failed err: %s", geterr.Error())
+			}
+
+		}
+	case <-time.After(15 * time.Second):
+		testError(t, "(xappConn) Not Received RIC_SUB_RESP within 15 secs")
+	}
+	return e2SubsId
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+func handle_xapp_subs_del_req(t *testing.T, e2SubsId int) {
+	xapp.Logger.Info("handle_xapp_subs_del_req start")
+	e2SubsDelReq := e2asnpacker.NewPackerSubscriptionDeleteRequest()
+
+	//---------------------------------
+	// xapp activity: Send Subs Del Req
+	//---------------------------------
+	//select {
+	//case <-time.After(1 * time.Second):
+	xapp.Logger.Info("(xappConn) Send Subs Del Req")
+	req := createSubsDelReq(uint32(e2SubsId))
+	e2SubsDelReq.Set(req)
+	xapp.Logger.Debug("%s", e2SubsDelReq.String())
+	err, packedMsg := e2SubsDelReq.Pack(nil)
+	if err != nil {
+		testError(t, "(xappConn) pack NOK %s", err.Error())
+	}
+
+	params := &xapp.RMRParams{}
+	params.Mtype = xapp.RIC_SUB_DEL_REQ
+	params.SubId = e2SubsId
+	params.Payload = packedMsg.Buf
+	params.Meid = &xapp.RMRMeid{RanName: "RAN_NAME_1"}
+	params.Xid = "XID_1"
+	params.Mbuf = nil
+
+	snderr := xappConn.RmrSend(params)
+	if snderr != nil {
+		testError(t, "(xappConn) RMR SEND FAILED: %s", snderr.Error())
+	}
+	//}
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+func handle_e2term_subs_del_req(t *testing.T) (*e2ap.E2APSubscriptionDeleteRequest, *xapp.RMRParams) {
+	xapp.Logger.Info("handle_e2term_subs_del_req start")
+	e2SubsDelReq := e2asnpacker.NewPackerSubscriptionDeleteRequest()
+
+	//---------------------------------
+	// e2term activity: Recv Subs Del Req
+	//---------------------------------
+	select {
+	case msg := <-e2termConn.rmrConChan:
+		if msg.Mtype != xapp.RICMessageTypes["RIC_SUB_DEL_REQ"] {
+			testError(t, "(e2termConn) Received non RIC_SUB_DEL_REQ message")
+		} else {
+			xapp.Logger.Info("(e2termConn) Recv Subs Del Req")
+
+			packedData := &packer.PackedData{}
+			packedData.Buf = msg.Payload
+			unpackerr := e2SubsDelReq.UnPack(packedData)
+			if unpackerr != nil {
+				testError(t, "(e2termConn) RIC_SUB_DEL_REQ unpack failed err: %s", unpackerr.Error())
+			}
+			geterr, req := e2SubsDelReq.Get()
+			if geterr != nil {
+				testError(t, "(e2termConn) RIC_SUB_DEL_REQ get failed err: %s", geterr.Error())
+			}
+			return req, msg
+		}
+	case <-time.After(15 * time.Second):
+		testError(t, "(e2termConn) Not Received RIC_SUB_DEL_REQ within 15 secs")
+	}
+	return nil, nil
+}
+
+func handle_e2term_subs_del_resp(t *testing.T, req *e2ap.E2APSubscriptionDeleteRequest, msg *xapp.RMRParams) {
+	xapp.Logger.Info("handle_e2term_subs_del_resp start")
+	e2SubsDelResp := e2asnpacker.NewPackerSubscriptionDeleteResponse()
+
+	//---------------------------------
+	// e2term activity: Send Subs Del Resp
+	//---------------------------------
+	xapp.Logger.Info("(e2termConn) Send Subs Del Resp")
+	resp := createSubsDelResp(req)
+	e2SubsDelResp.Set(resp)
+	xapp.Logger.Debug("%s", e2SubsDelResp.String())
+	packerr, packedMsg := e2SubsDelResp.Pack(nil)
+	if packerr != nil {
+		testError(t, "(e2termConn) pack NOK %s", packerr.Error())
+	}
+
+	params := &xapp.RMRParams{}
+	params.Mtype = xapp.RIC_SUB_DEL_RESP
+	params.SubId = msg.SubId
+	params.Payload = packedMsg.Buf
+	params.Meid = msg.Meid
+	params.Xid = msg.Xid
+	params.Mbuf = nil
+
+	snderr := e2termConn.RmrSend(params)
+	if snderr != nil {
+		testError(t, "(e2termConn) RMR SEND FAILED: %s", snderr.Error())
+	}
+
+}
+
+func handle_e2term_subs_del_reqandresp(t *testing.T) {
+	req, msg := handle_e2term_subs_del_req(t)
+	handle_e2term_subs_del_resp(t, req, msg)
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+func handle_xapp_subs_del_resp(t *testing.T) {
+	xapp.Logger.Info("handle_xapp_subs_del_resp start")
+	e2SubsDelResp := e2asnpacker.NewPackerSubscriptionDeleteResponse()
+
+	//---------------------------------
+	// xapp activity: Recv Subs Del Resp
+	//---------------------------------
+	select {
+	case msg := <-xappConn.rmrConChan:
+		if msg.Mtype != xapp.RICMessageTypes["RIC_SUB_DEL_RESP"] {
+			testError(t, "(xappConn) Received non RIC_SUB_DEL_RESP message")
+		} else {
+			xapp.Logger.Info("(xappConn) Recv Subs Del Resp")
+
+			packedData := &packer.PackedData{}
+			packedData.Buf = msg.Payload
+			unpackerr := e2SubsDelResp.UnPack(packedData)
+			if unpackerr != nil {
+				testError(t, "(xappConn) RIC_SUB_DEL_RESP unpack failed err: %s", unpackerr.Error())
+			}
+			geterr, _ := e2SubsDelResp.Get()
+			if geterr != nil {
+				testError(t, "(xappConn) RIC_SUB_DEL_RESP get failed err: %s", geterr.Error())
+			}
+
+		}
+	case <-time.After(15 * time.Second):
+		testError(t, "(xappConn) Not Received RIC_SUB_DEL_RESP within 15 secs")
+	}
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+func handle_wait_subs_clean(t *testing.T, e2SubsId int) bool {
+	xapp.Logger.Info("handle_wait_subs_clean start")
+	if mainCtrl.wait_subs_clean(e2SubsId, 10) == false {
+		testError(t, "(general) no clean within 10 secs")
+		return false
+	}
+	return true
+}
+
+//-----------------------------------------------------------------------------
+// TestSubReqAndSubDelOk
 //
 //   stub                          stub
 // +-------+     +---------+    +---------+
@@ -153,215 +449,114 @@ func createSubsDelResp(req *e2ap.E2APSubscriptionDeleteRequest) *e2ap.E2APSubscr
 //
 //-----------------------------------------------------------------------------
 func TestSubReqAndSubDelOk(t *testing.T) {
-
 	xapp.Logger.Info("TestSubReqAndSubDelOk start")
-	e2SubsReq := e2asnpacker.NewPackerSubscriptionRequest()
-	e2SubsResp := e2asnpacker.NewPackerSubscriptionResponse()
-	e2SubsDelReq := e2asnpacker.NewPackerSubscriptionDeleteRequest()
-	e2SubsDelResp := e2asnpacker.NewPackerSubscriptionDeleteResponse()
-	var e2SubsId int
 
-	//---------------------------------
-	// xapp activity: Send Subs Req
-	//---------------------------------
-	select {
-	case <-time.After(5 * time.Second):
-		xapp.Logger.Info("(xappConn) Send Subs Req")
-		req := createSubsReq()
-		e2SubsReq.Set(req)
-		xapp.Logger.Debug("%s", e2SubsReq.String())
-		err, packedMsg := e2SubsReq.Pack(nil)
-		if err != nil {
-			testError(t, "(xappConn) pack NOK %s", err.Error())
-		}
+	handle_xapp_subs_req(t)
+	handle_e2term_subs_reqandresp(t)
+	e2SubsId := handle_xapp_subs_resp(t)
 
-		params := &xapp.RMRParams{}
-		params.Mtype = xapp.RIC_SUB_REQ
-		params.SubId = -1
-		params.Payload = packedMsg.Buf
-		params.Meid = &xapp.RMRMeid{RanName: "RAN_NAME_1"}
-		params.Xid = "XID_1"
-		params.Mbuf = nil
+	handle_xapp_subs_del_req(t, e2SubsId)
+	handle_e2term_subs_del_reqandresp(t)
+	handle_xapp_subs_del_resp(t)
 
-		snderr := xappConn.RmrSend(params)
-		if snderr != nil {
-			testError(t, "(xappConn) RMR SEND FAILED: %s", snderr.Error())
-		}
-	}
+	//Wait that subs is cleaned
+	handle_wait_subs_clean(t, e2SubsId)
+}
 
-	//---------------------------------
-	// e2term activity: Recv Subs Req & Send Subs Resp
-	//---------------------------------
-	select {
-	case msg := <-e2termConn.rmrConChan:
-		if msg.Mtype != xapp.RICMessageTypes["RIC_SUB_REQ"] {
-			testError(t, "(e2termConn) Received non RIC_SUB_REQ message")
-		} else {
-			xapp.Logger.Info("(e2termConn) Recv Subs Req & Send Subs Resp")
-			packedData := &packer.PackedData{}
-			packedData.Buf = msg.Payload
-			unpackerr := e2SubsReq.UnPack(packedData)
-			if unpackerr != nil {
-				testError(t, "(e2termConn) RIC_SUB_REQ unpack failed err: %s", unpackerr.Error())
-			}
-			geterr, req := e2SubsReq.Get()
-			if geterr != nil {
-				testError(t, "(e2termConn) RIC_SUB_REQ get failed err: %s", geterr.Error())
-			}
+//-----------------------------------------------------------------------------
+// TestSubReqRetransmission
+//
+//   stub                          stub
+// +-------+     +---------+    +---------+
+// | xapp  |     | submgr  |    | e2term  |
+// +-------+     +---------+    +---------+
+//     |              |              |
+//     |  SubReq      |              |
+//     |------------->|              |
+//     |              |              |
+//     |              | SubReq       |
+//     |              |------------->|
+//     |              |              |
+//     |  SubReq      |              |
+//     | (retrans)    |              |
+//     |------------->|              |
+//     |              |              |
+//     |              |      SubResp |
+//     |              |<-------------|
+//     |              |              |
+//     |      SubResp |              |
+//     |<-------------|              |
+//     |              |              |
+//     |         [SUBS DELETE]       |
+//     |              |              |
+//
+//-----------------------------------------------------------------------------
+func TestSubReqRetransmission(t *testing.T) {
+	xapp.Logger.Info("TestSubReqRetransmission start")
 
-			resp := createSubsResp(req)
-			e2SubsResp.Set(resp)
-			xapp.Logger.Debug("%s", e2SubsResp.String())
-			packerr, packedMsg := e2SubsResp.Pack(nil)
-			if packerr != nil {
-				testError(t, "(e2termConn) pack NOK %s", packerr.Error())
-			}
+	//Subs Create
+	handle_xapp_subs_req(t)
+	req, msg := handle_e2term_subs_req(t)
+	handle_xapp_subs_req(t)
 
-			params := &xapp.RMRParams{}
-			params.Mtype = xapp.RIC_SUB_RESP
-			params.SubId = msg.SubId
-			params.Payload = packedMsg.Buf
-			params.Meid = msg.Meid
-			params.Xid = msg.Xid
-			params.Mbuf = nil
+	handle_e2term_subs_resp(t, req, msg)
 
-			snderr := e2termConn.RmrSend(params)
-			if snderr != nil {
-				testError(t, "(e2termConn) RMR SEND FAILED: %s", snderr.Error())
-			}
+	e2SubsId := handle_xapp_subs_resp(t)
 
-		}
-	case <-time.After(15 * time.Second):
-		testError(t, "(e2termConn) Not Received RIC_SUB_REQ within 15 secs")
-	}
+	//Subs Delete
+	handle_xapp_subs_del_req(t, e2SubsId)
+	handle_e2term_subs_del_reqandresp(t)
+	handle_xapp_subs_del_resp(t)
 
-	//---------------------------------
-	// xapp activity: Recv Subs Resp
-	//---------------------------------
-	select {
-	case msg := <-xappConn.rmrConChan:
-		if msg.Mtype != xapp.RICMessageTypes["RIC_SUB_RESP"] {
-			testError(t, "(xappConn) Received non RIC_SUB_RESP message")
-		} else {
-			xapp.Logger.Info("(xappConn) Recv Subs Resp")
+	//Wait that subs is cleaned
+	handle_wait_subs_clean(t, e2SubsId)
+}
 
-			packedData := &packer.PackedData{}
-			packedData.Buf = msg.Payload
-			e2SubsId = msg.SubId
-			unpackerr := e2SubsResp.UnPack(packedData)
+//-----------------------------------------------------------------------------
+// TestSubDelReqRetransmission
+//
+//   stub                          stub
+// +-------+     +---------+    +---------+
+// | xapp  |     | submgr  |    | e2term  |
+// +-------+     +---------+    +---------+
+//     |              |              |
+//     |         [SUBS CREATE]       |
+//     |              |              |
+//     |              |              |
+//     | SubDelReq    |              |
+//     |------------->|              |
+//     |              |              |
+//     |              | SubDelReq    |
+//     |              |------------->|
+//     |              |              |
+//     | SubDelReq    |              |
+//     |------------->|              |
+//     |              |              |
+//     |              |   SubDelResp |
+//     |              |<-------------|
+//     |              |              |
+//     |   SubDelResp |              |
+//     |<-------------|              |
+//
+//-----------------------------------------------------------------------------
+func TestSubDelReqRetransmission(t *testing.T) {
+	xapp.Logger.Info("TestSubDelReqRetransmission start")
 
-			if unpackerr != nil {
-				testError(t, "(xappConn) RIC_SUB_RESP unpack failed err: %s", unpackerr.Error())
-			}
-			geterr, _ := e2SubsResp.Get()
-			if geterr != nil {
-				testError(t, "(xappConn) RIC_SUB_RESP get failed err: %s", geterr.Error())
-			}
+	//Subs Create
+	handle_xapp_subs_req(t)
+	handle_e2term_subs_reqandresp(t)
+	e2SubsId := handle_xapp_subs_resp(t)
 
-		}
-	case <-time.After(15 * time.Second):
-		testError(t, "(xappConn) Not Received RIC_SUB_RESP within 15 secs")
-	}
+	//Subs Delete
+	handle_xapp_subs_del_req(t, e2SubsId)
+	req, msg := handle_e2term_subs_del_req(t)
 
-	//---------------------------------
-	// xapp activity: Send Subs Del Req
-	//---------------------------------
-	select {
-	case <-time.After(2 * time.Second):
-		xapp.Logger.Info("(xappConn) Send Subs Del Req")
-		req := createSubsDelReq(uint32(e2SubsId))
-		e2SubsDelReq.Set(req)
-		xapp.Logger.Debug("%s", e2SubsDelReq.String())
-		err, packedMsg := e2SubsDelReq.Pack(nil)
-		if err != nil {
-			testError(t, "(xappConn) pack NOK %s", err.Error())
-		}
+	<-time.After(2 * time.Second)
 
-		params := &xapp.RMRParams{}
-		params.Mtype = xapp.RIC_SUB_DEL_REQ
-		params.SubId = e2SubsId
-		params.Payload = packedMsg.Buf
-		params.Meid = &xapp.RMRMeid{RanName: "RAN_NAME_1"}
-		params.Xid = "XID_1"
-		params.Mbuf = nil
+	handle_xapp_subs_del_req(t, e2SubsId)
 
-		snderr := xappConn.RmrSend(params)
-		if snderr != nil {
-			testError(t, "(xappConn) RMR SEND FAILED: %s", snderr.Error())
-		}
-	}
+	handle_e2term_subs_del_resp(t, req, msg)
 
-	//---------------------------------
-	// e2term activity: Recv Subs Del Req & Send Subs Del Resp
-	//---------------------------------
-	select {
-	case msg := <-e2termConn.rmrConChan:
-		if msg.Mtype != xapp.RICMessageTypes["RIC_SUB_DEL_REQ"] {
-			testError(t, "(e2termConn) Received non RIC_SUB_DEL_REQ message")
-		} else {
-			xapp.Logger.Info("(e2termConn) Recv Subs Del Req & Send Subs Del Resp")
-
-			packedData := &packer.PackedData{}
-			packedData.Buf = msg.Payload
-			unpackerr := e2SubsDelReq.UnPack(packedData)
-			if unpackerr != nil {
-				testError(t, "(e2termConn) RIC_SUB_DEL_REQ unpack failed err: %s", unpackerr.Error())
-			}
-			geterr, req := e2SubsDelReq.Get()
-			if geterr != nil {
-				testError(t, "(e2termConn) RIC_SUB_DEL_REQ get failed err: %s", geterr.Error())
-			}
-
-			resp := createSubsDelResp(req)
-			e2SubsDelResp.Set(resp)
-			xapp.Logger.Debug("%s", e2SubsDelResp.String())
-			packerr, packedMsg := e2SubsDelResp.Pack(nil)
-			if packerr != nil {
-				testError(t, "(e2termConn) pack NOK %s", packerr.Error())
-			}
-
-			params := &xapp.RMRParams{}
-			params.Mtype = xapp.RIC_SUB_DEL_RESP
-			params.SubId = msg.SubId
-			params.Payload = packedMsg.Buf
-			params.Meid = msg.Meid
-			params.Xid = msg.Xid
-			params.Mbuf = nil
-
-			snderr := e2termConn.RmrSend(params)
-			if snderr != nil {
-				testError(t, "(e2termConn) RMR SEND FAILED: %s", snderr.Error())
-			}
-
-		}
-	case <-time.After(15 * time.Second):
-		testError(t, "(e2termConn) Not Received RIC_SUB_DEL_REQ within 15 secs")
-	}
-
-	//---------------------------------
-	// xapp activity: Recv Subs Del Resp
-	//---------------------------------
-	select {
-	case msg := <-xappConn.rmrConChan:
-		if msg.Mtype != xapp.RICMessageTypes["RIC_SUB_DEL_RESP"] {
-			testError(t, "(xappConn) Received non RIC_SUB_DEL_RESP message")
-		} else {
-			xapp.Logger.Info("(xappConn) Recv Subs Del Resp")
-
-			packedData := &packer.PackedData{}
-			packedData.Buf = msg.Payload
-			unpackerr := e2SubsDelResp.UnPack(packedData)
-			if unpackerr != nil {
-				testError(t, "(xappConn) RIC_SUB_DEL_RESP unpack failed err: %s", unpackerr.Error())
-			}
-			geterr, _ := e2SubsDelResp.Get()
-			if geterr != nil {
-				testError(t, "(xappConn) RIC_SUB_DEL_RESP get failed err: %s", geterr.Error())
-			}
-
-		}
-	case <-time.After(15 * time.Second):
-		testError(t, "(xappConn) Not Received RIC_SUB_DEL_RESP within 15 secs")
-	}
-
+	//Wait that subs is cleaned
+	handle_wait_subs_clean(t, e2SubsId)
 }

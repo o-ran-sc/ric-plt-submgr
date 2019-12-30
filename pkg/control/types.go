@@ -19,10 +19,6 @@
 
 package control
 
-import (
-	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
-)
-
 type RmrDatagram struct {
 	MessageType    int
 	SubscriptionId uint16
@@ -37,14 +33,3 @@ type SubRouteInfo struct {
 }
 
 type Action int
-
-type TransactionKey struct {
-	SubID     uint16
-	transType Action
-}
-
-type Transaction struct {
-	XappInstanceAddress string
-	XappPort            uint16
-	OrigParams          *xapp.RMRParams
-}

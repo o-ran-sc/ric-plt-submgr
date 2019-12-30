@@ -98,6 +98,25 @@ func createNewRmrControl(desc string, rtfile string, port string, stat string) *
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
+type testingMainControl struct {
+	testingControl
+	c *Control
+}
+
+func (mc *testingMainControl) wait_subs_clean(e2SubsId int, secs int) bool {
+	i := 1
+	for ; i <= secs*2; i++ {
+		if mc.c.registry.IsValidSequenceNumber(uint16(e2SubsId)) == false {
+			return true
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+	return false
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
 
 func testError(t *testing.T, pattern string, args ...interface{}) {
 	xapp.Logger.Error(fmt.Sprintf(pattern, args...))
@@ -123,6 +142,7 @@ func testCreateTmpFile(str string) (string, error) {
 
 var xappConn *testingRmrControl
 var e2termConn *testingRmrControl
+var mainCtrl *testingMainControl
 
 func TestMain(m *testing.M) {
 	xapp.Logger.Info("TestMain start")
@@ -187,16 +207,17 @@ newrt|end
 	subrtfilename, _ := testCreateTmpFile(subsrt)
 	defer os.Remove(subrtfilename)
 	os.Setenv("RMR_SEED_RT", subrtfilename)
+	os.Setenv("RMR_SRC_ID", "localhost:14560")
 	xapp.Logger.Info("Using rt file %s", os.Getenv("RMR_SEED_RT"))
+	xapp.Logger.Info("Using src id  %s", os.Getenv("RMR_SRC_ID"))
 
-	mainCtrl := &testingControl{}
+	mainCtrl = &testingMainControl{}
 	mainCtrl.desc = "main"
 	mainCtrl.syncChan = make(chan struct{})
 
-	os.Setenv("RMR_SRC_ID", "localhost:14560")
-	c := NewControl()
+	mainCtrl.c = NewControl()
 	xapp.SetReadyCB(mainCtrl.ReadyCB, nil)
-	go xapp.RunWithParams(c, false)
+	go xapp.RunWithParams(mainCtrl.c, false)
 	<-mainCtrl.syncChan
 
 	//---------------------------------
