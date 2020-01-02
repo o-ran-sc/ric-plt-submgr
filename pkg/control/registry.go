@@ -24,15 +24,20 @@ import (
 	"sync"
 )
 
+type Subscription struct {
+	Seq       uint16
+	Confirmed bool
+}
+
 type Registry struct {
-	register map[uint16]bool
+	register map[uint16]*Subscription
 	counter  uint16
 	mutex    sync.Mutex
 }
 
 // This method should run as a constructor
 func (r *Registry) Initialize(seedsn uint16) {
-	r.register = make(map[uint16]bool)
+	r.register = make(map[uint16]*Subscription)
 	r.counter = seedsn
 }
 
@@ -46,7 +51,7 @@ func (r *Registry) ReserveSequenceNumber() (uint16, bool) {
 		xapp.Logger.Error("Invalid SeqenceNumber sequenceNumber: %v", sequenceNumber)
 		return sequenceNumber, false
 	}
-	r.register[sequenceNumber] = false
+	r.register[sequenceNumber] = &Subscription{sequenceNumber, false}
 
 	// Allocate next SequenceNumber value
 	if r.counter == 65535 {
@@ -72,14 +77,14 @@ func (r *Registry) IsValidSequenceNumber(sn uint16) bool {
 func (r *Registry) setSubscriptionToConfirmed(sn uint16) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
-	r.register[sn] = true
+	r.register[sn].Confirmed = true
 }
 
 //This function sets the given id as unused in the register
 func (r *Registry) deleteSubscription(sn uint16) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
-	r.register[sn] = false
+	r.register[sn].Confirmed = false
 }
 
 //This function releases the given id as unused in the register
