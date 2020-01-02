@@ -37,10 +37,12 @@ type TransactionXappKey struct {
 }
 
 type Transaction struct {
-	tracker    *Tracker           // tracker instance
-	Key        TransactionKey     // action key
-	Xappkey    TransactionXappKey // transaction key
-	OrigParams *xapp.RMRParams    // request orginal params
+	tracker           *Tracker           // tracker instance
+	Key               TransactionKey     // action key
+	Xappkey           TransactionXappKey // transaction key
+	OrigParams        *xapp.RMRParams    // request orginal params
+	RespReceived      bool
+	ForwardRespToXapp bool
 }
 
 func (t *Transaction) SubRouteInfo() SubRouteInfo {
@@ -65,10 +67,10 @@ func (t *Tracker) Init() {
 Checks if a tranascation with similar type has been ongoing. If not then creates one.
 Returns error if there is similar transatcion ongoing.
 */
-func (t *Tracker) TrackTransaction(subID uint16, act Action, addr string, port uint16, params *xapp.RMRParams) (*Transaction, error) {
+func (t *Tracker) TrackTransaction(subID uint16, act Action, addr string, port uint16, params *xapp.RMRParams, respReceived bool, forwardRespToXapp bool) (*Transaction, error) {
 	key := TransactionKey{subID, act}
 	xappkey := TransactionXappKey{addr, port, params.Xid}
-	trans := &Transaction{t, key, xappkey, params}
+	trans := &Transaction{t, key, xappkey, params, respReceived, forwardRespToXapp}
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 	if _, ok := t.transactionTable[key]; ok {
@@ -87,7 +89,7 @@ func (t *Tracker) TrackTransaction(subID uint16, act Action, addr string, port u
 }
 
 /*
-Retreives the transaction table entry for the given request.
+Retreives the transaction table entry for the given request. Controls that only one response is sent to xapp.
 Returns error in case the transaction cannot be found.
 */
 func (t *Tracker) RetriveTransaction(subID uint16, act Action) (*Transaction, error) {
@@ -95,6 +97,12 @@ func (t *Tracker) RetriveTransaction(subID uint16, act Action) (*Transaction, er
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 	if trans, ok := t.transactionTable[key]; ok {
+		if trans.RespReceived == false {
+			trans.RespReceived = true
+			t.transactionTable[key] = trans
+			// This is used to control that only one response action (success response, failure or timer) is excecuted for the transaction
+			trans.RespReceived = false
+		}
 		return trans, nil
 	}
 	err := fmt.Errorf("transaction record for Subscription ID %d and action %s does not exist", subID, act)
@@ -114,6 +122,22 @@ func (t *Tracker) completeTransaction(subID uint16, act Action) (*Transaction, e
 			delete(t.transactionXappTable, trans.Xappkey)
 		}
 		delete(t.transactionTable, key)
+		return trans, nil
+	}
+	err := fmt.Errorf("transaction record for Subscription ID %d and action %s does not exist", subID, act)
+	return nil, err
+}
+
+/*
+Makes possible to receive response to retransmitted request to BTS
+Returns error in case the transaction cannot be found.
+*/
+func (t *Tracker) RetryTransaction(subID uint16, act Action) (*Transaction, error) {
+	key := TransactionKey{subID, act}
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+	if trans, ok := t.transactionTable[key]; ok {
+		trans.RespReceived = false
 		return trans, nil
 	}
 	err := fmt.Errorf("transaction record for Subscription ID %d and action %s does not exist", subID, act)

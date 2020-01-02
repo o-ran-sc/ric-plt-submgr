@@ -21,13 +21,15 @@ Timer takes four parameters:
 	 1) strId 			string   			'string format timerMap key'
 	 2) nbrId 			int      			'numeric format timerMap key'
 	 3) timerDuration	time.Duration  		'timer duration'
-	 4) timerFunction	func(string, int) 	'function to be executed when timer expires'
+	 4) tryCount        uint64              'tryCount'
+	 5) timerFunction	func(string, int) 	'function to be executed when timer expires'
 
 	Timer function is put inside in-build time.AfterFunc() Go function, where it is run inside own Go routine
 	when the timer expires. Timer are two key values. Both are used always, but the other one can be left
-	"empty", i.e. strId = "" or  nbrId = 0. Fourth parameter, the timer function is bare function name without
-	any function parameters and parenthesis! Filling first parameter strId with related name can improve
-	code readability and robustness, even the numeric Id would be enough from functionality point of view.
+	"empty", i.e. strId = "" or  nbrId = 0. Fourth parameter is for tryCount. Fifth parameter, the timer
+	function is bare function name without 	any function parameters and parenthesis! Filling first parameter
+	strId with related name can improve code readability and robustness, even the numeric Id would be enough
+	from functionality point of view.
 
 	TimerStart() function starts the timer. If TimerStart() function is called again with same key values
 	while earlier started timer is still in the timerMap, i.e. it has not been stopped or the timer has not
@@ -52,24 +54,45 @@ Timer takes four parameters:
 	1)
 		subReqTime := 2 * time.Second
 		subId := 123
-		timerMap.StartTimer("RIC_SUB_REQ", int(subId), subReqTime, handleSubscriptionRequestTimer)
+		var tryCount uint64 = 1
+		timerMap.StartTimer("RIC_SUB_REQ", int(subId), subReqTime, FirstTry, handleSubscriptionRequestTimer)
 		timerMap.StopTimer("RIC_SUB_REQ", int(subId))
 
+
+	StartTimer() retry example.
 	2)
 		subReqTime := 2 * time.Second
-		strId := "1UHSUwNqxiVgUWXvC4zFaatpZFF"
-		timerMap.StartTimer(strId, 0, subReqTime, handleSubscriptionRequestTimer)
-		timerMap.StopTimer(strId, 0)
+		subId := 123
+		var tryCount uint64 = 1
+		timerMap.StartTimer("RIC_SUB_REQ", int(subId), subReqTime, FirstTry, handleSubscriptionRequestTimer)
+		timerMap.StopTimer("RIC_SUB_REQ", int(subId))
 
 	3)
 		subReqTime := 2 * time.Second
 		strId := "1UHSUwNqxiVgUWXvC4zFaatpZFF"
-		timerMap.StartTimer(RIC_SUB_REQ_" + strId, 0, subReqTime, handleSubscriptionRequestTimer)
+		var tryCount uint64 = 1
+		timerMap.StartTimer(strId, 0, subReqTime, FirstTry, handleSubscriptionRequestTimer)
+		timerMap.StopTimer(strId, 0)
+
+	4)
+		subReqTime := 2 * time.Second
+		strId := "1UHSUwNqxiVgUWXvC4zFaatpZFF"
+		var tryCount uint64 = 1
+		timerMap.StartTimer(RIC_SUB_REQ_" + strId, 0, subReqTime, FirstTry, handleSubscriptionRequestTimer)
 		timerMap.timerMap.StopTimer("RIC_SUB_REQ_" + strId, 0)
 
 	Timer function example. This is run if any of the above started timer expires.
-		func handleSubscriptionRequestTimer1(strId string, nbrId int) {
-			fmt.Printf("Subscription Request timer expired. Name: %v, SubId: %v\n",strId, nbrId)
+		func handleSubscriptionRequestTimer1(strId string, nbrId int, tryCount uint64) {
+			fmt.Printf("Subscription Request timer expired. Name: %v, SubId: %v, tryCount: %v\n",strId, nbrId, tryCount)
+			...
+
+			// Retry
+			....
+
+			tryCount++
+		    timerMap.StartTimer("RIC_SUB_REQ", int(subId), subReqTime, tryCount, handleSubscriptionRequestTimer)
+			...
+
 		}
 */
 
@@ -80,6 +103,8 @@ import (
 	"sync"
 	"time"
 )
+
+const FirstTry = 1
 
 type TimerKey struct {
 	strId string
@@ -101,7 +126,7 @@ func (t *TimerMap) Init() {
 	t.timer = make(map[TimerKey]TimerInfo)
 }
 
-func (t *TimerMap) StartTimer(strId string, nbrId int, expireAfterTime time.Duration, timerFunction func(srtId string, nbrId int)) bool {
+func (t *TimerMap) StartTimer(strId string, nbrId int, expireAfterTime time.Duration, tryCount uint64, timerFunction func(srtId string, nbrId int, tryCount uint64)) bool {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 	if timerFunction == nil {
@@ -119,9 +144,9 @@ func (t *TimerMap) StartTimer(strId string, nbrId int, expireAfterTime time.Dura
 		delete(t.timer, timerKey)
 	}
 
-	// Store in timerMap in-build Go "timer", timer function executor, and the function to be executed when the timer expires
+	// Store in timerMap in-build Go "timer", timer function executor and the function to be executed when the timer expires
 	t.timer[timerKey] = TimerInfo{timerAddress: time.AfterFunc(expireAfterTime, func() { t.timerFunctionExecutor(strId, nbrId) }),
-		timerFunctionAddress: func() { timerFunction(strId, nbrId) }}
+		timerFunctionAddress: func() { timerFunction(strId, nbrId, tryCount) }}
 	return true
 }
 
