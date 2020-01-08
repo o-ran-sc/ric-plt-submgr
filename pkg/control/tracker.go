@@ -31,9 +31,8 @@ type TransactionKey struct {
 }
 
 type TransactionXappKey struct {
-	Addr string // xapp addr
-	Port uint16 // xapp port
-	Xid  string // xapp xid in req
+	RmrEndpoint
+	Xid string // xapp xid in req
 }
 
 type Transaction struct {
@@ -46,7 +45,7 @@ type Transaction struct {
 }
 
 func (t *Transaction) SubRouteInfo() SubRouteInfo {
-	return SubRouteInfo{t.Key.TransType, t.Xappkey.Addr, t.Xappkey.Port, t.Key.SubID}
+	return SubRouteInfo{t.Key.TransType, t.Xappkey.RmrEndpoint.Addr, t.Xappkey.RmrEndpoint.Port, t.Key.SubID}
 }
 
 /*
@@ -69,7 +68,8 @@ Returns error if there is similar transatcion ongoing.
 */
 func (t *Tracker) TrackTransaction(subID uint16, act Action, addr string, port uint16, params *xapp.RMRParams, respReceived bool, forwardRespToXapp bool) (*Transaction, error) {
 	key := TransactionKey{subID, act}
-	xappkey := TransactionXappKey{addr, port, params.Xid}
+	endpoint := RmrEndpoint{addr, port}
+	xappkey := TransactionXappKey{endpoint, params.Xid}
 	trans := &Transaction{t, key, xappkey, params, respReceived, forwardRespToXapp}
 	t.mutex.Lock()
 	defer t.mutex.Unlock()

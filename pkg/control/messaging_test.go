@@ -31,27 +31,12 @@ import (
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-
 var e2asnpacker e2ap.E2APPackerIf = e2ap_wrapper.NewAsn1E2Packer()
 
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-type xappTransaction struct {
-	xappConn *testingXappControl
-	xid      string
-}
-
-func newXappTransaction(xappConn *testingXappControl) {
-	trans := &xappTransaction{}
-	trans.xappConn = xappConn
-	trans.xid = xappConn.newXid()
-}
-
-//-----------------------------------------------------------------------------
-//
-//-----------------------------------------------------------------------------
-func (xappConn *testingXappControl) handle_xapp_subs_req(t *testing.T, updseq bool) {
+func (xappConn *testingXappControl) handle_xapp_subs_req(t *testing.T, oldTrans *xappTransaction) *xappTransaction {
 	xapp.Logger.Info("handle_xapp_subs_req")
 	e2SubsReq := e2asnpacker.NewPackerSubscriptionRequest()
 
@@ -93,29 +78,34 @@ func (xappConn *testingXappControl) handle_xapp_subs_req(t *testing.T, updseq bo
 	err, packedMsg := e2SubsReq.Pack(nil)
 	if err != nil {
 		testError(t, "(%s) pack NOK %s", xappConn.desc, err.Error())
+		return nil
+	}
+
+	var trans *xappTransaction = oldTrans
+	if trans == nil {
+		trans = xappConn.newXappTransaction(nil, "RAN_NAME_1")
 	}
 
 	params := &xapp.RMRParams{}
 	params.Mtype = xapp.RIC_SUB_REQ
 	params.SubId = -1
 	params.Payload = packedMsg.Buf
-	params.Meid = xappConn.meid
-	if updseq {
-		xappConn.newXid()
-	}
-	params.Xid = xappConn.xid
+	params.Meid = trans.meid
+	params.Xid = trans.xid
 	params.Mbuf = nil
 
 	snderr := xappConn.RmrSend(params)
 	if snderr != nil {
 		testError(t, "(%s) RMR SEND FAILED: %s", xappConn.desc, snderr.Error())
+		return nil
 	}
+	return trans
 }
 
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-func (xappConn *testingXappControl) handle_xapp_subs_resp(t *testing.T) int {
+func (xappConn *testingXappControl) handle_xapp_subs_resp(t *testing.T, trans *xappTransaction) int {
 	xapp.Logger.Info("handle_xapp_subs_resp")
 	e2SubsResp := e2asnpacker.NewPackerSubscriptionResponse()
 	var e2SubsId int
@@ -126,7 +116,10 @@ func (xappConn *testingXappControl) handle_xapp_subs_resp(t *testing.T) int {
 	select {
 	case msg := <-xappConn.rmrConChan:
 		if msg.Mtype != xapp.RICMessageTypes["RIC_SUB_RESP"] {
-			testError(t, "(%s) Received wrong mtype expected %s got %s, error", xappConn.desc, "RIC_SUB_RESP", xapp.RicMessageTypeToName[msg.Mtype])
+			testError(t, "(%s) Received RIC_SUB_RESP wrong mtype expected %s got %s, error", xappConn.desc, "RIC_SUB_RESP", xapp.RicMessageTypeToName[msg.Mtype])
+			return -1
+		} else if msg.Xid != trans.xid {
+			testError(t, "(%s) Received RIC_SUB_RESP wrong xid expected %s got %s, error", xappConn.desc, trans.xid, msg.Xid)
 			return -1
 		} else {
 			packedData := &packer.PackedData{}
@@ -155,7 +148,7 @@ func (xappConn *testingXappControl) handle_xapp_subs_resp(t *testing.T) int {
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-func (xappConn *testingXappControl) handle_xapp_subs_del_req(t *testing.T, updseq bool, e2SubsId int) {
+func (xappConn *testingXappControl) handle_xapp_subs_del_req(t *testing.T, oldTrans *xappTransaction, e2SubsId int) *xappTransaction {
 	xapp.Logger.Info("handle_xapp_subs_del_req")
 	e2SubsDelReq := e2asnpacker.NewPackerSubscriptionDeleteRequest()
 
@@ -174,29 +167,34 @@ func (xappConn *testingXappControl) handle_xapp_subs_del_req(t *testing.T, updse
 	err, packedMsg := e2SubsDelReq.Pack(nil)
 	if err != nil {
 		testError(t, "(%s) pack NOK %s", xappConn.desc, err.Error())
+		return nil
+	}
+
+	var trans *xappTransaction = oldTrans
+	if trans == nil {
+		trans = xappConn.newXappTransaction(nil, "RAN_NAME_1")
 	}
 
 	params := &xapp.RMRParams{}
 	params.Mtype = xapp.RIC_SUB_DEL_REQ
 	params.SubId = e2SubsId
 	params.Payload = packedMsg.Buf
-	params.Meid = xappConn.meid
-	if updseq {
-		xappConn.newXid()
-	}
-	params.Xid = xappConn.xid
+	params.Meid = trans.meid
+	params.Xid = trans.xid
 	params.Mbuf = nil
 
 	snderr := xappConn.RmrSend(params)
 	if snderr != nil {
 		testError(t, "(%s) RMR SEND FAILED: %s", xappConn.desc, snderr.Error())
+		return nil
 	}
+	return trans
 }
 
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-func (xappConn *testingXappControl) handle_xapp_subs_del_resp(t *testing.T) {
+func (xappConn *testingXappControl) handle_xapp_subs_del_resp(t *testing.T, trans *xappTransaction) {
 	xapp.Logger.Info("handle_xapp_subs_del_resp")
 	e2SubsDelResp := e2asnpacker.NewPackerSubscriptionDeleteResponse()
 
@@ -206,7 +204,10 @@ func (xappConn *testingXappControl) handle_xapp_subs_del_resp(t *testing.T) {
 	select {
 	case msg := <-xappConn.rmrConChan:
 		if msg.Mtype != xapp.RICMessageTypes["RIC_SUB_DEL_RESP"] {
-			testError(t, "(%s) Received wrong mtype expected %s got %s, error", xappConn.desc, "RIC_SUB_DEL_RESP", xapp.RicMessageTypeToName[msg.Mtype])
+			testError(t, "(%s) Received RIC_SUB_DEL_RESP wrong mtype expected %s got %s, error", xappConn.desc, "RIC_SUB_DEL_RESP", xapp.RicMessageTypeToName[msg.Mtype])
+			return
+		} else if msg.Xid != trans.xid {
+			testError(t, "(%s) Received RIC_SUB_DEL_RESP wrong xid expected %s got %s, error", xappConn.desc, trans.xid, msg.Xid)
 			return
 		} else {
 			packedData := &packer.PackedData{}
@@ -403,6 +404,44 @@ func (mc *testingMainControl) wait_subs_clean(t *testing.T, e2SubsId int, secs i
 	return false
 }
 
+func (mc *testingMainControl) get_seqcnt(t *testing.T) uint16 {
+	mc.c.registry.mutex.Lock()
+	defer mc.c.registry.mutex.Unlock()
+	return mc.c.registry.counter
+}
+
+func (mc *testingMainControl) wait_seqcnt_change(t *testing.T, orig uint16, secs int) (uint16, bool) {
+	i := 1
+	for ; i <= secs*2; i++ {
+		mc.c.registry.mutex.Lock()
+		curr := mc.c.registry.counter
+		mc.c.registry.mutex.Unlock()
+		if curr != orig {
+			return curr, true
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+	testError(t, "(general) no seq change within %d secs", secs)
+	return 0, false
+}
+
+func (mc *testingMainControl) get_msgcounter(t *testing.T) uint64 {
+	return mc.c.msgCounter
+}
+
+func (mc *testingMainControl) wait_msgcounter_change(t *testing.T, orig uint64, secs int) (uint64, bool) {
+	i := 1
+	for ; i <= secs*2; i++ {
+		curr := mc.c.msgCounter
+		if curr != orig {
+			return curr, true
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+	testError(t, "(general) no msg counter change within %d secs", secs)
+	return 0, false
+}
+
 //-----------------------------------------------------------------------------
 // TestSubReqAndSubDelOk
 //
@@ -440,15 +479,15 @@ func (mc *testingMainControl) wait_subs_clean(t *testing.T, e2SubsId int, secs i
 func TestSubReqAndSubDelOk(t *testing.T) {
 	xapp.Logger.Info("TestSubReqAndSubDelOk")
 
-	xappConn1.handle_xapp_subs_req(t, true)
+	cretrans := xappConn1.handle_xapp_subs_req(t, nil)
 	crereq, cremsg := e2termConn.handle_e2term_subs_req(t)
 	e2termConn.handle_e2term_subs_resp(t, crereq, cremsg)
-	e2SubsId := xappConn1.handle_xapp_subs_resp(t)
+	e2SubsId := xappConn1.handle_xapp_subs_resp(t, cretrans)
 
-	xappConn1.handle_xapp_subs_del_req(t, true, e2SubsId)
+	deltrans := xappConn1.handle_xapp_subs_del_req(t, nil, e2SubsId)
 	delreq, delmsg := e2termConn.handle_e2term_subs_del_req(t)
 	e2termConn.handle_e2term_subs_del_resp(t, delreq, delmsg)
-	xappConn1.handle_xapp_subs_del_resp(t)
+	xappConn1.handle_xapp_subs_del_resp(t, deltrans)
 
 	//Wait that subs is cleaned
 	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
@@ -486,19 +525,21 @@ func TestSubReqRetransmission(t *testing.T) {
 	xapp.Logger.Info("TestSubReqRetransmission")
 
 	//Subs Create
-	xappConn1.handle_xapp_subs_req(t, true)
+	cretrans := xappConn1.handle_xapp_subs_req(t, nil)
 	crereq, cremsg := e2termConn.handle_e2term_subs_req(t)
-	xappConn1.handle_xapp_subs_req(t, false)
+
+	seqBef := mainCtrl.get_msgcounter(t)
+	xappConn1.handle_xapp_subs_req(t, cretrans) //Retransmitted SubReq
+	mainCtrl.wait_msgcounter_change(t, seqBef, 10)
 
 	e2termConn.handle_e2term_subs_resp(t, crereq, cremsg)
-
-	e2SubsId := xappConn1.handle_xapp_subs_resp(t)
+	e2SubsId := xappConn1.handle_xapp_subs_resp(t, cretrans)
 
 	//Subs Delete
-	xappConn1.handle_xapp_subs_del_req(t, true, e2SubsId)
+	deltrans := xappConn1.handle_xapp_subs_del_req(t, nil, e2SubsId)
 	delreq, delmsg := e2termConn.handle_e2term_subs_del_req(t)
 	e2termConn.handle_e2term_subs_del_resp(t, delreq, delmsg)
-	xappConn1.handle_xapp_subs_del_resp(t)
+	xappConn1.handle_xapp_subs_del_resp(t, deltrans)
 
 	//Wait that subs is cleaned
 	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
@@ -535,20 +576,21 @@ func TestSubDelReqRetransmission(t *testing.T) {
 	xapp.Logger.Info("TestSubDelReqRetransmission")
 
 	//Subs Create
-	xappConn1.handle_xapp_subs_req(t, true)
+	cretrans := xappConn1.handle_xapp_subs_req(t, nil)
 	crereq, cremsg := e2termConn.handle_e2term_subs_req(t)
 	e2termConn.handle_e2term_subs_resp(t, crereq, cremsg)
-	e2SubsId := xappConn1.handle_xapp_subs_resp(t)
+	e2SubsId := xappConn1.handle_xapp_subs_resp(t, cretrans)
 
 	//Subs Delete
-	xappConn1.handle_xapp_subs_del_req(t, true, e2SubsId)
+	deltrans := xappConn1.handle_xapp_subs_del_req(t, nil, e2SubsId)
 	delreq, delmsg := e2termConn.handle_e2term_subs_del_req(t)
 
-	<-time.After(2 * time.Second)
-	xappConn1.handle_xapp_subs_del_req(t, false, e2SubsId)
+	seqBef := mainCtrl.get_msgcounter(t)
+	xappConn1.handle_xapp_subs_del_req(t, deltrans, e2SubsId) //Retransmitted SubDelReq
+	mainCtrl.wait_msgcounter_change(t, seqBef, 10)
 
 	e2termConn.handle_e2term_subs_del_resp(t, delreq, delmsg)
-	xappConn1.handle_xapp_subs_del_resp(t)
+	xappConn1.handle_xapp_subs_del_resp(t, deltrans)
 
 	//Wait that subs is cleaned
 	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
@@ -596,34 +638,111 @@ func TestSubReqAndSubDelOkTwoParallel(t *testing.T) {
 	xapp.Logger.Info("TestSubReqAndSubDelOkTwoParallel")
 
 	//Req1
-	xappConn1.handle_xapp_subs_req(t, true)
+	cretrans1 := xappConn1.handle_xapp_subs_req(t, nil)
 	crereq1, cremsg1 := e2termConn.handle_e2term_subs_req(t)
 
 	//Req2
-	xappConn2.handle_xapp_subs_req(t, true)
+	cretrans2 := xappConn2.handle_xapp_subs_req(t, nil)
 	crereq2, cremsg2 := e2termConn.handle_e2term_subs_req(t)
 
 	//Resp1
 	e2termConn.handle_e2term_subs_resp(t, crereq1, cremsg1)
-	e2SubsId1 := xappConn1.handle_xapp_subs_resp(t)
+	e2SubsId1 := xappConn1.handle_xapp_subs_resp(t, cretrans1)
 
 	//Resp2
 	e2termConn.handle_e2term_subs_resp(t, crereq2, cremsg2)
-	e2SubsId2 := xappConn2.handle_xapp_subs_resp(t)
+	e2SubsId2 := xappConn2.handle_xapp_subs_resp(t, cretrans2)
 
 	//Del1
-	xappConn1.handle_xapp_subs_del_req(t, true, e2SubsId1)
+	deltrans1 := xappConn1.handle_xapp_subs_del_req(t, nil, e2SubsId1)
 	delreq1, delmsg1 := e2termConn.handle_e2term_subs_del_req(t)
 	e2termConn.handle_e2term_subs_del_resp(t, delreq1, delmsg1)
-	xappConn1.handle_xapp_subs_del_resp(t)
+	xappConn1.handle_xapp_subs_del_resp(t, deltrans1)
 	//Wait that subs is cleaned
 	mainCtrl.wait_subs_clean(t, e2SubsId1, 10)
 
 	//Del2
-	xappConn2.handle_xapp_subs_del_req(t, true, e2SubsId2)
+	deltrans2 := xappConn2.handle_xapp_subs_del_req(t, nil, e2SubsId2)
 	delreq2, delmsg2 := e2termConn.handle_e2term_subs_del_req(t)
 	e2termConn.handle_e2term_subs_del_resp(t, delreq2, delmsg2)
-	xappConn2.handle_xapp_subs_del_resp(t)
+	xappConn2.handle_xapp_subs_del_resp(t, deltrans2)
+	//Wait that subs is cleaned
+	mainCtrl.wait_subs_clean(t, e2SubsId2, 10)
+}
+
+//-----------------------------------------------------------------------------
+// TestSameSubsDiffRan
+// Same subscription to different RANs
+//
+//   stub                          stub
+// +-------+     +---------+    +---------+
+// | xapp  |     | submgr  |    | e2term  |
+// +-------+     +---------+    +---------+
+//     |              |              |
+//     |              |              |
+//     |              |              |
+//     | SubReq(r1)   |              |
+//     |------------->|              |
+//     |              |              |
+//     |              | SubReq(r1)   |
+//     |              |------------->|
+//     |              |              |
+//     |              | SubResp(r1)  |
+//     |              |<-------------|
+//     |              |              |
+//     | SubResp(r1)  |              |
+//     |<-------------|              |
+//     |              |              |
+//     | SubReq(r2)   |              |
+//     |------------->|              |
+//     |              |              |
+//     |              | SubReq(r2)   |
+//     |              |------------->|
+//     |              |              |
+//     |              | SubResp(r2)  |
+//     |              |<-------------|
+//     |              |              |
+//     | SubResp(r2)  |              |
+//     |<-------------|              |
+//     |              |              |
+//     |       [SUBS r1 DELETE]      |
+//     |              |              |
+//     |       [SUBS r2 DELETE]      |
+//     |              |              |
+//
+//-----------------------------------------------------------------------------
+func TestSameSubsDiffRan(t *testing.T) {
+	xapp.Logger.Info("TestSameSubsDiffRan")
+
+	//Req1
+	cretrans1 := xappConn1.newXappTransaction(nil, "RAN_NAME_1")
+	xappConn1.handle_xapp_subs_req(t, cretrans1)
+	crereq1, cremsg1 := e2termConn.handle_e2term_subs_req(t)
+	e2termConn.handle_e2term_subs_resp(t, crereq1, cremsg1)
+	e2SubsId1 := xappConn1.handle_xapp_subs_resp(t, cretrans1)
+
+	//Req2
+	cretrans2 := xappConn1.newXappTransaction(nil, "RAN_NAME_2")
+	xappConn1.handle_xapp_subs_req(t, cretrans2)
+	crereq2, cremsg2 := e2termConn.handle_e2term_subs_req(t)
+	e2termConn.handle_e2term_subs_resp(t, crereq2, cremsg2)
+	e2SubsId2 := xappConn1.handle_xapp_subs_resp(t, cretrans2)
+
+	//Del1
+	deltrans1 := xappConn1.newXappTransaction(nil, "RAN_NAME_1")
+	xappConn1.handle_xapp_subs_del_req(t, deltrans1, e2SubsId1)
+	delreq1, delmsg1 := e2termConn.handle_e2term_subs_del_req(t)
+	e2termConn.handle_e2term_subs_del_resp(t, delreq1, delmsg1)
+	xappConn1.handle_xapp_subs_del_resp(t, deltrans1)
+	//Wait that subs is cleaned
+	mainCtrl.wait_subs_clean(t, e2SubsId1, 10)
+
+	//Del2
+	deltrans2 := xappConn1.newXappTransaction(nil, "RAN_NAME_2")
+	xappConn1.handle_xapp_subs_del_req(t, deltrans2, e2SubsId2)
+	delreq2, delmsg2 := e2termConn.handle_e2term_subs_del_req(t)
+	e2termConn.handle_e2term_subs_del_resp(t, delreq2, delmsg2)
+	xappConn1.handle_xapp_subs_del_resp(t, deltrans2)
 	//Wait that subs is cleaned
 	mainCtrl.wait_subs_clean(t, e2SubsId2, 10)
 }

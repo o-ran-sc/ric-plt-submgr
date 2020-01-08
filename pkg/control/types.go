@@ -32,4 +32,8 @@ type SubRouteInfo struct {
 	SubID   uint16
 }
 
+type RmrEndpoint struct {
+	Addr string // xapp addr
+	Port uint16 // xapp port
+}
 type Action int

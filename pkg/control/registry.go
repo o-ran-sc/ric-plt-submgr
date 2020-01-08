@@ -25,8 +25,20 @@ import (
 )
 
 type Subscription struct {
-	Seq       uint16
-	Confirmed bool
+	Seq    uint16
+	Active bool
+}
+
+func (s *Subscription) Confirmed() {
+	s.Active = true
+}
+
+func (s *Subscription) UnConfirmed() {
+	s.Active = false
+}
+
+func (s *Subscription) IsConfirmed() bool {
+	return s.Active
 }
 
 type Registry struct {
@@ -42,24 +54,37 @@ func (r *Registry) Initialize(seedsn uint16) {
 }
 
 // Reserves and returns the next free sequence number
-func (r *Registry) ReserveSequenceNumber() (uint16, bool) {
+func (r *Registry) ReserveSubscription() *Subscription {
 	// Check is current SequenceNumber valid
+	// Allocate next SequenceNumber value and retry N times
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
-	sequenceNumber := r.counter
-	if _, ok := r.register[sequenceNumber]; ok {
-		xapp.Logger.Error("Invalid SeqenceNumber sequenceNumber: %v", sequenceNumber)
-		return sequenceNumber, false
+	var subs *Subscription = nil
+	var retrytimes uint16 = 1000
+	for ; subs == nil && retrytimes > 0; retrytimes-- {
+		sequenceNumber := r.counter
+		if r.counter == 65535 {
+			r.counter = 0
+		} else {
+			r.counter++
+		}
+		if _, ok := r.register[sequenceNumber]; ok == false {
+			r.register[sequenceNumber] = &Subscription{sequenceNumber, false}
+			return r.register[sequenceNumber]
+		}
 	}
-	r.register[sequenceNumber] = &Subscription{sequenceNumber, false}
+	return nil
+}
 
-	// Allocate next SequenceNumber value
-	if r.counter == 65535 {
-		r.counter = 0
-	} else {
-		r.counter++
+// This function checks the validity of the given subscription id
+func (r *Registry) GetSubscription(sn uint16) *Subscription {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	xapp.Logger.Debug("Registry map: %v", r.register)
+	if _, ok := r.register[sn]; ok {
+		return r.register[sn]
 	}
-	return sequenceNumber, true
+	return nil
 }
 
 // This function checks the validity of the given subscription id
@@ -77,14 +102,14 @@ func (r *Registry) IsValidSequenceNumber(sn uint16) bool {
 func (r *Registry) setSubscriptionToConfirmed(sn uint16) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
-	r.register[sn].Confirmed = true
+	r.register[sn].Confirmed()
 }
 
 //This function sets the given id as unused in the register
-func (r *Registry) deleteSubscription(sn uint16) {
+func (r *Registry) setSubscriptionToUnConfirmed(sn uint16) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
-	r.register[sn].Confirmed = false
+	r.register[sn].UnConfirmed()
 }
 
 //This function releases the given id as unused in the register

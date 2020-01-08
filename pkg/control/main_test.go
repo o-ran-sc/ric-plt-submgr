@@ -117,24 +117,43 @@ func initTestingMessageChannel() testingMessageChannel {
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type xappTransaction struct {
+	tc   *testingXappControl
+	xid  string
+	meid *xapp.RMRMeid
+}
 
 type testingXappControl struct {
 	testingRmrControl
 	testingMessageChannel
 	meid    *xapp.RMRMeid
 	xid_seq uint64
-	xid     string
 }
 
 func (tc *testingXappControl) newXid() string {
-	tc.xid = tc.desc + "_XID_" + strconv.FormatUint(uint64(tc.xid_seq), 10)
+	var xid string
+	xid = tc.desc + "_XID_" + strconv.FormatUint(uint64(tc.xid_seq), 10)
 	tc.xid_seq++
-	return tc.xid
+	return xid
+}
+
+func (tc *testingXappControl) newXappTransaction(xid *string, ranname string) *xappTransaction {
+	trans := &xappTransaction{}
+	trans.tc = tc
+	if xid == nil {
+		trans.xid = tc.newXid()
+	} else {
+		trans.xid = *xid
+	}
+	trans.meid = &xapp.RMRMeid{RanName: ranname}
+	return trans
 }
 
 func (tc *testingXappControl) Consume(msg *xapp.RMRParams) (err error) {
 
-	//if msg.Xid == tc.xid {
 	if strings.Contains(msg.Xid, tc.desc) {
 		xapp.Logger.Info("(%s) Consume mtype=%s subid=%d xid=%s", tc.desc, xapp.RicMessageTypeToName[msg.Mtype], msg.SubId, msg.Xid)
 		tc.rmrConChan <- msg
@@ -149,8 +168,7 @@ func createNewXappControl(desc string, rtfile string, port string, stat string, 
 	xappCtrl.testingRmrControl = initTestingRmrControl(desc, rtfile, port, stat, xappCtrl)
 	xappCtrl.testingMessageChannel = initTestingMessageChannel()
 	xappCtrl.meid = &xapp.RMRMeid{RanName: ranname}
-	xappCtrl.xid_seq = 0
-	xappCtrl.newXid()
+	xappCtrl.xid_seq = 1
 	return xappCtrl
 }
 
