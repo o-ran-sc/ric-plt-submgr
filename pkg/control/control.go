@@ -79,6 +79,7 @@ func init() {
 }
 
 func NewControl() *Control {
+
 	registry := new(Registry)
 	registry.Initialize(seedSN)
 
@@ -94,9 +95,14 @@ func NewControl() *Control {
 	deleteHandle := rtmgrhandle.NewDeleteXappSubscriptionHandleParamsWithTimeout(10 * time.Second)
 	rtmgrClient := RtmgrClient{client, handle, deleteHandle}
 
+	rtmgrClientPtr := &rtmgrClient
+
+	//TODO: to make this better. Now it is just a hack.
+	registry.rtmgrClient = rtmgrClientPtr
+
 	return &Control{e2ap: new(E2ap),
 		registry:    registry,
-		rtmgrClient: &rtmgrClient,
+		rtmgrClient: rtmgrClientPtr,
 		tracker:     tracker,
 		timerMap:    timerMap,
 		msgCounter:  0,
@@ -163,10 +169,9 @@ func (c *Control) handleSubscriptionRequest(params *xapp.RMRParams) {
 		return
 	}
 
-	/* Reserve a sequence number and set it in the payload */
-	subs := c.registry.ReserveSubscription(RmrEndpoint{*srcAddr, *srcPort}, params.Meid)
-	if subs == nil {
-		xapp.Logger.Error("SubReq: Failed to reserve sequence number. Dropping this msg. SubId: %v, Xid: %s", params.SubId, params.Xid)
+	subs, err := c.registry.ReserveSubscription(RmrEndpoint{*srcAddr, *srcPort}, params.Meid)
+	if err != nil {
+		xapp.Logger.Error("SubReq: %s, Dropping this msg.", err.Error())
 		return
 	}
 
@@ -174,7 +179,7 @@ func (c *Control) handleSubscriptionRequest(params *xapp.RMRParams) {
 	err = c.e2ap.SetSubscriptionRequestSequenceNumber(params.Payload, subs.Seq)
 	if err != nil {
 		xapp.Logger.Error("SubReq: Unable to get Sequence Number from Payload. Dropping this msg. Err: %v, SubId: %v, Xid: %s, Payload %X", err, params.SubId, params.Xid, params.Payload)
-		c.registry.releaseSequenceNumber(subs.Seq)
+		c.registry.DelSubscription(subs.Seq)
 		return
 	}
 
@@ -184,18 +189,7 @@ func (c *Control) handleSubscriptionRequest(params *xapp.RMRParams) {
 	_, err = c.tracker.TrackTransaction(subs, RmrEndpoint{*srcAddr, *srcPort}, params, responseReceived, forwardRespToXapp)
 	if err != nil {
 		xapp.Logger.Error("SubReq: %s, Dropping this msg.", err.Error())
-		c.registry.releaseSequenceNumber(subs.Seq)
-		return
-	}
-
-	// Update routing manager about the new subscription
-	subRouteAction := subs.SubRouteInfo(CREATE)
-	xapp.Logger.Info("SubReq: Starting routing manager update. SubId: %v, Xid: %s", params.SubId, params.Xid)
-
-	err = c.rtmgrClient.SubscriptionRequestUpdate(subRouteAction)
-	if err != nil {
-		xapp.Logger.Error("SubReq: Failed to update routing manager. Dropping this msg. Err: %v, SubId: %v, Xid: %s", err, params.SubId, params.Xid)
-		c.registry.releaseSequenceNumber(subs.Seq)
+		c.registry.DelSubscription(subs.Seq)
 		return
 	}
 
@@ -295,16 +289,9 @@ func (c *Control) handleSubscriptionFailure(params *xapp.RMRParams) {
 
 	time.Sleep(3 * time.Second)
 
-	xapp.Logger.Info("SubFail: Starting routing manager update. SubId: %v, Xid: %s", params.SubId, params.Xid)
-	subRouteAction := subs.SubRouteInfo(DELETE)
-	err = c.rtmgrClient.SubscriptionRequestUpdate(subRouteAction)
-	if err != nil {
-		xapp.Logger.Error("SubFail: Failed to update routing manager. Err: %v, SubId: %v, Xid: %s", err, params.SubId, params.Xid)
-	}
-
 	xapp.Logger.Info("SubFail: Deleting transaction record. SubId: %v, Xid: %s", params.SubId, params.Xid)
 	transaction.Release()
-	if !c.registry.releaseSequenceNumber(payloadSeqNum) {
+	if !c.registry.DelSubscription(payloadSeqNum) {
 		xapp.Logger.Error("SubFail: Failed to release sequency number. SubId: %v, Xid: %s", params.SubId, params.Xid)
 	}
 	return
@@ -500,16 +487,8 @@ func (c *Control) handleSubscriptionDeleteResponse(params *xapp.RMRParams) (err 
 		time.Sleep(3 * time.Second)
 	}
 
-	xapp.Logger.Info("SubDelResp: Starting routing manager update. SubId: %v, Xid: %s", params.SubId, params.Xid)
-	subRouteAction := subs.SubRouteInfo(DELETE)
-	err = c.rtmgrClient.SubscriptionRequestUpdate(subRouteAction)
-	if err != nil {
-		xapp.Logger.Error("SubDelResp: Failed to update routing manager. Err: %v, SubId: %v, Xid: %s", err, params.SubId, params.Xid)
-		return
-	}
-
 	xapp.Logger.Info("SubDelResp: Deleting transaction record. SubId: %v, Xid: %s", params.SubId, params.Xid)
-	if !c.registry.releaseSequenceNumber(payloadSeqNum) {
+	if !c.registry.DelSubscription(payloadSeqNum) {
 		xapp.Logger.Error("SubDelResp: Failed to release sequency number. SubId: %v, Xid: %s", params.SubId, params.Xid)
 		return
 	}
@@ -574,17 +553,9 @@ func (c *Control) handleSubscriptionDeleteFailure(params *xapp.RMRParams) {
 		time.Sleep(3 * time.Second)
 	}
 
-	xapp.Logger.Info("SubDelFail: Starting routing manager update. SubId: %v, Xid: %s", params.SubId, params.Xid)
-	subRouteAction := subs.SubRouteInfo(DELETE)
-	err = c.rtmgrClient.SubscriptionRequestUpdate(subRouteAction)
-	if err != nil {
-		xapp.Logger.Error("SubDelFail: Failed to update routing manager. Err: %v, SubId: %v, Xid: %s", err, params.SubId, params.Xid)
-		return
-	}
-
 	xapp.Logger.Info("SubDelFail: Deleting transaction record. SubId: %v, Xid: %s", params.SubId, params.Xid)
 	transaction.Release()
-	if !c.registry.releaseSequenceNumber(payloadSeqNum) {
+	if !c.registry.DelSubscription(payloadSeqNum) {
 		xapp.Logger.Error("SubDelFail: Failed to release sequency number. Err: %v, SubId: %v, Xid: %s", err, params.SubId, params.Xid)
 		return
 	}
@@ -656,17 +627,9 @@ func (c *Control) handleSubscriptionDeleteRequestTimer(strId string, nbrId int, 
 		time.Sleep(3 * time.Second)
 	}
 
-	xapp.Logger.Info("handleSubDelTimer: Starting routing manager update. SubId: %v, Xid: %s", subId, params.Xid)
-	subRouteAction := subs.SubRouteInfo(DELETE)
-	err := c.rtmgrClient.SubscriptionRequestUpdate(subRouteAction)
-	if err != nil {
-		xapp.Logger.Error("handleSubDelTimer: Failed to update routing manager. Err: %v, SubId: %v, Xid: %s", err, subId, params.Xid)
-		return
-	}
-
 	xapp.Logger.Info("handleSubDelTimer: Deleting transaction record. SubId: %v, Xid: %s", subId, params.Xid)
 	transaction.Release()
-	if !c.registry.releaseSequenceNumber(subId) {
+	if !c.registry.DelSubscription(subId) {
 		xapp.Logger.Error("handleSubDelTimer: Failed to release sequency number. SubId: %v, Xid: %s", subId, params.Xid)
 	}
 	return
