@@ -19,6 +19,10 @@
 
 package control
 
+import (
+	"strconv"
+)
+
 type RmrDatagram struct {
 	MessageType    int
 	SubscriptionId uint16
@@ -36,4 +40,9 @@ type RmrEndpoint struct {
 	Addr string // xapp addr
 	Port uint16 // xapp port
 }
+
+func (endpoint RmrEndpoint) String() string {
+	return endpoint.Addr + ":" + strconv.FormatUint(uint64(endpoint.Port), 10)
+}
+
 type Action int
