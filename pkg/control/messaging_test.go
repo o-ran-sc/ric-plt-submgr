@@ -746,3 +746,274 @@ func TestSameSubsDiffRan(t *testing.T) {
 	//Wait that subs is cleaned
 	mainCtrl.wait_subs_clean(t, e2SubsId2, 10)
 }
+
+//-----------------------------------------------------------------------------
+// TestSubReqRetryInSubmgr
+//
+//   stub                          stub
+// +-------+     +---------+    +---------+
+// | xapp  |     | submgr  |    | e2term  |
+// +-------+     +---------+    +---------+
+//     |              |              |
+//     |  SubReq      |              |
+//     |------------->|              |
+//     |              |              |
+//     |              | SubReq       |
+//     |              |------------->|
+//     |              |              |
+//     |              |              |
+//     |              | SubReq       |
+//     |              |------------->|
+//     |              |              |
+//     |              |      SubResp |
+//     |              |<-------------|
+//     |              |              |
+//     |      SubResp |              |
+//     |<-------------|              |
+//     |              |              |
+//     |         [SUBS DELETE]       |
+//     |              |              |
+//
+//-----------------------------------------------------------------------------
+
+func TestSubReqRetryInSubmgr(t *testing.T) {
+
+	xapp.Logger.Info("TestSubReqRetryInSubmgr start")
+
+	// Xapp: Send SubsReq
+	cretrans := xappConn1.handle_xapp_subs_req(t, nil)
+
+	// E2t: Receive 1st SubsReq
+	e2termConn.handle_e2term_subs_req(t)
+
+	// E2t: Receive 2nd SubsReq and send SubsResp
+	crereq, cremsg := e2termConn.handle_e2term_subs_req(t)
+	e2termConn.handle_e2term_subs_resp(t, crereq, cremsg)
+
+	// Xapp: Receive SubsResp
+	e2SubsId := xappConn1.handle_xapp_subs_resp(t, cretrans)
+
+	deltrans := xappConn1.handle_xapp_subs_del_req(t, nil, e2SubsId)
+	delreq, delmsg := e2termConn.handle_e2term_subs_del_req(t)
+	e2termConn.handle_e2term_subs_del_resp(t, delreq, delmsg)
+	xappConn1.handle_xapp_subs_del_resp(t, deltrans)
+
+	// Wait that subs is cleaned
+	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
+}
+
+//-----------------------------------------------------------------------------
+// TestSubReqTwoRetriesNoRespSubDelRespInSubmgr
+//
+//   stub                          stub
+// +-------+     +---------+    +---------+
+// | xapp  |     | submgr  |    | e2term  |
+// +-------+     +---------+    +---------+
+//     |              |              |
+//     |  SubReq      |              |
+//     |------------->|              |
+//     |              |              |
+//     |              | SubReq       |
+//     |              |------------->|
+//     |              |              |
+//     |              |              |
+//     |              | SubReq       |
+//     |              |------------->|
+//     |              |              |
+//     |              | SubDelReq    |
+//     |              |------------->|
+//     |              |              |
+//     |              |              |
+//     |              | SubDelReq    |
+//     |              |------------->|
+//     |              |              |
+//     |              |              |
+//     |              |   SubDelResp |
+//     |              |<-------------|
+//     |   SubDelResp |              |
+//     |<-------------|              |
+//     |              |              |
+//
+//-----------------------------------------------------------------------------
+
+func TestSubReqRetryNoRespSubDelRespInSubmgr(t *testing.T) {
+
+	xapp.Logger.Info("TestSubReqTwoRetriesNoRespSubDelRespInSubmgr start")
+
+	// Xapp: Send SubsReq
+	xappConn1.handle_xapp_subs_req(t, nil)
+
+	// E2t: Receive 1st SubsReq
+	e2termConn.handle_e2term_subs_req(t)
+
+	// E2t: Receive 2nd SubsReq
+	e2termConn.handle_e2term_subs_req(t)
+
+	// E2t: Send SubsResp
+	delreq, delmsg := e2termConn.handle_e2term_subs_del_req(t)
+	e2termConn.handle_e2term_subs_del_resp(t, delreq, delmsg)
+
+	// Wait that subs is cleaned
+	mainCtrl.wait_subs_clean(t, int(delreq.RequestId.Seq), 10)
+}
+
+//-----------------------------------------------------------------------------
+// TestSubReqTwoRetriesNoRespAtAllInSubmgr
+//
+//   stub                          stub
+// +-------+     +---------+    +---------+
+// | xapp  |     | submgr  |    | e2term  |
+// +-------+     +---------+    +---------+
+//     |              |              |
+//     |  SubReq      |              |
+//     |------------->|              |
+//     |              |              |
+//     |              | SubReq       |
+//     |              |------------->|
+//     |              |              |
+//     |              |              |
+//     |              | SubReq       |
+//     |              |------------->|
+//     |              |              |
+//     |              | SubDelReq    |
+//     |              |------------->|
+//     |              |              |
+//     |              |              |
+//     |              | SubDelReq    |
+//     |              |------------->|
+//     |              |              |
+//     |              |   SubDelResp |
+//     |              |<-------------|
+//     |              |              |
+//
+//-----------------------------------------------------------------------------
+
+func TestSubReqTwoRetriesNoRespAtAllInSubmgr(t *testing.T) {
+
+	xapp.Logger.Info("TestSubReqTwoRetriesNoRespAtAllInSubmgr start")
+
+	// Xapp: Send SubsReq
+	xappConn1.handle_xapp_subs_req(t, nil)
+
+	// E2t: Receive 1st SubsReq
+	e2termConn.handle_e2term_subs_req(t)
+
+	// E2t: Receive 2nd SubsReq
+	e2termConn.handle_e2term_subs_req(t)
+
+	// E2t: Receive SubsDelReq and send resp
+	delreq, delmsg := e2termConn.handle_e2term_subs_del_req(t)
+	e2termConn.handle_e2term_subs_del_resp(t, delreq, delmsg)
+
+	// Wait that subs is cleaned
+	mainCtrl.wait_subs_clean(t, int(delreq.RequestId.Seq), 10)
+}
+
+//-----------------------------------------------------------------------------
+// TestSubDelReqRetryInSubmgr
+//
+//   stub                          stub
+// +-------+     +---------+    +---------+
+// | xapp  |     | submgr  |    | e2term  |
+// +-------+     +---------+    +---------+
+//     |              |              |
+//     |         [SUBS CREATE]       |
+//     |              |              |
+//     |              |              |
+//     | SubDelReq    |              |
+//     |------------->|              |
+//     |              |              |
+//     |              | SubDelReq    |
+//     |              |------------->|
+//     |              |              |
+//     |              | SubDelReq    |
+//     |              |------------->|
+//     |              |              |
+//     |              |   SubDelResp |
+//     |              |<-------------|
+//     |              |              |
+//     |   SubDelResp |              |
+//     |<-------------|              |
+//
+//-----------------------------------------------------------------------------
+
+func TestSubDelReqRetryInSubmgr(t *testing.T) {
+
+	xapp.Logger.Info("TestSubDelReqRetryInSubmgr start")
+
+	// Subs Create
+	cretrans := xappConn1.handle_xapp_subs_req(t, nil)
+	crereq, cremsg := e2termConn.handle_e2term_subs_req(t)
+	e2termConn.handle_e2term_subs_resp(t, crereq, cremsg)
+	e2SubsId := xappConn1.handle_xapp_subs_resp(t, cretrans)
+
+	// Subs Delete
+	// Xapp: Send SubsDelReq
+	deltrans := xappConn1.handle_xapp_subs_del_req(t, nil, e2SubsId)
+
+	// E2t: Receive 1st SubsDelReq
+	e2termConn.handle_e2term_subs_del_req(t)
+
+	// E2t: Receive 2nd SubsDelReq
+	delreq, delmsg := e2termConn.handle_e2term_subs_del_req(t)
+	e2termConn.handle_e2term_subs_del_resp(t, delreq, delmsg)
+
+	// Xapp: Receive SubsDelReq
+	xappConn1.handle_xapp_subs_del_resp(t, deltrans)
+
+	// Wait that subs is cleaned
+	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
+}
+
+//-----------------------------------------------------------------------------
+// TestSubDelReqTwoRetriesNoRespInSubmgr
+//
+//   stub                          stub
+// +-------+     +---------+    +---------+
+// | xapp  |     | submgr  |    | e2term  |
+// +-------+     +---------+    +---------+
+//     |              |              |
+//     |         [SUBS CREATE]       |
+//     |              |              |
+//     |              |              |
+//     | SubDelReq    |              |
+//     |------------->|              |
+//     |              |              |
+//     |              | SubDelReq    |
+//     |              |------------->|
+//     |              |              |
+//     |              | SubDelReq    |
+//     |              |------------->|
+//     |              |              |
+//     |              |              |
+//     |   SubDelResp |              |
+//     |<-------------|              |
+//
+//-----------------------------------------------------------------------------
+
+func TestSubDelReqTwoRetriesNoRespInSubmgr(t *testing.T) {
+
+	xapp.Logger.Info("TestSubDelReTwoRetriesNoRespInSubmgr start")
+
+	// Subs Create
+	cretrans := xappConn1.handle_xapp_subs_req(t, nil)
+	crereq, cremsg := e2termConn.handle_e2term_subs_req(t)
+	e2termConn.handle_e2term_subs_resp(t, crereq, cremsg)
+	e2SubsId := xappConn1.handle_xapp_subs_resp(t, cretrans)
+
+	// Subs Delete
+	// Xapp: Send SubsDelReq
+	deltrans := xappConn1.handle_xapp_subs_del_req(t, nil, e2SubsId)
+
+	// E2t: Receive 1st SubsDelReq
+	e2termConn.handle_e2term_subs_del_req(t)
+
+	// E2t: Receive 2nd SubsDelReq
+	e2termConn.handle_e2term_subs_del_req(t)
+
+	// Xapp: Receive SubsDelReq
+	xappConn1.handle_xapp_subs_del_resp(t, deltrans)
+
+	// Wait that subs is cleaned
+	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
+}
