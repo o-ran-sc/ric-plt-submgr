@@ -129,7 +129,6 @@ type xappTransaction struct {
 type testingXappControl struct {
 	testingRmrControl
 	testingMessageChannel
-	meid    *xapp.RMRMeid
 	xid_seq uint64
 }
 
@@ -163,11 +162,10 @@ func (tc *testingXappControl) Consume(msg *xapp.RMRParams) (err error) {
 	return
 }
 
-func createNewXappControl(desc string, rtfile string, port string, stat string, ranname string) *testingXappControl {
+func createNewXappControl(desc string, rtfile string, port string, stat string) *testingXappControl {
 	xappCtrl := &testingXappControl{}
 	xappCtrl.testingRmrControl = initTestingRmrControl(desc, rtfile, port, stat, xappCtrl)
 	xappCtrl.testingMessageChannel = initTestingMessageChannel()
-	xappCtrl.meid = &xapp.RMRMeid{RanName: ranname}
 	xappCtrl.xid_seq = 1
 	return xappCtrl
 }
@@ -330,7 +328,7 @@ newrt|end
 
 	xapprtfilename1, _ := testCreateTmpFile(xapprt1)
 	defer os.Remove(xapprtfilename1)
-	xappConn1 = createNewXappControl("xappConn1", xapprtfilename1, "13560", "RMRXAPP1STUB", "RAN_NAME_1")
+	xappConn1 = createNewXappControl("xappstub1", xapprtfilename1, "13560", "RMRXAPP1STUB")
 
 	//---------------------------------
 	//
@@ -350,7 +348,7 @@ newrt|end
 
 	xapprtfilename2, _ := testCreateTmpFile(xapprt2)
 	defer os.Remove(xapprtfilename2)
-	xappConn2 = createNewXappControl("xappConn2", xapprtfilename2, "13660", "RMRXAPP2STUB", "RAN_NAME_1")
+	xappConn2 = createNewXappControl("xappstub2", xapprtfilename2, "13660", "RMRXAPP2STUB")
 
 	//---------------------------------
 	//
@@ -369,7 +367,7 @@ newrt|end
 
 	e2termrtfilename, _ := testCreateTmpFile(e2termrt)
 	defer os.Remove(e2termrtfilename)
-	e2termConn = createNewE2termControl("e2termConn", e2termrtfilename, "15560", "RMRE2TERMSTUB")
+	e2termConn = createNewE2termControl("e2termstub", e2termrtfilename, "15560", "RMRE2TERMSTUB")
 
 	//---------------------------------
 	//

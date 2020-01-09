@@ -395,7 +395,24 @@ func (e2termConn *testingE2termControl) handle_e2term_subs_del_resp(t *testing.T
 func (mc *testingMainControl) wait_subs_clean(t *testing.T, e2SubsId int, secs int) bool {
 	i := 1
 	for ; i <= secs*2; i++ {
-		if mc.c.registry.IsValidSequenceNumber(uint16(e2SubsId)) == false {
+		if mc.c.registry.GetSubscription(uint16(e2SubsId)) == nil {
+			return true
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+	testError(t, "(general) no clean within %d secs", secs)
+	return false
+}
+
+func (mc *testingMainControl) wait_subs_trans_clean(t *testing.T, e2SubsId int, secs int) bool {
+	i := 1
+	for ; i <= secs*2; i++ {
+		subs := mc.c.registry.GetSubscription(uint16(e2SubsId))
+		if subs == nil {
+			return true
+		}
+		trans := subs.GetTransaction()
+		if trans == nil {
 			return true
 		}
 		time.Sleep(500 * time.Millisecond)
@@ -563,6 +580,8 @@ func TestSubReqRetransmission(t *testing.T) {
 //     |              |------------->|
 //     |              |              |
 //     | SubDelReq    |              |
+//     | (same sub)   |              |
+//     | (same xid)   |              |
 //     |------------->|              |
 //     |              |              |
 //     |              |   SubDelResp |
@@ -587,6 +606,60 @@ func TestSubDelReqRetransmission(t *testing.T) {
 
 	seqBef := mainCtrl.get_msgcounter(t)
 	xappConn1.handle_xapp_subs_del_req(t, deltrans, e2SubsId) //Retransmitted SubDelReq
+	mainCtrl.wait_msgcounter_change(t, seqBef, 10)
+
+	e2termConn.handle_e2term_subs_del_resp(t, delreq, delmsg)
+	xappConn1.handle_xapp_subs_del_resp(t, deltrans)
+
+	//Wait that subs is cleaned
+	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
+}
+
+//-----------------------------------------------------------------------------
+// TestSubDelReqCollision
+//
+//   stub                          stub
+// +-------+     +---------+    +---------+
+// | xapp  |     | submgr  |    | e2term  |
+// +-------+     +---------+    +---------+
+//     |              |              |
+//     |         [SUBS CREATE]       |
+//     |              |              |
+//     |              |              |
+//     | SubDelReq    |              |
+//     |------------->|              |
+//     |              |              |
+//     |              | SubDelReq    |
+//     |              |------------->|
+//     |              |              |
+//     | SubDelReq    |              |
+//     | (same sub)   |              |
+//     | (diff xid)   |              |
+//     |------------->|              |
+//     |              |              |
+//     |              |   SubDelResp |
+//     |              |<-------------|
+//     |              |              |
+//     |   SubDelResp |              |
+//     |<-------------|              |
+//
+//-----------------------------------------------------------------------------
+func TestSubDelReqCollision(t *testing.T) {
+	xapp.Logger.Info("TestSubDelReqCollision")
+
+	//Subs Create
+	cretrans := xappConn1.handle_xapp_subs_req(t, nil)
+	crereq, cremsg := e2termConn.handle_e2term_subs_req(t)
+	e2termConn.handle_e2term_subs_resp(t, crereq, cremsg)
+	e2SubsId := xappConn1.handle_xapp_subs_resp(t, cretrans)
+
+	//Subs Delete
+	deltrans := xappConn1.handle_xapp_subs_del_req(t, nil, e2SubsId)
+	delreq, delmsg := e2termConn.handle_e2term_subs_del_req(t)
+
+	seqBef := mainCtrl.get_msgcounter(t)
+	deltranscol := xappConn1.newXappTransaction(nil, "RAN_NAME_1")
+	xappConn1.handle_xapp_subs_del_req(t, deltranscol, e2SubsId) //Colliding SubDelReq
 	mainCtrl.wait_msgcounter_change(t, seqBef, 10)
 
 	e2termConn.handle_e2term_subs_del_resp(t, delreq, delmsg)
