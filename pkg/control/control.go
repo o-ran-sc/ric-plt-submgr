@@ -287,6 +287,15 @@ func (c *Control) handleSubscriptionFailure(params *xapp.RMRParams) {
 	}
 	xapp.Logger.Info("SubFail: SubId: %v, from address: %s. Forwarding response to xApp", payloadSeqNum, transaction.RmrEndpoint)
 
+	params.SubId = int(payloadSeqNum)
+	params.Xid = transaction.OrigParams.Xid
+
+	xapp.Logger.Info("SubFail: Forwarding SubFail to xApp: Mtype: %v, SubId: %v, Xid: %v, Meid: %v", params.Mtype, params.SubId, params.Xid, params.Meid)
+	err = c.rmrReplyToSender(params)
+	if err != nil {
+		xapp.Logger.Error("SubFail: Failed to send response to xApp. Err: %v, SubId: %v, Xid: %s", err, params.SubId, params.Xid)
+	}
+
 	time.Sleep(3 * time.Second)
 
 	xapp.Logger.Info("SubFail: Deleting transaction record. SubId: %v, Xid: %s", params.SubId, params.Xid)
@@ -544,10 +553,10 @@ func (c *Control) handleSubscriptionDeleteFailure(params *xapp.RMRParams) {
 		params.PayloadLen = len(subDelRespPayload)
 		params.Payload = subDelRespPayload
 		params.Mbuf = nil
-		xapp.Logger.Info("SubDelFail: Forwarding SubDelFail to xApp: Mtype: %v, SubId: %v, Xid: %v, Meid: %v", params.Mtype, params.SubId, params.Xid, params.Meid)
+		xapp.Logger.Info("SubDelFail: Forwarding SubDelResp to xApp: Mtype: %v, SubId: %v, Xid: %v, Meid: %v", params.Mtype, params.SubId, params.Xid, params.Meid)
 		err = c.rmrReplyToSender(params)
 		if err != nil {
-			xapp.Logger.Error("SubDelFail: Failed to send SubDelFail to xApp. Err: %v, SubId: %v, Xid: %s", err, params.SubId, params.Xid)
+			xapp.Logger.Error("SubDelFail: Failed to send SubDelResp to xApp. Err: %v, SubId: %v, Xid: %s", err, params.SubId, params.Xid)
 		}
 
 		time.Sleep(3 * time.Second)
@@ -605,7 +614,7 @@ func (c *Control) handleSubscriptionDeleteRequestTimer(strId string, nbrId int, 
 		var subDelRespPayload []byte
 		subDelRespPayload, err := c.e2ap.PackSubscriptionDeleteResponse(transaction.OrigParams.Payload, subId)
 		if err != nil {
-			xapp.Logger.Error("handleSubDelTimer: Unable to pack payload. Dropping this timer action. Err: %v, SubId: %v, Xid: %s, Payload %x", err, subId, transaction.OrigParams.Xid, transaction.OrigParams.Payload)
+			xapp.Logger.Error("handleSubDelTimer: Unable to pack payload. Dropping this this msg. Err: %v, SubId: %v, Xid: %s, Payload %x", err, subId, transaction.OrigParams.Xid, transaction.OrigParams.Payload)
 			return
 		}
 

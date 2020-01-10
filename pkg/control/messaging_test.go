@@ -148,6 +148,49 @@ func (xappConn *testingXappControl) handle_xapp_subs_resp(t *testing.T, trans *x
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
+func (xappConn *testingXappControl) handle_xapp_subs_fail(t *testing.T, trans *xappTransaction) int {
+	xapp.Logger.Info("handle_xapp_subs_fail")
+	e2SubsFail := e2asnpacker.NewPackerSubscriptionFailure()
+	var e2SubsId int
+
+	//-------------------------------
+	// xapp activity: Recv Subs Fail
+	//-------------------------------
+	select {
+	case msg := <-xappConn.rmrConChan:
+		if msg.Mtype != xapp.RICMessageTypes["RIC_SUB_FAILURE"] {
+			testError(t, "(%s) Received RIC_SUB_FAILURE wrong mtype expected %s got %s, error", xappConn.desc, "RIC_SUB_FAILURE", xapp.RicMessageTypeToName[msg.Mtype])
+			return -1
+		} else if msg.Xid != trans.xid {
+			testError(t, "(%s) Received RIC_SUB_FAILURE wrong xid expected %s got %s, error", xappConn.desc, trans.xid, msg.Xid)
+			return -1
+		} else {
+			packedData := &packer.PackedData{}
+			packedData.Buf = msg.Payload
+			e2SubsId = msg.SubId
+			unpackerr := e2SubsFail.UnPack(packedData)
+
+			if unpackerr != nil {
+				testError(t, "(%s) RIC_SUB_FAILURE unpack failed err: %s", xappConn.desc, unpackerr.Error())
+			}
+			geterr, resp := e2SubsFail.Get()
+			if geterr != nil {
+				testError(t, "(%s) RIC_SUB_FAILURE get failed err: %s", xappConn.desc, geterr.Error())
+			}
+
+			xapp.Logger.Info("(%s) Recv Subs Fail rmr: xid=%s subid=%d, asn: seqnro=%d", xappConn.desc, msg.Xid, msg.SubId, resp.RequestId.Seq)
+			return e2SubsId
+		}
+	case <-time.After(15 * time.Second):
+		testError(t, "(%s) Not Received RIC_SUB_FAILURE within 15 secs", xappConn.desc)
+		return -1
+	}
+	return -1
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
 func (xappConn *testingXappControl) handle_xapp_subs_del_req(t *testing.T, oldTrans *xappTransaction, e2SubsId int) *xappTransaction {
 	xapp.Logger.Info("handle_xapp_subs_del_req")
 	e2SubsDelReq := e2asnpacker.NewPackerSubscriptionDeleteRequest()
@@ -314,6 +357,51 @@ func (e2termConn *testingE2termControl) handle_e2term_subs_resp(t *testing.T, re
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
+func (e2termConn *testingE2termControl) handle_e2term_subs_fail(t *testing.T, req *e2ap.E2APSubscriptionRequest, msg *xapp.RMRParams) {
+	xapp.Logger.Info("handle_e2term_subs_fail")
+	e2SubsFail := e2asnpacker.NewPackerSubscriptionFailure()
+
+	//---------------------------------
+	// e2term activity: Send Subs Fail
+	//---------------------------------
+	xapp.Logger.Info("(%s) Send Subs Fail", e2termConn.desc)
+
+	resp := &e2ap.E2APSubscriptionFailure{}
+	resp.RequestId.Id = req.RequestId.Id
+	resp.RequestId.Seq = req.RequestId.Seq
+	resp.FunctionId = req.FunctionId
+
+	resp.ActionNotAdmittedList.Items = make([]e2ap.ActionNotAdmittedItem, len(resp.ActionNotAdmittedList.Items))
+	for index := int(0); index < len(resp.ActionNotAdmittedList.Items); index++ {
+		resp.ActionNotAdmittedList.Items[index].ActionId = req.ActionSetups[index].ActionId
+		resp.ActionNotAdmittedList.Items[index].Cause.Content = 3  // CauseMisc
+		resp.ActionNotAdmittedList.Items[index].Cause.CauseVal = 4 // unspecified
+	}
+
+	e2SubsFail.Set(resp)
+	xapp.Logger.Debug("%s", e2SubsFail.String())
+	packerr, packedMsg := e2SubsFail.Pack(nil)
+	if packerr != nil {
+		testError(t, "(%s) pack NOK %s", e2termConn.desc, packerr.Error())
+	}
+
+	params := &xapp.RMRParams{}
+	params.Mtype = xapp.RIC_SUB_FAILURE
+	params.SubId = msg.SubId
+	params.Payload = packedMsg.Buf
+	params.Meid = msg.Meid
+	params.Xid = msg.Xid
+	params.Mbuf = nil
+
+	snderr := e2termConn.RmrSend(params)
+	if snderr != nil {
+		testError(t, "(%s) RMR SEND FAILED: %s", e2termConn.desc, snderr.Error())
+	}
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
 func (e2termConn *testingE2termControl) handle_e2term_subs_del_req(t *testing.T) (*e2ap.E2APSubscriptionDeleteRequest, *xapp.RMRParams) {
 	xapp.Logger.Info("handle_e2term_subs_del_req")
 	e2SubsDelReq := e2asnpacker.NewPackerSubscriptionDeleteRequest()
@@ -386,7 +474,46 @@ func (e2termConn *testingE2termControl) handle_e2term_subs_del_resp(t *testing.T
 	if snderr != nil {
 		testError(t, "(%s) RMR SEND FAILED: %s", e2termConn.desc, snderr.Error())
 	}
+}
 
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+func (e2termConn *testingE2termControl) handle_e2term_subs_del_fail(t *testing.T, req *e2ap.E2APSubscriptionDeleteRequest, msg *xapp.RMRParams) {
+	xapp.Logger.Info("handle_e2term_del_subs_fail")
+	e2SubsDelFail := e2asnpacker.NewPackerSubscriptionDeleteFailure()
+
+	//---------------------------------
+	// e2term activity: Send Subs Del Fail
+	//---------------------------------
+	xapp.Logger.Info("(%s) Send Subs Del Fail", e2termConn.desc)
+
+	resp := &e2ap.E2APSubscriptionDeleteFailure{}
+	resp.RequestId.Id = req.RequestId.Id
+	resp.RequestId.Seq = req.RequestId.Seq
+	resp.FunctionId = req.FunctionId
+	resp.Cause.Content = 3  // CauseMisc
+	resp.Cause.CauseVal = 4 // unspecified
+
+	e2SubsDelFail.Set(resp)
+	xapp.Logger.Debug("%s", e2SubsDelFail.String())
+	packerr, packedMsg := e2SubsDelFail.Pack(nil)
+	if packerr != nil {
+		testError(t, "(%s) pack NOK %s", e2termConn.desc, packerr.Error())
+	}
+
+	params := &xapp.RMRParams{}
+	params.Mtype = xapp.RIC_SUB_DEL_FAILURE
+	params.SubId = msg.SubId
+	params.Payload = packedMsg.Buf
+	params.Meid = msg.Meid
+	params.Xid = msg.Xid
+	params.Mbuf = nil
+
+	snderr := e2termConn.RmrSend(params)
+	if snderr != nil {
+		testError(t, "(%s) RMR SEND FAILED: %s", e2termConn.desc, snderr.Error())
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -920,7 +1047,7 @@ func TestSubReqRetryNoRespSubDelRespInSubmgr(t *testing.T) {
 	// E2t: Receive 2nd SubsReq
 	e2termConn.handle_e2term_subs_req(t)
 
-	// E2t: Send receive SubsReq and send SubsResp
+	// E2t: Send receive SubsDelReq and send SubsResp
 	delreq, delmsg := e2termConn.handle_e2term_subs_del_req(t)
 	e2termConn.handle_e2term_subs_del_resp(t, delreq, delmsg)
 
@@ -981,6 +1108,47 @@ func TestSubReqTwoRetriesNoRespAtAllInSubmgr(t *testing.T) {
 }
 
 //-----------------------------------------------------------------------------
+// TestSubReqSubFailRespInSubmgr
+//
+//   stub                          stub
+// +-------+     +---------+    +---------+
+// | xapp  |     | submgr  |    | e2term  |
+// +-------+     +---------+    +---------+
+//     |              |              |
+//     |  SubReq      |              |
+//     |------------->|              |
+//     |              |              |
+//     |              | SubReq       |
+//     |              |------------->|
+//     |              |              |
+//     |              |      SubFail |
+//     |              |<-------------|
+//     |              |              |
+//     |      SubFail |              |
+//     |<-------------|              |
+//     |              |              |
+//
+//-----------------------------------------------------------------------------
+
+func TestSubReqSubFailRespInSubmgr(t *testing.T) {
+
+	xapp.Logger.Info("TestSubReqSubFailRespInSubmgr start")
+
+	// Xapp: Send SubsReq
+	cretrans := xappConn1.handle_xapp_subs_req(t, nil)
+
+	// E2t: Receive SubsReq and send SubsFail
+	crereq, cremsg := e2termConn.handle_e2term_subs_req(t)
+	e2termConn.handle_e2term_subs_fail(t, crereq, cremsg)
+
+	// Xapp: Receive SubsFail
+	e2SubsId := xappConn1.handle_xapp_subs_fail(t, cretrans)
+
+	// Wait that subs is cleaned
+	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
+}
+
+//-----------------------------------------------------------------------------
 // TestSubDelReqRetryInSubmgr
 //
 //   stub                          stub
@@ -1029,7 +1197,7 @@ func TestSubDelReqRetryInSubmgr(t *testing.T) {
 	delreq, delmsg := e2termConn.handle_e2term_subs_del_req(t)
 	e2termConn.handle_e2term_subs_del_resp(t, delreq, delmsg)
 
-	// Xapp: Receive SubsDelReq
+	// Xapp: Receive SubsDelResp
 	xappConn1.handle_xapp_subs_del_resp(t, deltrans)
 
 	// Wait that subs is cleaned
@@ -1082,9 +1250,61 @@ func TestSubDelReqTwoRetriesNoRespInSubmgr(t *testing.T) {
 	// E2t: Receive 2nd SubsDelReq
 	e2termConn.handle_e2term_subs_del_req(t)
 
-	// Xapp: Receive SubsDelReq
+	// Xapp: Receive SubsDelResp
 	xappConn1.handle_xapp_subs_del_resp(t, deltrans)
 
 	// Wait that subs is cleaned
 	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
 }
+
+//-----------------------------------------------------------------------------
+// TestSubDelReqSubDelFailRespInSubmgr
+//
+//   stub                          stub
+// +-------+     +---------+    +---------+
+// | xapp  |     | submgr  |    | e2term  |
+// +-------+     +---------+    +---------+
+//     |              |              |
+//     |         [SUBS CREATE]       |
+//     |              |              |
+//     |              |              |
+//     |  SubDelReq   |              |
+//     |------------->|              |
+//     |              |              |
+//     |              | SubDelReq    |
+//     |              |------------->|
+//     |              |              |
+//     |              |   SubDelFail |
+//     |              |<-------------|
+//     |              |              |
+//     |   SubDelResp |              |
+//     |<-------------|              |
+//     |              |              |
+//
+//-----------------------------------------------------------------------------
+
+func TestSubDelReqSubDelFailRespInSubmgr(t *testing.T) {
+
+	xapp.Logger.Info("TestSubReqSubDelFailRespInSubmgr start")
+
+	// Subs Create
+	cretrans := xappConn1.handle_xapp_subs_req(t, nil)
+	crereq, cremsg := e2termConn.handle_e2term_subs_req(t)
+	e2termConn.handle_e2term_subs_resp(t, crereq, cremsg)
+	e2SubsId := xappConn1.handle_xapp_subs_resp(t, cretrans)
+
+	// Xapp: Send SubsDelReq
+	deltrans := xappConn1.handle_xapp_subs_del_req(t, nil, e2SubsId)
+
+	// E2t: Send receive SubsDelReq and send SubsDelFail
+	delreq, delmsg := e2termConn.handle_e2term_subs_del_req(t)
+	e2termConn.handle_e2term_subs_del_fail(t, delreq, delmsg)
+
+	// Xapp: Receive SubsDelResp
+	xappConn1.handle_xapp_subs_del_resp(t, deltrans)
+
+	// Wait that subs is cleaned
+	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
+}
+
+/* */
