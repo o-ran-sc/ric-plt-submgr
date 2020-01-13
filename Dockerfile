@@ -115,7 +115,10 @@ RUN /usr/local/go/bin/go mod tidy
 # unittest
 COPY test/config-file.json test/config-file.json
 ENV CFG_FILE=/opt/submgr/test/config-file.json
-RUN /usr/local/go/bin/go test -count=1 -v ./pkg/control
+
+RUN /usr/local/go/bin/go test -test.coverprofile /tmp/submgr_cover.out -count=1 -v ./pkg/control
+
+RUN /usr/local/go/bin/go tool cover -html=/tmp/submgr_cover.out -o /tmp/submgr_cover.html
 
 # test formating (not important)
 RUN test -z "$(/usr/local/go/bin/gofmt -l pkg/control/*.go)"

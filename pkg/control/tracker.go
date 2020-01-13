@@ -21,7 +21,6 @@ package control
 
 import (
 	"fmt"
-	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"sync"
 )
 
@@ -37,12 +36,13 @@ func (t *Tracker) Init() {
 	t.transactionXappTable = make(map[TransactionXappKey]*Transaction)
 }
 
-func (t *Tracker) TrackTransaction(subs *Subscription, endpoint RmrEndpoint, params *xapp.RMRParams, respReceived bool, forwardRespToXapp bool) (*Transaction, error) {
+func (t *Tracker) TrackTransaction(subs *Subscription, endpoint RmrEndpoint, params *RMRParams, respReceived bool, forwardRespToXapp bool) (*Transaction, error) {
 
 	trans := &Transaction{
 		tracker:           nil,
 		Subs:              nil,
 		RmrEndpoint:       endpoint,
+		Mtype:             params.Mtype,
 		Xid:               params.Xid,
 		OrigParams:        params,
 		RespReceived:      respReceived,

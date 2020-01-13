@@ -45,6 +45,21 @@ func (s *Subscription) String() string {
 	return strconv.FormatUint(uint64(s.Seq), 10) + "/" + s.RmrEndpoint.String() + "/" + s.Meid.RanName
 }
 
+func (s *Subscription) GetSubId() uint16 {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	return s.Seq
+}
+
+func (s *Subscription) GetMeid() *xapp.RMRMeid {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	if s.Meid != nil {
+		return s.Meid
+	}
+	return nil
+}
+
 func (s *Subscription) Confirmed() {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
