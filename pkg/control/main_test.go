@@ -21,7 +21,6 @@ package control
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/rtmgr_models"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
@@ -71,22 +70,23 @@ type testingRmrControl struct {
 	rmrClientTest *xapp.RMRClient
 }
 
-func (tc *testingRmrControl) RmrSend(params *xapp.RMRParams) (err error) {
+func (tc *testingRmrControl) RmrSend(params *RMRParams) (err error) {
 	//
 	//NOTE: Do this way until xapp-frame sending is improved
 	//
+	xapp.Logger.Info("(%s) RmrSend %s", tc.desc, params.String())
 	status := false
 	i := 1
 	for ; i <= 10 && status == false; i++ {
-		status = tc.rmrClientTest.SendMsg(params)
+		status = tc.rmrClientTest.SendMsg(params.RMRParams)
 		if status == false {
-			xapp.Logger.Info("rmr.Send() failed. Retry count %v, Mtype: %v, SubId: %v, Xid %s", i, params.Mtype, params.SubId, params.Xid)
+			xapp.Logger.Info("(%s) RmrSend failed. Retry count %v, %s", tc.desc, i, params.String())
 			time.Sleep(500 * time.Millisecond)
 		}
 	}
 	if status == false {
-		err = errors.New("rmr.Send() failed")
-		tc.rmrClientTest.Free(params.Mbuf)
+		err = fmt.Errorf("(%s) RmrSend failed. Retry count %v, %s", tc.desc, i, params.String())
+		xapp.Rmr.Free(params.Mbuf)
 	}
 	return
 }
@@ -105,12 +105,12 @@ func initTestingRmrControl(desc string, rtfile string, port string, stat string,
 //
 //-----------------------------------------------------------------------------
 type testingMessageChannel struct {
-	rmrConChan chan *xapp.RMRParams
+	rmrConChan chan *RMRParams
 }
 
 func initTestingMessageChannel() testingMessageChannel {
 	mc := testingMessageChannel{}
-	mc.rmrConChan = make(chan *xapp.RMRParams)
+	mc.rmrConChan = make(chan *RMRParams)
 	return mc
 }
 
@@ -148,13 +148,16 @@ func (tc *testingXappControl) newXappTransaction(xid *string, ranname string) *x
 	return trans
 }
 
-func (tc *testingXappControl) Consume(msg *xapp.RMRParams) (err error) {
+func (tc *testingXappControl) Consume(params *xapp.RMRParams) (err error) {
+	xapp.Rmr.Free(params.Mbuf)
+	params.Mbuf = nil
+	msg := &RMRParams{params}
 
 	if strings.Contains(msg.Xid, tc.desc) {
-		xapp.Logger.Info("(%s) Consume mtype=%s subid=%d xid=%s", tc.desc, xapp.RicMessageTypeToName[msg.Mtype], msg.SubId, msg.Xid)
+		xapp.Logger.Info("(%s) Consume %s", tc.desc, msg.String())
 		tc.rmrConChan <- msg
 	} else {
-		xapp.Logger.Info("(%s) Ignore mtype=%s subid=%d xid=%s, Expected xid to contain %s", tc.desc, xapp.RicMessageTypeToName[msg.Mtype], msg.SubId, msg.Xid, tc.desc)
+		xapp.Logger.Info("(%s) Ignore %s", tc.desc, msg.String())
 	}
 	return
 }
@@ -175,8 +178,11 @@ type testingE2termControl struct {
 	testingMessageChannel
 }
 
-func (tc *testingE2termControl) Consume(msg *xapp.RMRParams) (err error) {
-	xapp.Logger.Info("(%s) Consume mtype=%s subid=%d xid=%s", tc.desc, xapp.RicMessageTypeToName[msg.Mtype], msg.SubId, msg.Xid)
+func (tc *testingE2termControl) Consume(params *xapp.RMRParams) (err error) {
+	xapp.Rmr.Free(params.Mbuf)
+	params.Mbuf = nil
+	msg := &RMRParams{params}
+	xapp.Logger.Info("(%s) Consume %s", tc.desc, msg.String())
 	tc.rmrConChan <- msg
 	return
 }
@@ -384,6 +390,12 @@ newrt|end
 		http.HandleFunc("/", http_handler)
 		http.ListenAndServe("localhost:8989", nil)
 	}()
+
+	//---------------------------------
+	// Stupid sleep to try improve robustness
+	// due: http handler and rmr routes init delays
+	//---------------------------------
+	<-time.After(2 * time.Second)
 
 	//---------------------------------
 	//
