@@ -21,7 +21,6 @@ package control
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/rtmgr_models"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
@@ -71,22 +70,23 @@ type testingRmrControl struct {
 	rmrClientTest *xapp.RMRClient
 }
 
-func (tc *testingRmrControl) RmrSend(params *xapp.RMRParams) (err error) {
+func (tc *testingRmrControl) RmrSend(params *RMRParams) (err error) {
 	//
 	//NOTE: Do this way until xapp-frame sending is improved
 	//
+	xapp.Logger.Info("(%s) RmrSend %s", tc.desc, params.String())
 	status := false
 	i := 1
 	for ; i <= 10 && status == false; i++ {
-		status = tc.rmrClientTest.SendMsg(params)
+		status = tc.rmrClientTest.SendMsg(params.RMRParams)
 		if status == false {
-			xapp.Logger.Info("rmr.Send() failed. Retry count %v, Mtype: %v, SubId: %v, Xid %s", i, params.Mtype, params.SubId, params.Xid)
+			xapp.Logger.Info("(%s) RmrSend failed. Retry count %v, %s", tc.desc, i, params.String())
 			time.Sleep(500 * time.Millisecond)
 		}
 	}
 	if status == false {
-		err = errors.New("rmr.Send() failed")
-		tc.rmrClientTest.Free(params.Mbuf)
+		err = fmt.Errorf("(%s) RmrSend failed. Retry count %v, %s", tc.desc, i, params.String())
+		xapp.Rmr.Free(params.Mbuf)
 	}
 	return
 }
@@ -105,12 +105,12 @@ func initTestingRmrControl(desc string, rtfile string, port string, stat string,
 //
 //-----------------------------------------------------------------------------
 type testingMessageChannel struct {
-	rmrConChan chan *xapp.RMRParams
+	rmrConChan chan *RMRParams
 }
 
 func initTestingMessageChannel() testingMessageChannel {
 	mc := testingMessageChannel{}
-	mc.rmrConChan = make(chan *xapp.RMRParams)
+	mc.rmrConChan = make(chan *RMRParams)
 	return mc
 }
 
@@ -148,13 +148,16 @@ func (tc *testingXappControl) newXappTransaction(xid *string, ranname string) *x
 	return trans
 }
 
-func (tc *testingXappControl) Consume(msg *xapp.RMRParams) (err error) {
+func (tc *testingXappControl) Consume(params *xapp.RMRParams) (err error) {
+	xapp.Rmr.Free(params.Mbuf)
+	params.Mbuf = nil
+	msg := &RMRParams{params}
 
 	if strings.Contains(msg.Xid, tc.desc) {
-		xapp.Logger.Info("(%s) Consume mtype=%s subid=%d xid=%s", tc.desc, xapp.RicMessageTypeToName[msg.Mtype], msg.SubId, msg.Xid)
+		xapp.Logger.Info("(%s) Consume %s", tc.desc, msg.String())
 		tc.rmrConChan <- msg
 	} else {
-		xapp.Logger.Info("(%s) Ignore mtype=%s subid=%d xid=%s, Expected xid to contain %s", tc.desc, xapp.RicMessageTypeToName[msg.Mtype], msg.SubId, msg.Xid, tc.desc)
+		xapp.Logger.Info("(%s) Ignore %s", tc.desc, msg.String())
 	}
 	return
 }
@@ -175,8 +178,11 @@ type testingE2termControl struct {
 	testingMessageChannel
 }
 
-func (tc *testingE2termControl) Consume(msg *xapp.RMRParams) (err error) {
-	xapp.Logger.Info("(%s) Consume mtype=%s subid=%d xid=%s", tc.desc, xapp.RicMessageTypeToName[msg.Mtype], msg.SubId, msg.Xid)
+func (tc *testingE2termControl) Consume(params *xapp.RMRParams) (err error) {
+	xapp.Rmr.Free(params.Mbuf)
+	params.Mbuf = nil
+	msg := &RMRParams{params}
+	xapp.Logger.Info("(%s) Consume %s", tc.desc, msg.String())
 	tc.rmrConChan <- msg
 	return
 }
@@ -282,28 +288,60 @@ func TestMain(m *testing.M) {
 	xapp.Logger.Info("Using cfg file %s", os.Getenv("CFG_FILE"))
 
 	//---------------------------------
+	// Static routetable for rmr
+	//
 	// NOTE: Routing table is configured so, that responses
 	//       are duplicated to xapp1 and xapp2 instances.
 	//       If XID is not matching xapp stub will just
 	//       drop message. (Messages 12011, 12012, 12021, 12022)
+	//
+	// 14560 submgr
+	// 15560 e2term stub
+	// 13560 xapp1 stub
+	// 13660 xapp2 stub
+	//
 	//---------------------------------
-	xapp.Logger.Info("### submgr main run ###")
 
-	subsrt := `newrt|start
+	allrt := `newrt|start
 mse|12010|-1|localhost:14560
 mse|12010,localhost:14560|-1|localhost:15560
 mse|12011,localhost:15560|-1|localhost:14560
-mse|12011|-1|localhost:13560;localhost:13660
+mse|12011,localhost:14560|-1|localhost:13560;localhost:13660
 mse|12012,localhost:15560|-1|localhost:14560
-mse|12012|-1|localhost:13560;localhost:13660
+mse|12012,localhost:14560|-1|localhost:13560;localhost:13660
 mse|12020|-1|localhost:14560
 mse|12020,localhost:14560|-1|localhost:15560
 mse|12021,localhost:15560|-1|localhost:14560
-mse|12021|-1|localhost:13560;localhost:13660
+mse|12021,localhost:14560|-1|localhost:13560;localhost:13660
 mse|12022,localhost:15560|-1|localhost:14560
-mse|12022|-1|localhost:13560;localhost:13660
+mse|12022,localhost:14560|-1|localhost:13560;localhost:13660
 newrt|end
 `
+
+	//---------------------------------
+	//
+	//---------------------------------
+	xapp.Logger.Info("### submgr main run ###")
+
+	subsrt := allrt
+	/*
+	   	subsrt := `newrt|start
+	   mse|12010|-1|localhost:14560
+	   mse|12010,localhost:14560|-1|localhost:15560
+	   mse|12011,localhost:15560|-1|localhost:14560
+	   mse|12011|-1|localhost:13560;localhost:13660
+	   mse|12012,localhost:15560|-1|localhost:14560
+	   mse|12012|-1|localhost:13560;localhost:13660
+	   mse|12020|-1|localhost:14560
+	   mse|12020,localhost:14560|-1|localhost:15560
+	   mse|12021,localhost:15560|-1|localhost:14560
+	   mse|12021|-1|localhost:13560;localhost:13660
+	   mse|12022,localhost:15560|-1|localhost:14560
+	   mse|12022|-1|localhost:13560;localhost:13660
+	   newrt|end
+	   `
+	*/
+
 	subrtfilename, _ := testCreateTmpFile(subsrt)
 	defer os.Remove(subrtfilename)
 	mainCtrl = createNewMainControl("main", subrtfilename, "14560")
@@ -313,15 +351,18 @@ newrt|end
 	//---------------------------------
 	xapp.Logger.Info("### xapp1 rmr run ###")
 
-	xapprt1 := `newrt|start
-mse|12010|-1|localhost:14560
-mse|12011|-1|localhost:13560
-mse|12012|-1|localhost:13560
-mse|12020|-1|localhost:14560
-mse|12021|-1|localhost:13560
-mse|12022|-1|localhost:13560
-newrt|end
-`
+	xapprt1 := allrt
+	/*
+	   	xapprt1 := `newrt|start
+	   mse|12010|-1|localhost:14560
+	   mse|12011|-1|localhost:13560
+	   mse|12012|-1|localhost:13560
+	   mse|12020|-1|localhost:14560
+	   mse|12021|-1|localhost:13560
+	   mse|12022|-1|localhost:13560
+	   newrt|end
+	   `
+	*/
 
 	xapprtfilename1, _ := testCreateTmpFile(xapprt1)
 	defer os.Remove(xapprtfilename1)
@@ -333,15 +374,18 @@ newrt|end
 
 	xapp.Logger.Info("### xapp2 rmr run ###")
 
-	xapprt2 := `newrt|start
-mse|12010|-1|localhost:14560
-mse|12011|-1|localhost:13660
-mse|12012|-1|localhost:13660
-mse|12020|-1|localhost:14560
-mse|12021|-1|localhost:13660
-mse|12022|-1|localhost:13660
-newrt|end
-`
+	xapprt2 := allrt
+	/*
+	   	xapprt2 := `newrt|start
+	   mse|12010|-1|localhost:14560
+	   mse|12011|-1|localhost:13660
+	   mse|12012|-1|localhost:13660
+	   mse|12020|-1|localhost:14560
+	   mse|12021|-1|localhost:13660
+	   mse|12022|-1|localhost:13660
+	   newrt|end
+	   `
+	*/
 
 	xapprtfilename2, _ := testCreateTmpFile(xapprt2)
 	defer os.Remove(xapprtfilename2)
@@ -352,15 +396,18 @@ newrt|end
 	//---------------------------------
 	xapp.Logger.Info("### e2term rmr run ###")
 
-	e2termrt := `newrt|start
-mse|12010|-1|localhost:15560
-mse|12011|-1|localhost:14560
-mse|12012|-1|localhost:14560
-mse|12020|-1|localhost:15560
-mse|12021|-1|localhost:14560
-mse|12022|-1|localhost:14560
-newrt|end
-`
+	e2termrt := allrt
+	/*
+	   	e2termrt := `newrt|start
+	   mse|12010|-1|localhost:15560
+	   mse|12011|-1|localhost:14560
+	   mse|12012|-1|localhost:14560
+	   mse|12020|-1|localhost:15560
+	   mse|12021|-1|localhost:14560
+	   mse|12022|-1|localhost:14560
+	   newrt|end
+	   `
+	*/
 
 	e2termrtfilename, _ := testCreateTmpFile(e2termrt)
 	defer os.Remove(e2termrtfilename)
@@ -384,6 +431,12 @@ newrt|end
 		http.HandleFunc("/", http_handler)
 		http.ListenAndServe("localhost:8989", nil)
 	}()
+
+	//---------------------------------
+	// Stupid sleep to try improve robustness
+	// due: http handler and rmr routes init delays
+	//---------------------------------
+	<-time.After(2 * time.Second)
 
 	//---------------------------------
 	//
