@@ -37,7 +37,7 @@ var e2asnpacker e2ap.E2APPackerIf = e2ap_wrapper.NewAsn1E2Packer()
 //
 //-----------------------------------------------------------------------------
 func (xappConn *testingXappControl) handle_xapp_subs_req(t *testing.T, oldTrans *xappTransaction) *xappTransaction {
-	xapp.Logger.Info("handle_xapp_subs_req")
+	xapp.Logger.Info("(%s) handle_xapp_subs_req", xappConn.desc)
 	e2SubsReq := e2asnpacker.NewPackerSubscriptionRequest()
 
 	//---------------------------------
@@ -86,7 +86,7 @@ func (xappConn *testingXappControl) handle_xapp_subs_req(t *testing.T, oldTrans 
 		trans = xappConn.newXappTransaction(nil, "RAN_NAME_1")
 	}
 
-	params := &xapp.RMRParams{}
+	params := &RMRParams{&xapp.RMRParams{}}
 	params.Mtype = xapp.RIC_SUB_REQ
 	params.SubId = -1
 	params.Payload = packedMsg.Buf
@@ -106,7 +106,7 @@ func (xappConn *testingXappControl) handle_xapp_subs_req(t *testing.T, oldTrans 
 //
 //-----------------------------------------------------------------------------
 func (xappConn *testingXappControl) handle_xapp_subs_resp(t *testing.T, trans *xappTransaction) int {
-	xapp.Logger.Info("handle_xapp_subs_resp")
+	xapp.Logger.Info("(%s) handle_xapp_subs_resp", xappConn.desc)
 	e2SubsResp := e2asnpacker.NewPackerSubscriptionResponse()
 	var e2SubsId int
 
@@ -149,7 +149,7 @@ func (xappConn *testingXappControl) handle_xapp_subs_resp(t *testing.T, trans *x
 //
 //-----------------------------------------------------------------------------
 func (xappConn *testingXappControl) handle_xapp_subs_fail(t *testing.T, trans *xappTransaction) int {
-	xapp.Logger.Info("handle_xapp_subs_fail")
+	xapp.Logger.Info("(%s) handle_xapp_subs_fail", xappConn.desc)
 	e2SubsFail := e2asnpacker.NewPackerSubscriptionFailure()
 	var e2SubsId int
 
@@ -192,7 +192,7 @@ func (xappConn *testingXappControl) handle_xapp_subs_fail(t *testing.T, trans *x
 //
 //-----------------------------------------------------------------------------
 func (xappConn *testingXappControl) handle_xapp_subs_del_req(t *testing.T, oldTrans *xappTransaction, e2SubsId int) *xappTransaction {
-	xapp.Logger.Info("handle_xapp_subs_del_req")
+	xapp.Logger.Info("(%s) handle_xapp_subs_del_req", xappConn.desc)
 	e2SubsDelReq := e2asnpacker.NewPackerSubscriptionDeleteRequest()
 
 	//---------------------------------
@@ -218,7 +218,7 @@ func (xappConn *testingXappControl) handle_xapp_subs_del_req(t *testing.T, oldTr
 		trans = xappConn.newXappTransaction(nil, "RAN_NAME_1")
 	}
 
-	params := &xapp.RMRParams{}
+	params := &RMRParams{&xapp.RMRParams{}}
 	params.Mtype = xapp.RIC_SUB_DEL_REQ
 	params.SubId = e2SubsId
 	params.Payload = packedMsg.Buf
@@ -238,7 +238,7 @@ func (xappConn *testingXappControl) handle_xapp_subs_del_req(t *testing.T, oldTr
 //
 //-----------------------------------------------------------------------------
 func (xappConn *testingXappControl) handle_xapp_subs_del_resp(t *testing.T, trans *xappTransaction) {
-	xapp.Logger.Info("handle_xapp_subs_del_resp")
+	xapp.Logger.Info("(%s) handle_xapp_subs_del_resp", xappConn.desc)
 	e2SubsDelResp := e2asnpacker.NewPackerSubscriptionDeleteResponse()
 
 	//---------------------------------
@@ -274,8 +274,8 @@ func (xappConn *testingXappControl) handle_xapp_subs_del_resp(t *testing.T, tran
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-func (e2termConn *testingE2termControl) handle_e2term_subs_req(t *testing.T) (*e2ap.E2APSubscriptionRequest, *xapp.RMRParams) {
-	xapp.Logger.Info("handle_e2term_subs_req")
+func (e2termConn *testingE2termControl) handle_e2term_subs_req(t *testing.T) (*e2ap.E2APSubscriptionRequest, *RMRParams) {
+	xapp.Logger.Info("(%s) handle_e2term_subs_req", e2termConn.desc)
 	e2SubsReq := e2asnpacker.NewPackerSubscriptionRequest()
 
 	//---------------------------------
@@ -305,8 +305,8 @@ func (e2termConn *testingE2termControl) handle_e2term_subs_req(t *testing.T) (*e
 	return nil, nil
 }
 
-func (e2termConn *testingE2termControl) handle_e2term_subs_resp(t *testing.T, req *e2ap.E2APSubscriptionRequest, msg *xapp.RMRParams) {
-	xapp.Logger.Info("handle_e2term_subs_resp")
+func (e2termConn *testingE2termControl) handle_e2term_subs_resp(t *testing.T, req *e2ap.E2APSubscriptionRequest, msg *RMRParams) {
+	xapp.Logger.Info("(%s) handle_e2term_subs_resp", e2termConn.desc)
 	e2SubsResp := e2asnpacker.NewPackerSubscriptionResponse()
 
 	//---------------------------------
@@ -340,7 +340,7 @@ func (e2termConn *testingE2termControl) handle_e2term_subs_resp(t *testing.T, re
 		testError(t, "(%s) pack NOK %s", e2termConn.desc, packerr.Error())
 	}
 
-	params := &xapp.RMRParams{}
+	params := &RMRParams{&xapp.RMRParams{}}
 	params.Mtype = xapp.RIC_SUB_RESP
 	params.SubId = msg.SubId
 	params.Payload = packedMsg.Buf
@@ -357,8 +357,8 @@ func (e2termConn *testingE2termControl) handle_e2term_subs_resp(t *testing.T, re
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-func (e2termConn *testingE2termControl) handle_e2term_subs_fail(t *testing.T, req *e2ap.E2APSubscriptionRequest, msg *xapp.RMRParams) {
-	xapp.Logger.Info("handle_e2term_subs_fail")
+func (e2termConn *testingE2termControl) handle_e2term_subs_fail(t *testing.T, req *e2ap.E2APSubscriptionRequest, msg *RMRParams) {
+	xapp.Logger.Info("(%s) handle_e2term_subs_fail", e2termConn.desc)
 	e2SubsFail := e2asnpacker.NewPackerSubscriptionFailure()
 
 	//---------------------------------
@@ -385,7 +385,7 @@ func (e2termConn *testingE2termControl) handle_e2term_subs_fail(t *testing.T, re
 		testError(t, "(%s) pack NOK %s", e2termConn.desc, packerr.Error())
 	}
 
-	params := &xapp.RMRParams{}
+	params := &RMRParams{&xapp.RMRParams{}}
 	params.Mtype = xapp.RIC_SUB_FAILURE
 	params.SubId = msg.SubId
 	params.Payload = packedMsg.Buf
@@ -402,8 +402,8 @@ func (e2termConn *testingE2termControl) handle_e2term_subs_fail(t *testing.T, re
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-func (e2termConn *testingE2termControl) handle_e2term_subs_del_req(t *testing.T) (*e2ap.E2APSubscriptionDeleteRequest, *xapp.RMRParams) {
-	xapp.Logger.Info("handle_e2term_subs_del_req")
+func (e2termConn *testingE2termControl) handle_e2term_subs_del_req(t *testing.T) (*e2ap.E2APSubscriptionDeleteRequest, *RMRParams) {
+	xapp.Logger.Info("(%s) handle_e2term_subs_del_req", e2termConn.desc)
 	e2SubsDelReq := e2asnpacker.NewPackerSubscriptionDeleteRequest()
 
 	//---------------------------------
@@ -441,8 +441,8 @@ func handle_e2term_recv_empty() bool {
 	return true
 }
 
-func (e2termConn *testingE2termControl) handle_e2term_subs_del_resp(t *testing.T, req *e2ap.E2APSubscriptionDeleteRequest, msg *xapp.RMRParams) {
-	xapp.Logger.Info("handle_e2term_subs_del_resp")
+func (e2termConn *testingE2termControl) handle_e2term_subs_del_resp(t *testing.T, req *e2ap.E2APSubscriptionDeleteRequest, msg *RMRParams) {
+	xapp.Logger.Info("(%s) handle_e2term_subs_del_resp", e2termConn.desc)
 	e2SubsDelResp := e2asnpacker.NewPackerSubscriptionDeleteResponse()
 
 	//---------------------------------
@@ -462,7 +462,7 @@ func (e2termConn *testingE2termControl) handle_e2term_subs_del_resp(t *testing.T
 		testError(t, "(%s) pack NOK %s", e2termConn.desc, packerr.Error())
 	}
 
-	params := &xapp.RMRParams{}
+	params := &RMRParams{&xapp.RMRParams{}}
 	params.Mtype = xapp.RIC_SUB_DEL_RESP
 	params.SubId = msg.SubId
 	params.Payload = packedMsg.Buf
@@ -479,8 +479,8 @@ func (e2termConn *testingE2termControl) handle_e2term_subs_del_resp(t *testing.T
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-func (e2termConn *testingE2termControl) handle_e2term_subs_del_fail(t *testing.T, req *e2ap.E2APSubscriptionDeleteRequest, msg *xapp.RMRParams) {
-	xapp.Logger.Info("handle_e2term_del_subs_fail")
+func (e2termConn *testingE2termControl) handle_e2term_subs_del_fail(t *testing.T, req *e2ap.E2APSubscriptionDeleteRequest, msg *RMRParams) {
+	xapp.Logger.Info("(%s) handle_e2term_del_subs_fail", e2termConn.desc)
 	e2SubsDelFail := e2asnpacker.NewPackerSubscriptionDeleteFailure()
 
 	//---------------------------------
@@ -502,7 +502,7 @@ func (e2termConn *testingE2termControl) handle_e2term_subs_del_fail(t *testing.T
 		testError(t, "(%s) pack NOK %s", e2termConn.desc, packerr.Error())
 	}
 
-	params := &xapp.RMRParams{}
+	params := &RMRParams{&xapp.RMRParams{}}
 	params.Mtype = xapp.RIC_SUB_DEL_FAILURE
 	params.SubId = msg.SubId
 	params.Payload = packedMsg.Buf

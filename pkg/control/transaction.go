@@ -20,7 +20,6 @@
 package control
 
 import (
-	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"strconv"
 	"sync"
 )
@@ -45,8 +44,9 @@ type Transaction struct {
 	tracker           *Tracker // tracker instance
 	Subs              *Subscription
 	RmrEndpoint       RmrEndpoint
-	Xid               string          // xapp xid in req
-	OrigParams        *xapp.RMRParams // request orginal params
+	Mtype             int
+	Xid               string     // xapp xid in req
+	OrigParams        *RMRParams // request orginal params
 	RespReceived      bool
 	ForwardRespToXapp bool
 }
@@ -59,6 +59,24 @@ func (t *Transaction) String() string {
 		subId = strconv.FormatUint(uint64(t.Subs.Seq), 10)
 	}
 	return subId + "/" + t.RmrEndpoint.String() + "/" + t.Xid
+}
+
+func (t *Transaction) GetXid() string {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+	return t.Xid
+}
+
+func (t *Transaction) GetMtype() int {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+	return t.Mtype
+}
+
+func (t *Transaction) GetSrc() string {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+	return t.RmrEndpoint.String()
 }
 
 func (t *Transaction) CheckResponseReceived() bool {

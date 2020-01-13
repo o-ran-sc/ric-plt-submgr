@@ -20,15 +20,24 @@
 package control
 
 import (
+	"bytes"
+	"fmt"
+	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"strconv"
 )
 
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
 type RmrDatagram struct {
 	MessageType    int
 	SubscriptionId uint16
 	Payload        []byte
 }
 
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
 type SubRouteInfo struct {
 	Command Action
 	Address string
@@ -36,6 +45,9 @@ type SubRouteInfo struct {
 	SubID   uint16
 }
 
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
 type RmrEndpoint struct {
 	Addr string // xapp addr
 	Port uint16 // xapp port
@@ -45,4 +57,34 @@ func (endpoint RmrEndpoint) String() string {
 	return endpoint.Addr + ":" + strconv.FormatUint(uint64(endpoint.Port), 10)
 }
 
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
 type Action int
+
+func (act Action) String() string {
+	actions := [...]string{
+		"CREATE",
+		"MERGE",
+		"NONE",
+		"DELETE",
+	}
+
+	if act < CREATE || act > DELETE {
+		return "UNKNOWN"
+	}
+	return actions[act]
+}
+
+//-----------------------------------------------------------------------------
+// To add own method for rmrparams
+//-----------------------------------------------------------------------------
+type RMRParams struct {
+	*xapp.RMRParams
+}
+
+func (params *RMRParams) String() string {
+	var b bytes.Buffer
+	fmt.Fprintf(&b, "Src: %s, Mtype: %s(%d), SubId: %v, Xid: %s, Meid: %v", params.Src, xapp.RicMessageTypeToName[params.Mtype], params.Mtype, params.SubId, params.Xid, params.Meid)
+	return b.String()
+}
