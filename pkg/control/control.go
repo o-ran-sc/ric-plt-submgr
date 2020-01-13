@@ -21,6 +21,7 @@ package control
 
 import (
 	"errors"
+	//"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/packer"
 	rtmgrclient "gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/rtmgr_client"
 	rtmgrhandle "gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/rtmgr_client/handle"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
@@ -31,6 +32,10 @@ import (
 	"sync"
 	"time"
 )
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
 
 var subReqTime time.Duration = 5 * time.Second
 var subDelReqTime time.Duration = 5 * time.Second
@@ -113,32 +118,64 @@ func (c *Control) Run() {
 	xapp.Run(c)
 }
 
-func (c *Control) rmrSend(params *xapp.RMRParams) (err error) {
+func (c *Control) rmrSendRaw(desc string, params *RMRParams) (err error) {
+
+	xapp.Logger.Info("%s: %s", desc, params.String())
 	status := false
 	i := 1
 	for ; i <= 10 && status == false; i++ {
 		c.rmrSendMutex.Lock()
-		status = xapp.Rmr.Send(params, false)
+		status = xapp.Rmr.Send(params.RMRParams, false)
 		c.rmrSendMutex.Unlock()
 		if status == false {
-			xapp.Logger.Info("rmr.Send() failed. Retry count %v, Mtype: %v, SubId: %v, Xid %s", i, params.Mtype, params.SubId, params.Xid)
+			xapp.Logger.Info("rmr.Send() failed. Retry count %v, %s", i, params.String())
 			time.Sleep(500 * time.Millisecond)
 		}
 	}
 	if status == false {
 		err = errors.New("rmr.Send() failed")
+		xapp.Logger.Error("%s: %s: Err: %v", desc, params.String(), err)
 		xapp.Rmr.Free(params.Mbuf)
 	}
 	return
 }
 
-func (c *Control) rmrReplyToSender(params *xapp.RMRParams) (err error) {
-	c.rmrSend(params)
-	return
+func (c *Control) rmrSend(desc string, subs *Subscription, trans *Transaction, payload []byte, payloadLen int) (err error) {
+	params := &RMRParams{&xapp.RMRParams{}}
+	params.Mtype = trans.GetMtype()
+	params.SubId = int(subs.GetSubId())
+	params.Xid = trans.GetXid()
+	params.Meid = subs.GetMeid()
+	params.Src = trans.GetSrc()
+	params.PayloadLen = payloadLen
+	params.Payload = payload
+	params.Mbuf = nil
+
+	return c.rmrSendRaw(desc, params)
 }
 
-func (c *Control) Consume(msg *xapp.RMRParams) (err error) {
+func (c *Control) rmrReplyToSender(desc string, subs *Subscription, trans *Transaction, mType int, payload []byte, payloadLen int) (err error) {
+	params := &RMRParams{&xapp.RMRParams{}}
+	params.Mtype = mType
+	params.SubId = int(subs.GetSubId())
+	params.Xid = trans.GetXid()
+	params.Meid = subs.GetMeid()
+	params.Src = trans.GetSrc()
+	params.PayloadLen = payloadLen
+	params.Payload = payload
+	params.Mbuf = nil
+
+	return c.rmrSendRaw(desc, params)
+}
+
+func (c *Control) Consume(params *xapp.RMRParams) (err error) {
+	xapp.Rmr.Free(params.Mbuf)
+	params.Mbuf = nil
+
+	msg := &RMRParams{params}
+
 	c.msgCounter++
+
 	switch msg.Mtype {
 	case xapp.RICMessageTypes["RIC_SUB_REQ"]:
 		go c.handleSubscriptionRequest(msg)
@@ -158,10 +195,8 @@ func (c *Control) Consume(msg *xapp.RMRParams) (err error) {
 	return nil
 }
 
-func (c *Control) handleSubscriptionRequest(params *xapp.RMRParams) {
-	xapp.Logger.Info("SubReq received from Src: %s, Mtype: %v, SubId: %v, Xid: %s, Meid: %v", params.Src, params.Mtype, params.SubId, params.Xid, params.Meid)
-	xapp.Rmr.Free(params.Mbuf)
-	params.Mbuf = nil
+func (c *Control) handleSubscriptionRequest(params *RMRParams) {
+	xapp.Logger.Info("SubReq from xapp: %s", params.String())
 
 	srcAddr, srcPort, err := c.rtmgrClient.SplitSource(params.Src)
 	if err != nil {
@@ -175,10 +210,47 @@ func (c *Control) handleSubscriptionRequest(params *xapp.RMRParams) {
 		return
 	}
 
-	params.SubId = int(subs.Seq)
-	err = c.e2ap.SetSubscriptionRequestSequenceNumber(params.Payload, subs.Seq)
+	//
+	// WIP RICPLT-2979
+	//
+	/*
+		e2SubReq := packerif.NewPackerSubscriptionRequest()
+		packedData := &packer.PackedData{}
+		packedData.Buf = params.Payload
+		err = e2SubReq.UnPack(packedData)
+		if err != nil {
+			xapp.Logger.Error("SubReq: UnPack() failed: %s", err.Error())
+		}
+		getErr, subReq := e2SubReq.Get()
+		if getErr != nil {
+			xapp.Logger.Error("SubReq: Get() failed: %s", err.Error())
+		}
+
+
+		subReq.RequestId.Seq = uint32(subs.GetSubId())
+
+		err = e2SubReq.Set(subReq)
+		if err != nil {
+			xapp.Logger.Error("SubReq: Set() failed: %s", err.Error())
+			return
+		}
+		err, packedData = e2SubReq.Pack(nil)
+		if err != nil {
+			xapp.Logger.Error("SubReq: Pack() failed: %s", err.Error())
+			return
+		}
+
+		params.PayloadLen = len(packedData.Buf)
+		params.Payload = packedData.Buf
+	*/
+	//
+	//
+	//
+
+	params.SubId = int(subs.GetSubId())
+	err = c.e2ap.SetSubscriptionRequestSequenceNumber(params.Payload, subs.GetSubId())
 	if err != nil {
-		xapp.Logger.Error("SubReq: Unable to get Sequence Number from Payload. Dropping this msg. Err: %v, SubId: %v, Xid: %s, Payload %X", err, params.SubId, params.Xid, params.Payload)
+		xapp.Logger.Error("SubReq: Unable to get Sequence Number from Payload. Dropping this msg. Err: %v, %s", err, params.String())
 		c.registry.DelSubscription(subs.Seq)
 		return
 	}
@@ -186,28 +258,22 @@ func (c *Control) handleSubscriptionRequest(params *xapp.RMRParams) {
 	// Create transatcion record for every subscription request
 	var forwardRespToXapp bool = true
 	var responseReceived bool = false
-	_, err = c.tracker.TrackTransaction(subs, RmrEndpoint{*srcAddr, *srcPort}, params, responseReceived, forwardRespToXapp)
+	trans, err := c.tracker.TrackTransaction(subs, RmrEndpoint{*srcAddr, *srcPort}, params, responseReceived, forwardRespToXapp)
 	if err != nil {
 		xapp.Logger.Error("SubReq: %s, Dropping this msg.", err.Error())
 		c.registry.DelSubscription(subs.Seq)
 		return
 	}
 
-	// Setting new subscription ID in the RMR header
-	xapp.Logger.Info("SubReq: Forwarding SubReq to E2T: Mtype: %v, SubId: %v, Xid %s, Meid %v", params.Mtype, params.SubId, params.Xid, params.Meid)
-	err = c.rmrSend(params)
-	if err != nil {
-		xapp.Logger.Error("SubReq: Failed to send request to E2T %v, SubId: %v, Xid: %s", err, params.SubId, params.Xid)
-	}
+	c.rmrSend("SubReq to E2T", subs, trans, params.Payload, params.PayloadLen)
+
 	c.timerMap.StartTimer("RIC_SUB_REQ", int(subs.Seq), subReqTime, FirstTry, c.handleSubscriptionRequestTimer)
-	xapp.Logger.Debug("SubReq: Debugging transaction table = %v", c.tracker.transactionXappTable)
+	xapp.Logger.Debug("SubReq: Debugging trans table = %v", c.tracker.transactionXappTable)
 	return
 }
 
-func (c *Control) handleSubscriptionResponse(params *xapp.RMRParams) {
-	xapp.Logger.Info("SubResp received from Src: %s, Mtype: %v, SubId: %v, Meid: %v", params.Src, params.Mtype, params.SubId, params.Meid)
-	xapp.Rmr.Free(params.Mbuf)
-	params.Mbuf = nil
+func (c *Control) handleSubscriptionResponse(params *RMRParams) {
+	xapp.Logger.Info("SubResp from E2T: %s", params.String())
 
 	payloadSeqNum, err := c.e2ap.GetSubscriptionResponseSequenceNumber(params.Payload)
 	if err != nil {
@@ -222,37 +288,25 @@ func (c *Control) handleSubscriptionResponse(params *xapp.RMRParams) {
 		return
 	}
 
-	transaction := subs.GetTransaction()
+	trans := subs.GetTransaction()
 
 	c.timerMap.StopTimer("RIC_SUB_REQ", int(payloadSeqNum))
 
-	responseReceived := transaction.CheckResponseReceived()
+	responseReceived := trans.CheckResponseReceived()
 	if responseReceived == true {
 		// Subscription timer already received
 		return
 	}
-	xapp.Logger.Info("SubResp: SubId: %v, from address: %s.", payloadSeqNum, transaction.RmrEndpoint)
 
 	subs.Confirmed()
-	transaction.Release()
-
-	params.SubId = int(payloadSeqNum)
-	params.Xid = transaction.OrigParams.Xid
-
-	xapp.Logger.Info("SubResp: Forwarding Subscription Response to xApp Mtype: %v, SubId: %v, Meid: %v", params.Mtype, params.SubId, params.Meid)
-	err = c.rmrReplyToSender(params)
-	if err != nil {
-		xapp.Logger.Error("SubResp: Failed to send response to xApp. Err: %v, SubId: %v, Xid: %s", err, params.SubId, params.Xid)
-	}
-
-	xapp.Logger.Info("SubResp: SubId: %v, from address: %s. Deleting transaction record", payloadSeqNum, transaction.RmrEndpoint)
+	trans.Release()
+	c.rmrReplyToSender("SubResp to xapp", subs, trans, params.Mtype, params.Payload, params.PayloadLen)
+	xapp.Logger.Info("SubResp: SubId: %v, from address: %s. Deleting trans record", payloadSeqNum, trans.RmrEndpoint)
 	return
 }
 
-func (c *Control) handleSubscriptionFailure(params *xapp.RMRParams) {
-	xapp.Logger.Info("SubFail received from Src: %s, Mtype: %v, SubId: %v, Meid: %v", params.Src, params.Mtype, params.SubId, params.Meid)
-	xapp.Rmr.Free(params.Mbuf)
-	params.Mbuf = nil
+func (c *Control) handleSubscriptionFailure(params *RMRParams) {
+	xapp.Logger.Info("SubFail from E2T: %s", params.String())
 
 	payloadSeqNum, err := c.e2ap.GetSubscriptionFailureSequenceNumber(params.Payload)
 	if err != nil {
@@ -267,15 +321,15 @@ func (c *Control) handleSubscriptionFailure(params *xapp.RMRParams) {
 		return
 	}
 
-	transaction := subs.GetTransaction()
-	if transaction == nil {
-		xapp.Logger.Error("SubFail: Unknown transaction. Dropping this msg. PayloadSeqNum: %v, SubId: %v", payloadSeqNum, params.SubId)
+	trans := subs.GetTransaction()
+	if trans == nil {
+		xapp.Logger.Error("SubFail: Unknown trans. Dropping this msg. PayloadSeqNum: %v, SubId: %v", payloadSeqNum, params.SubId)
 		return
 	}
 
 	c.timerMap.StopTimer("RIC_SUB_REQ", int(payloadSeqNum))
 
-	responseReceived := transaction.CheckResponseReceived()
+	responseReceived := trans.CheckResponseReceived()
 	if err != nil {
 		xapp.Logger.Info("SubFail: Dropping this msg. Err: %v SubId: %v", err, payloadSeqNum)
 		return
@@ -285,21 +339,14 @@ func (c *Control) handleSubscriptionFailure(params *xapp.RMRParams) {
 		// Subscription timer already received
 		return
 	}
-	xapp.Logger.Info("SubFail: SubId: %v, from address: %s. Forwarding response to xApp", payloadSeqNum, transaction.RmrEndpoint)
+	xapp.Logger.Info("SubFail: SubId: %v, from address: %s. Forwarding response to xApp", payloadSeqNum, trans.RmrEndpoint)
 
-	params.SubId = int(payloadSeqNum)
-	params.Xid = transaction.OrigParams.Xid
-
-	xapp.Logger.Info("SubFail: Forwarding SubFail to xApp: Mtype: %v, SubId: %v, Xid: %v, Meid: %v", params.Mtype, params.SubId, params.Xid, params.Meid)
-	err = c.rmrReplyToSender(params)
-	if err != nil {
-		xapp.Logger.Error("SubFail: Failed to send response to xApp. Err: %v, SubId: %v, Xid: %s", err, params.SubId, params.Xid)
-	}
+	c.rmrReplyToSender("SubFail to xapp", subs, trans, params.Mtype, params.Payload, params.PayloadLen)
 
 	time.Sleep(3 * time.Second)
 
-	xapp.Logger.Info("SubFail: Deleting transaction record. SubId: %v, Xid: %s", params.SubId, params.Xid)
-	transaction.Release()
+	xapp.Logger.Info("SubFail: Deleting trans record. SubId: %v, Xid: %s", params.SubId, params.Xid)
+	trans.Release()
 	if !c.registry.DelSubscription(payloadSeqNum) {
 		xapp.Logger.Error("SubFail: Failed to release sequency number. SubId: %v, Xid: %s", params.SubId, params.Xid)
 	}
@@ -307,22 +354,21 @@ func (c *Control) handleSubscriptionFailure(params *xapp.RMRParams) {
 }
 
 func (c *Control) handleSubscriptionRequestTimer(strId string, nbrId int, tryCount uint64) {
-	subId := uint16(nbrId)
-	xapp.Logger.Info("handleSubTimer: SubReq timer expired. subId: %v,  tryCount: %v", subId, tryCount)
+	xapp.Logger.Info("SubReq timeout: subId: %v,  tryCount: %v", nbrId, tryCount)
 
-	subs := c.registry.GetSubscription(subId)
+	subs := c.registry.GetSubscription(uint16(nbrId))
 	if subs == nil {
-		xapp.Logger.Error("SubFail: Unknown payloadSeqNum. Dropping this msg. SubId: %v", subId)
+		xapp.Logger.Error("SubReq timeout: Unknown payloadSeqNum. Dropping this msg. SubId: %v", nbrId)
 		return
 	}
 
-	transaction := subs.GetTransaction()
-	if transaction == nil {
-		xapp.Logger.Error("SubFail: Unknown transaction. Dropping this msg. SubId: %v", subId)
+	trans := subs.GetTransaction()
+	if trans == nil {
+		xapp.Logger.Error("SubReq timeout: Unknown trans. Dropping this msg. SubId: %v", subs.GetSubId())
 		return
 	}
 
-	responseReceived := transaction.CheckResponseReceived()
+	responseReceived := trans.CheckResponseReceived()
 
 	if responseReceived == true {
 		// Subscription Response or Failure already received
@@ -330,54 +376,50 @@ func (c *Control) handleSubscriptionRequestTimer(strId string, nbrId int, tryCou
 	}
 
 	if tryCount < maxSubReqTryCount {
-		xapp.Logger.Info("handleSubTimer: Resending SubReq to E2T: Mtype: %v, SubId: %v, Xid %s, Meid %v", transaction.OrigParams.Mtype, transaction.OrigParams.SubId, transaction.OrigParams.Xid, transaction.OrigParams.Meid)
+		xapp.Logger.Info("SubReq timeout: Resending SubReq to E2T: Mtype: %v, SubId: %v, Xid %s, Meid %v", trans.OrigParams.Mtype, subs.GetSubId(), trans.GetXid(), subs.GetMeid())
 
-		transaction.RetryTransaction()
+		trans.RetryTransaction()
 
-		err := c.rmrSend(transaction.OrigParams)
-		if err != nil {
-			xapp.Logger.Error("handleSubTimer: Failed to send request to E2T %v, SubId: %v, Xid: %s", err, transaction.OrigParams.SubId, transaction.OrigParams.Xid)
-		}
+		c.rmrSend("SubReq(SubReq timer) to E2T", subs, trans, trans.OrigParams.Payload, trans.OrigParams.PayloadLen)
 
 		tryCount++
-		c.timerMap.StartTimer("RIC_SUB_REQ", int(subId), subReqTime, tryCount, c.handleSubscriptionRequestTimer)
+		c.timerMap.StartTimer("RIC_SUB_REQ", int(subs.GetSubId()), subReqTime, tryCount, c.handleSubscriptionRequestTimer)
 		return
 	}
 
 	var subDelReqPayload []byte
-	subDelReqPayload, err := c.e2ap.PackSubscriptionDeleteRequest(transaction.OrigParams.Payload, subId)
+	subDelReqPayload, err := c.e2ap.PackSubscriptionDeleteRequest(trans.OrigParams.Payload, subs.GetSubId())
 	if err != nil {
-		xapp.Logger.Error("handleSubTimer: Packing SubDelReq failed. Err: %v", err)
+		xapp.Logger.Error("SubReq timeout: Packing SubDelReq failed. Err: %v", err)
 		return
 	}
 
 	// Cancel failed subscription
-	var params xapp.RMRParams
+	params := &RMRParams{&xapp.RMRParams{}}
 	params.Mtype = 12020 // RIC SUBSCRIPTION DELETE
-	params.SubId = int(subId)
-	params.Xid = transaction.OrigParams.Xid
-	params.Meid = transaction.OrigParams.Meid
-	params.Src = transaction.OrigParams.Src
+	params.SubId = int(subs.GetSubId())
+	params.Xid = trans.GetXid()
+	params.Meid = subs.GetMeid()
+	params.Src = trans.OrigParams.Src
 	params.PayloadLen = len(subDelReqPayload)
 	params.Payload = subDelReqPayload
 	params.Mbuf = nil
 
 	// Delete CREATE transaction
-	transaction.Release()
+	trans.Release()
 
-	// Create DELETE transaction
-	_, err = c.trackDeleteTransaction(subs, &params, subId, false)
+	// Create DELETE transaction (internal and no messages toward xapp)
+	var forwardRespToXapp bool = false
+	var respReceived bool = false
+	deltrans, err := c.tracker.TrackTransaction(subs, trans.RmrEndpoint, params, respReceived, forwardRespToXapp)
 	if err != nil {
 		xapp.Logger.Error("handleSubTimer: %s, Dropping this msg.", err.Error())
 		return
 	}
 
-	xapp.Logger.Info("handleSubTimer: Sending SubDelReq to E2T: Mtype: %v, SubId: %v, Meid: %v", params.Mtype, params.SubId, params.Meid)
-	c.rmrSend(&params)
-	if err != nil {
-		xapp.Logger.Error("handleSubTimer: Failed to send request to E2T %v. SubId: %v, Xid: %s", err, params.SubId, params.Xid)
-	}
-	c.timerMap.StartTimer("RIC_SUB_DEL_REQ", int(subId), subDelReqTime, FirstTry, c.handleSubscriptionDeleteRequestTimer)
+	c.rmrSend("SubDelReq(SubReq timer) to E2T", subs, deltrans, deltrans.OrigParams.Payload, deltrans.OrigParams.PayloadLen)
+
+	c.timerMap.StartTimer("RIC_SUB_DEL_REQ", int(subs.GetSubId()), subDelReqTime, FirstTry, c.handleSubscriptionDeleteRequestTimer)
 	return
 }
 
@@ -404,10 +446,14 @@ func (act Action) valid() bool {
 	}
 }
 
-func (c *Control) handleSubscriptionDeleteRequest(params *xapp.RMRParams) {
-	xapp.Logger.Info("SubDelReq received from Src: %s, Mtype: %v, SubId: %v, Xid: %s, Meid: %v", params.Src, params.Mtype, params.SubId, params.Xid, params.Meid)
-	xapp.Rmr.Free(params.Mbuf)
-	params.Mbuf = nil
+func (c *Control) handleSubscriptionDeleteRequest(params *RMRParams) {
+	xapp.Logger.Info("SubDelReq from xapp: %s", params.String())
+
+	srcAddr, srcPort, err := c.rtmgrClient.SplitSource(params.Src)
+	if err != nil {
+		xapp.Logger.Error("SubDelReq: Failed to update routing-manager. Dropping this msg. Err: %s, SubId: %v, Xid: %s", err, params.SubId, params.Xid)
+		return
+	}
 
 	payloadSeqNum, err := c.e2ap.GetSubscriptionDeleteRequestSequenceNumber(params.Payload)
 	if err != nil {
@@ -417,42 +463,28 @@ func (c *Control) handleSubscriptionDeleteRequest(params *xapp.RMRParams) {
 	xapp.Logger.Info("SubDelReq: Received payloadSeqNum: %v", payloadSeqNum)
 
 	subs := c.registry.GetSubscription(payloadSeqNum)
-	if subs != nil {
-		var forwardRespToXapp bool = true
-		_, err = c.trackDeleteTransaction(subs, params, payloadSeqNum, forwardRespToXapp)
-		if err != nil {
-			xapp.Logger.Error("SubDelReq: %s, Dropping this msg.", err.Error())
-			return
-		}
-		subs.UnConfirmed()
-	} else {
+	if subs == nil {
 		xapp.Logger.Error("SubDelReq: Not valid sequence number. Dropping this msg. SubId: %v, Xid: %s", params.SubId, params.Xid)
 		return
 	}
 
-	xapp.Logger.Info("SubDelReq: Forwarding Request to E2T. Mtype: %v, SubId: %v, Xid: %s, Meid: %v", params.Mtype, params.SubId, params.Xid, params.Meid)
-	c.rmrSend(params)
-	if err != nil {
-		xapp.Logger.Error("SubDelReq: Failed to send request to E2T. Err %v, SubId: %v, Xid: %s", err, params.SubId, params.Xid)
-	}
-	c.timerMap.StartTimer("RIC_SUB_DEL_REQ", int(payloadSeqNum), subDelReqTime, FirstTry, c.handleSubscriptionDeleteRequestTimer)
-	return
-}
-
-func (c *Control) trackDeleteTransaction(subs *Subscription, params *xapp.RMRParams, payloadSeqNum uint16, forwardRespToXapp bool) (transaction *Transaction, err error) {
-	srcAddr, srcPort, err := c.rtmgrClient.SplitSource(params.Src)
-	if err != nil {
-		xapp.Logger.Error("Failed to split source address. Err: %s, SubId: %v, Xid: %s", err, payloadSeqNum, params.Xid)
-	}
+	var forwardRespToXapp bool = true
 	var respReceived bool = false
-	transaction, err = c.tracker.TrackTransaction(subs, RmrEndpoint{*srcAddr, *srcPort}, params, respReceived, forwardRespToXapp)
+	trans, err := c.tracker.TrackTransaction(subs, RmrEndpoint{*srcAddr, *srcPort}, params, respReceived, forwardRespToXapp)
+	if err != nil {
+		xapp.Logger.Error("SubDelReq: %s, Dropping this msg.", err.Error())
+		return
+	}
+	subs.UnConfirmed()
+
+	c.rmrSend("SubDelReq to E2T", subs, trans, trans.OrigParams.Payload, trans.OrigParams.PayloadLen)
+
+	c.timerMap.StartTimer("RIC_SUB_DEL_REQ", int(subs.GetSubId()), subDelReqTime, FirstTry, c.handleSubscriptionDeleteRequestTimer)
 	return
 }
 
-func (c *Control) handleSubscriptionDeleteResponse(params *xapp.RMRParams) (err error) {
-	xapp.Logger.Info("SubDelResp received from Src: %s, Mtype: %v, SubId: %v, Meid: %v", params.Src, params.Mtype, params.SubId, params.Meid)
-	xapp.Rmr.Free(params.Mbuf)
-	params.Mbuf = nil
+func (c *Control) handleSubscriptionDeleteResponse(params *RMRParams) (err error) {
+	xapp.Logger.Info("SubDelResp from E2T:%s", params.String())
 
 	payloadSeqNum, err := c.e2ap.GetSubscriptionDeleteResponseSequenceNumber(params.Payload)
 	if err != nil {
@@ -467,51 +499,41 @@ func (c *Control) handleSubscriptionDeleteResponse(params *xapp.RMRParams) (err 
 		return
 	}
 
-	transaction := subs.GetTransaction()
-	if transaction == nil {
-		xapp.Logger.Error("SubDelResp: Unknown transaction. Dropping this msg. PayloadSeqNum: %v, SubId: %v", payloadSeqNum, params.SubId)
+	trans := subs.GetTransaction()
+	if trans == nil {
+		xapp.Logger.Error("SubDelResp: Unknown trans. Dropping this msg. PayloadSeqNum: %v, SubId: %v", subs.GetSubId(), params.SubId)
 		return
 	}
 
-	c.timerMap.StopTimer("RIC_SUB_DEL_REQ", int(payloadSeqNum))
+	c.timerMap.StopTimer("RIC_SUB_DEL_REQ", int(subs.GetSubId()))
 
-	responseReceived := transaction.CheckResponseReceived()
+	responseReceived := trans.CheckResponseReceived()
 	if responseReceived == true {
 		// Subscription Delete timer already received
 		return
 	}
 
-	transaction.Release()
+	trans.Release()
 
-	xapp.Logger.Info("SubDelResp: SubId: %v, from address: %s. Forwarding response to xApp", payloadSeqNum, transaction.RmrEndpoint)
-	if transaction.ForwardRespToXapp == true {
-		params.SubId = int(payloadSeqNum)
-		params.Xid = transaction.OrigParams.Xid
-		xapp.Logger.Info("Forwarding SubDelResp to xApp: Mtype: %v, SubId: %v, Xid: %v, Meid: %v", params.Mtype, params.SubId, params.Xid, params.Meid)
-		err = c.rmrReplyToSender(params)
-		if err != nil {
-			xapp.Logger.Error("SubDelResp: Failed to send response to xApp. Err: %v, SubId: %v, Xid: %s", err, params.SubId, params.Xid)
-		}
-
+	if trans.ForwardRespToXapp == true {
+		c.rmrReplyToSender("SubDelResp to xapp", subs, trans, params.Mtype, params.Payload, params.PayloadLen)
 		time.Sleep(3 * time.Second)
 	}
 
-	xapp.Logger.Info("SubDelResp: Deleting transaction record. SubId: %v, Xid: %s", params.SubId, params.Xid)
-	if !c.registry.DelSubscription(payloadSeqNum) {
-		xapp.Logger.Error("SubDelResp: Failed to release sequency number. SubId: %v, Xid: %s", params.SubId, params.Xid)
+	xapp.Logger.Info("SubDelResp: Deleting trans record. SubId: %v, Xid: %s", subs.GetSubId(), trans.GetXid())
+	if !c.registry.DelSubscription(subs.GetSubId()) {
+		xapp.Logger.Error("SubDelResp: Failed to release sequency number. SubId: %v, Xid: %s", subs.GetSubId(), trans.GetXid())
 		return
 	}
 	return
 }
 
-func (c *Control) handleSubscriptionDeleteFailure(params *xapp.RMRParams) {
-	xapp.Logger.Info("SubDelFail received from Src: %s, Mtype: %v, SubId: %v, Meid: %v", params.Src, params.Mtype, params.SubId, params.Meid)
-	xapp.Rmr.Free(params.Mbuf)
-	params.Mbuf = nil
+func (c *Control) handleSubscriptionDeleteFailure(params *RMRParams) {
+	xapp.Logger.Info("SubDelFail from E2T:%s", params.String())
 
 	payloadSeqNum, err := c.e2ap.GetSubscriptionDeleteFailureSequenceNumber(params.Payload)
 	if err != nil {
-		xapp.Logger.Error("SubDelFail: Unable to get Sequence Number from Payload. Dropping this msg. Err: %v, SubId: %v, Xid: %s, Payload %X", err, params.SubId, params.Xid, params.Payload)
+		xapp.Logger.Error("SubDelFail: Unable to get Sequence Number from Payload. Dropping this msg. Err: %v, %s", err, params.String())
 		return
 	}
 	xapp.Logger.Info("SubDelFail: Received payloadSeqNum: %v", payloadSeqNum)
@@ -522,124 +544,94 @@ func (c *Control) handleSubscriptionDeleteFailure(params *xapp.RMRParams) {
 		return
 	}
 
-	transaction := subs.GetTransaction()
-	if transaction == nil {
-		xapp.Logger.Error("SubDelFail: Unknown transaction. Dropping this msg. PayloadSeqNum: %v, SubId: %v", payloadSeqNum, params.SubId)
+	trans := subs.GetTransaction()
+	if trans == nil {
+		xapp.Logger.Error("SubDelFail: Unknown trans. Dropping this msg. PayloadSeqNum: %v, SubId: %v", subs.GetSubId(), params.SubId)
 		return
 	}
 
-	c.timerMap.StopTimer("RIC_SUB_DEL_REQ", int(payloadSeqNum))
+	c.timerMap.StopTimer("RIC_SUB_DEL_REQ", int(subs.GetSubId()))
 
-	responseReceived := transaction.CheckResponseReceived()
+	responseReceived := trans.CheckResponseReceived()
 	if responseReceived == true {
 		// Subscription Delete timer already received
 		return
 	}
-	xapp.Logger.Info("SubDelFail: SubId: %v, from address: %s. Forwarding response to xApp", payloadSeqNum, transaction.RmrEndpoint)
-
-	if transaction.ForwardRespToXapp == true {
+	if trans.ForwardRespToXapp == true {
 		var subDelRespPayload []byte
-		subDelRespPayload, err = c.e2ap.PackSubscriptionDeleteResponse(transaction.OrigParams.Payload, payloadSeqNum)
+		subDelRespPayload, err = c.e2ap.PackSubscriptionDeleteResponse(trans.OrigParams.Payload, subs.GetSubId())
 		if err != nil {
 			xapp.Logger.Error("SubDelFail:Packing SubDelResp failed. Err: %v", err)
 			return
 		}
 
-		params.Mtype = 12021 // RIC SUBSCRIPTION DELETE RESPONSE
-		params.SubId = int(payloadSeqNum)
-		params.Xid = transaction.OrigParams.Xid
-		params.Meid = transaction.OrigParams.Meid
-		params.Src = transaction.OrigParams.Src
-		params.PayloadLen = len(subDelRespPayload)
-		params.Payload = subDelRespPayload
-		params.Mbuf = nil
-		xapp.Logger.Info("SubDelFail: Forwarding SubDelResp to xApp: Mtype: %v, SubId: %v, Xid: %v, Meid: %v", params.Mtype, params.SubId, params.Xid, params.Meid)
-		err = c.rmrReplyToSender(params)
-		if err != nil {
-			xapp.Logger.Error("SubDelFail: Failed to send SubDelResp to xApp. Err: %v, SubId: %v, Xid: %s", err, params.SubId, params.Xid)
-		}
-
+		// RIC SUBSCRIPTION DELETE RESPONSE
+		c.rmrReplyToSender("SubDelFail to xapp", subs, trans, 12021, subDelRespPayload, len(subDelRespPayload))
 		time.Sleep(3 * time.Second)
 	}
 
-	xapp.Logger.Info("SubDelFail: Deleting transaction record. SubId: %v, Xid: %s", params.SubId, params.Xid)
-	transaction.Release()
-	if !c.registry.DelSubscription(payloadSeqNum) {
-		xapp.Logger.Error("SubDelFail: Failed to release sequency number. Err: %v, SubId: %v, Xid: %s", err, params.SubId, params.Xid)
+	xapp.Logger.Info("SubDelFail: Deleting trans record. SubId: %v, Xid: %s", subs.GetSubId(), trans.GetXid())
+	trans.Release()
+	if !c.registry.DelSubscription(subs.GetSubId()) {
+		xapp.Logger.Error("SubDelFail: Failed to release sequency number. Err: %v, SubId: %v, Xid: %s", err, subs.GetSubId(), trans.GetXid())
 		return
 	}
 	return
 }
 
 func (c *Control) handleSubscriptionDeleteRequestTimer(strId string, nbrId int, tryCount uint64) {
-	subId := uint16(nbrId)
-	xapp.Logger.Info("handleSubDelTimer: SubDelReq timer expired. subId: %v, tryCount: %v", subId, tryCount)
+	xapp.Logger.Info("SubDelReq timeout: subId: %v, tryCount: %v", nbrId, tryCount)
 
-	subs := c.registry.GetSubscription(subId)
+	subs := c.registry.GetSubscription(uint16(nbrId))
 	if subs == nil {
-		xapp.Logger.Error("handleSubDelTimer: Unknown payloadSeqNum. Dropping this msg. SubId: %v", subId)
+		xapp.Logger.Error("SubDelReq timeout: Unknown payloadSeqNum. Dropping this msg. SubId: %v", nbrId)
 		return
 	}
 
-	transaction := subs.GetTransaction()
-	if transaction == nil {
-		xapp.Logger.Error("handleSubDelTimer: Unknown transaction. Dropping this msg. SubId: %v", subId)
+	trans := subs.GetTransaction()
+	if trans == nil {
+		xapp.Logger.Error("SubDelReq timeout: Unknown trans. Dropping this msg. SubId: %v", subs.GetSubId())
 		return
 	}
 
-	responseReceived := transaction.CheckResponseReceived()
+	responseReceived := trans.CheckResponseReceived()
 	if responseReceived == true {
 		// Subscription Delete Response or Failure already received
 		return
 	}
 
 	if tryCount < maxSubDelReqTryCount {
-		xapp.Logger.Info("handleSubDelTimer: Resending SubDelReq to E2T: Mtype: %v, SubId: %v, Xid %s, Meid %v", transaction.OrigParams.Mtype, transaction.OrigParams.SubId, transaction.OrigParams.Xid, transaction.OrigParams.Meid)
+		xapp.Logger.Info("SubDelReq timeout: Resending SubDelReq to E2T: Mtype: %v, SubId: %v, Xid %s, Meid %v", trans.OrigParams.Mtype, subs.GetSubId(), trans.GetXid(), subs.GetMeid())
 		// Set possible to handle new response for the subId
 
-		transaction.RetryTransaction()
+		trans.RetryTransaction()
 
-		err := c.rmrSend(transaction.OrigParams)
-		if err != nil {
-			xapp.Logger.Error("handleSubDelTimer: Failed to send request to E2T %v, SubId: %v, Xid: %s", err, transaction.OrigParams.SubId, transaction.OrigParams.Xid)
-		}
+		c.rmrSend("SubDelReq(SubDelReq timer) to E2T", subs, trans, trans.OrigParams.Payload, trans.OrigParams.PayloadLen)
 
 		tryCount++
-		c.timerMap.StartTimer("RIC_SUB_DEL_REQ", int(subId), subReqTime, tryCount, c.handleSubscriptionDeleteRequestTimer)
+		c.timerMap.StartTimer("RIC_SUB_DEL_REQ", int(subs.GetSubId()), subReqTime, tryCount, c.handleSubscriptionDeleteRequestTimer)
 		return
 	}
 
-	var params xapp.RMRParams
-	if transaction.ForwardRespToXapp == true {
+	if trans.ForwardRespToXapp == true {
 		var subDelRespPayload []byte
-		subDelRespPayload, err := c.e2ap.PackSubscriptionDeleteResponse(transaction.OrigParams.Payload, subId)
+		subDelRespPayload, err := c.e2ap.PackSubscriptionDeleteResponse(trans.OrigParams.Payload, subs.GetSubId())
 		if err != nil {
-			xapp.Logger.Error("handleSubDelTimer: Unable to pack payload. Dropping this this msg. Err: %v, SubId: %v, Xid: %s, Payload %x", err, subId, transaction.OrigParams.Xid, transaction.OrigParams.Payload)
+			xapp.Logger.Error("SubDelReq timeout: Unable to pack payload. Dropping this this msg. Err: %v, SubId: %v, Xid: %s, Payload %x", err, subs.GetSubId(), trans.GetXid(), trans.OrigParams.Payload)
 			return
 		}
 
-		params.Mtype = 12021 // RIC SUBSCRIPTION DELETE RESPONSE
-		params.SubId = int(subId)
-		params.Meid = transaction.OrigParams.Meid
-		params.Xid = transaction.OrigParams.Xid
-		params.Src = transaction.OrigParams.Src
-		params.PayloadLen = len(subDelRespPayload)
-		params.Payload = subDelRespPayload
-		params.Mbuf = nil
-
-		xapp.Logger.Info("handleSubDelTimer: Sending SubDelResp to xApp: Mtype: %v, SubId: %v, Xid: %s, Meid: %v", params.Mtype, params.SubId, params.Xid, params.Meid)
-		err = c.rmrReplyToSender(&params)
-		if err != nil {
-			xapp.Logger.Error("handleSubDelTimer: Failed to send response to xApp: Err: %v, SubId: %v, Xid: %s", err, params.SubId, params.Xid)
-		}
+		// RIC SUBSCRIPTION DELETE RESPONSE
+		c.rmrReplyToSender("SubDelResp(SubDelReq timer) to xapp", subs, trans, 12021, subDelRespPayload, len(subDelRespPayload))
 
 		time.Sleep(3 * time.Second)
+
 	}
 
-	xapp.Logger.Info("handleSubDelTimer: Deleting transaction record. SubId: %v, Xid: %s", subId, params.Xid)
-	transaction.Release()
-	if !c.registry.DelSubscription(subId) {
-		xapp.Logger.Error("handleSubDelTimer: Failed to release sequency number. SubId: %v, Xid: %s", subId, params.Xid)
+	xapp.Logger.Info("SubDelReq timeout: Deleting trans record. SubId: %v, Xid: %s", subs.GetSubId(), trans.GetXid())
+	trans.Release()
+	if !c.registry.DelSubscription(subs.GetSubId()) {
+		xapp.Logger.Error("SubDelReq timeout: Failed to release sequency number. SubId: %v, Xid: %s", subs.GetSubId(), trans.GetXid())
 	}
 	return
 }
