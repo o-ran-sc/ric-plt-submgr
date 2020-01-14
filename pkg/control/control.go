@@ -336,30 +336,46 @@ func (c *Control) handleSubscriptionResponse(params *RMRParams) {
 func (c *Control) handleSubscriptionFailure(params *RMRParams) {
 	xapp.Logger.Info("SubFail from E2T: %s", params.String())
 
-	payloadSeqNum, err := c.e2ap.GetSubscriptionFailureSequenceNumber(params.Payload)
+	//
+	//
+	//
+	SubFailMsg, err := c.e2ap.UnpackSubscriptionFailure(params.Payload)
 	if err != nil {
-		xapp.Logger.Error("SubFail: Unable to get Sequence Number from Payload. Dropping this msg. Err: %v, SubId: %v, Xid: %s, Payload %X", err, params.SubId, params.Xid, params.Payload)
+		xapp.Logger.Error("SubFail: %s Dropping this msg. %s", err.Error(), params.String())
 		return
 	}
-	xapp.Logger.Info("SubFail: Received payloadSeqNum: %v", payloadSeqNum)
 
-	subs := c.registry.GetSubscription(payloadSeqNum)
+	//
+	//
+	//
+	subs := c.registry.GetSubscription(uint16(SubFailMsg.RequestId.Seq))
+	if subs == nil && params.SubId > 0 {
+		subs = c.registry.GetSubscription(uint16(params.SubId))
+	}
+
 	if subs == nil {
-		xapp.Logger.Error("SubFail: Unknown payloadSeqNum. Dropping this msg. PayloadSeqNum: %v, SubId: %v", payloadSeqNum, params.SubId)
+		xapp.Logger.Error("SubFail: Not valid subscription found payloadSeqNum: %d, SubId: %d. Dropping this msg. %s", SubFailMsg.RequestId.Seq, params.SubId, params.String())
 		return
 	}
+	xapp.Logger.Info("SubFail: subscription found payloadSeqNum: %d, SubId: %d", SubFailMsg.RequestId.Seq, subs.GetSubId())
 
+	//
+	//
+	//
 	trans := subs.GetTransaction()
 	if trans == nil {
-		xapp.Logger.Error("SubFail: Unknown trans. Dropping this msg. PayloadSeqNum: %v, SubId: %v", payloadSeqNum, params.SubId)
+		xapp.Logger.Error("SubFail: Unknown trans. Dropping this msg. SubId: %d", subs.GetSubId())
 		return
 	}
+	trans.SubFailMsg = SubFailMsg
 
-	c.timerMap.StopTimer("RIC_SUB_REQ", int(payloadSeqNum))
+	//
+	//
+	//
+	c.timerMap.StopTimer("RIC_SUB_REQ", int(subs.GetSubId()))
 
 	responseReceived := trans.CheckResponseReceived()
 	if err != nil {
-		xapp.Logger.Info("SubFail: Dropping this msg. Err: %v SubId: %v", err, payloadSeqNum)
 		return
 	}
 
@@ -367,16 +383,22 @@ func (c *Control) handleSubscriptionFailure(params *RMRParams) {
 		// Subscription timer already received
 		return
 	}
-	xapp.Logger.Info("SubFail: SubId: %v, from address: %s. Forwarding response to xApp", payloadSeqNum, trans.RmrEndpoint)
 
-	c.rmrReplyToSender("SubFail to xapp", subs, trans, params.Mtype, params.Payload, params.PayloadLen)
+	packedData, err := c.e2ap.PackSubscriptionFailure(trans.SubFailMsg)
+	if err != nil {
+		//TODO error handling improvement
+		xapp.Logger.Error("SubFail: %s for trans %s (continue still)", err.Error(), trans)
+	} else {
+		//Optimize and store packed message to be sent.
+		trans.Payload = packedData.Buf
+		trans.PayloadLen = len(packedData.Buf)
+		c.rmrReplyToSender("SubFail to xapp", subs, trans, 12012, trans.Payload, trans.PayloadLen)
+		time.Sleep(3 * time.Second)
+	}
 
-	time.Sleep(3 * time.Second)
-
-	xapp.Logger.Info("SubFail: Deleting trans record. SubId: %v, Xid: %s", params.SubId, params.Xid)
 	trans.Release()
-	if !c.registry.DelSubscription(payloadSeqNum) {
-		xapp.Logger.Error("SubFail: Failed to release sequency number. SubId: %v, Xid: %s", params.SubId, params.Xid)
+	if !c.registry.DelSubscription(subs.GetSubId()) {
+		xapp.Logger.Error("SubFail: Failed to release sequency number. %s", subs)
 	}
 	return
 }

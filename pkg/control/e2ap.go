@@ -62,29 +62,6 @@ func (c *E2ap) SetSubscriptionDeleteResponseSequenceNumber(payload []byte, newSu
 	return
 }
 
-/* RICsubscriptionRequestFailure */
-
-// Used by submgr
-func (c *E2ap) GetSubscriptionFailureSequenceNumber(payload []byte) (subId uint16, err error) {
-	cptr := unsafe.Pointer(&payload[0])
-	cret := C.e2ap_get_ric_subscription_failure_sequence_number(cptr, C.size_t(len(payload)))
-	if cret < 0 {
-		return 0, fmt.Errorf("e2ap wrapper is unable to get Subscirption Failure Sequence Number due to wrong or invalid payload. Erroxappde: %v", cret)
-	}
-	subId = uint16(cret)
-	return
-}
-
-// Used by e2t test stub
-func (c *E2ap) SetSubscriptionFailureSequenceNumber(payload []byte, newSubscriptionid uint16) (err error) {
-	cptr := unsafe.Pointer(&payload[0])
-	size := C.e2ap_set_ric_subscription_failure_sequence_number(cptr, C.size_t(len(payload)), C.long(newSubscriptionid))
-	if size < 0 {
-		return fmt.Errorf("e2ap wrapper is unable to set Subscription Failure Sequence Number due to wrong or invalid payload. Erroxappde: %v", size)
-	}
-	return
-}
-
 /* RICsubscriptionDeleteFailure */
 
 // Used by submgr
@@ -184,6 +161,37 @@ func (c *E2ap) PackSubscriptionResponse(req *e2ap.E2APSubscriptionResponse) (*pa
 		return nil, err
 	}
 	err, packedData := e2SubResp.Pack(nil)
+	if err != nil {
+		return nil, err
+	}
+	return packedData, nil
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+func (c *E2ap) UnpackSubscriptionFailure(payload []byte) (*e2ap.E2APSubscriptionFailure, error) {
+	e2SubFail := packerif.NewPackerSubscriptionFailure()
+	packedData := &packer.PackedData{}
+	packedData.Buf = payload
+	err := e2SubFail.UnPack(packedData)
+	if err != nil {
+		return nil, err
+	}
+	err, subFail := e2SubFail.Get()
+	if err != nil {
+		return nil, err
+	}
+	return subFail, nil
+}
+
+func (c *E2ap) PackSubscriptionFailure(req *e2ap.E2APSubscriptionFailure) (*packer.PackedData, error) {
+	e2SubFail := packerif.NewPackerSubscriptionFailure()
+	err := e2SubFail.Set(req)
+	if err != nil {
+		return nil, err
+	}
+	err, packedData := e2SubFail.Pack(nil)
 	if err != nil {
 		return nil, err
 	}
