@@ -447,23 +447,27 @@ func (c *Control) handleSubscriptionDeleteRequest(params *RMRParams) {
 		return
 	}
 
-	payloadSeqNum, err := c.e2ap.GetSubscriptionDeleteRequestSequenceNumber(params.Payload)
-	if err == nil {
-		subs = c.registry.GetSubscription(payloadSeqNum)
+	//
+	//
+	//
+	trans.SubDelReqMsg, err = c.e2ap.UnpackSubscriptionDeleteRequest(params.Payload)
+	if err != nil {
+		xapp.Logger.Error("SubDelReq: %s Dropping this msg. %s", err.Error(), trans)
+		trans.Release()
+		return
 	}
+
+	subs = c.registry.GetSubscription(uint16(trans.SubDelReqMsg.RequestId.Seq))
 	if subs == nil && params.SubId > 0 {
 		subs = c.registry.GetSubscription(uint16(params.SubId))
 	}
 
 	if subs == nil {
-		xapp.Logger.Error("SubDelReq: Not valid subscription found payloadSeqNum: %d. Dropping this msg. %s", payloadSeqNum, trans)
+		xapp.Logger.Error("SubDelReq: Not valid subscription found payloadSeqNum: %d, SubId: %d. Dropping this msg. %s", trans.SubDelReqMsg.RequestId.Seq, params.SubId, trans)
 		trans.Release()
 		return
 	}
-	xapp.Logger.Info("SubDelReq: subscription found payloadSeqNum: %d. %s", payloadSeqNum, trans)
-
-	trans.PayloadLen = params.PayloadLen
-	trans.Payload = params.Payload
+	xapp.Logger.Info("SubDelReq: subscription found payloadSeqNum: %d, SubId: %d. %s", trans.SubDelReqMsg.RequestId.Seq, params.SubId, trans)
 
 	err = subs.SetTransaction(trans)
 	if err != nil {
@@ -471,6 +475,25 @@ func (c *Control) handleSubscriptionDeleteRequest(params *RMRParams) {
 		trans.Release()
 		return
 	}
+
+	//
+	// TODO: subscription delete is in fact owned by subscription and not transaction.
+	//       Transaction is toward xapp while Subscription is toward ran.
+	//       In merge several xapps may wake transactions, while only one subscription
+	//       toward ran occurs -> subscription owns subscription creation toward ran
+	//
+	//       This is intermediate solution while improving message handling
+	//
+	packedData, err := c.e2ap.PackSubscriptionDeleteRequest(trans.SubDelReqMsg)
+	if err != nil {
+		xapp.Logger.Error("SubDelReq: %s for trans %s", err.Error(), trans)
+		trans.Release()
+		return
+	}
+
+	//Optimize and store packed message to be sent (for retransmission). Again owned by subscription?
+	trans.Payload = packedData.Buf
+	trans.PayloadLen = len(packedData.Buf)
 
 	subs.UnConfirmed()
 
