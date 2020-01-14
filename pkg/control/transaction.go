@@ -20,6 +20,8 @@
 package control
 
 import (
+	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
+	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"strconv"
 	"sync"
 )
@@ -41,12 +43,16 @@ func (key *TransactionXappKey) String() string {
 //-----------------------------------------------------------------------------
 type Transaction struct {
 	mutex             sync.Mutex
-	tracker           *Tracker // tracker instance
-	Subs              *Subscription
-	RmrEndpoint       RmrEndpoint
-	Mtype             int
-	Xid               string     // xapp xid in req
-	OrigParams        *RMRParams // request orginal params
+	tracker           *Tracker                            //tracker instance
+	Subs              *Subscription                       //related subscription
+	RmrEndpoint       RmrEndpoint                         //xapp endpoint
+	Mtype             int                                 //type of initiating message
+	Xid               string                              //xapp xid in req
+	Meid              *xapp.RMRMeid                       //meid transaction related
+	SubReqMsg         *e2ap.E2APSubscriptionRequest       //SubReq TODO: maybe own transactions per type
+	SubDelReqMsg      *e2ap.E2APSubscriptionDeleteRequest //SubDelReq TODO: maybe own transactions per type
+	Payload           []byte                              //packed message to optimize retransmissions
+	PayloadLen        int                                 //packed message len to optimize  retransmissions
 	RespReceived      bool
 	ForwardRespToXapp bool
 }
@@ -71,6 +77,15 @@ func (t *Transaction) GetMtype() int {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 	return t.Mtype
+}
+
+func (t *Transaction) GetMeid() *xapp.RMRMeid {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+	if t.Meid != nil {
+		return t.Meid
+	}
+	return nil
 }
 
 func (t *Transaction) GetSrc() string {

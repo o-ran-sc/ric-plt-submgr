@@ -42,7 +42,7 @@ func (r *Registry) Initialize(seedsn uint16) {
 }
 
 // Reserves and returns the next free sequence number
-func (r *Registry) ReserveSubscription(endPoint RmrEndpoint, meid *xapp.RMRMeid) (*Subscription, error) {
+func (r *Registry) ReserveSubscription(endPoint *RmrEndpoint, meid *xapp.RMRMeid) (*Subscription, error) {
 	// Check is current SequenceNumber valid
 	// Allocate next SequenceNumber value and retry N times
 	r.mutex.Lock()
@@ -60,7 +60,7 @@ func (r *Registry) ReserveSubscription(endPoint RmrEndpoint, meid *xapp.RMRMeid)
 			subs := &Subscription{
 				Seq:         sequenceNumber,
 				Active:      false,
-				RmrEndpoint: endPoint,
+				RmrEndpoint: *endPoint,
 				Meid:        meid,
 				Trans:       nil,
 			}
