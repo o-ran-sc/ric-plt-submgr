@@ -21,6 +21,7 @@ package control
 
 import (
 	"fmt"
+	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"sync"
 )
 
@@ -36,15 +37,26 @@ func (t *Tracker) Init() {
 	t.transactionXappTable = make(map[TransactionXappKey]*Transaction)
 }
 
-func (t *Tracker) TrackTransaction(endpoint RmrEndpoint, params *RMRParams, respReceived bool, forwardRespToXapp bool) (*Transaction, error) {
+func (t *Tracker) TrackTransaction(
+	endpoint *RmrEndpoint,
+	mtype int,
+	xid string,
+	meid *xapp.RMRMeid,
+	respReceived bool,
+	forwardRespToXapp bool) (*Transaction, error) {
+
+	if endpoint == nil {
+		err := fmt.Errorf("Tracker: No valid endpoint given")
+		return nil, err
+	}
 
 	trans := &Transaction{
 		tracker:           nil,
 		Subs:              nil,
-		RmrEndpoint:       endpoint,
-		Mtype:             params.Mtype,
-		Xid:               params.Xid,
-		OrigParams:        params,
+		RmrEndpoint:       *endpoint,
+		Mtype:             mtype,
+		Xid:               xid,
+		Meid:              meid,
 		RespReceived:      respReceived,
 		ForwardRespToXapp: forwardRespToXapp,
 	}
@@ -52,7 +64,7 @@ func (t *Tracker) TrackTransaction(endpoint RmrEndpoint, params *RMRParams, resp
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 
-	xappkey := TransactionXappKey{endpoint, params.Xid}
+	xappkey := TransactionXappKey{*endpoint, xid}
 	if _, ok := t.transactionXappTable[xappkey]; ok {
 		err := fmt.Errorf("Tracker: Similar transaction with xappkey %s is ongoing, transaction %s not created ", xappkey, trans)
 		return nil, err

@@ -41,27 +41,6 @@ type E2ap struct {
 
 /* RICsubscriptionRequest */
 
-// Used by e2t test stub
-func (c *E2ap) GetSubscriptionRequestSequenceNumber(payload []byte) (subId uint16, err error) {
-	cptr := unsafe.Pointer(&payload[0])
-	cret := C.e2ap_get_ric_subscription_request_sequence_number(cptr, C.size_t(len(payload)))
-	if cret < 0 {
-		return 0, fmt.Errorf("e2ap wrapper is unable to get Subscirption Request Sequence Number due to wrong or invalid payload. Erroxappde: %v", cret)
-	}
-	subId = uint16(cret)
-	return
-}
-
-// Used by submgr, xapp test stub
-func (c *E2ap) SetSubscriptionRequestSequenceNumber(payload []byte, newSubscriptionid uint16) (err error) {
-	cptr := unsafe.Pointer(&payload[0])
-	size := C.e2ap_set_ric_subscription_request_sequence_number(cptr, C.size_t(len(payload)), C.long(newSubscriptionid))
-	if size < 0 {
-		return fmt.Errorf("e2ap wrapper is unable to set Subscription Request Sequence Number due to wrong or invalid payload. Erroxappde: %v", size)
-	}
-	return
-}
-
 // Used by submgr, xapp test stub
 func (c *E2ap) GetSubscriptionResponseSequenceNumber(payload []byte) (subId uint16, err error) {
 	cptr := unsafe.Pointer(&payload[0])
@@ -176,61 +155,96 @@ func (c *E2ap) SetSubscriptionDeleteFailureSequenceNumber(payload []byte, newSub
 }
 
 // Used by submgr
-func (c *E2ap) PackSubscriptionDeleteResponse(payload []byte, newSubscriptionid uint16) (newPayload []byte, err error) {
-	e2SubDelReq := packerif.NewPackerSubscriptionDeleteRequest()
-	packedData := &packer.PackedData{}
-	packedData.Buf = payload
-	err = e2SubDelReq.UnPack(packedData)
+func (c *E2ap) PackSubscriptionDeleteResponseFromSubDelReq(payload []byte, newSubscriptionid uint16) (newPayload []byte, err error) {
+
+	subDelReq, err := c.UnpackSubscriptionDeleteRequest(payload)
 	if err != nil {
-		return make([]byte, 0), fmt.Errorf("PackSubDelResp: UnPack() failed: %s", err.Error())
-	}
-	getErr, subDelReq := e2SubDelReq.Get()
-	if getErr != nil {
-		return make([]byte, 0), fmt.Errorf("PackSubDelResp: Get() failed: %s", getErr.Error())
+		return make([]byte, 0), fmt.Errorf("PackSubDelRespFromSubDelReq: SubDelReq unpack failed: %s", err.Error())
 	}
 
-	e2SubDelResp := packerif.NewPackerSubscriptionDeleteResponse()
-	subDelResp := e2ap.E2APSubscriptionDeleteResponse{}
+	subDelResp := &e2ap.E2APSubscriptionDeleteResponse{}
 	subDelResp.RequestId.Id = subDelReq.RequestId.Id
 	subDelResp.RequestId.Seq = uint32(newSubscriptionid)
 	subDelResp.FunctionId = subDelReq.FunctionId
-	err = e2SubDelResp.Set(&subDelResp)
+
+	packedData, err := c.PackSubscriptionDeleteResponse(subDelResp)
 	if err != nil {
-		return make([]byte, 0), fmt.Errorf("PackSubDelResp: Set() failed: %s", err.Error())
-	}
-	err, packedData = e2SubDelResp.Pack(nil)
-	if err != nil {
-		return make([]byte, 0), fmt.Errorf("PackSubDelResp: Pack() failed: %s", err.Error())
+		return make([]byte, 0), fmt.Errorf("PackSubDelRespFromSubDelReq: SubDelResp pack failed: %s", err.Error())
 	}
 	return packedData.Buf, nil
 }
 
-// Used by submgr
-func (c *E2ap) PackSubscriptionDeleteRequest(payload []byte, newSubscriptionid uint16) (newPayload []byte, err error) {
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+func (c *E2ap) UnpackSubscriptionRequest(payload []byte) (*e2ap.E2APSubscriptionRequest, error) {
 	e2SubReq := packerif.NewPackerSubscriptionRequest()
 	packedData := &packer.PackedData{}
 	packedData.Buf = payload
-	err = e2SubReq.UnPack(packedData)
+	err := e2SubReq.UnPack(packedData)
 	if err != nil {
-		return make([]byte, 0), fmt.Errorf("PackSubDelReq: UnPack() failed: %s", err.Error())
+		return nil, err
 	}
-	getErr, subReq := e2SubReq.Get()
-	if getErr != nil {
-		return make([]byte, 0), fmt.Errorf("PackSubDelReq: Get() failed: %s", getErr.Error())
+	err, subReq := e2SubReq.Get()
+	if err != nil {
+		return nil, err
 	}
+	return subReq, nil
+}
 
-	e2SubDel := packerif.NewPackerSubscriptionDeleteRequest()
-	subDelReq := e2ap.E2APSubscriptionDeleteRequest{}
-	subDelReq.RequestId.Id = subReq.RequestId.Id
-	subDelReq.RequestId.Seq = uint32(newSubscriptionid)
-	subDelReq.FunctionId = subReq.FunctionId
-	err = e2SubDel.Set(&subDelReq)
+func (c *E2ap) PackSubscriptionRequest(req *e2ap.E2APSubscriptionRequest) (*packer.PackedData, error) {
+	e2SubReq := packerif.NewPackerSubscriptionRequest()
+	err := e2SubReq.Set(req)
 	if err != nil {
-		return make([]byte, 0), fmt.Errorf("PackSubDelReq: Set() failed: %s", err.Error())
+		return nil, err
 	}
-	err, packedData = e2SubDel.Pack(nil)
+	err, packedData := e2SubReq.Pack(nil)
 	if err != nil {
-		return make([]byte, 0), fmt.Errorf("PackSubDelReq: Pack() failed: %s", err.Error())
+		return nil, err
 	}
-	return packedData.Buf, nil
+	return packedData, nil
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+func (c *E2ap) UnpackSubscriptionDeleteRequest(payload []byte) (*e2ap.E2APSubscriptionDeleteRequest, error) {
+	e2SubDelReq := packerif.NewPackerSubscriptionDeleteRequest()
+	packedData := &packer.PackedData{}
+	packedData.Buf = payload
+	err := e2SubDelReq.UnPack(packedData)
+	if err != nil {
+		return nil, err
+	}
+	err, subReq := e2SubDelReq.Get()
+	if err != nil {
+		return nil, err
+	}
+	return subReq, nil
+}
+
+func (c *E2ap) PackSubscriptionDeleteRequest(req *e2ap.E2APSubscriptionDeleteRequest) (*packer.PackedData, error) {
+	e2SubDelReq := packerif.NewPackerSubscriptionDeleteRequest()
+	err := e2SubDelReq.Set(req)
+	if err != nil {
+		return nil, err
+	}
+	err, packedData := e2SubDelReq.Pack(nil)
+	if err != nil {
+		return nil, err
+	}
+	return packedData, nil
+}
+
+func (c *E2ap) PackSubscriptionDeleteResponse(req *e2ap.E2APSubscriptionDeleteResponse) (*packer.PackedData, error) {
+	e2SubDelResp := packerif.NewPackerSubscriptionDeleteResponse()
+	err := e2SubDelResp.Set(req)
+	if err != nil {
+		return nil, err
+	}
+	err, packedData := e2SubDelResp.Pack(nil)
+	if err != nil {
+		return nil, err
+	}
+	return packedData, nil
 }

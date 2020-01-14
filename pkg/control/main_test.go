@@ -68,6 +68,7 @@ func initTestingControl(desc string, rtfile string, port string) testingControl 
 type testingRmrControl struct {
 	testingControl
 	rmrClientTest *xapp.RMRClient
+	active        bool
 }
 
 func (tc *testingRmrControl) RmrSend(params *RMRParams) (err error) {
@@ -93,6 +94,7 @@ func (tc *testingRmrControl) RmrSend(params *RMRParams) (err error) {
 
 func initTestingRmrControl(desc string, rtfile string, port string, stat string, consumer xapp.MessageConsumer) testingRmrControl {
 	tc := testingRmrControl{}
+	tc.active = false
 	tc.testingControl = initTestingControl(desc, rtfile, port)
 	tc.rmrClientTest = xapp.NewRMRClientWithParams("tcp:"+port, 4096, 1, stat)
 	tc.rmrClientTest.SetReadyCB(tc.ReadyCB, nil)
@@ -153,6 +155,12 @@ func (tc *testingXappControl) Consume(params *xapp.RMRParams) (err error) {
 	params.Mbuf = nil
 	msg := &RMRParams{params}
 
+	if params.Mtype == 55555 {
+		xapp.Logger.Info("(%s) Testing message ignore %s", tc.desc, msg.String())
+		tc.active = true
+		return
+	}
+
 	if strings.Contains(msg.Xid, tc.desc) {
 		xapp.Logger.Info("(%s) Consume %s", tc.desc, msg.String())
 		tc.rmrConChan <- msg
@@ -182,6 +190,13 @@ func (tc *testingE2termControl) Consume(params *xapp.RMRParams) (err error) {
 	xapp.Rmr.Free(params.Mbuf)
 	params.Mbuf = nil
 	msg := &RMRParams{params}
+
+	if params.Mtype == 55555 {
+		xapp.Logger.Info("(%s) Testing message ignore %s", tc.desc, msg.String())
+		tc.active = true
+		return
+	}
+
 	xapp.Logger.Info("(%s) Consume %s", tc.desc, msg.String())
 	tc.rmrConChan <- msg
 	return
@@ -338,6 +353,7 @@ mse|12021,localhost:15560|-1|localhost:14560
 mse|12022,localhost:15560|-1|localhost:14560
 mse|12021,localhost:14560|-1|localhost:13660;localhost:13560
 mse|12022,localhost:14560|-1|localhost:13660;localhost:13560
+mse|55555|-1|localhost:13660;localhost:13560,localhost:15560
 newrt|end
 `
 
@@ -437,10 +453,36 @@ newrt|end
 	e2termConn = createNewE2termControl("e2termstub", e2termrtfilename, "15560", "RMRE2TERMSTUB")
 
 	//---------------------------------
-	// Stupid sleep to try improve robustness
-	// due: http handler and rmr routes init delays
+	// Testing message sending
 	//---------------------------------
-	<-time.After(2 * time.Second)
+	var dummyBuf []byte = make([]byte, 100)
+
+	params := &RMRParams{&xapp.RMRParams{}}
+	params.Mtype = 55555
+	params.SubId = -1
+	params.Payload = dummyBuf
+	params.PayloadLen = 100
+	params.Meid = &xapp.RMRMeid{RanName: "NONEXISTINGRAN"}
+	params.Xid = "THISISTESTFORSTUBS"
+	params.Mbuf = nil
+
+	status := false
+	i := 1
+	for ; i <= 10 && status == false; i++ {
+		xapp.Rmr.Send(params.RMRParams, false)
+		if e2termConn.active == true && xappConn1.active == true && xappConn2.active == true {
+			status = true
+			break
+		} else {
+			xapp.Logger.Info("Sleep 0.5 secs and try routes again")
+			time.Sleep(500 * time.Millisecond)
+		}
+	}
+
+	if status == false {
+		xapp.Logger.Error("Could not initialize routes")
+		os.Exit(1)
+	}
 
 	//---------------------------------
 	//
