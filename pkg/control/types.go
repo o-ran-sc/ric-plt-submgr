@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"strconv"
+	"strings"
 )
 
 //-----------------------------------------------------------------------------
@@ -54,7 +55,41 @@ type RmrEndpoint struct {
 }
 
 func (endpoint RmrEndpoint) String() string {
+	return endpoint.Get()
+}
+
+func (endpoint *RmrEndpoint) GetAddr() string {
+	return endpoint.Addr
+}
+
+func (endpoint *RmrEndpoint) GetPort() uint16 {
+	return endpoint.Port
+}
+
+func (endpoint *RmrEndpoint) Get() string {
 	return endpoint.Addr + ":" + strconv.FormatUint(uint64(endpoint.Port), 10)
+}
+
+func (endpoint *RmrEndpoint) Set(src string) bool {
+	elems := strings.Split(src, ":")
+	if len(elems) == 2 {
+		srcAddr := elems[0]
+		srcPort, err := strconv.ParseUint(elems[1], 10, 16)
+		if err == nil {
+			endpoint.Addr = srcAddr
+			endpoint.Port = uint16(srcPort)
+			return true
+		}
+	}
+	return false
+}
+
+func NewRmrEndpoint(src string) *RmrEndpoint {
+	ep := &RmrEndpoint{}
+	if ep.Set(src) == false {
+		return nil
+	}
+	return ep
 }
 
 //-----------------------------------------------------------------------------
@@ -85,6 +120,6 @@ type RMRParams struct {
 
 func (params *RMRParams) String() string {
 	var b bytes.Buffer
-	fmt.Fprintf(&b, "Src: %s, Mtype: %s(%d), SubId: %v, Xid: %s, Meid: %v", params.Src, xapp.RicMessageTypeToName[params.Mtype], params.Mtype, params.SubId, params.Xid, params.Meid)
+	fmt.Fprintf(&b, "Src=%s Mtype=%s(%d) SubId=%v Xid=%s Meid=%v", params.Src, xapp.RicMessageTypeToName[params.Mtype], params.Mtype, params.SubId, params.Xid, params.Meid)
 	return b.String()
 }
