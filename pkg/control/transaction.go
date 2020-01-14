@@ -54,6 +54,7 @@ type Transaction struct {
 	SubFailMsg        *e2ap.E2APSubscriptionFailure        //SubFail TODO: maybe own transactions per type
 	SubDelReqMsg      *e2ap.E2APSubscriptionDeleteRequest  //SubDelReq TODO: maybe own transactions per type
 	SubDelRespMsg     *e2ap.E2APSubscriptionDeleteResponse //SubDelResp TODO: maybe own transactions per type
+	SubDelFailMsg     *e2ap.E2APSubscriptionDeleteFailure  //SubDelFail TODO: maybe own transactions per type
 	Payload           []byte                               //packed message to optimize retransmissions
 	PayloadLen        int                                  //packed message len to optimize  retransmissions
 	RespReceived      bool

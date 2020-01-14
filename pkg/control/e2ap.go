@@ -27,59 +27,14 @@ package control
 import "C"
 
 import (
-	"fmt"
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap_wrapper"
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/packer"
-	"unsafe"
 )
 
 var packerif e2ap.E2APPackerIf = e2ap_wrapper.NewAsn1E2Packer()
 
 type E2ap struct {
-}
-
-/* RICsubscriptionDeleteFailure */
-
-// Used by submgr
-func (c *E2ap) GetSubscriptionDeleteFailureSequenceNumber(payload []byte) (subId uint16, err error) {
-	cptr := unsafe.Pointer(&payload[0])
-	cret := C.e2ap_get_ric_subscription_delete_failure_sequence_number(cptr, C.size_t(len(payload)))
-	if cret < 0 {
-		return 0, fmt.Errorf("e2ap wrapper is unable to get Subscirption Delete Failure Sequence Number due to wrong or invalid payload. Erroxappde: %v", cret)
-	}
-	subId = uint16(cret)
-	return
-}
-
-// Used by submgr
-func (c *E2ap) SetSubscriptionDeleteFailureSequenceNumber(payload []byte, newSubscriptionid uint16) (err error) {
-	cptr := unsafe.Pointer(&payload[0])
-	size := C.e2ap_set_ric_subscription_delete_failure_sequence_number(cptr, C.size_t(len(payload)), C.long(newSubscriptionid))
-	if size < 0 {
-		return fmt.Errorf("e2ap wrapper is unable to set Subscription Delete Failure Sequence Number due to wrong or invalid payload. Erroxappde: %v", size)
-	}
-	return
-}
-
-// Used by submgr
-func (c *E2ap) PackSubscriptionDeleteResponseFromSubDelReq(payload []byte, newSubscriptionid uint16) (newPayload []byte, err error) {
-
-	subDelReq, err := c.UnpackSubscriptionDeleteRequest(payload)
-	if err != nil {
-		return make([]byte, 0), fmt.Errorf("PackSubDelRespFromSubDelReq: SubDelReq unpack failed: %s", err.Error())
-	}
-
-	subDelResp := &e2ap.E2APSubscriptionDeleteResponse{}
-	subDelResp.RequestId.Id = subDelReq.RequestId.Id
-	subDelResp.RequestId.Seq = uint32(newSubscriptionid)
-	subDelResp.FunctionId = subDelReq.FunctionId
-
-	packedData, err := c.PackSubscriptionDeleteResponse(subDelResp)
-	if err != nil {
-		return make([]byte, 0), fmt.Errorf("PackSubDelRespFromSubDelReq: SubDelResp pack failed: %s", err.Error())
-	}
-	return packedData.Buf, nil
 }
 
 //-----------------------------------------------------------------------------
@@ -231,6 +186,37 @@ func (c *E2ap) PackSubscriptionDeleteResponse(req *e2ap.E2APSubscriptionDeleteRe
 		return nil, err
 	}
 	err, packedData := e2SubDelResp.Pack(nil)
+	if err != nil {
+		return nil, err
+	}
+	return packedData, nil
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+func (c *E2ap) UnpackSubscriptionDeleteFailure(payload []byte) (*e2ap.E2APSubscriptionDeleteFailure, error) {
+	e2SubDelFail := packerif.NewPackerSubscriptionDeleteFailure()
+	packedData := &packer.PackedData{}
+	packedData.Buf = payload
+	err := e2SubDelFail.UnPack(packedData)
+	if err != nil {
+		return nil, err
+	}
+	err, subDelFail := e2SubDelFail.Get()
+	if err != nil {
+		return nil, err
+	}
+	return subDelFail, nil
+}
+
+func (c *E2ap) PackSubscriptionDeleteFailure(req *e2ap.E2APSubscriptionDeleteFailure) (*packer.PackedData, error) {
+	e2SubDelFail := packerif.NewPackerSubscriptionDeleteFailure()
+	err := e2SubDelFail.Set(req)
+	if err != nil {
+		return nil, err
+	}
+	err, packedData := e2SubDelFail.Pack(nil)
 	if err != nil {
 		return nil, err
 	}
