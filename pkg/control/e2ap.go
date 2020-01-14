@@ -39,29 +39,6 @@ var packerif e2ap.E2APPackerIf = e2ap_wrapper.NewAsn1E2Packer()
 type E2ap struct {
 }
 
-/* RICsubscriptionResponse */
-
-// Used by submgr, xapp test stub
-func (c *E2ap) GetSubscriptionResponseSequenceNumber(payload []byte) (subId uint16, err error) {
-	cptr := unsafe.Pointer(&payload[0])
-	cret := C.e2ap_get_ric_subscription_response_sequence_number(cptr, C.size_t(len(payload)))
-	if cret < 0 {
-		return 0, fmt.Errorf("e2ap wrapper is unable to get Subscirption Response Sequence Number due to wrong or invalid payload. Erroxappde: %v", cret)
-	}
-	subId = uint16(cret)
-	return
-}
-
-// Used by e2t test stub
-func (c *E2ap) SetSubscriptionResponseSequenceNumber(payload []byte, newSubscriptionid uint16) (err error) {
-	cptr := unsafe.Pointer(&payload[0])
-	size := C.e2ap_set_ric_subscription_response_sequence_number(cptr, C.size_t(len(payload)), C.long(newSubscriptionid))
-	if size < 0 {
-		return fmt.Errorf("e2ap wrapper is unable to set Subscription Response Sequence Number due to wrong or invalid payload. Erroxappde: %v", size)
-	}
-	return
-}
-
 /* RICsubscriptionDeleteResponse */
 
 // Used by submgr, e2t test stub
@@ -185,6 +162,37 @@ func (c *E2ap) PackSubscriptionRequest(req *e2ap.E2APSubscriptionRequest) (*pack
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
+func (c *E2ap) UnpackSubscriptionResponse(payload []byte) (*e2ap.E2APSubscriptionResponse, error) {
+	e2SubResp := packerif.NewPackerSubscriptionResponse()
+	packedData := &packer.PackedData{}
+	packedData.Buf = payload
+	err := e2SubResp.UnPack(packedData)
+	if err != nil {
+		return nil, err
+	}
+	err, subResp := e2SubResp.Get()
+	if err != nil {
+		return nil, err
+	}
+	return subResp, nil
+}
+
+func (c *E2ap) PackSubscriptionResponse(req *e2ap.E2APSubscriptionResponse) (*packer.PackedData, error) {
+	e2SubResp := packerif.NewPackerSubscriptionResponse()
+	err := e2SubResp.Set(req)
+	if err != nil {
+		return nil, err
+	}
+	err, packedData := e2SubResp.Pack(nil)
+	if err != nil {
+		return nil, err
+	}
+	return packedData, nil
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
 func (c *E2ap) UnpackSubscriptionDeleteRequest(payload []byte) (*e2ap.E2APSubscriptionDeleteRequest, error) {
 	e2SubDelReq := packerif.NewPackerSubscriptionDeleteRequest()
 	packedData := &packer.PackedData{}
@@ -193,11 +201,11 @@ func (c *E2ap) UnpackSubscriptionDeleteRequest(payload []byte) (*e2ap.E2APSubscr
 	if err != nil {
 		return nil, err
 	}
-	err, subReq := e2SubDelReq.Get()
+	err, subDelReq := e2SubDelReq.Get()
 	if err != nil {
 		return nil, err
 	}
-	return subReq, nil
+	return subDelReq, nil
 }
 
 func (c *E2ap) PackSubscriptionDeleteRequest(req *e2ap.E2APSubscriptionDeleteRequest) (*packer.PackedData, error) {
@@ -211,6 +219,24 @@ func (c *E2ap) PackSubscriptionDeleteRequest(req *e2ap.E2APSubscriptionDeleteReq
 		return nil, err
 	}
 	return packedData, nil
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+func (c *E2ap) UnpackSubscriptionDeleteResponse(payload []byte) (*e2ap.E2APSubscriptionDeleteResponse, error) {
+	e2SubDelResp := packerif.NewPackerSubscriptionDeleteResponse()
+	packedData := &packer.PackedData{}
+	packedData.Buf = payload
+	err := e2SubDelResp.UnPack(packedData)
+	if err != nil {
+		return nil, err
+	}
+	err, subDelResp := e2SubDelResp.Get()
+	if err != nil {
+		return nil, err
+	}
+	return subDelResp, nil
 }
 
 func (c *E2ap) PackSubscriptionDeleteResponse(req *e2ap.E2APSubscriptionDeleteResponse) (*packer.PackedData, error) {

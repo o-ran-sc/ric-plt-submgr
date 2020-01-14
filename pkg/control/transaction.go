@@ -50,6 +50,7 @@ type Transaction struct {
 	Xid               string                              //xapp xid in req
 	Meid              *xapp.RMRMeid                       //meid transaction related
 	SubReqMsg         *e2ap.E2APSubscriptionRequest       //SubReq TODO: maybe own transactions per type
+	SubRespMsg        *e2ap.E2APSubscriptionResponse      //SubResp TODO: maybe own transactions per type
 	SubDelReqMsg      *e2ap.E2APSubscriptionDeleteRequest //SubDelReq TODO: maybe own transactions per type
 	Payload           []byte                              //packed message to optimize retransmissions
 	PayloadLen        int                                 //packed message len to optimize  retransmissions

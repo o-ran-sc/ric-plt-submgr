@@ -263,7 +263,7 @@ func (c *Control) handleSubscriptionRequest(params *RMRParams) {
 
 	c.rmrSend("SubReq to E2T", subs, trans, packedData.Buf, len(packedData.Buf))
 
-	c.timerMap.StartTimer("RIC_SUB_REQ", int(subs.Seq), subReqTime, FirstTry, c.handleSubscriptionRequestTimer)
+	c.timerMap.StartTimer("RIC_SUB_REQ", int(subs.GetSubId()), subReqTime, FirstTry, c.handleSubscriptionRequestTimer)
 	xapp.Logger.Debug("SubReq: Debugging trans table = %v", c.tracker.transactionXappTable)
 	return
 }
@@ -271,22 +271,44 @@ func (c *Control) handleSubscriptionRequest(params *RMRParams) {
 func (c *Control) handleSubscriptionResponse(params *RMRParams) {
 	xapp.Logger.Info("SubResp from E2T: %s", params.String())
 
-	payloadSeqNum, err := c.e2ap.GetSubscriptionResponseSequenceNumber(params.Payload)
+	//
+	//
+	//
+	SubRespMsg, err := c.e2ap.UnpackSubscriptionResponse(params.Payload)
 	if err != nil {
-		xapp.Logger.Error("SubResp: Unable to get Sequence Number from Payload. Dropping this msg. Err: %v, SubId: %v, Xid: %s, Payload %X", err, params.SubId, params.Xid, params.Payload)
+		xapp.Logger.Error("SubDelReq: %s Dropping this msg. %s", err.Error(), params.String())
 		return
 	}
-	xapp.Logger.Info("SubResp: Received payloadSeqNum: %v", payloadSeqNum)
 
-	subs := c.registry.GetSubscription(payloadSeqNum)
+	//
+	//
+	//
+	subs := c.registry.GetSubscription(uint16(SubRespMsg.RequestId.Seq))
+	if subs == nil && params.SubId > 0 {
+		subs = c.registry.GetSubscription(uint16(params.SubId))
+	}
+
 	if subs == nil {
-		xapp.Logger.Error("SubResp: Unknown payloadSeqNum. Dropping this msg. PayloadSeqNum: %v, SubId: %v", payloadSeqNum, params.SubId)
+		xapp.Logger.Error("SubResp: Not valid subscription found payloadSeqNum: %d, SubId: %d. Dropping this msg. %s", SubRespMsg.RequestId.Seq, params.SubId, params.String())
+		return
+	}
+	xapp.Logger.Info("SubResp: subscription found payloadSeqNum: %d, SubId: %d", SubRespMsg.RequestId.Seq, subs.GetSubId())
+
+	//
+	//
+	//
+	trans := subs.GetTransaction()
+	if trans == nil {
+		xapp.Logger.Error("SubResp: Unknown trans. Dropping this msg. SubId: %d", subs.GetSubId())
 		return
 	}
 
-	trans := subs.GetTransaction()
+	trans.SubRespMsg = SubRespMsg
 
-	c.timerMap.StopTimer("RIC_SUB_REQ", int(payloadSeqNum))
+	//
+	//
+	//
+	c.timerMap.StopTimer("RIC_SUB_REQ", int(subs.GetSubId()))
 
 	responseReceived := trans.CheckResponseReceived()
 	if responseReceived == true {
@@ -294,10 +316,20 @@ func (c *Control) handleSubscriptionResponse(params *RMRParams) {
 		return
 	}
 
+	packedData, err := c.e2ap.PackSubscriptionResponse(trans.SubRespMsg)
+	if err != nil {
+		xapp.Logger.Error("SubResp: %s for trans %s", err.Error(), trans)
+		trans.Release()
+		return
+	}
+
+	//Optimize and store packed message to be sent.
+	trans.Payload = packedData.Buf
+	trans.PayloadLen = len(packedData.Buf)
+
 	subs.Confirmed()
 	trans.Release()
-	c.rmrReplyToSender("SubResp to xapp", subs, trans, params.Mtype, params.Payload, params.PayloadLen)
-	xapp.Logger.Info("SubResp: SubId: %v, from address: %s. Deleting trans record", payloadSeqNum, trans.RmrEndpoint)
+	c.rmrReplyToSender("SubResp to xapp", subs, trans, 12011, trans.Payload, trans.PayloadLen)
 	return
 }
 
@@ -431,10 +463,11 @@ func (c *Control) handleSubscriptionRequestTimer(strId string, nbrId int, tryCou
 }
 
 func (c *Control) handleSubscriptionDeleteRequest(params *RMRParams) {
-	var subs *Subscription
-
 	xapp.Logger.Info("SubDelReq from xapp: %s", params.String())
 
+	//
+	//
+	//
 	trans, err := c.tracker.TrackTransaction(NewRmrEndpoint(params.Src),
 		params.Mtype,
 		params.Xid,
@@ -457,7 +490,10 @@ func (c *Control) handleSubscriptionDeleteRequest(params *RMRParams) {
 		return
 	}
 
-	subs = c.registry.GetSubscription(uint16(trans.SubDelReqMsg.RequestId.Seq))
+	//
+	//
+	//
+	subs := c.registry.GetSubscription(uint16(trans.SubDelReqMsg.RequestId.Seq))
 	if subs == nil && params.SubId > 0 {
 		subs = c.registry.GetSubscription(uint16(params.SubId))
 	}
