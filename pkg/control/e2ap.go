@@ -39,29 +39,6 @@ var packerif e2ap.E2APPackerIf = e2ap_wrapper.NewAsn1E2Packer()
 type E2ap struct {
 }
 
-/* RICsubscriptionDeleteResponse */
-
-// Used by submgr, e2t test stub
-func (c *E2ap) GetSubscriptionDeleteResponseSequenceNumber(payload []byte) (subId uint16, err error) {
-	cptr := unsafe.Pointer(&payload[0])
-	cret := C.e2ap_get_ric_subscription_delete_response_sequence_number(cptr, C.size_t(len(payload)))
-	if cret < 0 {
-		return 0, fmt.Errorf("e2ap wrapper is unable to get Subscirption Delete Response Sequence Number due to wrong or invalid payload. Erroxappde: %v", cret)
-	}
-	subId = uint16(cret)
-	return
-}
-
-// Used by e2t test stub
-func (c *E2ap) SetSubscriptionDeleteResponseSequenceNumber(payload []byte, newSubscriptionid uint16) (err error) {
-	cptr := unsafe.Pointer(&payload[0])
-	size := C.e2ap_set_ric_subscription_delete_response_sequence_number(cptr, C.size_t(len(payload)), C.long(newSubscriptionid))
-	if size < 0 {
-		return fmt.Errorf("e2ap wrapper is unable to set Subscription Delete Response Sequence Number due to wrong or invalid payload. Erroxappde: %v", size)
-	}
-	return
-}
-
 /* RICsubscriptionDeleteFailure */
 
 // Used by submgr

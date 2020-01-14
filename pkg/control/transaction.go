@@ -43,18 +43,19 @@ func (key *TransactionXappKey) String() string {
 //-----------------------------------------------------------------------------
 type Transaction struct {
 	mutex             sync.Mutex
-	tracker           *Tracker                            //tracker instance
-	Subs              *Subscription                       //related subscription
-	RmrEndpoint       RmrEndpoint                         //xapp endpoint
-	Mtype             int                                 //type of initiating message
-	Xid               string                              //xapp xid in req
-	Meid              *xapp.RMRMeid                       //meid transaction related
-	SubReqMsg         *e2ap.E2APSubscriptionRequest       //SubReq TODO: maybe own transactions per type
-	SubRespMsg        *e2ap.E2APSubscriptionResponse      //SubResp TODO: maybe own transactions per type
-	SubFailMsg        *e2ap.E2APSubscriptionFailure       //SubFail TODO: maybe own transactions per type
-	SubDelReqMsg      *e2ap.E2APSubscriptionDeleteRequest //SubDelReq TODO: maybe own transactions per type
-	Payload           []byte                              //packed message to optimize retransmissions
-	PayloadLen        int                                 //packed message len to optimize  retransmissions
+	tracker           *Tracker                             //tracker instance
+	Subs              *Subscription                        //related subscription
+	RmrEndpoint       RmrEndpoint                          //xapp endpoint
+	Mtype             int                                  //type of initiating message
+	Xid               string                               //xapp xid in req
+	Meid              *xapp.RMRMeid                        //meid transaction related
+	SubReqMsg         *e2ap.E2APSubscriptionRequest        //SubReq TODO: maybe own transactions per type
+	SubRespMsg        *e2ap.E2APSubscriptionResponse       //SubResp TODO: maybe own transactions per type
+	SubFailMsg        *e2ap.E2APSubscriptionFailure        //SubFail TODO: maybe own transactions per type
+	SubDelReqMsg      *e2ap.E2APSubscriptionDeleteRequest  //SubDelReq TODO: maybe own transactions per type
+	SubDelRespMsg     *e2ap.E2APSubscriptionDeleteResponse //SubDelResp TODO: maybe own transactions per type
+	Payload           []byte                               //packed message to optimize retransmissions
+	PayloadLen        int                                  //packed message len to optimize  retransmissions
 	RespReceived      bool
 	ForwardRespToXapp bool
 }
