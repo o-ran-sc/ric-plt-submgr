@@ -58,6 +58,7 @@ func (r *Registry) ReserveSubscription(endPoint *RmrEndpoint, meid *xapp.RMRMeid
 		}
 		if _, ok := r.register[sequenceNumber]; ok == false {
 			subs := &Subscription{
+				registry:    r,
 				Seq:         sequenceNumber,
 				Active:      false,
 				RmrEndpoint: *endPoint,
@@ -68,7 +69,7 @@ func (r *Registry) ReserveSubscription(endPoint *RmrEndpoint, meid *xapp.RMRMeid
 
 			// Update routing
 			r.mutex.Unlock()
-			err := subs.UpdateRoute(CREATE, r.rtmgrClient)
+			err := subs.UpdateRoute(CREATE)
 			r.mutex.Lock()
 			if err != nil {
 				if _, ok := r.register[sequenceNumber]; ok {
@@ -96,16 +97,7 @@ func (r *Registry) DelSubscription(sn uint16) bool {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 	if _, ok := r.register[sn]; ok {
-		subs := r.register[sn]
 		delete(r.register, sn)
-
-		// Update routing
-		r.mutex.Unlock()
-		err := subs.UpdateRoute(DELETE, r.rtmgrClient)
-		r.mutex.Lock()
-		if err != nil {
-			xapp.Logger.Error("Registry: Failed to del route. SubId: %d, RmrEndpoint: %s", subs.Seq, subs.RmrEndpoint)
-		}
 		return true
 	}
 	return false

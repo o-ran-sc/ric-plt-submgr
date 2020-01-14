@@ -30,9 +30,10 @@ import (
 //
 //-----------------------------------------------------------------------------
 type Subscription struct {
-	mutex  sync.Mutex
-	Seq    uint16
-	Active bool
+	mutex    sync.Mutex
+	registry *Registry
+	Seq      uint16
+	Active   bool
 	//
 	Meid        *xapp.RMRMeid
 	RmrEndpoint // xapp endpoint. Now only one xapp can have relation to single subscription. To be changed in merge
@@ -111,14 +112,29 @@ func (s *Subscription) GetTransaction() *Transaction {
 	return s.Trans
 }
 
-func (s *Subscription) UpdateRoute(act Action, rtmgrClient *RtmgrClient) error {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
+func (s *Subscription) updateRouteImpl(act Action) error {
 	xapp.Logger.Info("Subscription: Starting routing manager route add. SubId: %d, RmrEndpoint: %s", s.Seq, s.RmrEndpoint)
 	subRouteAction := SubRouteInfo{act, s.RmrEndpoint.Addr, s.RmrEndpoint.Port, s.Seq}
-	err := rtmgrClient.SubscriptionRequestUpdate(subRouteAction)
+	err := s.registry.rtmgrClient.SubscriptionRequestUpdate(subRouteAction)
 	if err != nil {
 		return fmt.Errorf("Subscription: Failed to add route. SubId: %d, RmrEndpoint: %s", s.Seq, s.RmrEndpoint)
 	}
 	return nil
+}
+
+func (s *Subscription) UpdateRoute(act Action) error {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	return s.updateRouteImpl(act)
+}
+
+func (s *Subscription) Release() {
+	xapp.Logger.Info("Subscription: Releasing %s", s)
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	s.registry.DelSubscription(s.Seq)
+	err := s.updateRouteImpl(DELETE)
+	if err != nil {
+		xapp.Logger.Error("Registry: Failed to del route. SubId: %d, RmrEndpoint: %s", s.Seq, s.RmrEndpoint)
+	}
 }

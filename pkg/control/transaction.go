@@ -113,6 +113,7 @@ func (t *Transaction) RetryTransaction() {
 }
 
 func (t *Transaction) Release() {
+	xapp.Logger.Info("Transaction: Releasing %s", t)
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 	if t.Subs != nil {

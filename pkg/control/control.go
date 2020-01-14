@@ -45,7 +45,6 @@ var maxSubDelReqTryCount uint64 = 2 // Initial try + retry
 type Control struct {
 	e2ap         *E2ap
 	registry     *Registry
-	rtmgrClient  *RtmgrClient
 	tracker      *Tracker
 	timerMap     *TimerMap
 	rmrSendMutex sync.Mutex
@@ -85,8 +84,15 @@ func init() {
 
 func NewControl() *Control {
 
+	transport := httptransport.New(viper.GetString("rtmgr.HostAddr")+":"+viper.GetString("rtmgr.port"), viper.GetString("rtmgr.baseUrl"), []string{"http"})
+	client := rtmgrclient.New(transport, strfmt.Default)
+	handle := rtmgrhandle.NewProvideXappSubscriptionHandleParamsWithTimeout(10 * time.Second)
+	deleteHandle := rtmgrhandle.NewDeleteXappSubscriptionHandleParamsWithTimeout(10 * time.Second)
+	rtmgrClient := RtmgrClient{client, handle, deleteHandle}
+
 	registry := new(Registry)
 	registry.Initialize(seedSN)
+	registry.rtmgrClient = &rtmgrClient
 
 	tracker := new(Tracker)
 	tracker.Init()
@@ -94,23 +100,11 @@ func NewControl() *Control {
 	timerMap := new(TimerMap)
 	timerMap.Init()
 
-	transport := httptransport.New(viper.GetString("rtmgr.HostAddr")+":"+viper.GetString("rtmgr.port"), viper.GetString("rtmgr.baseUrl"), []string{"http"})
-	client := rtmgrclient.New(transport, strfmt.Default)
-	handle := rtmgrhandle.NewProvideXappSubscriptionHandleParamsWithTimeout(10 * time.Second)
-	deleteHandle := rtmgrhandle.NewDeleteXappSubscriptionHandleParamsWithTimeout(10 * time.Second)
-	rtmgrClient := RtmgrClient{client, handle, deleteHandle}
-
-	rtmgrClientPtr := &rtmgrClient
-
-	//TODO: to make this better. Now it is just a hack.
-	registry.rtmgrClient = rtmgrClientPtr
-
 	return &Control{e2ap: new(E2ap),
-		registry:    registry,
-		rtmgrClient: rtmgrClientPtr,
-		tracker:     tracker,
-		timerMap:    timerMap,
-		msgCounter:  0,
+		registry:   registry,
+		tracker:    tracker,
+		timerMap:   timerMap,
+		msgCounter: 0,
 	}
 }
 
@@ -234,7 +228,7 @@ func (c *Control) handleSubscriptionRequest(params *RMRParams) {
 	err = subs.SetTransaction(trans)
 	if err != nil {
 		xapp.Logger.Error("SubReq: %s, Dropping this msg. %s", err.Error(), trans)
-		c.registry.DelSubscription(subs.Seq)
+		subs.Release()
 		trans.Release()
 		return
 	}
@@ -252,7 +246,7 @@ func (c *Control) handleSubscriptionRequest(params *RMRParams) {
 	packedData, err := c.e2ap.PackSubscriptionRequest(trans.SubReqMsg)
 	if err != nil {
 		xapp.Logger.Error("SubReq: %s for trans %s", err.Error(), trans)
-		c.registry.DelSubscription(subs.Seq)
+		subs.Release()
 		trans.Release()
 		return
 	}
@@ -397,9 +391,7 @@ func (c *Control) handleSubscriptionFailure(params *RMRParams) {
 	}
 
 	trans.Release()
-	if !c.registry.DelSubscription(subs.GetSubId()) {
-		xapp.Logger.Error("SubFail: Failed to release sequency number. %s", subs)
-	}
+	subs.Release()
 	return
 }
 
@@ -430,7 +422,7 @@ func (c *Control) handleSubscriptionRequestTimer(strId string, nbrId int, tryCou
 
 		trans.RetryTransaction()
 
-		c.rmrSend("SubReq(SubReq timer) to E2T", subs, trans, trans.Payload, trans.PayloadLen)
+		c.rmrSend("SubReq(SubReq timer retransmit) to E2T", subs, trans, trans.Payload, trans.PayloadLen)
 
 		tryCount++
 		c.timerMap.StartTimer("RIC_SUB_REQ", int(subs.GetSubId()), subReqTime, tryCount, c.handleSubscriptionRequestTimer)
@@ -451,7 +443,7 @@ func (c *Control) handleSubscriptionRequestTimer(strId string, nbrId int, tryCou
 	if err != nil {
 		xapp.Logger.Error("SubReq timeout: %s, Dropping this msg.", err.Error())
 		//TODO improve error handling. Important at least in merge
-		c.registry.DelSubscription(subs.GetSubId())
+		subs.Release()
 		return
 	}
 
@@ -464,7 +456,7 @@ func (c *Control) handleSubscriptionRequestTimer(strId string, nbrId int, tryCou
 		xapp.Logger.Error("SubReq timeout: Packing SubDelReq failed. Err: %v", err)
 		//TODO improve error handling. Important at least in merge
 		deltrans.Release()
-		c.registry.DelSubscription(subs.GetSubId())
+		subs.Release()
 		return
 	}
 	deltrans.PayloadLen = len(packedData.Buf)
@@ -591,18 +583,13 @@ func (c *Control) handleSubscriptionDeleteResponse(params *RMRParams) (err error
 		return
 	}
 
-	trans.Release()
-
 	if trans.ForwardRespToXapp == true {
 		c.rmrReplyToSender("SubDelResp to xapp", subs, trans, params.Mtype, params.Payload, params.PayloadLen)
 		time.Sleep(3 * time.Second)
 	}
 
-	xapp.Logger.Info("SubDelResp: Deleting trans record. SubId: %v, Xid: %s", subs.GetSubId(), trans.GetXid())
-	if !c.registry.DelSubscription(subs.GetSubId()) {
-		xapp.Logger.Error("SubDelResp: Failed to release sequency number. SubId: %v, Xid: %s", subs.GetSubId(), trans.GetXid())
-		return
-	}
+	trans.Release()
+	subs.Release()
 	return
 }
 
@@ -648,12 +635,8 @@ func (c *Control) handleSubscriptionDeleteFailure(params *RMRParams) {
 		time.Sleep(3 * time.Second)
 	}
 
-	xapp.Logger.Info("SubDelFail: Deleting trans record. SubId: %v, Xid: %s", subs.GetSubId(), trans.GetXid())
 	trans.Release()
-	if !c.registry.DelSubscription(subs.GetSubId()) {
-		xapp.Logger.Error("SubDelFail: Failed to release sequency number. Err: %v, SubId: %v, Xid: %s", err, subs.GetSubId(), trans.GetXid())
-		return
-	}
+	subs.Release()
 	return
 }
 
@@ -679,13 +662,9 @@ func (c *Control) handleSubscriptionDeleteRequestTimer(strId string, nbrId int, 
 	}
 
 	if tryCount < maxSubDelReqTryCount {
-		xapp.Logger.Info("SubDelReq timeout: Resending SubDelReq to E2T: Mtype: %v, SubId: %v, Xid %s, Meid %v", trans.GetMtype(), subs.GetSubId(), trans.GetXid(), trans.GetMeid())
 		// Set possible to handle new response for the subId
-
 		trans.RetryTransaction()
-
-		c.rmrSend("SubDelReq(SubDelReq timer) to E2T", subs, trans, trans.Payload, trans.PayloadLen)
-
+		c.rmrSend("SubDelReq(SubDelReq timer retransmit) to E2T", subs, trans, trans.Payload, trans.PayloadLen)
 		tryCount++
 		c.timerMap.StartTimer("RIC_SUB_DEL_REQ", int(subs.GetSubId()), subReqTime, tryCount, c.handleSubscriptionDeleteRequestTimer)
 		return
@@ -705,11 +684,7 @@ func (c *Control) handleSubscriptionDeleteRequestTimer(strId string, nbrId int, 
 		time.Sleep(3 * time.Second)
 
 	}
-
-	xapp.Logger.Info("SubDelReq timeout: Deleting trans record. SubId: %v, Xid: %s", subs.GetSubId(), trans.GetXid())
 	trans.Release()
-	if !c.registry.DelSubscription(subs.GetSubId()) {
-		xapp.Logger.Error("SubDelReq timeout: Failed to release sequency number. SubId: %v, Xid: %s", subs.GetSubId(), trans.GetXid())
-	}
+	subs.Release()
 	return
 }
