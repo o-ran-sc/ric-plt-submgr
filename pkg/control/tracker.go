@@ -39,7 +39,6 @@ func (t *Tracker) Init() {
 
 func (t *Tracker) TrackTransaction(
 	endpoint *RmrEndpoint,
-	mtype int,
 	xid string,
 	meid *xapp.RMRMeid,
 	respReceived bool,
@@ -54,7 +53,6 @@ func (t *Tracker) TrackTransaction(
 		tracker:           nil,
 		Subs:              nil,
 		RmrEndpoint:       *endpoint,
-		Mtype:             mtype,
 		Xid:               xid,
 		Meid:              meid,
 		RespReceived:      respReceived,

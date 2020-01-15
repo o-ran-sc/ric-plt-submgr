@@ -47,7 +47,6 @@ type Transaction struct {
 	tracker           *Tracker                             //tracker instance
 	Subs              *Subscription                        //related subscription
 	RmrEndpoint       RmrEndpoint                          //xapp endpoint
-	Mtype             int                                  //type of initiating message
 	Xid               string                               //xapp xid in req
 	Meid              *xapp.RMRMeid                        //meid transaction related
 	SubReqMsg         *e2ap.E2APSubscriptionRequest        //SubReq TODO: maybe own transactions per type
@@ -56,7 +55,8 @@ type Transaction struct {
 	SubDelReqMsg      *e2ap.E2APSubscriptionDeleteRequest  //SubDelReq TODO: maybe own transactions per type
 	SubDelRespMsg     *e2ap.E2APSubscriptionDeleteResponse //SubDelResp TODO: maybe own transactions per type
 	SubDelFailMsg     *e2ap.E2APSubscriptionDeleteFailure  //SubDelFail TODO: maybe own transactions per type
-	Payload           *packer.PackedData                   //Encoded message to be send. Optimized
+	Mtype             int                                  //Encoded message type to be send
+	Payload           *packer.PackedData                   //Encoded message to be send
 	RespReceived      bool
 	ForwardRespToXapp bool
 }
