@@ -1,0 +1,8 @@
+Verified+1: ORAN Jobbuilder <releng+oran-jobbuilder@linuxfoundation.org>
+Verified+1: Anssi Mannila <anssi.mannila@nokia.com>
+Code-Review+2: Juha Hyttinen <juha.hyttinen@nokia.com>
+Submitted-by: Juha Hyttinen <juha.hyttinen@nokia.com>
+Submitted-at: Wed, 15 Jan 2020 09:31:51 +0000
+Reviewed-on: https://gerrit.o-ran-sc.org/r/c/ric-plt/submgr/+/2229
+Project: ric-plt/submgr
+Branch: refs/heads/master
