@@ -265,7 +265,7 @@ func (c *Control) handleSubscriptionResponse(params *RMRParams) {
 	//
 	SubRespMsg, err := c.e2ap.UnpackSubscriptionResponse(params.Payload)
 	if err != nil {
-		xapp.Logger.Error("SubDelReq: %s Dropping this msg. %s", err.Error(), params.String())
+		xapp.Logger.Error("SubResp: %s Dropping this msg. %s", err.Error(), params.String())
 		return
 	}
 

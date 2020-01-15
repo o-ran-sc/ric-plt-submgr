@@ -46,8 +46,7 @@ func PduPackerPack(entry PduPackerIf, trgBuf *PackedData) error {
 	if err == nil {
 		return nil
 	}
-	reterr := fmt.Errorf("Pack failed: %s", err.Error())
-
+	reterr := fmt.Errorf("Pack failed: err: %s, logbuffer: %s", err.Error(), string(logBuffer[:]))
 	//reterr = fmt.Errorf("%s: PDU:%s", reterr.Error(), string(logBuffer))
 	return reterr
 }
@@ -80,8 +79,7 @@ func PduPackerUnPack(entry PduUnPackerIf, data *PackedData) error {
 	if err == nil {
 		return nil
 	}
-	reterr := fmt.Errorf("Unpack failed: %s", logBuffer)
-
+	reterr := fmt.Errorf("Unpack failed: err: %s, logbuffer: %s", err.Error(), string(logBuffer[:]))
 	//reterr = fmt.Errorf("%s: PDU:%s", reterr.Error(), string(logBuffer))
 	return reterr
 }

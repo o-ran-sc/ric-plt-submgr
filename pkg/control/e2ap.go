@@ -27,6 +27,8 @@ package control
 import "C"
 
 import (
+	"encoding/hex"
+	"fmt"
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap_wrapper"
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/packer"
@@ -47,11 +49,11 @@ func (c *E2ap) UnpackSubscriptionRequest(payload []byte) (*e2ap.E2APSubscription
 	packedData.Buf = payload
 	err := e2SubReq.UnPack(packedData)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s buf[%s]", err.Error(), hex.EncodeToString(payload))
 	}
 	err, subReq := e2SubReq.Get()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s buf[%s]", err.Error(), hex.EncodeToString(payload))
 	}
 	return subReq, nil
 }
@@ -78,11 +80,11 @@ func (c *E2ap) UnpackSubscriptionResponse(payload []byte) (*e2ap.E2APSubscriptio
 	packedData.Buf = payload
 	err := e2SubResp.UnPack(packedData)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s buf[%s]", err.Error(), hex.EncodeToString(payload))
 	}
 	err, subResp := e2SubResp.Get()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s buf[%s]", err.Error(), hex.EncodeToString(payload))
 	}
 	return subResp, nil
 }
@@ -109,11 +111,11 @@ func (c *E2ap) UnpackSubscriptionFailure(payload []byte) (*e2ap.E2APSubscription
 	packedData.Buf = payload
 	err := e2SubFail.UnPack(packedData)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s buf[%s]", err.Error(), hex.EncodeToString(payload))
 	}
 	err, subFail := e2SubFail.Get()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s buf[%s]", err.Error(), hex.EncodeToString(payload))
 	}
 	return subFail, nil
 }
@@ -140,11 +142,11 @@ func (c *E2ap) UnpackSubscriptionDeleteRequest(payload []byte) (*e2ap.E2APSubscr
 	packedData.Buf = payload
 	err := e2SubDelReq.UnPack(packedData)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s buf[%s]", err.Error(), hex.EncodeToString(payload))
 	}
 	err, subDelReq := e2SubDelReq.Get()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s buf[%s]", err.Error(), hex.EncodeToString(payload))
 	}
 	return subDelReq, nil
 }
@@ -171,11 +173,11 @@ func (c *E2ap) UnpackSubscriptionDeleteResponse(payload []byte) (*e2ap.E2APSubsc
 	packedData.Buf = payload
 	err := e2SubDelResp.UnPack(packedData)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s buf[%s]", err.Error(), hex.EncodeToString(payload))
 	}
 	err, subDelResp := e2SubDelResp.Get()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s buf[%s]", err.Error(), hex.EncodeToString(payload))
 	}
 	return subDelResp, nil
 }
@@ -202,11 +204,11 @@ func (c *E2ap) UnpackSubscriptionDeleteFailure(payload []byte) (*e2ap.E2APSubscr
 	packedData.Buf = payload
 	err := e2SubDelFail.UnPack(packedData)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s buf[%s]", err.Error(), hex.EncodeToString(payload))
 	}
 	err, subDelFail := e2SubDelFail.Get()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s buf[%s]", err.Error(), hex.EncodeToString(payload))
 	}
 	return subDelFail, nil
 }
