@@ -548,24 +548,24 @@ func (mc *testingMainControl) wait_subs_trans_clean(t *testing.T, e2SubsId int, 
 	return false
 }
 
-func (mc *testingMainControl) get_seqcnt(t *testing.T) uint16 {
+func (mc *testingMainControl) get_subid(t *testing.T) uint16 {
 	mc.c.registry.mutex.Lock()
 	defer mc.c.registry.mutex.Unlock()
-	return mc.c.registry.counter
+	return mc.c.registry.subIds[0]
 }
 
-func (mc *testingMainControl) wait_seqcnt_change(t *testing.T, orig uint16, secs int) (uint16, bool) {
+func (mc *testingMainControl) wait_subid_change(t *testing.T, origSubId uint16, secs int) (uint16, bool) {
 	i := 1
 	for ; i <= secs*2; i++ {
 		mc.c.registry.mutex.Lock()
-		curr := mc.c.registry.counter
+		currSubId := mc.c.registry.subIds[0]
 		mc.c.registry.mutex.Unlock()
-		if curr != orig {
-			return curr, true
+		if currSubId != origSubId {
+			return currSubId, true
 		}
 		time.Sleep(500 * time.Millisecond)
 	}
-	testError(t, "(general) no seq change within %d secs", secs)
+	testError(t, "(general) no subId change within %d secs", secs)
 	return 0, false
 }
 
@@ -1306,5 +1306,3 @@ func TestSubDelReqSubDelFailRespInSubmgr(t *testing.T) {
 	// Wait that subs is cleaned
 	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
 }
-
-/* */

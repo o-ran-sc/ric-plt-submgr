@@ -31,14 +31,17 @@ import (
 type Registry struct {
 	mutex       sync.Mutex
 	register    map[uint16]*Subscription
-	counter     uint16
+	subIds      []uint16
 	rtmgrClient *RtmgrClient
 }
 
 // This method should run as a constructor
-func (r *Registry) Initialize(seedsn uint16) {
+func (r *Registry) Initialize() {
 	r.register = make(map[uint16]*Subscription)
-	r.counter = seedsn
+	var i uint16
+	for i = 0; i < 65535; i++ {
+		r.subIds = append(r.subIds, i+1)
+	}
 }
 
 // Reserves and returns the next free sequence number
@@ -50,12 +53,8 @@ func (r *Registry) ReserveSubscription(endPoint *RmrEndpoint, meid *xapp.RMRMeid
 	var subs *Subscription = nil
 	var retrytimes uint16 = 1000
 	for ; subs == nil && retrytimes > 0; retrytimes-- {
-		sequenceNumber := r.counter
-		if r.counter == 65535 {
-			r.counter = 0
-		} else {
-			r.counter++
-		}
+		sequenceNumber := r.subIds[0]
+		r.subIds = r.subIds[1:]
 		if _, ok := r.register[sequenceNumber]; ok == false {
 			subs := &Subscription{
 				registry:    r,
@@ -80,7 +79,7 @@ func (r *Registry) ReserveSubscription(endPoint *RmrEndpoint, meid *xapp.RMRMeid
 			return subs, nil
 		}
 	}
-	return nil, fmt.Errorf("Registry: Failed to reserves subcription. RmrEndpoint: %s, Meid: %s", endPoint, meid.RanName)
+	return nil, fmt.Errorf("Registry: Failed to reserves subscription. RmrEndpoint: %s, Meid: %s", endPoint, meid.RanName)
 }
 
 func (r *Registry) GetSubscription(sn uint16) *Subscription {
@@ -97,6 +96,7 @@ func (r *Registry) DelSubscription(sn uint16) bool {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 	if _, ok := r.register[sn]; ok {
+		r.subIds = append(r.subIds, sn)
 		delete(r.register, sn)
 		return true
 	}
