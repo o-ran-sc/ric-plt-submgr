@@ -21,6 +21,7 @@ package control
 
 import (
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
+	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/packer"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"strconv"
 	"sync"
@@ -55,8 +56,7 @@ type Transaction struct {
 	SubDelReqMsg      *e2ap.E2APSubscriptionDeleteRequest  //SubDelReq TODO: maybe own transactions per type
 	SubDelRespMsg     *e2ap.E2APSubscriptionDeleteResponse //SubDelResp TODO: maybe own transactions per type
 	SubDelFailMsg     *e2ap.E2APSubscriptionDeleteFailure  //SubDelFail TODO: maybe own transactions per type
-	Payload           []byte                               //packed message to optimize retransmissions
-	PayloadLen        int                                  //packed message len to optimize  retransmissions
+	Payload           *packer.PackedData                   //Encoded message to be send. Optimized
 	RespReceived      bool
 	ForwardRespToXapp bool
 }
