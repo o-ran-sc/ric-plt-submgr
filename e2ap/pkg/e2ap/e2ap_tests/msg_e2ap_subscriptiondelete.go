@@ -167,3 +167,103 @@ func (testCtxt *E2ApTests) E2ApTestMsgSubscriptionDeleteFailure(t *testing.T) {
 	}
 	testCtxt.testValueEquality(t, "msg", &afailenc, afaildec)
 }
+
+func (testCtxt *E2ApTests) E2ApTestMsgSubscriptionDeleteRequestBuffers(t *testing.T) {
+
+	testfunc := func(buffer string) {
+		packedData := testCtxt.toPackedData(t, buffer)
+		if packedData == nil {
+			return
+		}
+		e2SubResp := testCtxt.packerif.NewPackerSubscriptionDeleteRequest()
+		err := e2SubResp.UnPack(packedData)
+		if err != nil {
+			testCtxt.testError(t, "UnPack() Failed: %s [%s]", err.Error(), buffer)
+			return
+		}
+		err, _ = e2SubResp.Get()
+		if err != nil {
+			testCtxt.testError(t, "Get() Failed: %s [%s]", err.Error(), buffer)
+			return
+		}
+		testCtxt.testPrint("OK [%s]", buffer)
+	}
+
+	testCtxt.SetDesc("SubDelReqBuffer")
+
+	testfunc("00ca4012000002ea7e000500000106e7ea6300020001")
+	testfunc("00ca4012000002ea7e000500000106e8ea6300020001")
+	testfunc("00ca4012000002ea7e000500000106e9ea6300020001")
+	testfunc("00ca4012000002ea7e000500000106eaea6300020001")
+	testfunc("00ca4012000002ea7e000500000106ebea6300020001")
+	testfunc("00ca4012000002ea7e000500000106ecea6300020001")
+	testfunc("00ca4012000002ea7e000500000106edea6300020001")
+	testfunc("00ca4012000002ea7e000500000106eeea6300020001")
+	testfunc("00ca4012000002ea7e000500000106efea6300020001")
+	testfunc("00ca4012000002ea7e000500000106f0ea6300020001")
+	testfunc("00ca4012000002ea7e000500000106f4ea6300020001")
+	testfunc("00ca4012000002ea7e000500000106f5ea6300020001")
+	testfunc("00ca4012000002ea7e000500000106f6ea6300020001")
+}
+
+func (testCtxt *E2ApTests) E2ApTestMsgSubscriptionDeleteResponseBuffers(t *testing.T) {
+
+	testfunc := func(buffer string) {
+		packedData := testCtxt.toPackedData(t, buffer)
+		if packedData == nil {
+			return
+		}
+		e2SubResp := testCtxt.packerif.NewPackerSubscriptionDeleteResponse()
+		err := e2SubResp.UnPack(packedData)
+		if err != nil {
+			testCtxt.testError(t, "UnPack() Failed: %s [%s]", err.Error(), buffer)
+			return
+		}
+		err, _ = e2SubResp.Get()
+		if err != nil {
+			testCtxt.testError(t, "Get() Failed: %s [%s]", err.Error(), buffer)
+			return
+		}
+		testCtxt.testPrint("OK [%s]", buffer)
+	}
+
+	testCtxt.SetDesc("SubDelRespBuffer")
+	testfunc("20ca4012000002ea7e000500000106e7ea6300020001")
+	testfunc("20ca4012000002ea7e000500000106e8ea6300020001")
+	testfunc("20ca4012000002ea7e000500000106e9ea6300020001")
+	testfunc("20ca4012000002ea7e000500000106eaea6300020001")
+	testfunc("20ca4012000002ea7e000500000106ebea6300020001")
+	testfunc("20ca4012000002ea7e000500000106ecea6300020001")
+	testfunc("20ca4012000002ea7e000500000106edea6300020001")
+	testfunc("20ca4012000002ea7e000500000106eeea6300020001")
+	testfunc("20ca4012000002ea7e000500000106efea6300020001")
+	testfunc("20ca4012000002ea7e000500000106f0ea6300020001")
+	testfunc("20ca4012000002ea7e000500000106f1ea6300020001")
+	testfunc("20ca4012000002ea7e000500000106f4ea6300020001")
+
+}
+
+func (testCtxt *E2ApTests) E2ApTestMsgSubscriptionDeleteFailureBuffers(t *testing.T) {
+
+	testfunc := func(buffer string) {
+		packedData := testCtxt.toPackedData(t, buffer)
+		if packedData == nil {
+			return
+		}
+		e2SubResp := testCtxt.packerif.NewPackerSubscriptionDeleteFailure()
+		err := e2SubResp.UnPack(packedData)
+		if err != nil {
+			testCtxt.testError(t, "UnPack() Failed: %s [%s]", err.Error(), buffer)
+			return
+		}
+		err, _ = e2SubResp.Get()
+		if err != nil {
+			testCtxt.testError(t, "Get() Failed: %s [%s]", err.Error(), buffer)
+			return
+		}
+		testCtxt.testPrint("OK [%s]", buffer)
+	}
+
+	testCtxt.SetDesc("SubDelFailBuffer")
+	testfunc("40ca4017000003ea7e000500000106f6ea6300020001ea74000124")
+}

@@ -20,8 +20,10 @@
 package e2ap_tests
 
 import (
+	"encoding/hex"
 	"fmt"
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
+	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/packer"
 	"github.com/google/go-cmp/cmp"
 	"log"
 	"os"
@@ -76,6 +78,17 @@ type E2ApTests struct {
 	packerif e2ap.E2APPackerIf
 }
 
+func (testCtxt *E2ApTests) toPackedData(t *testing.T, buffer string) *packer.PackedData {
+	msg, err := hex.DecodeString(buffer)
+	if err != nil {
+		testCtxt.testError(t, "Hex DecodeString Failed: %s [%s]", err.Error(), buffer)
+		return nil
+	}
+	packedData := &packer.PackedData{}
+	packedData.Buf = msg
+	return packedData
+}
+
 func NewE2ApTests(name string, packerif e2ap.E2APPackerIf) *E2ApTests {
 	testCtxt := &E2ApTests{}
 	testCtxt.packerif = packerif
@@ -101,4 +114,11 @@ func RunTests(t *testing.T, e2aptestctxt *E2ApTests) {
 		e2aptestctxt.E2ApTestMsgSubscriptionDeleteFailure(t)
 	})
 	t.Run(e2aptestctxt.Name(), func(t *testing.T) { e2aptestctxt.E2ApTestMsgIndication(t) })
+
+	t.Run(e2aptestctxt.Name(), func(t *testing.T) { e2aptestctxt.E2ApTestMsgSubscriptionRequestBuffers(t) })
+	t.Run(e2aptestctxt.Name(), func(t *testing.T) { e2aptestctxt.E2ApTestMsgSubscriptionResponseBuffers(t) })
+	t.Run(e2aptestctxt.Name(), func(t *testing.T) { e2aptestctxt.E2ApTestMsgSubscriptionFailureBuffers(t) })
+	t.Run(e2aptestctxt.Name(), func(t *testing.T) { e2aptestctxt.E2ApTestMsgSubscriptionDeleteRequestBuffers(t) })
+	t.Run(e2aptestctxt.Name(), func(t *testing.T) { e2aptestctxt.E2ApTestMsgSubscriptionDeleteResponseBuffers(t) })
+	t.Run(e2aptestctxt.Name(), func(t *testing.T) { e2aptestctxt.E2ApTestMsgSubscriptionDeleteFailureBuffers(t) })
 }
