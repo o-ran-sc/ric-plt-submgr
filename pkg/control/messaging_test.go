@@ -548,20 +548,21 @@ func (mc *testingMainControl) wait_subs_trans_clean(t *testing.T, e2SubsId int, 
 	return false
 }
 
-func (mc *testingMainControl) get_seqcnt(t *testing.T) uint16 {
+func (mc *testingMainControl) get_seqid(t *testing.T) uint16 {
 	mc.c.registry.mutex.Lock()
 	defer mc.c.registry.mutex.Unlock()
-	return mc.c.registry.counter
+	segId := mc.c.registry.ids[0]
+	return segId
 }
 
-func (mc *testingMainControl) wait_seqcnt_change(t *testing.T, orig uint16, secs int) (uint16, bool) {
+func (mc *testingMainControl) wait_seqid_change(t *testing.T, origSeqId uint16, secs int) (uint16, bool) {
 	i := 1
 	for ; i <= secs*2; i++ {
 		mc.c.registry.mutex.Lock()
-		curr := mc.c.registry.counter
+		currId := mc.c.registry.ids[0]
 		mc.c.registry.mutex.Unlock()
-		if curr != orig {
-			return curr, true
+		if currId != origSeqId {
+			return currId, true
 		}
 		time.Sleep(500 * time.Millisecond)
 	}

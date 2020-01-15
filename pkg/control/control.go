@@ -28,7 +28,6 @@ import (
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
 	"github.com/spf13/viper"
-	"math/rand"
 	"sync"
 	"time"
 )
@@ -57,8 +56,6 @@ type RMRMeid struct {
 	RanName string
 }
 
-var seedSN uint16
-
 const (
 	CREATE Action = 0
 	MERGE  Action = 1
@@ -71,15 +68,6 @@ func init() {
 	viper.AutomaticEnv()
 	viper.SetEnvPrefix("submgr")
 	viper.AllowEmptyEnv(true)
-	seedSN = uint16(viper.GetInt("seed_sn"))
-	if seedSN == 0 {
-		rand.Seed(time.Now().UnixNano())
-		seedSN = uint16(rand.Intn(65535))
-	}
-	if seedSN > 65535 {
-		seedSN = 0
-	}
-	xapp.Logger.Info("SUBMGR: Initial Sequence Number: %v", seedSN)
 }
 
 func NewControl() *Control {
@@ -91,7 +79,7 @@ func NewControl() *Control {
 	rtmgrClient := RtmgrClient{client, handle, deleteHandle}
 
 	registry := new(Registry)
-	registry.Initialize(seedSN)
+	registry.Initialize()
 	registry.rtmgrClient = &rtmgrClient
 
 	tracker := new(Tracker)
