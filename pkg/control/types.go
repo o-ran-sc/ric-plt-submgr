@@ -39,16 +39,6 @@ type RmrDatagram struct {
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-type SubRouteInfo struct {
-	Command Action
-	Address string
-	Port    uint16
-	SubID   uint16
-}
-
-//-----------------------------------------------------------------------------
-//
-//-----------------------------------------------------------------------------
 type RmrEndpoint struct {
 	Addr string // xapp addr
 	Port uint16 // xapp port
@@ -78,6 +68,32 @@ func (endpoint *RmrEndpoint) Set(src string) bool {
 		if err == nil {
 			endpoint.Addr = srcAddr
 			endpoint.Port = uint16(srcPort)
+			return true
+		}
+	}
+	return false
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type RmrEndpointList struct {
+	Endpoints []RmrEndpoint
+}
+
+func (eplist *RmrEndpointList) String() string {
+	valuesText := []string{}
+	for i := range eplist.Endpoints {
+		ep := eplist.Endpoints[i]
+		text := ep.String()
+		valuesText = append(valuesText, text)
+	}
+	return strings.Join(valuesText, ",")
+}
+
+func (eplist *RmrEndpointList) HasEndpoint(ep *RmrEndpoint) bool {
+	for i := range eplist.Endpoints {
+		if (eplist.Endpoints[i].Addr == ep.Addr) && (eplist.Endpoints[i].Port == ep.Port) {
 			return true
 		}
 	}
@@ -120,6 +136,6 @@ type RMRParams struct {
 
 func (params *RMRParams) String() string {
 	var b bytes.Buffer
-	fmt.Fprintf(&b, "Src=%s Mtype=%s(%d) SubId=%v Xid=%s Meid=%v", params.Src, xapp.RicMessageTypeToName[params.Mtype], params.Mtype, params.SubId, params.Xid, params.Meid)
+	fmt.Fprintf(&b, "params(Src=%s Mtype=%s(%d) SubId=%v Xid=%s Meid=%s)", params.Src, xapp.RicMessageTypeToName[params.Mtype], params.Mtype, params.SubId, params.Xid, params.Meid.RanName)
 	return b.String()
 }

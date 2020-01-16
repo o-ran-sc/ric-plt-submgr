@@ -36,7 +36,7 @@ type TransactionXappKey struct {
 }
 
 func (key *TransactionXappKey) String() string {
-	return key.RmrEndpoint.String() + "/" + key.Xid
+	return "transkey(" + key.RmrEndpoint.String() + "/" + key.Xid + ")"
 }
 
 //-----------------------------------------------------------------------------
@@ -61,14 +61,18 @@ type Transaction struct {
 	ForwardRespToXapp bool
 }
 
-func (t *Transaction) String() string {
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
+func (t *Transaction) StringImpl() string {
 	var subId string = "?"
 	if t.Subs != nil {
 		subId = strconv.FormatUint(uint64(t.Subs.Seq), 10)
 	}
-	return subId + "/" + t.RmrEndpoint.String() + "/" + t.Xid
+	return "trans(" + t.RmrEndpoint.String() + "/" + t.Xid + "/" + t.Meid.RanName + "/" + subId + ")"
+}
+
+func (t *Transaction) String() string {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+	return t.StringImpl()
 }
 
 func (t *Transaction) GetXid() string {
@@ -115,16 +119,18 @@ func (t *Transaction) RetryTransaction() {
 }
 
 func (t *Transaction) Release() {
-	xapp.Logger.Info("Transaction: Releasing %s", t)
 	t.mutex.Lock()
-	defer t.mutex.Unlock()
-	if t.Subs != nil {
-		t.Subs.UnSetTransaction(t)
-	}
-	if t.tracker != nil {
-		xappkey := TransactionXappKey{t.RmrEndpoint, t.Xid}
-		t.tracker.UnTrackTransaction(xappkey)
-	}
+	subs := t.Subs
+	tracker := t.tracker
+	xappkey := TransactionXappKey{t.RmrEndpoint, t.Xid}
 	t.Subs = nil
 	t.tracker = nil
+	t.mutex.Unlock()
+
+	if subs != nil {
+		subs.UnSetTransaction(t)
+	}
+	if tracker != nil {
+		tracker.UnTrackTransaction(xappkey)
+	}
 }
