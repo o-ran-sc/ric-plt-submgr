@@ -45,47 +45,32 @@ func (r *Registry) Initialize() {
 }
 
 // Reserves and returns the next free sequence number
-func (r *Registry) ReserveSubscription(endPoint *RmrEndpoint, meid *xapp.RMRMeid) (*Subscription, error) {
-	// Check is current SequenceNumber valid
-	// Allocate next SequenceNumber value and retry N times
+func (r *Registry) ReserveSubscription(meid *xapp.RMRMeid) (*Subscription, error) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
-	var subs *Subscription = nil
-	var retrytimes uint16 = 1000
-	for ; subs == nil && retrytimes > 0; retrytimes-- {
+	if len(r.subIds) > 0 {
 		sequenceNumber := r.subIds[0]
 		r.subIds = r.subIds[1:]
 		if _, ok := r.register[sequenceNumber]; ok == false {
 			subs := &Subscription{
-				registry:    r,
-				Seq:         sequenceNumber,
-				Active:      false,
-				RmrEndpoint: *endPoint,
-				Meid:        meid,
-				Trans:       nil,
+				registry: r,
+				Seq:      sequenceNumber,
+				Active:   false,
+				Meid:     meid,
+				Trans:    nil,
 			}
 			r.register[sequenceNumber] = subs
-
-			// Update routing
-			r.mutex.Unlock()
-			err := subs.UpdateRoute(CREATE)
-			r.mutex.Lock()
-			if err != nil {
-				if _, ok := r.register[sequenceNumber]; ok {
-					delete(r.register, sequenceNumber)
-				}
-				return nil, err
-			}
+			xapp.Logger.Info("Registry: Create %s", subs.String())
+			xapp.Logger.Debug("Registry: substable=%v", r.register)
 			return subs, nil
 		}
 	}
-	return nil, fmt.Errorf("Registry: Failed to reserves subscription. RmrEndpoint: %s, Meid: %s", endPoint, meid.RanName)
+	return nil, fmt.Errorf("Registry: Failed to reserves subscription")
 }
 
 func (r *Registry) GetSubscription(sn uint16) *Subscription {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
-	xapp.Logger.Debug("Registry map: %v", r.register)
 	if _, ok := r.register[sn]; ok {
 		return r.register[sn]
 	}
@@ -96,8 +81,11 @@ func (r *Registry) DelSubscription(sn uint16) bool {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 	if _, ok := r.register[sn]; ok {
+		subs := r.register[sn]
+		xapp.Logger.Info("Registry: Delete %s", subs.String())
 		r.subIds = append(r.subIds, sn)
 		delete(r.register, sn)
+		xapp.Logger.Debug("Registry: substable=%v", r.register)
 		return true
 	}
 	return false

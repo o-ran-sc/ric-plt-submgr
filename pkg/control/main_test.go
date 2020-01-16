@@ -29,6 +29,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -37,56 +38,92 @@ import (
 //
 //-----------------------------------------------------------------------------
 
-type httpRtmgrMsg struct {
-	msg *rtmgr_models.XappSubscriptionData
-	w   http.ResponseWriter
-	r   *http.Request
+type httpEventWaiter struct {
+	resultChan   chan bool
+	nextActionOk bool
 }
 
-func (msg *httpRtmgrMsg) RetOk() {
-	msg.w.WriteHeader(200)
+func (msg *httpEventWaiter) SetResult(res bool) {
+	msg.resultChan <- res
 }
 
-type testingHttpRtmgrControl struct {
-	desc       string
-	port       string
-	useChannel bool
-	msgChan    chan *httpRtmgrMsg
-}
-
-func (hc *testingHttpRtmgrControl) UseChannel(flag bool) {
-	hc.useChannel = flag
-}
-
-func (hc *testingHttpRtmgrControl) WaitReq(t *testing.T) *httpRtmgrMsg {
-	xapp.Logger.Info("(%s) handle_rtmgr_req", hc.desc)
+func (msg *httpEventWaiter) WaitResult(t *testing.T) bool {
 	select {
-	case msg := <-hc.msgChan:
-		return msg
+	case result := <-msg.resultChan:
+		return result
 	case <-time.After(15 * time.Second):
-		testError(t, "(%s) Not Received RTMGR Subscription message within 15 secs", hc.desc)
-		return nil
+		testError(t, "Waiter not received result status from case within 15 secs")
+		return false
 	}
-	return nil
+	testError(t, "Waiter error in default branch")
+	return false
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type testingHttpRtmgrControl struct {
+	sync.Mutex
+	desc        string
+	port        string
+	eventWaiter *httpEventWaiter
+}
+
+func (hc *testingHttpRtmgrControl) NextEvent(eventWaiter *httpEventWaiter) {
+	hc.Lock()
+	defer hc.Unlock()
+	hc.eventWaiter = eventWaiter
+}
+
+func (hc *testingHttpRtmgrControl) AllocNextEvent(nextAction bool) *httpEventWaiter {
+	eventWaiter := &httpEventWaiter{
+		resultChan:   make(chan bool),
+		nextActionOk: nextAction,
+	}
+	hc.NextEvent(eventWaiter)
+	return eventWaiter
 }
 
 func (hc *testingHttpRtmgrControl) http_handler(w http.ResponseWriter, r *http.Request) {
+
+	hc.Lock()
+	defer hc.Unlock()
+
 	var req rtmgr_models.XappSubscriptionData
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		xapp.Logger.Error("%s", err.Error())
 	}
 	xapp.Logger.Info("(%s) handling Address=%s Port=%d SubscriptionID=%d", hc.desc, *req.Address, *req.Port, *req.SubscriptionID)
-	msg := &httpRtmgrMsg{
-		msg: &req,
-		w:   w,
-		r:   r,
+
+	var code int = 0
+	switch r.Method {
+	case http.MethodPost:
+		code = 201
+		if hc.eventWaiter != nil {
+			if hc.eventWaiter.nextActionOk == false {
+				code = 400
+			}
+		}
+	case http.MethodDelete:
+		code = 200
+		if hc.eventWaiter != nil {
+			if hc.eventWaiter.nextActionOk == false {
+				code = 400
+			}
+		}
+	default:
+		code = 200
 	}
-	if hc.useChannel {
-		hc.msgChan <- msg
-	} else {
-		msg.RetOk()
+
+	waiter := hc.eventWaiter
+	hc.eventWaiter = nil
+	if waiter != nil {
+		waiter.SetResult(true)
 	}
+	xapp.Logger.Info("(%s) Method=%s Reply with code %d", hc.desc, r.Method, code)
+	w.WriteHeader(code)
+
 }
 
 func (hc *testingHttpRtmgrControl) run() {
@@ -98,8 +135,6 @@ func initTestingHttpRtmgrControl(desc string, port string) *testingHttpRtmgrCont
 	hc := &testingHttpRtmgrControl{}
 	hc.desc = desc
 	hc.port = port
-	hc.useChannel = false
-	hc.msgChan = make(chan *httpRtmgrMsg)
 	return hc
 }
 

@@ -63,13 +63,15 @@ func (t *Tracker) TrackTransaction(
 	defer t.mutex.Unlock()
 
 	xappkey := TransactionXappKey{*endpoint, xid}
-	if _, ok := t.transactionXappTable[xappkey]; ok {
-		err := fmt.Errorf("Tracker: Similar transaction with xappkey %s is ongoing, transaction %s not created ", xappkey, trans)
+	if othtrans, ok := t.transactionXappTable[xappkey]; ok {
+		err := fmt.Errorf("Tracker: %s is ongoing, %s not created ", othtrans, trans)
 		return nil, err
 	}
 
 	trans.tracker = t
 	t.transactionXappTable[xappkey] = trans
+	xapp.Logger.Info("Tracker: Create %s", trans.String())
+	xapp.Logger.Debug("Tracker: transtable=%v", t.transactionXappTable)
 	return trans, nil
 }
 
@@ -77,8 +79,10 @@ func (t *Tracker) UnTrackTransaction(xappKey TransactionXappKey) (*Transaction, 
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 	if trans, ok2 := t.transactionXappTable[xappKey]; ok2 {
+		xapp.Logger.Info("Tracker: Delete %s", trans.String())
 		delete(t.transactionXappTable, xappKey)
+		xapp.Logger.Debug("Tracker: transtable=%v", t.transactionXappTable)
 		return trans, nil
 	}
-	return nil, fmt.Errorf("Tracker: No record for xappkey %s", xappKey)
+	return nil, fmt.Errorf("Tracker: No record %s", xappKey)
 }
