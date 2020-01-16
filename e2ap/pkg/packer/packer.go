@@ -21,6 +21,7 @@ package packer
 
 import (
 	"fmt"
+	"strings"
 )
 
 const cLogBufferMaxSize = 1024
@@ -46,9 +47,7 @@ func PduPackerPack(entry PduPackerIf, trgBuf *PackedData) error {
 	if err == nil {
 		return nil
 	}
-	reterr := fmt.Errorf("Pack failed: err: %s, logbuffer: %s", err.Error(), string(logBuffer[:]))
-	//reterr = fmt.Errorf("%s: PDU:%s", reterr.Error(), string(logBuffer))
-	return reterr
+	return fmt.Errorf("Pack failed: err: %s, logbuffer: %s", err.Error(), logBuffer[:strings.Index(string(logBuffer[:]), "\000")])
 }
 
 func PduPackerPackAllocTrg(entry PduPackerIf, trgBuf *PackedData) (error, *PackedData) {
@@ -79,7 +78,5 @@ func PduPackerUnPack(entry PduUnPackerIf, data *PackedData) error {
 	if err == nil {
 		return nil
 	}
-	reterr := fmt.Errorf("Unpack failed: err: %s, logbuffer: %s", err.Error(), string(logBuffer[:]))
-	//reterr = fmt.Errorf("%s: PDU:%s", reterr.Error(), string(logBuffer))
-	return reterr
+	return fmt.Errorf("Unpack failed: err: %s, logbuffer: %s", err.Error(), logBuffer[:strings.Index(string(logBuffer[:]), "\000")])
 }
