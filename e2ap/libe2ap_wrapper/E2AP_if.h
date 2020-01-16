@@ -68,7 +68,7 @@ typedef uint64_t StyleID_t;
 typedef uint32_t ParameterID_t;
 
 typedef struct {
-    uint32_t dummy; // This data type has no content. This dymmy is added here to solve problem with Golang. Golang do not like empty types.
+    uint32_t dummy; // This data type has no content. This dummy is added here to solve problem with Golang. Golang do not like empty types.
 } ParameterValue_t;
 
 typedef struct {
@@ -180,7 +180,7 @@ enum ProtocolIEtestCondition_t {
 
 typedef struct {   // CHOICE. Only one value can be present
     bool valueIntPresent;
-	int64_t integer;           //INTEGER;
+	int64_t integer;           // INTEGER;
 	bool valueEnumPresent;
 	int64_t valueEnum;         // INTEGER
     bool valueBoolPresent;
@@ -299,24 +299,6 @@ typedef struct {
 
 } CriticalityDiagnostics__t;
 
-typedef int32_t RICIndicationSN_t;
-
-enum RICIndicationType_t {
-	RICIndicationType_RICIndicationTypeReport,
-	RICIndicationType_RICIndicationTypeInsert
-};
-
-typedef struct {
-    OctetString_t octetString;    // E2AP spec format, the other elements for E2SM-X2 format
-    InterfaceID_t interfaceID;
-    uint8_t interfaceDirection;
-} RICIndicationHeader_t;
-
-typedef struct {
-    OctetString_t octetString;    // E2AP spec format, the other elements for E2SM-X2 format
-    OctetString_t interfaceMessage;
-} RICIndicationMessage_t;
-
 typedef struct {
     OctetString_t octetString;    // E2AP spec format, the other elements for E2SM-X2 format
     uint64_t ricCallProcessIDVal;
@@ -362,33 +344,6 @@ enum e2err {
     e2err_RICSubscriptionFailureAllocRICActionAdmittedListFail,
     e2err_RICSubscriptionFailureEncodeFail,
     e2err_RICSubscriptionFailureAllocE2AP_PDUFail,
-    e2err_RICIndicationRICrequestIDFail,
-    e2err_RICIndicationAllocRANfunctionIDFail,
-    e2err_RICIndicationAllocRICactionIDFail,
-    e2err_RICIndicationAllocRICindicationSNFail,
-    e2err_RICIndicationAllocRICindicationTypeFail,
-    e2err_RICIndicationAllocRRICindicationHeaderBufFail,
-    e2err_RICIndicationAllocRICindicationHeaderFail,
-    e2err_RICIndicationAllocRICindicationMessageBufFail,
-    e2err_RICIndicationAllocRICindicationMessageFail,
-    e2err_RICIndicationEncodeFail,
-    e2err_RICIndicationAllocE2AP_PDUFail,
-    e2err_RICindicationHeaderIEValueFail_1,
-    e2err_RICIndicationAllocRICIndicationHeaderglobal_eNB_IDpLMN_IdentityBufFail,
-    e2err_RICIndicationAllocRICIndicationHeaderglobal_eNB_IDeNB_IDmacro_eNB_IDBufFail,
-    e2err_RICIndicationAllocRICIndicationHeaderglobal_eNB_IDeNB_IDhome_eNB_IDBufFail,
-    e2err_RICIndicationAllocRICIndicationHeaderglobal_eNB_IDeNB_IDshort_Macro_eNB_IDBufFail,
-    e2err_RICIndicationAllocRICIndicationHeaderglobal_eNB_IDeNB_IDlong_Macro_eNB_IDBufFail,
-    e2err_RICindicationHeaderIEValueFail_2,
-    e2err_RICIndicationAllocRICIndicationHeaderglobal_gNB_IDpLMN_IdentityBufFail,
-    e2err_RICIndicationAllocRICIndicationHeaderglobal_gNB_IDgNB_IDgNB_IDBufFail,
-    e2err_RICindicationHeaderIEValueFail_3,
-    e2err_RICindicationHeaderPackFail_1,
-    e2err_RICindicationHeaderPackFail_2,
-    e2err_RICIndicationHeaderAllocE2AP_PDUFail,
-    e2err_RICIndicationMessageAllocinterfaceMessageFail,
-    e2err_RICindicationMessagePackFail_1,
-    e2err_RICindicationMessagePackFail_2,
     e2err_E2SM_gNB_X2_indicationMessageAllocE2AP_PDUFail,
     e2err_RICSubscriptionDeleteRequestAllocRICrequestIDFail,
     e2err_RICSubscriptionDeleteRequestAllocRANfunctionIDFail,
@@ -419,25 +374,9 @@ enum e2err {
     e2err_RICsubscriptionFailureRICrequestIDMissing,
     e2err_RICsubscriptionFailureRANfunctionIDMissing,
     e2err_RICsubscriptionFailureRICaction_NotAdmitted_ListMissing,
-    e2err_RICindicationRICrequestIDMissing,
-    e2err_RICindicationRANfunctionIDMissing,
-    e2err_RICindicationRICactionIDMissing,
-    e2err_RICindicationRICindicationSNMissing,
-    e2err_RICindicationRICindicationTypeMissing,
-    e2err_RICIndicationHeaderContentLengthFail,
-    e2err_RICindicationRICindicationHeaderMissing,
-    e2err_RICIndicationMessageContentLengthFail,
-    e2err_RICindicationRICindicationMessageMissing,
     e2err_RICEventTriggerDefinitionIEValueFail_9,
     e2err_RICEventTriggerDefinitionIEValueFail_10,
     e2err_RICEventTriggerDefinitionIEValueFail_11,
-    e2err_RICIndicationHeaderDecodeWMOREFail,
-    e2err_RICIndicationHeaderDecodeFAIL,
-    e2err_RICIndicationHeaderDecodeDefaultFail,
-    e2err_RICIndicationMessageIEContentLengthFail,
-    e2err_RICIndicationMessageDecodeWMOREFail,
-    e2err_RICIndicationMessageDecodeFAIL,
-    e2err_RICIndicationMessageDecodeDefaultFail,
     e2err_RICsubscriptionDeleteRequestRICrequestIDMissing,
     e2err_RICsubscriptionDeleteRequestRANfunctionIDMissing,
     e2err_RICsubscriptionDeleteResponseRICrequestIDMissing,
@@ -446,7 +385,6 @@ enum e2err {
     e2err_RICsubscriptionDeleteFailureRANfunctionIDMissing,
     e2err_RICsubscriptionDeleteFailureRICcauseMissing
 };
-
 
 static const char* const E2ErrorStrings[] = {
     "e2err_OK",
@@ -486,33 +424,6 @@ static const char* const E2ErrorStrings[] = {
     "e2err_RICSubscriptionFailureAllocRICActionAdmittedListFail",
     "e2err_RICSubscriptionFailureEncodeFail",
     "e2err_RICSubscriptionFailureAllocE2AP_PDUFail",
-    "e2err_RICIndicationRICrequestIDFail",
-    "e2err_RICIndicationAllocRANfunctionIDFail",
-    "e2err_RICIndicationAllocRICactionIDFail",
-    "e2err_RICIndicationAllocRICindicationSNFail",
-    "e2err_RICIndicationAllocRICindicationTypeFail",
-    "e2err_RICIndicationAllocRRICindicationHeaderBufFail",
-    "e2err_RICIndicationAllocRICindicationHeaderFail",
-    "e2err_RICIndicationAllocRICindicationMessageBufFail",
-    "e2err_RICIndicationAllocRICindicationMessageFail",
-    "e2err_RICIndicationEncodeFail",
-    "e2err_RICIndicationAllocE2AP_PDUFail",
-    "e2err_RICindicationHeaderIEValueFail_1",
-    "e2err_RICIndicationAllocRICIndicationHeaderglobal_eNB_IDpLMN_IdentityBufFail",
-    "e2err_RICIndicationAllocRICIndicationHeaderglobal_eNB_IDeNB_IDmacro_eNB_IDBufFail",
-    "e2err_RICIndicationAllocRICIndicationHeaderglobal_eNB_IDeNB_IDhome_eNB_IDBufFail",
-    "e2err_RICIndicationAllocRICIndicationHeaderglobal_eNB_IDeNB_IDshort_Macro_eNB_IDBufFail",
-    "e2err_RICIndicationAllocRICIndicationHeaderglobal_eNB_IDeNB_IDlong_Macro_eNB_IDBufFail",
-    "e2err_RICindicationHeaderIEValueFail_2",
-    "e2err_RICIndicationAllocRICIndicationHeaderglobal_gNB_IDpLMN_IdentityBufFail",
-    "e2err_RICIndicationAllocRICIndicationHeaderglobal_gNB_IDgNB_IDgNB_IDBufFail",
-    "e2err_RICindicationHeaderIEValueFail_3",
-    "e2err_RICindicationHeaderPackFail_1",
-    "e2err_RICindicationHeaderPackFail_2",
-    "e2err_RICIndicationHeaderAllocE2AP_PDUFail",
-    "e2err_RICIndicationMessageAllocinterfaceMessageFail",
-    "e2err_RICindicationMessagePackFail_1",
-    "e2err_RICindicationMessagePackFail_2",
     "e2err_E2SM_gNB_X2_indicationMessageAllocE2AP_PDUFail",
     "e2err_RICSubscriptionDeleteRequestAllocRICrequestIDFail",
     "e2err_RICSubscriptionDeleteRequestAllocRANfunctionIDFail",
@@ -543,25 +454,9 @@ static const char* const E2ErrorStrings[] = {
     "e2err_RICsubscriptionFailureRICrequestIDMissing",
     "e2err_RICsubscriptionFailureRANfunctionIDMissing",
     "e2err_RICsubscriptionFailureRICaction_NotAdmitted_ListMissing",
-    "e2err_RICindicationRICrequestIDMissing",
-    "e2err_RICindicationRANfunctionIDMissing",
-    "e2err_RICindicationRICactionIDMissing",
-    "e2err_RICindicationRICindicationSNMissing",
-    "e2err_RICindicationRICindicationTypeMissing",
-    "e2err_RICIndicationHeaderContentLengthFail",
-    "e2err_RICindicationRICindicationHeaderMissing",
-    "e2err_RICIndicationMessageContentLengthFail",
-    "e2err_RICindicationRICindicationMessageMissing",
     "e2err_RICEventTriggerDefinitionIEValueFail_9",
     "e2err_RICEventTriggerDefinitionIEValueFail_10",
     "e2err_RICEventTriggerDefinitionIEValueFail_11",
-    "e2err_RICIndicationHeaderDecodeWMOREFail",
-    "e2err_RICIndicationHeaderDecodeFAIL",
-    "e2err_RICIndicationHeaderDecodeDefaultFail",
-    "e2err_RICIndicationMessageIEContentLengthFail",
-    "e2err_RICIndicationMessageDecodeWMOREFail",
-    "e2err_RICIndicationMessageDecodeFAIL",
-    "e2err_RICIndicationMessageDecodeDefaultFail",
     "e2err_RICsubscriptionDeleteRequestRICrequestIDMissing",
     "e2err_RICsubscriptionDeleteRequestRANfunctionIDMissing",
     "e2err_RICsubscriptionDeleteResponseRICrequestIDMissing",
@@ -589,7 +484,6 @@ extern const uint64_t cE2UnsuccessfulOutcome;
 // Initiating message
 extern const uint64_t cRICSubscriptionRequest;
 extern const uint64_t cRICSubscriptionDeleteRequest;
-extern const uint64_t cRICIndication;
 
 // Successful outcome
 extern const uint64_t cRICSubscriptionResponse;
@@ -623,17 +517,6 @@ typedef struct {
 } RICSubscriptionFailure_t;
 
 typedef struct {
-	RICRequestID_t ricRequestID;
-	RANFunctionID_t ranFunctionID;
-	RICActionID_t ricActionID;
-	RICIndicationSN_t ricIndicationSN;
-   	uint64_t ricIndicationType; // this is type of enum RICIndicationType_t
-	RICIndicationHeader_t ricIndicationHeader;
-	RICIndicationMessage_t ricIndicationMessage;
-    RICCallProcessID_t ricCallProcessID;  // Not usein RIC currently
-} RICIndication_t;
-
-typedef struct {
     RICRequestID_t ricRequestID;
     RANFunctionID_t ranFunctionID;
 } RICSubscriptionDeleteRequest_t;
@@ -648,7 +531,7 @@ typedef struct  {
     RANFunctionID_t ranFunctionID;
     RICCause_t ricCause;
     bool criticalityDiagnosticsPresent;
-    CriticalityDiagnostics__t criticalityDiagnostics; // Not usein RIC currently
+    CriticalityDiagnostics__t criticalityDiagnostics; // Not used in RIC currently
 } RICSubscriptionDeleteFailure_t;
 
 //////////////////////////////////////////////////////////////////////
@@ -662,9 +545,6 @@ uint64_t packRICSubscriptionRequest(size_t*, byte*, char*,RICSubscriptionRequest
 uint64_t packRICEventTriggerDefinition(char*,RICEventTriggerDefinition_t*);
 uint64_t packRICSubscriptionResponse(size_t*, byte*, char*,RICSubscriptionResponse_t*);
 uint64_t packRICSubscriptionFailure(size_t*, byte*, char*,RICSubscriptionFailure_t*);
-uint64_t packRICIndication(size_t*, byte*, char*,RICIndication_t*);
-uint64_t packRICIndicationHeader(char*,RICIndicationHeader_t*);
-uint64_t packRICIndicationMessage(char*,RICIndicationMessage_t*);
 uint64_t packRICSubscriptionDeleteRequest(size_t*, byte*, char*,RICSubscriptionDeleteRequest_t*);
 uint64_t packRICSubscriptionDeleteResponse(size_t*, byte*, char*,RICSubscriptionDeleteResponse_t*);
 uint64_t packRICSubscriptionDeleteFailure(size_t*, byte*, char*,RICSubscriptionDeleteFailure_t*);
@@ -674,19 +554,14 @@ uint64_t getRICSubscriptionRequestData(e2ap_pdu_ptr_t*, RICSubscriptionRequest_t
 uint64_t getRICEventTriggerDefinitionData(RICEventTriggerDefinition_t*);
 uint64_t getRICSubscriptionResponseData(e2ap_pdu_ptr_t*, RICSubscriptionResponse_t*);
 uint64_t getRICSubscriptionFailureData(e2ap_pdu_ptr_t*, RICSubscriptionFailure_t*);
-uint64_t getRICIndicationData(e2ap_pdu_ptr_t*, RICIndication_t*);
-uint64_t getRICIndicationHeaderData(RICIndicationHeader_t*);
-uint64_t getRICIndicationMessageData(RICIndicationMessage_t*);
 uint64_t getRICSubscriptionDeleteRequestData(e2ap_pdu_ptr_t*, RICSubscriptionDeleteRequest_t*);
 uint64_t getRICSubscriptionDeleteResponseData(e2ap_pdu_ptr_t*, RICSubscriptionDeleteResponse_t*);
 uint64_t getRICSubscriptionDeleteFailureData(e2ap_pdu_ptr_t*, RICSubscriptionDeleteFailure_t*);
-
 
 #if DEBUG
 bool TestRICSubscriptionRequest();
 bool TestRICSubscriptionResponse();
 bool TestRICSubscriptionFailure();
-bool TestRICIndication();
 bool TestRICSubscriptionDeleteRequest();
 bool TestRICSubscriptionDeleteResponse();
 bool TestRICSubscriptionDeleteFailure();
@@ -694,7 +569,6 @@ bool TestRICSubscriptionDeleteFailure();
 void printRICSubscriptionRequest(const RICSubscriptionRequest_t*);
 void printRICSubscriptionResponse(const RICSubscriptionResponse_t*);
 void printRICSubscriptionFailure(const RICSubscriptionFailure_t*);
-void printRICIndication(const RICIndication_t*);
 void printRICSubscriptionDeleteRequest(const RICSubscriptionDeleteRequest_t*);
 void printRICSubscriptionDeleteResponse(const RICSubscriptionDeleteResponse_t*);
 void printRICSubscriptionDeleteFailure(const RICSubscriptionDeleteFailure_t*);

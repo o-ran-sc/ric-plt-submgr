@@ -250,83 +250,6 @@ bool TestRICSubscriptionFailure() {
 }
 
 //////////////////////////////////////////////////////////////////////
-bool TestRICIndication() {
-    // Test RICIndication
-    RICIndication_t ricIndication;
-
-    ricIndication.ricRequestID.ricRequestorID = 1;
-    ricIndication.ricRequestID.ricRequestSequenceNumber = 22;
-    ricIndication.ranFunctionID = 33;
-    ricIndication.ricActionID = 44;
-    ricIndication.ricIndicationSN =  55;
-    ricIndication.ricIndicationType =  RICIndicationType_RICIndicationTypeReport;
-
-    ricIndication.ricIndicationHeader.interfaceID.globalGNBIDPresent = false;
-    ricIndication.ricIndicationHeader.interfaceID.globalENBIDPresent = true;
-    ricIndication.ricIndicationHeader.interfaceID.globalENBID.pLMNIdentity.contentLength = 3;
-
-    ricIndication.ricIndicationHeader.interfaceID.globalENBID.pLMNIdentity.pLMNIdentityVal[0] = 1;
-    ricIndication.ricIndicationHeader.interfaceID.globalENBID.pLMNIdentity.pLMNIdentityVal[1] = 2;
-    ricIndication.ricIndicationHeader.interfaceID.globalENBID.pLMNIdentity.pLMNIdentityVal[2] = 3;
-
-//    ricIndication.ricIndicationHeader.interfaceID.globalENBID.nodeID.bits = cMacroENBIDP_20Bits;
-//    ricIndication.ricIndicationHeader.interfaceID.globalENBID.nodeID.bits = cHomeENBID_28Bits;
-//    ricIndication.ricIndicationHeader.interfaceID.globalENBID.nodeID.bits = cShortMacroENBID_18Bits;
-    ricIndication.ricIndicationHeader.interfaceID.globalENBID.nodeID.bits = clongMacroENBIDP_21Bits;
-
-    IdOctects_t eNBOctects;
-    memset(eNBOctects.octets, 0, sizeof(eNBOctects));
-    eNBOctects.octets[0] = 11;
-    eNBOctects.octets[1] = 22;
-    eNBOctects.octets[2] = 31;
-    eNBOctects.octets[3] = 1;
-    ricIndication.ricIndicationHeader.interfaceID.globalENBID.nodeID.nodeID = eNBOctects.nodeID;
-    printf("eNBOctects.nodeID = %u",eNBOctects.nodeID);
-
-    ricIndication.ricIndicationHeader.interfaceDirection = InterfaceDirection__incoming;
-
-    char data[] = "Hello world";
-    ricIndication.ricIndicationMessage.interfaceMessage.contentLength = sizeof(data);
-    memcpy(ricIndication.ricIndicationMessage.interfaceMessage.data,data,sizeof(data));
-
-    printRICIndication(&ricIndication);
-
-    uint64_t logBufferSize = 1024;
-    char logBuffer[logBufferSize];
-    uint64_t dataBufferSize = cDataBufferSize;
-    byte dataBuffer[dataBufferSize];
-    if (packRICIndication(&dataBufferSize, dataBuffer, logBuffer, &ricIndication) == e2err_OK)
-    {
-        memset(&ricIndication,0, sizeof ricIndication);
-        uint64_t returnCode;
-        E2MessageInfo_t messageInfo;
-        e2ap_pdu_ptr_t* pE2AP_PDU = unpackE2AP_pdu(dataBufferSize, dataBuffer, logBuffer, &messageInfo);
-        if (pE2AP_PDU != 0) {
-            if (messageInfo.messageType == cE2InitiatingMessage) {
-                if (messageInfo.messageId == cRICIndication) {
-                    // RICindication
-                    if ((returnCode = getRICIndicationData(pE2AP_PDU, &ricIndication)) == e2err_OK) {
-                        printRICIndication(&ricIndication);
-                        return true;
-                    }
-                    else
-                        printf("Error in getRICIndicationData. ReturnCode = %s",getE2ErrorString(returnCode));
-                }
-                else
-                    printf("Not RICIndication\n");
-            }
-            else
-                printf("Not InitiatingMessage\n");
-        }
-        else
-            printf("%s",logBuffer);
-    }
-    else
-        printf("%s",logBuffer);
-    return false;
-}
-
-//////////////////////////////////////////////////////////////////////
 bool TestRICSubscriptionDeleteRequest() {
 
     RICSubscriptionDeleteRequest_t ricSubscriptionDeleteRequest;
@@ -587,41 +510,6 @@ void printRICSubscriptionFailure(const RICSubscriptionFailure_t* pRICSubscriptio
             index++;
         }
     }
-    printf("\n");
-}
-
-//////////////////////////////////////////////////////////////////////
-void printRICIndication(const RICIndication_t* pRICIndication) {
-
-    printf("pRICIndication->ricRequestID.ricRequestorID = %u\n",pRICIndication->ricRequestID.ricRequestorID);
-    printf("pRICIndication->ricRequestID.ricRequestSequenceNumber = %u\n",pRICIndication->ricRequestID.ricRequestSequenceNumber);
-    printf("pRICIndication->ranFunctionID = %u\n",pRICIndication->ranFunctionID);
-    printf("pRICIndication->ricActionID = %lu\n",pRICIndication->ricActionID);
-    printf("pRICIndication->ricIndicationSN = %u\n",pRICIndication->ricIndicationSN);
-    printf("pRICIndication->ricIndicationType = %u\n",(unsigned)pRICIndication->ricIndicationType);
-    printf("pRICIndication->ricIndicationHeader.interfaceID.globalENBIDPresent = %u\n",pRICIndication->ricIndicationHeader.interfaceID.globalENBIDPresent);
-    if (pRICIndication->ricIndicationHeader.interfaceID.globalENBIDPresent) {
-        printf("pRICIndication->ricIndicationHeader.interfaceID.globalENBID.pLMNIdentity.contentLength = %u\n",(unsigned)pRICIndication->ricIndicationHeader.interfaceID.globalENBID.pLMNIdentity.contentLength);
-        printf("pRICIndication->ricIndicationHeader.interfaceID.globalENBID.pLMNIdentity.pLMNIdentityVal[0] = %u\n",(unsigned)pRICIndication->ricIndicationHeader.interfaceID.globalENBID.pLMNIdentity.pLMNIdentityVal[0]);
-        printf("pRICIndication->ricIndicationHeader.interfaceID.globalENBID.pLMNIdentity.pLMNIdentityVal[1] = %u\n",(unsigned)pRICIndication->ricIndicationHeader.interfaceID.globalENBID.pLMNIdentity.pLMNIdentityVal[1]);
-        printf("pRICIndication->ricIndicationHeader.interfaceID.globalENBID.pLMNIdentity.pLMNIdentityVal[2] = %u\n",(unsigned)pRICIndication->ricIndicationHeader.interfaceID.globalENBID.pLMNIdentity.pLMNIdentityVal[2]);
-        printf("pRICIndication->ricIndicationHeader.interfaceID.globalENBID.nodeID.bits = %u\n",(unsigned)pRICIndication->ricIndicationHeader.interfaceID.globalENBID.nodeID.bits);
-        printf("pRICIndication->ricIndicationHeader.interfaceID.globalENBID.nodeID.nodeID = %u\n",(unsigned)pRICIndication->ricIndicationHeader.interfaceID.globalENBID.nodeID.nodeID);
-    }
-    printf("pRICIndication->ricIndicationHeader.interfaceID.globalGNBIDPresent = %u\n",pRICIndication->ricIndicationHeader.interfaceID.globalGNBIDPresent);
- 	if(pRICIndication->ricIndicationHeader.interfaceID.globalGNBIDPresent){
-		printf("pRICIndication->ricIndicationHeader.interfaceID.globalGNBID.pLMNIdentity.contentLength = %u\n",(unsigned)pRICIndication->ricIndicationHeader.interfaceID.globalGNBID.pLMNIdentity.contentLength);
-		printf("pRICIndication->ricIndicationHeader.interfaceID.globalGNBID.pLMNIdentity.pLMNIdentityVal[0] = %u\n",(unsigned)pRICIndication->ricIndicationHeader.interfaceID.globalGNBID.pLMNIdentity.pLMNIdentityVal[0]);
-		printf("pRICIndication->ricIndicationHeader.interfaceID.globalGNBID.pLMNIdentity.pLMNIdentityVal[1] = %u\n",(unsigned)pRICIndication->ricIndicationHeader.interfaceID.globalGNBID.pLMNIdentity.pLMNIdentityVal[1]);
-		printf("pRICIndication->ricIndicationHeader.interfaceID.globalGNBID.pLMNIdentity.pLMNIdentityVal[2] = %u\n",(unsigned)pRICIndication->ricIndicationHeader.interfaceID.globalGNBID.pLMNIdentity.pLMNIdentityVal[2]);
-		printf("pRICIndication->ricIndicationHeader.interfaceID.globalGNBID.nodeID.bits = %u\n",(unsigned)pRICIndication->ricIndicationHeader.interfaceID.globalGNBID.nodeID.bits);
-		printf("pRICIndication->ricIndicationHeader.interfaceID.globalGNBID.nodeID.nodeID = %u\n",(unsigned)pRICIndication->ricIndicationHeader.interfaceID.globalGNBID.nodeID.nodeID);
-    }
-    printf("pRICIndication->ricIndicationHeader.interfaceDirection = %u\n",(unsigned)pRICIndication->ricIndicationHeader.interfaceDirection);
-    printf("pRICIndication->ricIndicationMessage.interfaceMessage.contentLength = %u\n",(unsigned)pRICIndication->ricIndicationMessage.interfaceMessage.contentLength);
-
-    printf("pRICIndication->ricIndicationMessage.interfaceMessage.data = ");
-    printDataBuffer(pRICIndication->ricIndicationMessage.interfaceMessage.contentLength,pRICIndication->ricIndicationMessage.interfaceMessage.data);
     printf("\n");
 }
 

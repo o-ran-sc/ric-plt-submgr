@@ -113,8 +113,6 @@ func RunTests(t *testing.T, e2aptestctxt *E2ApTests) {
 	t.Run(e2aptestctxt.Name(), func(t *testing.T) {
 		e2aptestctxt.E2ApTestMsgSubscriptionDeleteFailure(t)
 	})
-	t.Run(e2aptestctxt.Name(), func(t *testing.T) { e2aptestctxt.E2ApTestMsgIndication(t) })
-
 	t.Run(e2aptestctxt.Name(), func(t *testing.T) { e2aptestctxt.E2ApTestMsgSubscriptionRequestBuffers(t) })
 	t.Run(e2aptestctxt.Name(), func(t *testing.T) { e2aptestctxt.E2ApTestMsgSubscriptionResponseBuffers(t) })
 	t.Run(e2aptestctxt.Name(), func(t *testing.T) { e2aptestctxt.E2ApTestMsgSubscriptionFailureBuffers(t) })

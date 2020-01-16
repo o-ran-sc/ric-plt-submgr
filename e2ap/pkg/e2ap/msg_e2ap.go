@@ -42,7 +42,7 @@ const E2AP_RICSubscriptionDeleteRequest uint64 = 2
 // const E2AP_ENBConfigurationUpdate uint64 = 8
 // const E2AP_ENDCConfigurationUpdate uint64 = 9
 // const E2AP_ResetRequest uint64 = 10
-const E2AP_RICIndication uint64 = 11
+// const E2AP_RICIndication uint64 = 11
 
 // const E2AP_RICServiceQuery uint64 = 12
 // const E2AP_LoadInformation uint64 = 13

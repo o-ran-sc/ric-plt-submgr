@@ -90,15 +90,6 @@ type E2APMsgPackerSubscriptionDeleteFailureIf interface {
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-type E2APMsgPackerIndicationIf interface {
-	E2APMsgPackerIf
-	Set(*E2APIndication) error
-	Get() (error, *E2APIndication)
-}
-
-//-----------------------------------------------------------------------------
-//
-//-----------------------------------------------------------------------------
 type E2APPackerIf interface {
 	NewPackerSubscriptionRequest() E2APMsgPackerSubscriptionRequestIf
 	NewPackerSubscriptionResponse() E2APMsgPackerSubscriptionResponseIf
@@ -106,7 +97,6 @@ type E2APPackerIf interface {
 	NewPackerSubscriptionDeleteRequest() E2APMsgPackerSubscriptionDeleteRequestIf
 	NewPackerSubscriptionDeleteResponse() E2APMsgPackerSubscriptionDeleteResponseIf
 	NewPackerSubscriptionDeleteFailure() E2APMsgPackerSubscriptionDeleteFailureIf
-	NewPackerIndication() E2APMsgPackerIndicationIf
 	MessageInfo(msg *packer.PackedData) *packer.MessageInfo
 }
 
@@ -138,12 +128,6 @@ func (autopacker *E2APAutoPacker) UnPack(msg *packer.PackedData) (error, interfa
 				}
 			case E2AP_RICSubscriptionDeleteRequest:
 				unpa := autopacker.packer.NewPackerSubscriptionDeleteRequest()
-				err = unpa.UnPack(msg)
-				if err == nil {
-					return unpa.Get()
-				}
-			case E2AP_RICIndication:
-				unpa := autopacker.packer.NewPackerIndication()
 				err = unpa.UnPack(msg)
 				if err == nil {
 					return unpa.Get()
@@ -229,12 +213,6 @@ func (autopacker *E2APAutoPacker) Pack(data interface{}, trg *packer.PackedData)
 		}
 	case *E2APSubscriptionDeleteFailure:
 		pa := autopacker.packer.NewPackerSubscriptionDeleteFailure()
-		err = pa.Set(themsg)
-		if err == nil {
-			return pa.Pack(trg)
-		}
-	case *E2APIndication:
-		pa := autopacker.packer.NewPackerIndication()
 		err = pa.Set(themsg)
 		if err == nil {
 			return pa.Pack(trg)

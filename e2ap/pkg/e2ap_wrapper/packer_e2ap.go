@@ -43,9 +43,6 @@ package e2ap_wrapper
 // void initSubsDeleteFailure(RICSubscriptionDeleteFailure_t *data){
 //   bzero(data,sizeof(RICSubscriptionDeleteFailure_t));
 // }
-// void initIndication(RICIndication_t *data){
-//   bzero(data,sizeof(RICIndication_t));
-// }
 //
 import "C"
 
@@ -400,52 +397,6 @@ func (item *e2apEntryCriticalityDiagnostic) get(data *e2ap.CriticalityDiagnostic
 	return nil
 }
 
-//-----------------------------------------------------------------------------
-//
-//-----------------------------------------------------------------------------
-type e2apEntryIndicationHeader struct {
-	entry *C.RICIndicationHeader_t
-}
-
-func (indHdr *e2apEntryIndicationHeader) set(data *e2ap.IndicationHeader) error {
-	indHdr.entry.interfaceDirection = (C.uint8_t)(data.InterfaceDirection)
-	return (&e2apEntryInterfaceId{entry: &indHdr.entry.interfaceID}).set(&data.InterfaceId)
-}
-
-func (indHdr *e2apEntryIndicationHeader) get(data *e2ap.IndicationHeader) error {
-	data.InterfaceDirection = (uint32)(indHdr.entry.interfaceDirection)
-	return (&e2apEntryInterfaceId{entry: &indHdr.entry.interfaceID}).get(&data.InterfaceId)
-}
-
-//-----------------------------------------------------------------------------
-//
-//-----------------------------------------------------------------------------
-type e2apEntryIndicationMessage struct {
-	entry *C.RICIndicationMessage_t
-}
-
-func (indMsg *e2apEntryIndicationMessage) set(data *e2ap.IndicationMessage) error {
-	if len(data.InterfaceMessage.Buf) > 1024 {
-		return fmt.Errorf("IndicationMessage.InterfaceMessage: too long %d while allowed %d", len(data.InterfaceMessage.Buf), 1024)
-	}
-	indMsg.entry.interfaceMessage.contentLength = (C.uint64_t)(len(data.InterfaceMessage.Buf))
-	for i := 0; i < len(data.InterfaceMessage.Buf); i++ {
-		indMsg.entry.interfaceMessage.data[i] = (C.uint8_t)(data.InterfaceMessage.Buf[i])
-	}
-	return nil
-}
-
-func (indMsg *e2apEntryIndicationMessage) get(data *e2ap.IndicationMessage) error {
-	conlen := (int)(indMsg.entry.interfaceMessage.contentLength)
-	if conlen > 0 {
-		data.InterfaceMessage.Buf = make([]byte, conlen)
-		for i := 0; i < conlen; i++ {
-			data.InterfaceMessage.Buf[i] = (uint8)(indMsg.entry.interfaceMessage.data[i])
-		}
-	}
-	return nil
-}
-
 /*
 //-----------------------------------------------------------------------------
 //
@@ -492,9 +443,6 @@ func (e2apMsg *e2apMessage) MessageInfo() *packer.MessageInfo {
 			return msgInfo
 		case C.cRICSubscriptionDeleteRequest:
 			msgInfo.MsgId = e2ap.E2AP_RICSubscriptionDeleteRequest
-			return msgInfo
-		case C.cRICIndication:
-			msgInfo.MsgId = e2ap.E2AP_RICIndication
 			return msgInfo
 		}
 	case C.cE2SuccessfulOutcome:
@@ -1238,149 +1186,6 @@ func (e2apMsg *e2apMsgSubscriptionDeleteFailure) String() string {
 }
 
 //-----------------------------------------------------------------------------
-//
-//-----------------------------------------------------------------------------
-type e2apMsgIndication struct {
-	e2apMessage
-	msgC *C.RICIndication_t
-}
-
-func (e2apMsg *e2apMsgIndication) Set(data *e2ap.E2APIndication) error {
-
-	e2apMsg.msgC = &C.RICIndication_t{}
-	C.initIndication(e2apMsg.msgC)
-
-	e2apMsg.msgC.ranFunctionID = (C.uint16_t)(data.FunctionId)
-	e2apMsg.msgC.ricIndicationSN = (C.int32_t)(data.IndicationSn)
-	e2apMsg.msgC.ricIndicationType = (C.uint64_t)(data.IndicationType)
-
-	if err := (&e2apEntryRequestID{entry: &e2apMsg.msgC.ricRequestID}).set(&data.RequestId); err != nil {
-		return err
-	}
-	if err := (&e2apEntryIndicationHeader{entry: &e2apMsg.msgC.ricIndicationHeader}).set(&data.IndicationHeader); err != nil {
-		return err
-	}
-	if err := (&e2apEntryIndicationMessage{entry: &e2apMsg.msgC.ricIndicationMessage}).set(&data.IndicationMessage); err != nil {
-		return err
-	}
-	/*	NOT SUPPORTED
-		if err := (&e2apEntryCallProcessId{entry: &e2apMsg.msgC.ricCallProcessID}).set(&data.CallProcessId); err != nil {
-			return err
-		}
-	*/
-	return nil
-}
-
-func (e2apMsg *e2apMsgIndication) Get() (error, *e2ap.E2APIndication) {
-
-	data := &e2ap.E2APIndication{}
-
-	data.FunctionId = (e2ap.FunctionId)(e2apMsg.msgC.ranFunctionID)
-	data.IndicationSn = (int32)(e2apMsg.msgC.ricIndicationSN)
-	data.IndicationType = (uint64)(e2apMsg.msgC.ricIndicationType)
-
-	if err := (&e2apEntryRequestID{entry: &e2apMsg.msgC.ricRequestID}).get(&data.RequestId); err != nil {
-		return err, data
-	}
-	if err := (&e2apEntryIndicationHeader{entry: &e2apMsg.msgC.ricIndicationHeader}).get(&data.IndicationHeader); err != nil {
-		return err, data
-	}
-	if err := (&e2apEntryIndicationMessage{entry: &e2apMsg.msgC.ricIndicationMessage}).get(&data.IndicationMessage); err != nil {
-		return err, data
-	}
-	/*	NOT SUPPORTED
-		if err := (&e2apEntryCallProcessId{entry: &e2apMsg.msgC.ricCallProcessID}).get(&data.CallProcessId); err != nil {
-			return err,data
-		}
-	*/
-	return nil, data
-}
-
-func (e2apMsg *e2apMsgIndication) PduPack(logBuf []byte, data *packer.PackedData) error {
-
-	/*	NOT SUPPORTED
-		callProcId := e2apEntryCallProcessId{entry: &e2apMsg.msgC.ricCallProcessID}
-		if err := callProcId.pack(); err != nil {
-			return err
-		}
-	*/
-	var buflen uint32 = (uint32)(len(data.Buf))
-	errorNro := C.packRICIndication((*C.size_t)(unsafe.Pointer(&buflen)), (*C.uchar)(unsafe.Pointer(&data.Buf[0])), (*C.char)(unsafe.Pointer(&logBuf[0])), e2apMsg.msgC)
-	if errorNro != C.e2err_OK {
-		return fmt.Errorf("%s", C.GoString(C.getE2ErrorString(errorNro)))
-	}
-	data.Buf = data.Buf[0:buflen]
-	return nil
-}
-
-func (e2apMsg *e2apMsgIndication) PduUnPack(logBuf []byte, data *packer.PackedData) error {
-
-	e2apMsg.msgC = &C.RICIndication_t{}
-	C.initIndication(e2apMsg.msgC)
-
-	e2apMsg.e2apMessage.PduUnPack(logBuf, data)
-	if e2apMsg.e2apMessage.messageInfo.messageType != C.cE2InitiatingMessage || e2apMsg.e2apMessage.messageInfo.messageId != C.cRICIndication {
-		return fmt.Errorf("unpackE2AP_pdu failed -> %s", e2apMsg.e2apMessage.String())
-	}
-	errorNro := C.getRICIndicationData(e2apMsg.e2apMessage.pdu, e2apMsg.msgC)
-	if errorNro != C.e2err_OK {
-		return fmt.Errorf("%s", C.GoString(C.getE2ErrorString(errorNro)))
-	}
-
-	/*	NOT SUPPORTED
-		callProcId := e2apEntryCallProcessId{entry: &e2apMsg.msgC.ricCallProcessID}
-		if err := callProcId.unpack(); err != nil {
-			return err
-		}
-	*/
-	return nil
-}
-
-func (e2apMsg *e2apMsgIndication) Pack(trg *packer.PackedData) (error, *packer.PackedData) {
-	return packer.PduPackerPackAllocTrg(e2apMsg, trg)
-}
-
-func (e2apMsg *e2apMsgIndication) UnPack(msg *packer.PackedData) error {
-	return packer.PduPackerUnPack(e2apMsg, msg)
-}
-
-func (e2apMsg *e2apMsgIndication) String() string {
-	var b bytes.Buffer
-	fmt.Fprintln(&b, "ricIndication.")
-	fmt.Fprintln(&b, "  ricRequestID.")
-	fmt.Fprintln(&b, "    ricRequestorID =", e2apMsg.msgC.ricRequestID.ricRequestorID)
-	fmt.Fprintln(&b, "    ricRequestSequenceNumber =", e2apMsg.msgC.ricRequestID.ricRequestSequenceNumber)
-	fmt.Fprintln(&b, "  ranFunctionID =", e2apMsg.msgC.ranFunctionID)
-
-	fmt.Fprintln(&b, "  ricActionID =", e2apMsg.msgC.ricActionID)
-	fmt.Fprintln(&b, "  ricIndicationSN =", e2apMsg.msgC.ricIndicationSN)
-	fmt.Fprintln(&b, "  ricIndicationType =", e2apMsg.msgC.ricIndicationType)
-	fmt.Fprintln(&b, "  ricIndication.ricIndicationHeader.")
-	fmt.Fprintln(&b, "    interfaceID.globalENBIDPresent =", e2apMsg.msgC.ricIndicationHeader.interfaceID.globalENBIDPresent)
-	if e2apMsg.msgC.ricIndicationHeader.interfaceID.globalENBIDPresent {
-		fmt.Fprintln(&b, "      interfaceID.globalENBID.pLMNIdentity.contentLength =", e2apMsg.msgC.ricIndicationHeader.interfaceID.globalENBID.pLMNIdentity.contentLength)
-		fmt.Fprintln(&b, "      interfaceID.globalENBID.pLMNIdentity.pLMNIdentityVal[0] =", e2apMsg.msgC.ricIndicationHeader.interfaceID.globalENBID.pLMNIdentity.pLMNIdentityVal[0])
-		fmt.Fprintln(&b, "      interfaceID.globalENBID.pLMNIdentity.pLMNIdentityVal[1] =", e2apMsg.msgC.ricIndicationHeader.interfaceID.globalENBID.pLMNIdentity.pLMNIdentityVal[1])
-		fmt.Fprintln(&b, "      interfaceID.globalENBID.pLMNIdentity.pLMNIdentityVal[2] =", e2apMsg.msgC.ricIndicationHeader.interfaceID.globalENBID.pLMNIdentity.pLMNIdentityVal[2])
-		fmt.Fprintln(&b, "      interfaceID.globalENBID.nodeID.bits =", e2apMsg.msgC.ricIndicationHeader.interfaceID.globalENBID.nodeID.bits)
-		fmt.Fprintln(&b, "      interfaceID.globalENBID.nodeID.nodeID =", e2apMsg.msgC.ricIndicationHeader.interfaceID.globalENBID.nodeID.nodeID)
-	}
-	fmt.Fprintln(&b, "      interfaceID.globalGNBIDPresent =", e2apMsg.msgC.ricIndicationHeader.interfaceID.globalGNBIDPresent)
-	if e2apMsg.msgC.ricIndicationHeader.interfaceID.globalGNBIDPresent {
-		fmt.Fprintln(&b, "      interfaceID.globalGNBID.pLMNIdentity.contentLength =", e2apMsg.msgC.ricIndicationHeader.interfaceID.globalGNBID.pLMNIdentity.contentLength)
-		fmt.Fprintln(&b, "      interfaceID.globalGNBID.pLMNIdentity.pLMNIdentityVal[0] =", e2apMsg.msgC.ricIndicationHeader.interfaceID.globalGNBID.pLMNIdentity.pLMNIdentityVal[0])
-		fmt.Fprintln(&b, "      interfaceID.globalGNBID.pLMNIdentity.pLMNIdentityVal[1] =", e2apMsg.msgC.ricIndicationHeader.interfaceID.globalGNBID.pLMNIdentity.pLMNIdentityVal[1])
-		fmt.Fprintln(&b, "      interfaceID.globalGNBID.pLMNIdentity.pLMNIdentityVal[2] =", e2apMsg.msgC.ricIndicationHeader.interfaceID.globalGNBID.pLMNIdentity.pLMNIdentityVal[2])
-		fmt.Fprintln(&b, "      interfaceID.globalGNBID.nodeID.bits =", e2apMsg.msgC.ricIndicationHeader.interfaceID.globalGNBID.nodeID.bits)
-		fmt.Fprintln(&b, "      interfaceID.globalGNBID.nodeID.nodeID =", e2apMsg.msgC.ricIndicationHeader.interfaceID.globalGNBID.nodeID.nodeID)
-	}
-	fmt.Fprintln(&b, "  ricIndication.ricIndicationMessage.interfaceMessage.contentLength =", e2apMsg.msgC.ricIndicationMessage.interfaceMessage.contentLength)
-	fmt.Fprintln(&b, "  ricIndication.ricIndicationMessage.interfaceMessage.data =", e2apMsg.msgC.ricIndicationMessage.interfaceMessage.data[:e2apMsg.msgC.ricIndicationMessage.interfaceMessage.contentLength])
-	//	fmt.Fprintln(&b,"  ricIndication.ricCallProcessID.ricCallProcessIDVal =", e2apMsg.msgC.ricCallProcessID.ricCallProcessIDVal)
-	return b.String()
-}
-
-//-----------------------------------------------------------------------------
 // Public E2AP packer creators
 //-----------------------------------------------------------------------------
 
@@ -1408,10 +1213,6 @@ func (*cppasn1E2APPacker) NewPackerSubscriptionDeleteResponse() e2ap.E2APMsgPack
 
 func (*cppasn1E2APPacker) NewPackerSubscriptionDeleteFailure() e2ap.E2APMsgPackerSubscriptionDeleteFailureIf {
 	return &e2apMsgSubscriptionDeleteFailure{}
-}
-
-func (*cppasn1E2APPacker) NewPackerIndication() e2ap.E2APMsgPackerIndicationIf {
-	return &e2apMsgIndication{}
 }
 
 func (*cppasn1E2APPacker) MessageInfo(msg *packer.PackedData) *packer.MessageInfo {
