@@ -20,7 +20,7 @@
 package control
 
 import (
-	"errors"
+	"fmt"
 	rtmgrclient "gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/rtmgr_client"
 	rtmgrhandle "gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/rtmgr_client/handle"
 	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/rtmgr_models"
@@ -29,6 +29,22 @@ import (
 	"strings"
 )
 
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type SubRouteInfo struct {
+	Command Action
+	EpList  RmrEndpointList
+	SubID   uint16
+}
+
+func (sri *SubRouteInfo) String() string {
+	return "routeinfo(" + sri.Command.String() + "/" + strconv.FormatUint(uint64(sri.SubID), 10) + "/[" + sri.EpList.String() + "])"
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
 type RtmgrClient struct {
 	rtClient         *rtmgrclient.RoutingManager
 	xappHandleParams *rtmgrhandle.ProvideXappSubscriptionHandleParams
@@ -36,48 +52,23 @@ type RtmgrClient struct {
 }
 
 func (rc *RtmgrClient) SubscriptionRequestUpdate(subRouteAction SubRouteInfo) error {
-	xapp.Logger.Debug("SubscriptionRequestUpdate() invoked")
 	subID := int32(subRouteAction.SubID)
-	xapp.Logger.Debug("Subscription action details received. subRouteAction.Command: %v, Address %s, Port %v, subID %v", int16(subRouteAction.Command), subRouteAction.Address, subRouteAction.Port, subID)
-	xappSubReq := rtmgr_models.XappSubscriptionData{&subRouteAction.Address, &subRouteAction.Port, &subID}
-
+	xapp.Logger.Debug("%s ongoing", subRouteAction.String())
+	xappSubReq := rtmgr_models.XappSubscriptionData{&subRouteAction.EpList.Endpoints[0].Addr, &subRouteAction.EpList.Endpoints[0].Port, &subID}
+	var err error
 	switch subRouteAction.Command {
 	case CREATE:
-		_, postErr := rc.rtClient.Handle.ProvideXappSubscriptionHandle(rc.xappHandleParams.WithXappSubscriptionData(&xappSubReq))
-		if postErr != nil && !(strings.Contains(postErr.Error(), "status 200")) {
-			xapp.Logger.Error("Updating routing manager about subscription id = %d failed with error: %v", subID, postErr)
-			return postErr
-		} else {
-			xapp.Logger.Info("Succesfully updated routing manager about the subscription: %d", subID)
-			return nil
-		}
+		_, err = rc.rtClient.Handle.ProvideXappSubscriptionHandle(rc.xappHandleParams.WithXappSubscriptionData(&xappSubReq))
 	case DELETE:
-		_, _, deleteErr := rc.rtClient.Handle.DeleteXappSubscriptionHandle(rc.xappDeleteParams.WithXappSubscriptionData(&xappSubReq))
-		if deleteErr != nil && !(strings.Contains(deleteErr.Error(), "status 200")) {
-			xapp.Logger.Error("Deleting subscription id = %d  in routing manager, failed with error: %v", subID, deleteErr)
-			return deleteErr
-		} else {
-			xapp.Logger.Info("Succesfully deleted subscription: %d in routing manager.", subID)
-			return nil
-		}
+		_, _, err = rc.rtClient.Handle.DeleteXappSubscriptionHandle(rc.xappDeleteParams.WithXappSubscriptionData(&xappSubReq))
 	default:
-		xapp.Logger.Debug("Unknown subRouteAction.Command: %v, Address %s, Port %v, subID: %v", subRouteAction.Command, subRouteAction.Address, subRouteAction.Port, subID)
-		return nil
+		return fmt.Errorf("%s unknown", subRouteAction.String())
 	}
-}
 
-func (rc *RtmgrClient) SplitSource(src string) (*string, *uint16, error) {
-	tcpSrc := strings.Split(src, ":")
-	if len(tcpSrc) != 2 {
-		err := errors.New("unable to get the source details of the xapp - check the source string received from the rmr")
-		return nil, nil, err
+	if err != nil && !(strings.Contains(err.Error(), "status 200")) {
+		return fmt.Errorf("%s failed with error: %s", subRouteAction.String(), err.Error())
 	}
-	srcAddr := tcpSrc[0]
-	xapp.Logger.Debug("Debugging Inside splitsource tcpsrc[0] = %s and tcpsrc[1]= %s ", tcpSrc[0], tcpSrc[1])
-	srcPort, err := strconv.ParseUint(tcpSrc[1], 10, 16)
-	if err != nil {
-		return nil, nil, err
-	}
-	srcPortInt := uint16(srcPort)
-	return &srcAddr, &srcPortInt, nil
+	xapp.Logger.Debug("%s successful", subRouteAction.String())
+	return nil
+
 }

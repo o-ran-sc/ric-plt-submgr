@@ -591,6 +591,41 @@ func (mc *testingMainControl) wait_msgcounter_change(t *testing.T, orig uint64, 
 //
 //   stub                          stub
 // +-------+     +---------+    +---------+
+// | xapp  |     | submgr  |    | rtmgr   |
+// +-------+     +---------+    +---------+
+//     |              |              |
+//     | SubReq       |              |
+//     |------------->|              |
+//     |              |              |
+//     |              | RouteCreate  |
+//     |              |------------->|
+//     |              |              |
+//     |              | RouteCreate  |
+//     |              |  status:400  |
+//     |              |<-------------|
+//     |              |              |
+//     |       [SUBS INT DELETE]     |
+//     |              |              |
+//
+//-----------------------------------------------------------------------------
+
+func TestSubReqAndRouteNok(t *testing.T) {
+	xapp.Logger.Info("TestSubReqAndRouteNok")
+
+	waiter := rtmgrHttp.AllocNextEvent(false)
+	newSubsId := mainCtrl.get_subid(t)
+	xappConn1.handle_xapp_subs_req(t, nil)
+	waiter.WaitResult(t)
+
+	//Wait that subs is cleaned
+	mainCtrl.wait_subs_clean(t, int(newSubsId), 10)
+}
+
+//-----------------------------------------------------------------------------
+// TestSubReqAndSubDelOk
+//
+//   stub                          stub
+// +-------+     +---------+    +---------+
 // | xapp  |     | submgr  |    | e2term  |
 // +-------+     +---------+    +---------+
 //     |              |              |
@@ -622,26 +657,24 @@ func (mc *testingMainControl) wait_msgcounter_change(t *testing.T, orig uint64, 
 //-----------------------------------------------------------------------------
 func TestSubReqAndSubDelOk(t *testing.T) {
 	xapp.Logger.Info("TestSubReqAndSubDelOk")
-	rtmgrHttp.UseChannel(true)
 
+	waiter := rtmgrHttp.AllocNextEvent(true)
 	cretrans := xappConn1.handle_xapp_subs_req(t, nil)
-	msg := rtmgrHttp.WaitReq(t)
-	msg.RetOk()
+	waiter.WaitResult(t)
+
 	crereq, cremsg := e2termConn.handle_e2term_subs_req(t)
 	e2termConn.handle_e2term_subs_resp(t, crereq, cremsg)
 	e2SubsId := xappConn1.handle_xapp_subs_resp(t, cretrans)
-
 	deltrans := xappConn1.handle_xapp_subs_del_req(t, nil, e2SubsId)
 	delreq, delmsg := e2termConn.handle_e2term_subs_del_req(t)
+
+	waiter = rtmgrHttp.AllocNextEvent(true)
 	e2termConn.handle_e2term_subs_del_resp(t, delreq, delmsg)
 	xappConn1.handle_xapp_subs_del_resp(t, deltrans)
-
-	msg = rtmgrHttp.WaitReq(t)
-	msg.RetOk()
+	waiter.WaitResult(t)
 
 	//Wait that subs is cleaned
 	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
-	rtmgrHttp.UseChannel(false)
 }
 
 //-----------------------------------------------------------------------------
