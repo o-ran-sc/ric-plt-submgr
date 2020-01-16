@@ -36,23 +36,93 @@ import (
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-type testingControl struct {
+
+type httpRtmgrMsg struct {
+	msg *rtmgr_models.XappSubscriptionData
+	w   http.ResponseWriter
+	r   *http.Request
+}
+
+func (msg *httpRtmgrMsg) RetOk() {
+	msg.w.WriteHeader(200)
+}
+
+type testingHttpRtmgrControl struct {
+	desc       string
+	port       string
+	useChannel bool
+	msgChan    chan *httpRtmgrMsg
+}
+
+func (hc *testingHttpRtmgrControl) UseChannel(flag bool) {
+	hc.useChannel = flag
+}
+
+func (hc *testingHttpRtmgrControl) WaitReq(t *testing.T) *httpRtmgrMsg {
+	xapp.Logger.Info("(%s) handle_rtmgr_req", hc.desc)
+	select {
+	case msg := <-hc.msgChan:
+		return msg
+	case <-time.After(15 * time.Second):
+		testError(t, "(%s) Not Received RTMGR Subscription message within 15 secs", hc.desc)
+		return nil
+	}
+	return nil
+}
+
+func (hc *testingHttpRtmgrControl) http_handler(w http.ResponseWriter, r *http.Request) {
+	var req rtmgr_models.XappSubscriptionData
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		xapp.Logger.Error("%s", err.Error())
+	}
+	xapp.Logger.Info("(%s) handling Address=%s Port=%d SubscriptionID=%d", hc.desc, *req.Address, *req.Port, *req.SubscriptionID)
+	msg := &httpRtmgrMsg{
+		msg: &req,
+		w:   w,
+		r:   r,
+	}
+	if hc.useChannel {
+		hc.msgChan <- msg
+	} else {
+		msg.RetOk()
+	}
+}
+
+func (hc *testingHttpRtmgrControl) run() {
+	http.HandleFunc("/", hc.http_handler)
+	http.ListenAndServe("localhost:"+hc.port, nil)
+}
+
+func initTestingHttpRtmgrControl(desc string, port string) *testingHttpRtmgrControl {
+	hc := &testingHttpRtmgrControl{}
+	hc.desc = desc
+	hc.port = port
+	hc.useChannel = false
+	hc.msgChan = make(chan *httpRtmgrMsg)
+	return hc
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type testingRmrControl struct {
 	desc     string
 	syncChan chan struct{}
 }
 
-func (tc *testingControl) ReadyCB(data interface{}) {
-	xapp.Logger.Info("testingControl(%s) ReadyCB", tc.desc)
+func (tc *testingRmrControl) ReadyCB(data interface{}) {
+	xapp.Logger.Info("testingRmrControl(%s) ReadyCB", tc.desc)
 	tc.syncChan <- struct{}{}
 	return
 }
 
-func (tc *testingControl) WaitCB() {
+func (tc *testingRmrControl) WaitCB() {
 	<-tc.syncChan
 }
 
-func initTestingControl(desc string, rtfile string, port string) testingControl {
-	tc := testingControl{}
+func initTestingControl(desc string, rtfile string, port string) testingRmrControl {
+	tc := testingRmrControl{}
 	os.Setenv("RMR_SEED_RT", rtfile)
 	os.Setenv("RMR_SRC_ID", "localhost:"+port)
 	xapp.Logger.Info("Using rt file %s", os.Getenv("RMR_SEED_RT"))
@@ -65,13 +135,13 @@ func initTestingControl(desc string, rtfile string, port string) testingControl 
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-type testingRmrControl struct {
-	testingControl
+type testingRmrStubControl struct {
+	testingRmrControl
 	rmrClientTest *xapp.RMRClient
 	active        bool
 }
 
-func (tc *testingRmrControl) RmrSend(params *RMRParams) (err error) {
+func (tc *testingRmrStubControl) RmrSend(params *RMRParams) (err error) {
 	//
 	//NOTE: Do this way until xapp-frame sending is improved
 	//
@@ -92,10 +162,10 @@ func (tc *testingRmrControl) RmrSend(params *RMRParams) (err error) {
 	return
 }
 
-func initTestingRmrControl(desc string, rtfile string, port string, stat string, consumer xapp.MessageConsumer) testingRmrControl {
-	tc := testingRmrControl{}
+func initTestingRmrControl(desc string, rtfile string, port string, stat string, consumer xapp.MessageConsumer) testingRmrStubControl {
+	tc := testingRmrStubControl{}
 	tc.active = false
-	tc.testingControl = initTestingControl(desc, rtfile, port)
+	tc.testingRmrControl = initTestingControl(desc, rtfile, port)
 	tc.rmrClientTest = xapp.NewRMRClientWithParams("tcp:"+port, 4096, 1, stat)
 	tc.rmrClientTest.SetReadyCB(tc.ReadyCB, nil)
 	go tc.rmrClientTest.Start(consumer)
@@ -126,7 +196,7 @@ type xappTransaction struct {
 }
 
 type testingXappControl struct {
-	testingRmrControl
+	testingRmrStubControl
 	testingMessageChannel
 	xid_seq uint64
 }
@@ -172,7 +242,7 @@ func (tc *testingXappControl) Consume(params *xapp.RMRParams) (err error) {
 
 func createNewXappControl(desc string, rtfile string, port string, stat string) *testingXappControl {
 	xappCtrl := &testingXappControl{}
-	xappCtrl.testingRmrControl = initTestingRmrControl(desc, rtfile, port, stat, xappCtrl)
+	xappCtrl.testingRmrStubControl = initTestingRmrControl(desc, rtfile, port, stat, xappCtrl)
 	xappCtrl.testingMessageChannel = initTestingMessageChannel()
 	xappCtrl.xid_seq = 1
 	return xappCtrl
@@ -182,7 +252,7 @@ func createNewXappControl(desc string, rtfile string, port string, stat string) 
 //
 //-----------------------------------------------------------------------------
 type testingE2termControl struct {
-	testingRmrControl
+	testingRmrStubControl
 	testingMessageChannel
 }
 
@@ -204,7 +274,7 @@ func (tc *testingE2termControl) Consume(params *xapp.RMRParams) (err error) {
 
 func createNewE2termControl(desc string, rtfile string, port string, stat string) *testingE2termControl {
 	e2termCtrl := &testingE2termControl{}
-	e2termCtrl.testingRmrControl = initTestingRmrControl(desc, rtfile, port, stat, e2termCtrl)
+	e2termCtrl.testingRmrStubControl = initTestingRmrControl(desc, rtfile, port, stat, e2termCtrl)
 	e2termCtrl.testingMessageChannel = initTestingMessageChannel()
 	return e2termCtrl
 }
@@ -213,13 +283,13 @@ func createNewE2termControl(desc string, rtfile string, port string, stat string
 //
 //-----------------------------------------------------------------------------
 type testingMainControl struct {
-	testingControl
+	testingRmrControl
 	c *Control
 }
 
 func createNewMainControl(desc string, rtfile string, port string) *testingMainControl {
 	mainCtrl = &testingMainControl{}
-	mainCtrl.testingControl = initTestingControl(desc, rtfile, port)
+	mainCtrl.testingRmrControl = initTestingControl(desc, rtfile, port)
 	mainCtrl.c = NewControl()
 	xapp.SetReadyCB(mainCtrl.ReadyCB, nil)
 	go xapp.RunWithParams(mainCtrl.c, false)
@@ -262,6 +332,7 @@ var xappConn1 *testingXappControl
 var xappConn2 *testingXappControl
 var e2termConn *testingE2termControl
 var mainCtrl *testingMainControl
+var rtmgrHttp *testingHttpRtmgrControl
 
 func TestMain(m *testing.M) {
 	xapp.Logger.Info("TestMain start")
@@ -269,21 +340,8 @@ func TestMain(m *testing.M) {
 	//---------------------------------
 	//
 	//---------------------------------
-	http_handler := func(w http.ResponseWriter, r *http.Request) {
-		var req rtmgr_models.XappSubscriptionData
-		err := json.NewDecoder(r.Body).Decode(&req)
-		if err != nil {
-			xapp.Logger.Error("%s", err.Error())
-		}
-		xapp.Logger.Info("(http handler) handling Address=%s Port=%d SubscriptionID=%d", *req.Address, *req.Port, *req.SubscriptionID)
-
-		w.WriteHeader(200)
-	}
-
-	go func() {
-		http.HandleFunc("/", http_handler)
-		http.ListenAndServe("localhost:8989", nil)
-	}()
+	rtmgrHttp = initTestingHttpRtmgrControl("RTMGRSTUB", "8989")
+	go rtmgrHttp.run()
 
 	//---------------------------------
 	//

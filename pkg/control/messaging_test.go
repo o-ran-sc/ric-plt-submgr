@@ -622,8 +622,11 @@ func (mc *testingMainControl) wait_msgcounter_change(t *testing.T, orig uint64, 
 //-----------------------------------------------------------------------------
 func TestSubReqAndSubDelOk(t *testing.T) {
 	xapp.Logger.Info("TestSubReqAndSubDelOk")
+	rtmgrHttp.UseChannel(true)
 
 	cretrans := xappConn1.handle_xapp_subs_req(t, nil)
+	msg := rtmgrHttp.WaitReq(t)
+	msg.RetOk()
 	crereq, cremsg := e2termConn.handle_e2term_subs_req(t)
 	e2termConn.handle_e2term_subs_resp(t, crereq, cremsg)
 	e2SubsId := xappConn1.handle_xapp_subs_resp(t, cretrans)
@@ -633,8 +636,12 @@ func TestSubReqAndSubDelOk(t *testing.T) {
 	e2termConn.handle_e2term_subs_del_resp(t, delreq, delmsg)
 	xappConn1.handle_xapp_subs_del_resp(t, deltrans)
 
+	msg = rtmgrHttp.WaitReq(t)
+	msg.RetOk()
+
 	//Wait that subs is cleaned
 	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
+	rtmgrHttp.UseChannel(false)
 }
 
 //-----------------------------------------------------------------------------
