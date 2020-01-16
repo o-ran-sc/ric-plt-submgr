@@ -94,18 +94,18 @@ bool E2encode(E2AP_PDU_t* pE2AP_PDU, size_t* dataBufferSize, byte* dataBuffer, c
     asn_enc_rval_t rval;
     rval = asn_encode_to_buffer(0, ATS_ALIGNED_BASIC_PER, &asn_DEF_E2AP_PDU, pE2AP_PDU, dataBuffer, *dataBufferSize);
     if (rval.encoded == -1) {
-        sprintf(pLogBuffer,"\nSerialization of %s failed.\n", asn_DEF_E2AP_PDU.name);
+        sprintf(pLogBuffer,"Serialization of %s failed.", asn_DEF_E2AP_PDU.name);
         ASN_STRUCT_FREE(asn_DEF_E2AP_PDU, pE2AP_PDU);
         return false;
     }
     else if (rval.encoded > *dataBufferSize) {
-        sprintf(pLogBuffer,"\nBuffer of size %zu is too small for %s, need %zu\n",*dataBufferSize, asn_DEF_E2AP_PDU.name, rval.encoded);
+        sprintf(pLogBuffer,"Buffer of size %zu is too small for %s, need %zu",*dataBufferSize, asn_DEF_E2AP_PDU.name, rval.encoded);
         ASN_STRUCT_FREE(asn_DEF_E2AP_PDU, pE2AP_PDU);
         return false;
     }
     else {
         if (debug)
-            sprintf(pLogBuffer,"\nSuccessfully encoded %s. Buffer size %zu, encoded size %zu\n\n",asn_DEF_E2AP_PDU.name, *dataBufferSize, rval.encoded);
+            sprintf(pLogBuffer,"Successfully encoded %s. Buffer size %zu, encoded size %zu",asn_DEF_E2AP_PDU.name, *dataBufferSize, rval.encoded);
 
         ASN_STRUCT_FREE(asn_DEF_E2AP_PDU, pE2AP_PDU);
         *dataBufferSize = rval.encoded;
@@ -370,17 +370,17 @@ uint64_t packRICEventTriggerDefinition(char* pLogBuffer, RICEventTriggerDefiniti
                                     pRICEventTriggerDefinition->octetString.data, bufferSize);
         if(rval.encoded == -1)
         {
-            sprintf(pLogBuffer,"\nSerialization of %s failed.\n", asn_DEF_E2SM_gNB_X2_eventTriggerDefinition.name);
+            sprintf(pLogBuffer,"Serialization of %s failed.", asn_DEF_E2SM_gNB_X2_eventTriggerDefinition.name);
             return e2err_RICEventTriggerDefinitionPackFail_1;
         }
         else if(rval.encoded > bufferSize)
         {
-           sprintf(pLogBuffer,"\nBuffer of size %zu is too small for %s, need %zu\n",bufferSize, asn_DEF_E2SM_gNB_X2_eventTriggerDefinition.name, rval.encoded);
+           sprintf(pLogBuffer,"Buffer of size %zu is too small for %s, need %zu",bufferSize, asn_DEF_E2SM_gNB_X2_eventTriggerDefinition.name, rval.encoded);
             return e2err_RICEventTriggerDefinitionPackFail_2;
         }
         else
         if (debug)
-               sprintf(pLogBuffer,"\nSuccessfully encoded %s. Buffer size %zu, encoded size %zu\n\n",asn_DEF_E2SM_gNB_X2_eventTriggerDefinition.name, bufferSize, rval.encoded);
+               sprintf(pLogBuffer,"Successfully encoded %s. Buffer size %zu, encoded size %zu",asn_DEF_E2SM_gNB_X2_eventTriggerDefinition.name, bufferSize, rval.encoded);
 
         ASN_STRUCT_FREE(asn_DEF_E2SM_gNB_X2_eventTriggerDefinition, pE2SM_gNB_X2_eventTriggerDefinition);
 
@@ -898,17 +898,17 @@ uint64_t packRICIndicationHeader(char* pLogBuffer, RICIndicationHeader_t* pRICIn
                                     pRICIndicationHeader->octetString.data, bufferSize);
         if(rval.encoded == -1)
         {
-            sprintf(pLogBuffer,"\nSerialization of %s failed.\n", asn_DEF_E2SM_gNB_X2_indicationHeader.name);
+            sprintf(pLogBuffer,"Serialization of %s failed.", asn_DEF_E2SM_gNB_X2_indicationHeader.name);
             return e2err_RICindicationHeaderPackFail_1;
         }
         else if(rval.encoded > bufferSize)
         {
-            sprintf(pLogBuffer,"\nBuffer of size %zu is too small for %s, need %zu\n",bufferSize, asn_DEF_E2SM_gNB_X2_indicationHeader.name, rval.encoded);
+            sprintf(pLogBuffer,"Buffer of size %zu is too small for %s, need %zu",bufferSize, asn_DEF_E2SM_gNB_X2_indicationHeader.name, rval.encoded);
             return e2err_RICindicationHeaderPackFail_2;
         }
         else
             if (debug)
-                sprintf(pLogBuffer,"\nSuccessfully encoded %s. Buffer size %zu, encoded size %zu\n\n",asn_DEF_E2SM_gNB_X2_indicationHeader.name, bufferSize, rval.encoded);
+                sprintf(pLogBuffer,"Successfully encoded %s. Buffer size %zu, encoded size %zu",asn_DEF_E2SM_gNB_X2_indicationHeader.name, bufferSize, rval.encoded);
 
         ASN_STRUCT_FREE(asn_DEF_E2SM_gNB_X2_indicationHeader, pE2SM_gNB_X2_indicationHeader);
 
@@ -945,17 +945,17 @@ uint64_t packRICIndicationMessage(char* pLogBuffer, RICIndicationMessage_t* pRIC
                                     pRICIndicationMessage->octetString.data, bufferSize);
         if(rval.encoded == -1)
         {
-            sprintf(pLogBuffer,"\nSerialization of %s failed.\n", asn_DEF_E2SM_gNB_X2_indicationMessage.name);
+            sprintf(pLogBuffer,"Serialization of %s failed.", asn_DEF_E2SM_gNB_X2_indicationMessage.name);
             return e2err_RICindicationMessagePackFail_1;
         }
         else if(rval.encoded > bufferSize)
         {
-            sprintf(pLogBuffer,"\nBuffer of size %zu is too small for %s, need %zu\n",bufferSize, asn_DEF_E2SM_gNB_X2_indicationMessage.name, rval.encoded);
+            sprintf(pLogBuffer,"Buffer of size %zu is too small for %s, need %zu",bufferSize, asn_DEF_E2SM_gNB_X2_indicationMessage.name, rval.encoded);
             return e2err_RICindicationMessagePackFail_2;
         }
         else
             if (debug)
-                sprintf(pLogBuffer,"\nSuccessfully encoded %s. Buffer size %zu, encoded size %zu\n\n",asn_DEF_E2SM_gNB_X2_indicationMessage.name, bufferSize, rval.encoded);
+                sprintf(pLogBuffer,"Successfully encoded %s. Buffer size %zu, encoded size %zu",asn_DEF_E2SM_gNB_X2_indicationMessage.name, bufferSize, rval.encoded);
 
         ASN_STRUCT_FREE(asn_DEF_E2SM_gNB_X2_indicationMessage, pE2SM_gNB_X2_indicationMessage);
 
@@ -1148,7 +1148,7 @@ e2ap_pdu_ptr_t* unpackE2AP_pdu(const size_t dataBufferSize, const byte* dataBuff
     case RC_OK:
         // Debug print
         if (debug) {
-            sprintf(pLogBuffer,"\nSuccessfully decoded E2AP-PDU\n\n");
+            sprintf(pLogBuffer,"Successfully decoded E2AP-PDU");
             asn_fprint(stdout, &asn_DEF_E2AP_PDU, pE2AP_PDU);
         }
 
@@ -1160,7 +1160,7 @@ e2ap_pdu_ptr_t* unpackE2AP_pdu(const size_t dataBufferSize, const byte* dataBuff
                     return (e2ap_pdu_ptr_t*)pE2AP_PDU;
                 }
                 else {
-                    sprintf(pLogBuffer,"\nError. Not supported initiatingMessage MessageId = %u\n\n",pE2AP_PDU->choice.initiatingMessage.value.present);
+                    sprintf(pLogBuffer,"Error. Not supported initiatingMessage MessageId = %u",pE2AP_PDU->choice.initiatingMessage.value.present);
                     return 0;
                 }
             }
@@ -1171,7 +1171,7 @@ e2ap_pdu_ptr_t* unpackE2AP_pdu(const size_t dataBufferSize, const byte* dataBuff
                     return (e2ap_pdu_ptr_t*)pE2AP_PDU;
                 }
                 else {
-                    sprintf(pLogBuffer,"\nError. Not supported initiatingMessage MessageId = %u\n\n",pE2AP_PDU->choice.initiatingMessage.value.present);
+                    sprintf(pLogBuffer,"Error. Not supported initiatingMessage MessageId = %u",pE2AP_PDU->choice.initiatingMessage.value.present);
                     return 0;
                 }
             }
@@ -1182,12 +1182,12 @@ e2ap_pdu_ptr_t* unpackE2AP_pdu(const size_t dataBufferSize, const byte* dataBuff
                     return (e2ap_pdu_ptr_t*)pE2AP_PDU;
                 }
                 else {
-                    sprintf(pLogBuffer,"\nError. Not supported initiatingMessage MessageId = %u\n\n",pE2AP_PDU->choice.initiatingMessage.value.present);
+                    sprintf(pLogBuffer,"Error. Not supported initiatingMessage MessageId = %u",pE2AP_PDU->choice.initiatingMessage.value.present);
                     return 0;
                 }
             }
             else {
-                sprintf(pLogBuffer,"\nError. Procedure not supported. ProcedureCode = %li\n\n",pE2AP_PDU->choice.initiatingMessage.procedureCode);
+                sprintf(pLogBuffer,"Error. Procedure not supported. ProcedureCode = %li",pE2AP_PDU->choice.initiatingMessage.procedureCode);
                 return 0;
             }
         }
@@ -1199,7 +1199,7 @@ e2ap_pdu_ptr_t* unpackE2AP_pdu(const size_t dataBufferSize, const byte* dataBuff
                     return (e2ap_pdu_ptr_t*)pE2AP_PDU;
                 }
                 else {
-                    sprintf(pLogBuffer,"\nError. Not supported successfulOutcome MessageId = %u\n\n",pE2AP_PDU->choice.successfulOutcome.value.present);
+                    sprintf(pLogBuffer,"Error. Not supported successfulOutcome MessageId = %u",pE2AP_PDU->choice.successfulOutcome.value.present);
                     return 0;
                 }
             }
@@ -1210,12 +1210,12 @@ e2ap_pdu_ptr_t* unpackE2AP_pdu(const size_t dataBufferSize, const byte* dataBuff
                     return (e2ap_pdu_ptr_t*)pE2AP_PDU;
                 }
                 else {
-                    sprintf(pLogBuffer,"\nError. Not supported successfulOutcome MessageId = %u\n\n",pE2AP_PDU->choice.successfulOutcome.value.present);
+                    sprintf(pLogBuffer,"Error. Not supported successfulOutcome MessageId = %u",pE2AP_PDU->choice.successfulOutcome.value.present);
                     return 0;
                 }
             }
             else {
-                sprintf(pLogBuffer,"\nError. Procedure not supported. ProcedureCode = %li\n\n",pE2AP_PDU->choice.successfulOutcome.procedureCode);
+                sprintf(pLogBuffer,"Error. Procedure not supported. ProcedureCode = %li",pE2AP_PDU->choice.successfulOutcome.procedureCode);
                 return 0;
             }
         }
@@ -1227,7 +1227,7 @@ e2ap_pdu_ptr_t* unpackE2AP_pdu(const size_t dataBufferSize, const byte* dataBuff
                     return (e2ap_pdu_ptr_t*)pE2AP_PDU;
                 }
                 else {
-                    sprintf(pLogBuffer,"\nError. Not supported unsuccessfulOutcome MessageId = %u\n\n",pE2AP_PDU->choice.unsuccessfulOutcome.value.present);
+                    sprintf(pLogBuffer,"Error. Not supported unsuccessfulOutcome MessageId = %u",pE2AP_PDU->choice.unsuccessfulOutcome.value.present);
                     return 0;
                 }
             }
@@ -1238,20 +1238,20 @@ e2ap_pdu_ptr_t* unpackE2AP_pdu(const size_t dataBufferSize, const byte* dataBuff
                     return (e2ap_pdu_ptr_t*)pE2AP_PDU;
                 }
                 else {
-                    sprintf(pLogBuffer,"\nError. Not supported unsuccessfulOutcome MessageId = %u\n\n",pE2AP_PDU->choice.unsuccessfulOutcome.value.present);
+                    sprintf(pLogBuffer,"Error. Not supported unsuccessfulOutcome MessageId = %u",pE2AP_PDU->choice.unsuccessfulOutcome.value.present);
                     return 0;
                 }
             }
         }
         else
-            sprintf(pLogBuffer,"\nDecode failed. Invalid message type %u\n",pE2AP_PDU->present);
+            sprintf(pLogBuffer,"Decode failed. Invalid message type %u",pE2AP_PDU->present);
         ASN_STRUCT_FREE(asn_DEF_E2AP_PDU, pE2AP_PDU);
         return 0;
     case RC_WMORE:
-        sprintf(pLogBuffer,"\nDecode failed. More data needed. Buffer size %zu, %s, consumed %zu\n",dataBufferSize, asn_DEF_E2AP_PDU.name, rval.consumed);
+        sprintf(pLogBuffer,"Decode failed. More data needed. Buffer size %zu, %s, consumed %zu",dataBufferSize, asn_DEF_E2AP_PDU.name, rval.consumed);
         return 0;
     case RC_FAIL:
-        sprintf(pLogBuffer,"\nDecode failed. Buffer size %zu, %s, consumed %zu\n",dataBufferSize, asn_DEF_E2AP_PDU.name, rval.consumed);
+        sprintf(pLogBuffer,"Decode failed. Buffer size %zu, %s, consumed %zu",dataBufferSize, asn_DEF_E2AP_PDU.name, rval.consumed);
         return 0;
     default:
         return 0;
@@ -1361,7 +1361,7 @@ uint64_t getRICEventTriggerDefinitionData(RICEventTriggerDefinition_t* pRICEvent
     case RC_OK:
         // Debug print
         if (debug) {
-            printf("\nSuccessfully decoded E2SM_gNB_X2_eventTriggerDefinition\n\n");
+            printf("Successfully decoded E2SM_gNB_X2_eventTriggerDefinition");
             asn_fprint(stdout, &asn_DEF_E2SM_gNB_X2_eventTriggerDefinition, pE2SM_gNB_X2_eventTriggerDefinition);
         }
 
@@ -1471,13 +1471,13 @@ uint64_t getRICEventTriggerDefinitionData(RICEventTriggerDefinition_t* pRICEvent
         return e2err_OK;
     case RC_WMORE:
         if (debug)
-            printf("\nDecode failed. More data needed. Buffer size %zu, %s, consumed %zu\n",pRICEventTriggerDefinition->octetString.contentLength,
+            printf("Decode failed. More data needed. Buffer size %zu, %s, consumed %zu",pRICEventTriggerDefinition->octetString.contentLength,
                    asn_DEF_E2SM_gNB_X2_eventTriggerDefinition.name, rval.consumed);
 
         return e2err_RICEventTriggerDefinitionDecodeWMOREFail;
     case RC_FAIL:
         if (debug)
-            printf("\nDecode failed. Buffer size %zu, %s, consumed %zu\n",pRICEventTriggerDefinition->octetString.contentLength,
+            printf("Decode failed. Buffer size %zu, %s, consumed %zu",pRICEventTriggerDefinition->octetString.contentLength,
                    asn_DEF_E2SM_gNB_X2_eventTriggerDefinition.name, rval.consumed);
 
         return e2err_RICEventTriggerDefinitionDecodeFAIL;
@@ -1579,10 +1579,6 @@ uint64_t getRICSubscriptionResponseData(e2ap_pdu_ptr_t* pE2AP_PDU_pointer, RICSu
             }
             pRICSubscriptionResponse->ricActionNotAdmittedList.contentLength = index;
         }
-    }
-    else {
-        ASN_STRUCT_FREE(asn_DEF_E2AP_PDU, pE2AP_PDU);
-        return e2err_RICsubscriptionResponseRICaction_NotAdmitted_ListMissing;
     }
 
     ASN_STRUCT_FREE(asn_DEF_E2AP_PDU, pE2AP_PDU);
@@ -1794,7 +1790,7 @@ uint64_t getRICIndicationHeaderData(RICIndicationHeader_t* pRICIndicationHeader)
     case RC_OK:
         // Debug print
         if (debug) {
-            printf("\nSuccessfully decoded E2SM_gNB_X2_indicationHeader\n\n");
+            printf("Successfully decoded E2SM_gNB_X2_indicationHeader");
             asn_fprint(stdout, &asn_DEF_E2SM_gNB_X2_indicationHeader, pE2SM_gNB_X2_indicationHeader);
         }
 
@@ -1892,12 +1888,12 @@ uint64_t getRICIndicationHeaderData(RICIndicationHeader_t* pRICIndicationHeader)
         return e2err_OK;
     case RC_WMORE:
         if (debug)
-            printf("\nDecode failed. More data needed. Buffer size %zu, %s, consumed %zu\n",pRICIndicationHeader->octetString.contentLength,
+            printf("Decode failed. More data needed. Buffer size %zu, %s, consumed %zu",pRICIndicationHeader->octetString.contentLength,
                    asn_DEF_E2SM_gNB_X2_indicationHeader.name, rval.consumed);
         return e2err_RICIndicationHeaderDecodeWMOREFail;
     case RC_FAIL:
         if (debug)
-            printf("\nDecode failed. Buffer size %zu, %s, consumed %zu\n",pRICIndicationHeader->octetString.contentLength,
+            printf("Decode failed. Buffer size %zu, %s, consumed %zu",pRICIndicationHeader->octetString.contentLength,
                    asn_DEF_E2SM_gNB_X2_indicationHeader.name, rval.consumed);
 
         return e2err_RICIndicationHeaderDecodeFAIL;
@@ -1917,7 +1913,7 @@ uint64_t getRICIndicationMessageData(RICIndicationMessage_t* pRICIndicationMessa
     case RC_OK:
         // Debug print
         if (debug) {
-            printf("\nSuccessfully decoded E2SM_gNB_X2_indicationMessage\n\n");
+            printf("Successfully decoded E2SM_gNB_X2_indicationMessage");
             asn_fprint(stdout, &asn_DEF_E2SM_gNB_X2_indicationMessage, pE2SM_gNB_X2_indicationMessage);
         }
 
@@ -1935,13 +1931,13 @@ uint64_t getRICIndicationMessageData(RICIndicationMessage_t* pRICIndicationMessa
         }
     case RC_WMORE:
         if (debug)
-            printf("\nDecode failed. More data needed. Buffer size %zu, %s, consumed %zu\n",pRICIndicationMessage->octetString.contentLength,
+            printf("Decode failed. More data needed. Buffer size %zu, %s, consumed %zu",pRICIndicationMessage->octetString.contentLength,
                    asn_DEF_E2SM_gNB_X2_indicationMessage.name, rval.consumed);
 
         return e2err_RICIndicationMessageDecodeWMOREFail;
     case RC_FAIL:
         if (debug)
-            printf("\nDecode failed. Buffer size %zu, %s, consumed %zu\n",pRICIndicationMessage->octetString.contentLength,
+            printf("Decode failed. Buffer size %zu, %s, consumed %zu",pRICIndicationMessage->octetString.contentLength,
                    asn_DEF_E2SM_gNB_X2_indicationMessage.name, rval.consumed);
 
         return e2err_RICIndicationMessageDecodeFAIL;
