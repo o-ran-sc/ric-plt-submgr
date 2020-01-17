@@ -31,47 +31,62 @@ import (
 type Tracker struct {
 	mutex                sync.Mutex
 	transactionXappTable map[TransactionXappKey]*Transaction
+	transSeq             uint64
 }
 
 func (t *Tracker) Init() {
 	t.transactionXappTable = make(map[TransactionXappKey]*Transaction)
 }
 
+func (t *Tracker) NewTransactionFromSkel(transSkel *Transaction) *Transaction {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+	trans := transSkel
+	if trans == nil {
+		trans = &Transaction{}
+	}
+	trans.EventChan = make(chan interface{})
+	trans.tracker = t
+	trans.Seq = t.transSeq
+	t.transSeq++
+	xapp.Logger.Debug("Transaction: Create %s", trans.String())
+	return trans
+}
+
+func (t *Tracker) NewTransaction(meid *xapp.RMRMeid) *Transaction {
+	trans := &Transaction{}
+	trans.Meid = meid
+	trans = t.NewTransactionFromSkel(trans)
+	return trans
+}
+
 func (t *Tracker) TrackTransaction(
 	endpoint *RmrEndpoint,
 	xid string,
-	meid *xapp.RMRMeid,
-	respReceived bool,
-	forwardRespToXapp bool) (*Transaction, error) {
+	meid *xapp.RMRMeid) (*Transaction, error) {
 
 	if endpoint == nil {
 		err := fmt.Errorf("Tracker: No valid endpoint given")
 		return nil, err
 	}
 
-	trans := &Transaction{
-		tracker:           nil,
-		Subs:              nil,
-		RmrEndpoint:       *endpoint,
-		Xid:               xid,
-		Meid:              meid,
-		RespReceived:      respReceived,
-		ForwardRespToXapp: forwardRespToXapp,
-	}
+	trans := &Transaction{}
+	trans.XappKey = &TransactionXappKey{*endpoint, xid}
+	trans.Meid = meid
+	trans = t.NewTransactionFromSkel(trans)
 
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 
-	xappkey := TransactionXappKey{*endpoint, xid}
-	if othtrans, ok := t.transactionXappTable[xappkey]; ok {
+	if othtrans, ok := t.transactionXappTable[*trans.XappKey]; ok {
 		err := fmt.Errorf("Tracker: %s is ongoing, %s not created ", othtrans, trans)
 		return nil, err
 	}
 
 	trans.tracker = t
-	t.transactionXappTable[xappkey] = trans
-	xapp.Logger.Info("Tracker: Create %s", trans.String())
-	xapp.Logger.Debug("Tracker: transtable=%v", t.transactionXappTable)
+	t.transactionXappTable[*trans.XappKey] = trans
+	xapp.Logger.Debug("Tracker: Add %s", trans.String())
+	//xapp.Logger.Debug("Tracker: transtable=%v", t.transactionXappTable)
 	return trans, nil
 }
 
@@ -79,9 +94,9 @@ func (t *Tracker) UnTrackTransaction(xappKey TransactionXappKey) (*Transaction, 
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 	if trans, ok2 := t.transactionXappTable[xappKey]; ok2 {
-		xapp.Logger.Info("Tracker: Delete %s", trans.String())
+		xapp.Logger.Debug("Tracker: Delete %s", trans.String())
 		delete(t.transactionXappTable, xappKey)
-		xapp.Logger.Debug("Tracker: transtable=%v", t.transactionXappTable)
+		//xapp.Logger.Debug("Tracker: transtable=%v", t.transactionXappTable)
 		return trans, nil
 	}
 	return nil, fmt.Errorf("Tracker: No record %s", xappKey)

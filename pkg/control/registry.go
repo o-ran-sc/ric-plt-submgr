@@ -21,6 +21,7 @@ package control
 
 import (
 	"fmt"
+	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"sync"
 )
@@ -45,7 +46,7 @@ func (r *Registry) Initialize() {
 }
 
 // Reserves and returns the next free sequence number
-func (r *Registry) ReserveSubscription(meid *xapp.RMRMeid) (*Subscription, error) {
+func (r *Registry) AssignToSubscription(trans *Transaction, subReqMsg *e2ap.E2APSubscriptionRequest) (*Subscription, error) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 	if len(r.subIds) > 0 {
@@ -55,12 +56,16 @@ func (r *Registry) ReserveSubscription(meid *xapp.RMRMeid) (*Subscription, error
 			subs := &Subscription{
 				registry: r,
 				Seq:      sequenceNumber,
-				Active:   false,
-				Meid:     meid,
-				Trans:    nil,
+				Meid:     trans.Meid,
 			}
+			err := subs.AddEndpoint(trans.GetEndpoint())
+			if err != nil {
+				return nil, err
+			}
+			subs.SubReqMsg = subReqMsg
+
 			r.register[sequenceNumber] = subs
-			xapp.Logger.Info("Registry: Create %s", subs.String())
+			xapp.Logger.Debug("Registry: Create %s", subs.String())
 			xapp.Logger.Debug("Registry: substable=%v", r.register)
 			return subs, nil
 		}
@@ -77,12 +82,23 @@ func (r *Registry) GetSubscription(sn uint16) *Subscription {
 	return nil
 }
 
+func (r *Registry) GetSubscriptionFirstMatch(ids []uint16) (*Subscription, error) {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	for _, id := range ids {
+		if _, ok := r.register[id]; ok {
+			return r.register[id], nil
+		}
+	}
+	return nil, fmt.Errorf("No valid subscription found with ids %v", ids)
+}
+
 func (r *Registry) DelSubscription(sn uint16) bool {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 	if _, ok := r.register[sn]; ok {
 		subs := r.register[sn]
-		xapp.Logger.Info("Registry: Delete %s", subs.String())
+		xapp.Logger.Debug("Registry: Delete %s", subs.String())
 		r.subIds = append(r.subIds, sn)
 		delete(r.register, sn)
 		xapp.Logger.Debug("Registry: substable=%v", r.register)
