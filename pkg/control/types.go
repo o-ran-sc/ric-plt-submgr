@@ -91,6 +91,32 @@ func (eplist *RmrEndpointList) String() string {
 	return strings.Join(valuesText, ",")
 }
 
+func (eplist *RmrEndpointList) Size() int {
+	return len(eplist.Endpoints)
+}
+
+func (eplist *RmrEndpointList) AddEndpoint(ep *RmrEndpoint) bool {
+	for i := range eplist.Endpoints {
+		if (eplist.Endpoints[i].Addr == ep.Addr) && (eplist.Endpoints[i].Port == ep.Port) {
+			return false
+		}
+	}
+	eplist.Endpoints = append(eplist.Endpoints, *ep)
+	return true
+}
+
+func (eplist *RmrEndpointList) DelEndpoint(ep *RmrEndpoint) bool {
+	for i := range eplist.Endpoints {
+		if (eplist.Endpoints[i].Addr == ep.Addr) && (eplist.Endpoints[i].Port == ep.Port) {
+			eplist.Endpoints[i] = eplist.Endpoints[len(eplist.Endpoints)-1]
+			eplist.Endpoints[len(eplist.Endpoints)-1] = RmrEndpoint{"", 0}
+			eplist.Endpoints = eplist.Endpoints[:len(eplist.Endpoints)-1]
+			return true
+		}
+	}
+	return false
+}
+
 func (eplist *RmrEndpointList) HasEndpoint(ep *RmrEndpoint) bool {
 	for i := range eplist.Endpoints {
 		if (eplist.Endpoints[i].Addr == ep.Addr) && (eplist.Endpoints[i].Port == ep.Port) {

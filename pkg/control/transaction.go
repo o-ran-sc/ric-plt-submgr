@@ -20,12 +20,24 @@
 package control
 
 import (
-	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/packer"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"strconv"
 	"sync"
+	"time"
 )
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type TransactionIf interface {
+	SendEvent(interface{}, time.Duration) (bool, bool)
+	WaitEvent(time.Duration) (interface{}, bool)
+	String() string
+	//GetMtype() int
+	//GetMeid() *xapp.RMRMeid
+	//GetPayload() *packer.PackedData
+}
 
 //-----------------------------------------------------------------------------
 //
@@ -42,52 +54,51 @@ func (key *TransactionXappKey) String() string {
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-type Transaction struct {
-	mutex             sync.Mutex
-	tracker           *Tracker                             //tracker instance
-	Subs              *Subscription                        //related subscription
-	RmrEndpoint       RmrEndpoint                          //xapp endpoint
-	Xid               string                               //xapp xid in req
-	Meid              *xapp.RMRMeid                        //meid transaction related
-	SubReqMsg         *e2ap.E2APSubscriptionRequest        //SubReq TODO: maybe own transactions per type
-	SubRespMsg        *e2ap.E2APSubscriptionResponse       //SubResp TODO: maybe own transactions per type
-	SubFailMsg        *e2ap.E2APSubscriptionFailure        //SubFail TODO: maybe own transactions per type
-	SubDelReqMsg      *e2ap.E2APSubscriptionDeleteRequest  //SubDelReq TODO: maybe own transactions per type
-	SubDelRespMsg     *e2ap.E2APSubscriptionDeleteResponse //SubDelResp TODO: maybe own transactions per type
-	SubDelFailMsg     *e2ap.E2APSubscriptionDeleteFailure  //SubDelFail TODO: maybe own transactions per type
-	Mtype             int                                  //Encoded message type to be send
-	Payload           *packer.PackedData                   //Encoded message to be send
-	RespReceived      bool
-	ForwardRespToXapp bool
+
+type TransactionBase struct {
+	mutex     sync.Mutex         //
+	Seq       uint64             //
+	tracker   *Tracker           //tracker instance
+	Meid      *xapp.RMRMeid      //meid transaction related
+	Mtype     int                //Encoded message type to be send
+	Payload   *packer.PackedData //Encoded message to be send
+	EventChan chan interface{}
 }
 
-func (t *Transaction) StringImpl() string {
-	var subId string = "?"
-	if t.Subs != nil {
-		subId = strconv.FormatUint(uint64(t.Subs.Seq), 10)
+func (t *TransactionBase) SendEvent(event interface{}, waittime time.Duration) (bool, bool) {
+	if waittime > 0 {
+		select {
+		case t.EventChan <- event:
+			return true, false
+		case <-time.After(waittime):
+			return false, true
+		}
+		return false, false
 	}
-	return "trans(" + t.RmrEndpoint.String() + "/" + t.Xid + "/" + t.Meid.RanName + "/" + subId + ")"
+	t.EventChan <- event
+	return true, false
 }
 
-func (t *Transaction) String() string {
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
-	return t.StringImpl()
+func (t *TransactionBase) WaitEvent(waittime time.Duration) (interface{}, bool) {
+	if waittime > 0 {
+		select {
+		case event := <-t.EventChan:
+			return event, false
+		case <-time.After(waittime):
+			return nil, true
+		}
+	}
+	event := <-t.EventChan
+	return event, false
 }
 
-func (t *Transaction) GetXid() string {
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
-	return t.Xid
-}
-
-func (t *Transaction) GetMtype() int {
+func (t *TransactionBase) GetMtype() int {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 	return t.Mtype
 }
 
-func (t *Transaction) GetMeid() *xapp.RMRMeid {
+func (t *TransactionBase) GetMeid() *xapp.RMRMeid {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 	if t.Meid != nil {
@@ -96,41 +107,70 @@ func (t *Transaction) GetMeid() *xapp.RMRMeid {
 	return nil
 }
 
+func (t *TransactionBase) GetPayload() *packer.PackedData {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+	return t.Payload
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type Transaction struct {
+	TransactionBase                     //
+	XappKey         *TransactionXappKey //
+}
+
+func (t *Transaction) StringImpl() string {
+	var transkey string = "transkey(N/A)"
+	if t.XappKey != nil {
+		transkey = t.XappKey.String()
+	}
+	return "trans(" + strconv.FormatUint(uint64(t.Seq), 10) + "/" + t.Meid.RanName + "/" + transkey + ")"
+}
+
+func (t *Transaction) String() string {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+	return t.StringImpl()
+}
+
+func (t *Transaction) GetEndpoint() *RmrEndpoint {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+	if t.XappKey != nil {
+		return &t.XappKey.RmrEndpoint
+	}
+	return nil
+}
+
+func (t *Transaction) GetXid() string {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+	if t.XappKey != nil {
+		return t.XappKey.Xid
+	}
+	return ""
+}
+
 func (t *Transaction) GetSrc() string {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
-	return t.RmrEndpoint.String()
-}
-
-func (t *Transaction) CheckResponseReceived() bool {
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
-	if t.RespReceived == false {
-		t.RespReceived = true
-		return false
+	if t.XappKey != nil {
+		return t.XappKey.RmrEndpoint.String()
 	}
-	return true
-}
-
-func (t *Transaction) RetryTransaction() {
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
-	t.RespReceived = false
+	return ""
 }
 
 func (t *Transaction) Release() {
 	t.mutex.Lock()
-	subs := t.Subs
+	xapp.Logger.Debug("Transaction: Release %s", t.StringImpl())
 	tracker := t.tracker
-	xappkey := TransactionXappKey{t.RmrEndpoint, t.Xid}
-	t.Subs = nil
+	xappkey := t.XappKey
 	t.tracker = nil
 	t.mutex.Unlock()
 
-	if subs != nil {
-		subs.UnSetTransaction(t)
-	}
-	if tracker != nil {
-		tracker.UnTrackTransaction(xappkey)
+	if tracker != nil && xappkey != nil {
+		tracker.UnTrackTransaction(*xappkey)
 	}
 }

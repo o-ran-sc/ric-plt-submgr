@@ -115,6 +115,7 @@ func (xappConn *testingXappControl) handle_xapp_subs_resp(t *testing.T, trans *x
 	//---------------------------------
 	select {
 	case msg := <-xappConn.rmrConChan:
+		xappConn.DecMsgCnt()
 		if msg.Mtype != xapp.RICMessageTypes["RIC_SUB_RESP"] {
 			testError(t, "(%s) Received RIC_SUB_RESP wrong mtype expected %s got %s, error", xappConn.desc, "RIC_SUB_RESP", xapp.RicMessageTypeToName[msg.Mtype])
 			return -1
@@ -158,6 +159,7 @@ func (xappConn *testingXappControl) handle_xapp_subs_fail(t *testing.T, trans *x
 	//-------------------------------
 	select {
 	case msg := <-xappConn.rmrConChan:
+		xappConn.DecMsgCnt()
 		if msg.Mtype != xapp.RICMessageTypes["RIC_SUB_FAILURE"] {
 			testError(t, "(%s) Received RIC_SUB_FAILURE wrong mtype expected %s got %s, error", xappConn.desc, "RIC_SUB_FAILURE", xapp.RicMessageTypeToName[msg.Mtype])
 			return -1
@@ -246,6 +248,7 @@ func (xappConn *testingXappControl) handle_xapp_subs_del_resp(t *testing.T, tran
 	//---------------------------------
 	select {
 	case msg := <-xappConn.rmrConChan:
+		xappConn.DecMsgCnt()
 		if msg.Mtype != xapp.RICMessageTypes["RIC_SUB_DEL_RESP"] {
 			testError(t, "(%s) Received RIC_SUB_DEL_RESP wrong mtype expected %s got %s, error", xappConn.desc, "RIC_SUB_DEL_RESP", xapp.RicMessageTypeToName[msg.Mtype])
 			return
@@ -283,6 +286,7 @@ func (e2termConn *testingE2termControl) handle_e2term_subs_req(t *testing.T) (*e
 	//---------------------------------
 	select {
 	case msg := <-e2termConn.rmrConChan:
+		e2termConn.DecMsgCnt()
 		if msg.Mtype != xapp.RICMessageTypes["RIC_SUB_REQ"] {
 			testError(t, "(%s) Received wrong mtype expected %s got %s, error", e2termConn.desc, "RIC_SUB_REQ", xapp.RicMessageTypeToName[msg.Mtype])
 		} else {
@@ -342,10 +346,11 @@ func (e2termConn *testingE2termControl) handle_e2term_subs_resp(t *testing.T, re
 
 	params := &RMRParams{&xapp.RMRParams{}}
 	params.Mtype = xapp.RIC_SUB_RESP
-	params.SubId = msg.SubId
+	//params.SubId = msg.SubId
+	params.SubId = -1
 	params.Payload = packedMsg.Buf
 	params.Meid = msg.Meid
-	params.Xid = msg.Xid
+	//params.Xid = msg.Xid
 	params.Mbuf = nil
 
 	snderr := e2termConn.RmrSend(params)
@@ -411,6 +416,7 @@ func (e2termConn *testingE2termControl) handle_e2term_subs_del_req(t *testing.T)
 	//---------------------------------
 	select {
 	case msg := <-e2termConn.rmrConChan:
+		e2termConn.DecMsgCnt()
 		if msg.Mtype != xapp.RICMessageTypes["RIC_SUB_DEL_REQ"] {
 			testError(t, "(%s) Received wrong mtype expected %s got %s, error", e2termConn.desc, "RIC_SUB_DEL_REQ", xapp.RicMessageTypeToName[msg.Mtype])
 		} else {
@@ -520,31 +526,42 @@ func (e2termConn *testingE2termControl) handle_e2term_subs_del_fail(t *testing.T
 //
 //-----------------------------------------------------------------------------
 func (mc *testingMainControl) wait_subs_clean(t *testing.T, e2SubsId int, secs int) bool {
+	var subs *Subscription
 	i := 1
 	for ; i <= secs*2; i++ {
-		if mc.c.registry.GetSubscription(uint16(e2SubsId)) == nil {
+		subs = mc.c.registry.GetSubscription(uint16(e2SubsId))
+		if subs == nil {
 			return true
 		}
 		time.Sleep(500 * time.Millisecond)
 	}
-	testError(t, "(general) no clean within %d secs", secs)
+	if subs != nil {
+		testError(t, "(general) no clean within %d secs: %s", secs, subs.String())
+	} else {
+		testError(t, "(general) no clean within %d secs: subs(N/A)", secs)
+	}
 	return false
 }
 
 func (mc *testingMainControl) wait_subs_trans_clean(t *testing.T, e2SubsId int, secs int) bool {
+	var trans *Transaction
 	i := 1
 	for ; i <= secs*2; i++ {
 		subs := mc.c.registry.GetSubscription(uint16(e2SubsId))
 		if subs == nil {
 			return true
 		}
-		trans := subs.GetTransaction()
+		trans = subs.GetTransaction()
 		if trans == nil {
 			return true
 		}
 		time.Sleep(500 * time.Millisecond)
 	}
-	testError(t, "(general) no clean within %d secs", secs)
+	if trans != nil {
+		testError(t, "(general) no clean within %d secs: %s", secs, trans.String())
+	} else {
+		testError(t, "(general) no clean within %d secs: trans(N/A)", secs)
+	}
 	return false
 }
 
@@ -619,6 +636,10 @@ func TestSubReqAndRouteNok(t *testing.T) {
 
 	//Wait that subs is cleaned
 	mainCtrl.wait_subs_clean(t, int(newSubsId), 10)
+
+	xappConn1.TestMsgCnt(t)
+	xappConn2.TestMsgCnt(t)
+	e2termConn.TestMsgCnt(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -675,6 +696,10 @@ func TestSubReqAndSubDelOk(t *testing.T) {
 
 	//Wait that subs is cleaned
 	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
+
+	xappConn1.TestMsgCnt(t)
+	xappConn2.TestMsgCnt(t)
+	e2termConn.TestMsgCnt(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -727,6 +752,10 @@ func TestSubReqRetransmission(t *testing.T) {
 
 	//Wait that subs is cleaned
 	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
+
+	xappConn1.TestMsgCnt(t)
+	xappConn2.TestMsgCnt(t)
+	e2termConn.TestMsgCnt(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -780,6 +809,10 @@ func TestSubDelReqRetransmission(t *testing.T) {
 
 	//Wait that subs is cleaned
 	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
+
+	xappConn1.TestMsgCnt(t)
+	xappConn2.TestMsgCnt(t)
+	e2termConn.TestMsgCnt(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -834,6 +867,10 @@ func TestSubDelReqCollision(t *testing.T) {
 
 	//Wait that subs is cleaned
 	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
+
+	xappConn1.TestMsgCnt(t)
+	xappConn2.TestMsgCnt(t)
+	e2termConn.TestMsgCnt(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -908,6 +945,10 @@ func TestSubReqAndSubDelOkTwoParallel(t *testing.T) {
 	xappConn2.handle_xapp_subs_del_resp(t, deltrans2)
 	//Wait that subs is cleaned
 	mainCtrl.wait_subs_clean(t, e2SubsId2, 10)
+
+	xappConn1.TestMsgCnt(t)
+	xappConn2.TestMsgCnt(t)
+	e2termConn.TestMsgCnt(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -985,6 +1026,10 @@ func TestSameSubsDiffRan(t *testing.T) {
 	xappConn1.handle_xapp_subs_del_resp(t, deltrans2)
 	//Wait that subs is cleaned
 	mainCtrl.wait_subs_clean(t, e2SubsId2, 10)
+
+	xappConn1.TestMsgCnt(t)
+	xappConn2.TestMsgCnt(t)
+	e2termConn.TestMsgCnt(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -1040,6 +1085,10 @@ func TestSubReqRetryInSubmgr(t *testing.T) {
 
 	// Wait that subs is cleaned
 	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
+
+	xappConn1.TestMsgCnt(t)
+	xappConn2.TestMsgCnt(t)
+	e2termConn.TestMsgCnt(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -1093,6 +1142,10 @@ func TestSubReqRetryNoRespSubDelRespInSubmgr(t *testing.T) {
 
 	// Wait that subs is cleaned
 	mainCtrl.wait_subs_clean(t, int(delreq.RequestId.Seq), 10)
+
+	xappConn1.TestMsgCnt(t)
+	xappConn2.TestMsgCnt(t)
+	e2termConn.TestMsgCnt(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -1145,6 +1198,10 @@ func TestSubReqTwoRetriesNoRespAtAllInSubmgr(t *testing.T) {
 
 	// Wait that subs is cleaned
 	mainCtrl.wait_subs_clean(t, int(delreq.RequestId.Seq), 10)
+
+	xappConn1.TestMsgCnt(t)
+	xappConn2.TestMsgCnt(t)
+	e2termConn.TestMsgCnt(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -1186,6 +1243,10 @@ func TestSubReqSubFailRespInSubmgr(t *testing.T) {
 
 	// Wait that subs is cleaned
 	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
+
+	xappConn1.TestMsgCnt(t)
+	xappConn2.TestMsgCnt(t)
+	e2termConn.TestMsgCnt(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -1242,6 +1303,10 @@ func TestSubDelReqRetryInSubmgr(t *testing.T) {
 
 	// Wait that subs is cleaned
 	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
+
+	xappConn1.TestMsgCnt(t)
+	xappConn2.TestMsgCnt(t)
+	e2termConn.TestMsgCnt(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -1295,6 +1360,10 @@ func TestSubDelReqTwoRetriesNoRespInSubmgr(t *testing.T) {
 
 	// Wait that subs is cleaned
 	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
+
+	xappConn1.TestMsgCnt(t)
+	xappConn2.TestMsgCnt(t)
+	e2termConn.TestMsgCnt(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -1345,4 +1414,8 @@ func TestSubDelReqSubDelFailRespInSubmgr(t *testing.T) {
 
 	// Wait that subs is cleaned
 	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
+
+	xappConn1.TestMsgCnt(t)
+	xappConn2.TestMsgCnt(t)
+	e2termConn.TestMsgCnt(t)
 }

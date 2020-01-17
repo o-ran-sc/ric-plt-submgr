@@ -174,6 +174,27 @@ type testingRmrStubControl struct {
 	testingRmrControl
 	rmrClientTest *xapp.RMRClient
 	active        bool
+	msgCnt        uint64
+}
+
+func (tc *testingRmrStubControl) GetMsgCnt() uint64 {
+	return tc.msgCnt
+}
+
+func (tc *testingRmrStubControl) IncMsgCnt() {
+	tc.msgCnt++
+}
+
+func (tc *testingRmrStubControl) DecMsgCnt() {
+	if tc.msgCnt > 0 {
+		tc.msgCnt--
+	}
+}
+
+func (tc *testingRmrStubControl) TestMsgCnt(t *testing.T) {
+	if tc.GetMsgCnt() > 0 {
+		testError(t, "(%s) message count expected 0 but is %d", tc.desc, tc.GetMsgCnt())
+	}
 }
 
 func (tc *testingRmrStubControl) RmrSend(params *RMRParams) (err error) {
@@ -268,6 +289,7 @@ func (tc *testingXappControl) Consume(params *xapp.RMRParams) (err error) {
 
 	if strings.Contains(msg.Xid, tc.desc) {
 		xapp.Logger.Info("(%s) Consume %s", tc.desc, msg.String())
+		tc.IncMsgCnt()
 		tc.rmrConChan <- msg
 	} else {
 		xapp.Logger.Info("(%s) Ignore %s", tc.desc, msg.String())

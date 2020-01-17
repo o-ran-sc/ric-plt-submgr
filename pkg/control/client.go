@@ -39,7 +39,7 @@ type SubRouteInfo struct {
 }
 
 func (sri *SubRouteInfo) String() string {
-	return "routeinfo(" + sri.Command.String() + "/" + strconv.FormatUint(uint64(sri.SubID), 10) + "/[" + sri.EpList.String() + "])"
+	return "routeinfo(" + strconv.FormatUint(uint64(sri.SubID), 10) + "/" + sri.Command.String() + "/[" + sri.EpList.String() + "])"
 }
 
 //-----------------------------------------------------------------------------

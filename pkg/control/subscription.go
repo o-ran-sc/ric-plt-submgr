@@ -21,6 +21,7 @@ package control
 
 import (
 	"fmt"
+	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"strconv"
 	"sync"
@@ -30,14 +31,15 @@ import (
 //
 //-----------------------------------------------------------------------------
 type Subscription struct {
-	mutex    sync.Mutex
-	registry *Registry
-	Seq      uint16
-	Active   bool
-	//
-	Meid   *xapp.RMRMeid
-	EpList RmrEndpointList
-	Trans  *Transaction
+	mutex      sync.Mutex                     // Lock
+	registry   *Registry                      // Registry
+	Seq        uint16                         // SubsId
+	Meid       *xapp.RMRMeid                  // Meid/ RanName
+	EpList     RmrEndpointList                // Endpoints
+	TransLock  sync.Mutex                     // Lock transactions, only one executed per time for subs
+	TheTrans   *Transaction                   // Ongoing transaction from xapp
+	SubReqMsg  *e2ap.E2APSubscriptionRequest  // Subscription information
+	SubRespMsg *e2ap.E2APSubscriptionResponse // Subscription information
 }
 
 func (s *Subscription) stringImpl() string {
@@ -65,85 +67,77 @@ func (s *Subscription) GetMeid() *xapp.RMRMeid {
 	return nil
 }
 
-func (s *Subscription) Confirmed() {
+func (s *Subscription) AddEndpoint(ep *RmrEndpoint) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	s.Active = true
-}
-
-func (s *Subscription) UnConfirmed() {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-	s.Active = false
-}
-
-func (s *Subscription) IsConfirmed() bool {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-	return s.Active
-}
-
-func (s *Subscription) IsEndpoint(ep *RmrEndpoint) bool {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-	return s.EpList.HasEndpoint(ep)
-}
-
-func (s *Subscription) SetTransaction(trans *Transaction) error {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-
-	if s.Trans != nil {
-		return fmt.Errorf("subs(%s) trans(%s) exist, can not register trans(%s)", s.stringImpl(), s.Trans, trans)
+	if ep == nil {
+		return fmt.Errorf("AddEndpoint no endpoint given")
 	}
-	trans.Subs = s
-	s.Trans = trans
-
-	if len(s.EpList.Endpoints) == 0 {
-		s.EpList.Endpoints = append(s.EpList.Endpoints, trans.RmrEndpoint)
-		return s.updateRouteImpl(CREATE)
-	} else if s.EpList.HasEndpoint(&trans.RmrEndpoint) == false {
-		s.EpList.Endpoints = append(s.EpList.Endpoints, trans.RmrEndpoint)
+	if s.EpList.AddEndpoint(ep) {
+		if s.EpList.Size() == 1 {
+			return s.updateRouteImpl(CREATE)
+		}
 		return s.updateRouteImpl(MERGE)
 	}
 	return nil
 }
 
-func (s *Subscription) UnSetTransaction(trans *Transaction) bool {
+func (s *Subscription) DelEndpoint(ep *RmrEndpoint) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	if trans == nil || trans == s.Trans {
-		s.Trans = nil
+	var err error
+	if ep == nil {
+		return fmt.Errorf("DelEndpoint no endpoint given")
+	}
+	if s.EpList.Size() == 1 {
+		err = s.updateRouteImpl(DELETE)
+		s.EpList.DelEndpoint(ep)
+	} else if s.EpList.Size() > 1 {
+		err = s.updateRouteImpl(MERGE)
+	}
+	if s.EpList.Size() == 0 {
+		go s.registry.DelSubscription(s.Seq)
+	}
+	return err
+}
+
+func (s *Subscription) IsTransactionReserved() bool {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	if s.TheTrans != nil {
 		return true
 	}
 	return false
+
 }
 
 func (s *Subscription) GetTransaction() *Transaction {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	return s.Trans
+	return s.TheTrans
+}
+
+func (s *Subscription) WaitTransactionTurn(trans *Transaction) {
+	s.TransLock.Lock()
+	s.mutex.Lock()
+	s.TheTrans = trans
+	s.mutex.Unlock()
+}
+
+func (s *Subscription) ReleaseTransactionTurn(trans *Transaction) {
+	s.mutex.Lock()
+	if trans != nil && trans == s.TheTrans {
+		s.TheTrans = nil
+	}
+	s.mutex.Unlock()
+	s.TransLock.Unlock()
 }
 
 func (s *Subscription) updateRouteImpl(act Action) error {
 	subRouteAction := SubRouteInfo{act, s.EpList, s.Seq}
 	err := s.registry.rtmgrClient.SubscriptionRequestUpdate(subRouteAction)
 	if err != nil {
-		return fmt.Errorf("subs(%s) %s", s.stringImpl(), err.Error())
+		return fmt.Errorf("%s %s", s.stringImpl(), err.Error())
 	}
 	return nil
-}
-
-func (s *Subscription) UpdateRoute(act Action) error {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-	return s.updateRouteImpl(act)
-}
-
-func (s *Subscription) Release() {
-	s.registry.DelSubscription(s.Seq)
-	err := s.UpdateRoute(DELETE)
-	if err != nil {
-		xapp.Logger.Error("%s", err.Error())
-	}
 }
