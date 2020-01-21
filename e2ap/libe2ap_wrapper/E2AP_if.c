@@ -193,17 +193,18 @@ uint64_t packRICSubscriptionRequest(size_t* pdataBufferSize, byte* pDataBuffer, 
                   // This is not used in RIC
 
                 // RICsubsequentAction, OPTIONAL
-                RICsubsequentAction_t* pRICsubsequentAction = calloc(1, sizeof(RICsubsequentAction_t));
-                if (pRICsubsequentAction) {
-                    pRICsubsequentAction->ricSubsequentActionType =
-                      pRICSubscriptionRequest->ricSubscription.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricSubsequentAction.ricSubsequentActionType;
-                    pRICsubsequentAction->ricTimeToWait =
-                      pRICSubscriptionRequest->ricSubscription.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricSubsequentAction.ricTimeToWait;
-                    pRICaction_ToBeSetup_ItemIEs->value.choice.RICaction_ToBeSetup_Item.ricSubsequentAction = pRICsubsequentAction;
+                if (pRICSubscriptionRequest->ricSubscription.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricSubsequentActionPresent) {
+                    RICsubsequentAction_t* pRICsubsequentAction = calloc(1, sizeof(RICsubsequentAction_t));
+                    if (pRICsubsequentAction) {
+                        pRICsubsequentAction->ricSubsequentActionType =
+                        pRICSubscriptionRequest->ricSubscription.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricSubsequentAction.ricSubsequentActionType;
+                        pRICsubsequentAction->ricTimeToWait =
+                        pRICSubscriptionRequest->ricSubscription.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricSubsequentAction.ricTimeToWait;
+                        pRICaction_ToBeSetup_ItemIEs->value.choice.RICaction_ToBeSetup_Item.ricSubsequentAction = pRICsubsequentAction;
+                    }
+                    else
+                        return e2err_RICSubscriptionRequestAllocRICsubsequentActionFail;
                 }
-                else
-                    return e2err_RICSubscriptionRequestAllocRICsubsequentActionFail;
-
                 ASN_SEQUENCE_ADD(&pRICsubscriptionRequest_IEs->value.choice.RICsubscription.ricAction_ToBeSetup_List.list, pRICaction_ToBeSetup_ItemIEs);
                 index++;
             }
@@ -454,7 +455,7 @@ uint64_t packRICSubscriptionResponse(size_t* pDataBufferSize, byte* pDataBuffer,
 
         ASN_SEQUENCE_ADD(&pE2AP_PDU->choice.successfulOutcome.value.choice.RICsubscriptionResponse.protocolIEs.list, pRICsubscriptionResponse_IEs);
 
-        // RICaction-NotAdmitted list
+        // RICaction-NotAdmitted list, OPTIONAL
         if (pRICSubscriptionResponse->ricActionNotAdmittedListPresent) {
             pRICsubscriptionResponse_IEs = calloc(1, sizeof(RICsubscriptionResponse_IEs_t));
             if (pRICsubscriptionResponse_IEs) {
@@ -511,8 +512,6 @@ uint64_t packRICSubscriptionResponse(size_t* pDataBufferSize, byte* pDataBuffer,
             }
             ASN_SEQUENCE_ADD(&pE2AP_PDU->choice.successfulOutcome.value.choice.RICsubscriptionResponse.protocolIEs.list, pRICsubscriptionResponse_IEs);
         }
-        else
-            return e2err_RICSubscriptionResponseAllocRICActionNotAdmittedListFail;
 
         if (E2encode(pE2AP_PDU, pDataBufferSize, pDataBuffer, pLogBuffer))
             return e2err_OK;
