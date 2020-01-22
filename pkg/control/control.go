@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
 	rtmgrclient "gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/rtmgr_client"
-	rtmgrhandle "gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/rtmgr_client/handle"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
@@ -60,7 +59,7 @@ type RMRMeid struct {
 
 const (
 	CREATE Action = 0
-	MERGE  Action = 1
+	UPDATE Action = 1
 	NONE   Action = 2
 	DELETE Action = 3
 )
@@ -75,10 +74,7 @@ func init() {
 func NewControl() *Control {
 
 	transport := httptransport.New(viper.GetString("rtmgr.HostAddr")+":"+viper.GetString("rtmgr.port"), viper.GetString("rtmgr.baseUrl"), []string{"http"})
-	client := rtmgrclient.New(transport, strfmt.Default)
-	handle := rtmgrhandle.NewProvideXappSubscriptionHandleParamsWithTimeout(10 * time.Second)
-	deleteHandle := rtmgrhandle.NewDeleteXappSubscriptionHandleParamsWithTimeout(10 * time.Second)
-	rtmgrClient := RtmgrClient{client, handle, deleteHandle}
+	rtmgrClient := RtmgrClient{rtClient: rtmgrclient.New(transport, strfmt.Default)}
 
 	registry := new(Registry)
 	registry.Initialize()
@@ -335,7 +331,7 @@ func (c *Control) handleSubscriptionCreate(subs *Subscription, parentTrans *Tran
 		parentTrans.SendEvent(nil, 0)
 	}
 
-	subs.DelEndpoint(parentTrans.GetEndpoint())
+	go c.registry.RemoveFromSubscription(subs, parentTrans, 5*time.Second)
 }
 
 //-------------------------------------------------------------------
@@ -353,7 +349,7 @@ func (c *Control) handleSubscriptionDelete(subs *Subscription, parentTrans *Tran
 	event := c.sendE2TSubscriptionDeleteRequest(subs, trans, parentTrans)
 
 	parentTrans.SendEvent(event, 0)
-	subs.DelEndpoint(parentTrans.GetEndpoint())
+	go c.registry.RemoveFromSubscription(subs, parentTrans, 5*time.Second)
 }
 
 //-------------------------------------------------------------------

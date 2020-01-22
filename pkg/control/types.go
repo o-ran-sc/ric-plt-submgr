@@ -152,7 +152,7 @@ type Action int
 func (act Action) String() string {
 	actions := [...]string{
 		"CREATE",
-		"MERGE",
+		"UPDATE",
 		"NONE",
 		"DELETE",
 	}

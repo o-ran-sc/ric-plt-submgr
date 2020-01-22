@@ -27,6 +27,7 @@ import (
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 //-----------------------------------------------------------------------------
@@ -46,21 +47,34 @@ func (sri *SubRouteInfo) String() string {
 //
 //-----------------------------------------------------------------------------
 type RtmgrClient struct {
-	rtClient         *rtmgrclient.RoutingManager
-	xappHandleParams *rtmgrhandle.ProvideXappSubscriptionHandleParams
-	xappDeleteParams *rtmgrhandle.DeleteXappSubscriptionHandleParams
+	rtClient *rtmgrclient.RoutingManager
 }
 
 func (rc *RtmgrClient) SubscriptionRequestUpdate(subRouteAction SubRouteInfo) error {
 	subID := int32(subRouteAction.SubID)
 	xapp.Logger.Debug("%s ongoing", subRouteAction.String())
-	xappSubReq := rtmgr_models.XappSubscriptionData{&subRouteAction.EpList.Endpoints[0].Addr, &subRouteAction.EpList.Endpoints[0].Port, &subID}
 	var err error
 	switch subRouteAction.Command {
 	case CREATE:
-		_, err = rc.rtClient.Handle.ProvideXappSubscriptionHandle(rc.xappHandleParams.WithXappSubscriptionData(&xappSubReq))
+		createData := rtmgr_models.XappSubscriptionData{&subRouteAction.EpList.Endpoints[0].Addr, &subRouteAction.EpList.Endpoints[0].Port, &subID}
+		createHandle := rtmgrhandle.NewProvideXappSubscriptionHandleParamsWithTimeout(10 * time.Second)
+		createHandle.WithXappSubscriptionData(&createData)
+		_, err = rc.rtClient.Handle.ProvideXappSubscriptionHandle(createHandle)
 	case DELETE:
-		_, _, err = rc.rtClient.Handle.DeleteXappSubscriptionHandle(rc.xappDeleteParams.WithXappSubscriptionData(&xappSubReq))
+		deleteData := rtmgr_models.XappSubscriptionData{&subRouteAction.EpList.Endpoints[0].Addr, &subRouteAction.EpList.Endpoints[0].Port, &subID}
+		deleteHandle := rtmgrhandle.NewDeleteXappSubscriptionHandleParamsWithTimeout(10 * time.Second)
+		deleteHandle.WithXappSubscriptionData(&deleteData)
+		_, _, err = rc.rtClient.Handle.DeleteXappSubscriptionHandle(deleteHandle)
+	case UPDATE:
+		updateData := rtmgr_models.XappList{}
+		for i := range subRouteAction.EpList.Endpoints {
+			updateData[i] = &rtmgr_models.XappElement{Address: &subRouteAction.EpList.Endpoints[i].Addr, Port: &subRouteAction.EpList.Endpoints[i].Port}
+		}
+		updateHandle := rtmgrhandle.NewUpdateXappSubscriptionHandleParamsWithTimeout(10 * time.Second)
+		updateHandle.WithSubscriptionID(subRouteAction.SubID)
+		updateHandle.WithXappList(updateData)
+		_, err = rc.rtClient.Handle.UpdateXappSubscriptionHandle(updateHandle)
+
 	default:
 		return fmt.Errorf("%s unknown", subRouteAction.String())
 	}

@@ -61,7 +61,7 @@ func TestAction(t *testing.T) {
 	}
 
 	testActionString(t, 0, "CREATE")
-	testActionString(t, 1, "MERGE")
+	testActionString(t, 1, "UPDATE")
 	testActionString(t, 2, "NONE")
 	testActionString(t, 3, "DELETE")
 	testActionString(t, 5, "UNKNOWN")

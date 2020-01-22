@@ -109,18 +109,12 @@ type Transaction struct {
 	XappKey         *TransactionXappKey //
 }
 
-func (t *Transaction) StringImpl() string {
+func (t *Transaction) String() string {
 	var transkey string = "transkey(N/A)"
 	if t.XappKey != nil {
 		transkey = t.XappKey.String()
 	}
 	return "trans(" + strconv.FormatUint(uint64(t.Seq), 10) + "/" + t.Meid.RanName + "/" + transkey + ")"
-}
-
-func (t *Transaction) String() string {
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
-	return t.StringImpl()
 }
 
 func (t *Transaction) GetEndpoint() *RmrEndpoint {
@@ -152,7 +146,7 @@ func (t *Transaction) GetSrc() string {
 
 func (t *Transaction) Release() {
 	t.mutex.Lock()
-	xapp.Logger.Debug("Transaction: Release %s", t.StringImpl())
+	xapp.Logger.Debug("Transaction: Release %s", t.String())
 	tracker := t.tracker
 	xappkey := t.XappKey
 	t.tracker = nil
