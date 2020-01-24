@@ -216,12 +216,6 @@ func (c *Control) handleXAPPSubscriptionRequest(params *RMRParams) {
 		return
 	}
 
-	if subs.IsTransactionReserved() {
-		err := fmt.Errorf("Currently parallel or queued transactions are not allowed")
-		xapp.Logger.Error("XAPP-SubReq: %s", idstring(trans, subs, err))
-		return
-	}
-
 	//
 	// Wake subs request
 	//
@@ -275,12 +269,6 @@ func (c *Control) handleXAPPSubscriptionDeleteRequest(params *RMRParams) {
 		return
 	}
 
-	if subs.IsTransactionReserved() {
-		err := fmt.Errorf("Currently parallel or queued transactions are not allowed")
-		xapp.Logger.Error("XAPP-SubDelReq: %s", idstring(trans, subs, err))
-		return
-	}
-
 	//
 	// Wake subs delete
 	//
@@ -310,23 +298,47 @@ func (c *Control) handleSubscriptionCreate(subs *Subscription, parentTrans *Tran
 
 	xapp.Logger.Debug("SUBS-SubReq: Handling %s parent %s", idstring(trans, subs, nil), parentTrans.String())
 
+	subs.mutex.Lock()
 	if subs.SubRespMsg != nil {
-		xapp.Logger.Debug("SUBS-SubReq: Handling (immediate response) %s parent %s", idstring(nil, subs, nil), parentTrans.String())
+		xapp.Logger.Debug("SUBS-SubReq: Handling (immediate resp response) %s parent %s", idstring(nil, subs, nil), parentTrans.String())
 		parentTrans.SendEvent(subs.SubRespMsg, 0)
+		subs.mutex.Unlock()
 		return
 	}
+	if subs.SubFailMsg != nil {
+		xapp.Logger.Debug("SUBS-SubReq: Handling (immediate fail response) %s parent %s", idstring(nil, subs, nil), parentTrans.String())
+		parentTrans.SendEvent(subs.SubFailMsg, 0)
+		subs.mutex.Unlock()
+		go c.registry.RemoveFromSubscription(subs, parentTrans, 5*time.Second)
+		return
+	}
+	if subs.valid == false {
+		xapp.Logger.Debug("SUBS-SubReq: Handling (immediate nil response) %s parent %s", idstring(nil, subs, nil), parentTrans.String())
+		parentTrans.SendEvent(nil, 0)
+		subs.mutex.Unlock()
+		go c.registry.RemoveFromSubscription(subs, parentTrans, 5*time.Second)
+		return
+	}
+	subs.mutex.Unlock()
 
 	event := c.sendE2TSubscriptionRequest(subs, trans, parentTrans)
 	switch themsg := event.(type) {
 	case *e2ap.E2APSubscriptionResponse:
+		subs.mutex.Lock()
 		subs.SubRespMsg = themsg
+		subs.mutex.Unlock()
 		parentTrans.SendEvent(event, 0)
 		return
 	case *e2ap.E2APSubscriptionFailure:
-		//TODO: Possible delete and one retry for subs req
+		subs.mutex.Lock()
+		subs.SubFailMsg = themsg
+		subs.mutex.Unlock()
 		parentTrans.SendEvent(event, 0)
 	default:
 		xapp.Logger.Info("SUBS-SubReq: internal delete due event(%s) %s", typeofSubsMessage(event), idstring(trans, subs, nil))
+		subs.mutex.Lock()
+		subs.valid = false
+		subs.mutex.Unlock()
 		c.sendE2TSubscriptionDeleteRequest(subs, trans, parentTrans)
 		parentTrans.SendEvent(nil, 0)
 	}
@@ -337,6 +349,7 @@ func (c *Control) handleSubscriptionCreate(subs *Subscription, parentTrans *Tran
 //-------------------------------------------------------------------
 // SUBS DELETE Handling
 //-------------------------------------------------------------------
+
 func (c *Control) handleSubscriptionDelete(subs *Subscription, parentTrans *Transaction) {
 
 	trans := c.tracker.NewTransaction(subs.GetMeid())
@@ -346,9 +359,21 @@ func (c *Control) handleSubscriptionDelete(subs *Subscription, parentTrans *Tran
 
 	xapp.Logger.Debug("SUBS-SubDelReq: Handling %s parent %s", idstring(trans, subs, nil), parentTrans.String())
 
-	event := c.sendE2TSubscriptionDeleteRequest(subs, trans, parentTrans)
+	subs.mutex.Lock()
+	if subs.valid && subs.EpList.HasEndpoint(parentTrans.GetEndpoint()) && subs.EpList.Size() == 1 {
+		subs.valid = false
+		subs.mutex.Unlock()
+		c.sendE2TSubscriptionDeleteRequest(subs, trans, parentTrans)
+	} else {
+		subs.mutex.Unlock()
+	}
 
-	parentTrans.SendEvent(event, 0)
+	subDelRespMsg := &e2ap.E2APSubscriptionDeleteResponse{}
+	subDelRespMsg.RequestId.Id = subs.SubReqMsg.RequestId.Id
+	subDelRespMsg.RequestId.Seq = uint32(subs.GetSubId())
+	subDelRespMsg.FunctionId = subs.SubReqMsg.FunctionId
+	parentTrans.SendEvent(subDelRespMsg, 0)
+
 	go c.registry.RemoveFromSubscription(subs, parentTrans, 5*time.Second)
 }
 

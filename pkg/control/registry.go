@@ -45,29 +45,74 @@ func (r *Registry) Initialize() {
 	}
 }
 
-func (r *Registry) AssignToSubscription(trans *Transaction, subReqMsg *e2ap.E2APSubscriptionRequest) (*Subscription, error) {
-	r.mutex.Lock()
-	defer r.mutex.Unlock()
-
-	var sequenceNumber uint16
-
-	//
-	// Allocate subscription
-	//
+func (r *Registry) allocateSubs(trans *Transaction, subReqMsg *e2ap.E2APSubscriptionRequest) (*Subscription, error) {
 	if len(r.subIds) > 0 {
-		sequenceNumber = r.subIds[0]
+		sequenceNumber := r.subIds[0]
 		r.subIds = r.subIds[1:]
 		if _, ok := r.register[sequenceNumber]; ok == true {
 			r.subIds = append(r.subIds, sequenceNumber)
-			return nil, fmt.Errorf("Registry: Failed to reserves subscription")
+			return nil, fmt.Errorf("Registry: Failed to reserve subscription exists")
 		}
-	} else {
-		return nil, fmt.Errorf("Registry: Failed to reserves subscription no free ids")
+		subs := &Subscription{
+			registry:  r,
+			Seq:       sequenceNumber,
+			Meid:      trans.Meid,
+			SubReqMsg: subReqMsg,
+			valid:     true,
+		}
+
+		if subs.EpList.AddEndpoint(trans.GetEndpoint()) == false {
+			r.subIds = append(r.subIds, subs.Seq)
+			return nil, fmt.Errorf("Registry: Endpoint existing already in subscription")
+		}
+
+		return subs, nil
 	}
-	subs := &Subscription{
-		registry: r,
-		Seq:      sequenceNumber,
-		Meid:     trans.Meid,
+	return nil, fmt.Errorf("Registry: Failed to reserve subscription no free ids")
+}
+
+func (r *Registry) findExistingSubs(trans *Transaction, subReqMsg *e2ap.E2APSubscriptionRequest) *Subscription {
+	for _, subs := range r.register {
+		if subs.IsSame(trans, subReqMsg) {
+
+			//
+			// check if there has been race conditions
+			//
+			subs.mutex.Lock()
+			//subs has been set to invalid
+			if subs.valid == false {
+				subs.mutex.Unlock()
+				continue
+			}
+			// try to add to endpointlist.
+			if subs.EpList.AddEndpoint(trans.GetEndpoint()) == false {
+				subs.mutex.Unlock()
+				continue
+			}
+			subs.mutex.Unlock()
+
+			//Race collision during parallel incoming and deleted
+			xapp.Logger.Debug("Registry: Identical subs found %s for %s", subs.String(), trans.String())
+			return subs
+		}
+	}
+	return nil
+}
+
+func (r *Registry) AssignToSubscription(trans *Transaction, subReqMsg *e2ap.E2APSubscriptionRequest) (*Subscription, error) {
+	var err error
+	var newAlloc bool
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
+	subs := r.findExistingSubs(trans, subReqMsg)
+
+	if subs == nil {
+		subs, err = r.allocateSubs(trans, subReqMsg)
+		if err != nil {
+			return nil, err
+		}
+		newAlloc = true
 	}
 
 	//
@@ -76,17 +121,12 @@ func (r *Registry) AssignToSubscription(trans *Transaction, subReqMsg *e2ap.E2AP
 	subs.mutex.Lock()
 	defer subs.mutex.Unlock()
 
-	if subs.EpList.AddEndpoint(trans.GetEndpoint()) == false {
-		r.subIds = append(r.subIds, sequenceNumber)
-		return nil, fmt.Errorf("Registry: Endpoint existing already in subscription")
-	}
 	epamount := subs.EpList.Size()
 
 	r.mutex.Unlock()
 	//
 	// Subscription route updates
 	//
-	var err error
 	if epamount == 1 {
 		subRouteAction := SubRouteInfo{CREATE, subs.EpList, subs.Seq}
 		err = r.rtmgrClient.SubscriptionRequestUpdate(subRouteAction)
@@ -97,18 +137,23 @@ func (r *Registry) AssignToSubscription(trans *Transaction, subReqMsg *e2ap.E2AP
 	r.mutex.Lock()
 
 	if err != nil {
-		r.subIds = append(r.subIds, sequenceNumber)
+		if newAlloc {
+			r.subIds = append(r.subIds, subs.Seq)
+		}
 		return nil, err
 	}
-	subs.SubReqMsg = subReqMsg
 
-	r.register[sequenceNumber] = subs
+	if newAlloc {
+		r.register[subs.Seq] = subs
+	}
 	xapp.Logger.Debug("Registry: Create %s", subs.String())
 	xapp.Logger.Debug("Registry: substable=%v", r.register)
 	return subs, nil
 }
 
+// TODO: Needs better logic when there is concurrent calls
 func (r *Registry) RemoveFromSubscription(subs *Subscription, trans *Transaction, waitRouteClean time.Duration) error {
+
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 	subs.mutex.Lock()

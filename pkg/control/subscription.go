@@ -31,6 +31,7 @@ import (
 //-----------------------------------------------------------------------------
 type Subscription struct {
 	mutex      sync.Mutex                     // Lock
+	valid      bool                           // valid
 	registry   *Registry                      // Registry
 	Seq        uint16                         // SubsId
 	Meid       *xapp.RMRMeid                  // Meid/ RanName
@@ -39,6 +40,7 @@ type Subscription struct {
 	TheTrans   *Transaction                   // Ongoing transaction from xapp
 	SubReqMsg  *e2ap.E2APSubscriptionRequest  // Subscription information
 	SubRespMsg *e2ap.E2APSubscriptionResponse // Subscription information
+	SubFailMsg *e2ap.E2APSubscriptionFailure  // Subscription information
 }
 
 func (s *Subscription) String() string {
@@ -90,4 +92,82 @@ func (s *Subscription) ReleaseTransactionTurn(trans *Transaction) {
 	}
 	s.mutex.Unlock()
 	s.TransLock.Unlock()
+}
+
+func (s *Subscription) IsSame(trans *Transaction, subReqMsg *e2ap.E2APSubscriptionRequest) bool {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	if s.valid == false {
+		return false
+	}
+
+	if s.SubReqMsg == nil {
+		return false
+	}
+
+	if s.Meid.RanName != trans.Meid.RanName {
+		return false
+	}
+
+	if s.EpList.Size() == 0 {
+		return false
+	}
+
+	//Somehow special case ... ?
+	if s.EpList.HasEndpoint(trans.GetEndpoint()) == true {
+		return false
+	}
+
+	// EventTrigger check
+	if s.SubReqMsg.EventTriggerDefinition.InterfaceDirection != subReqMsg.EventTriggerDefinition.InterfaceDirection ||
+		s.SubReqMsg.EventTriggerDefinition.ProcedureCode != subReqMsg.EventTriggerDefinition.ProcedureCode ||
+		s.SubReqMsg.EventTriggerDefinition.TypeOfMessage != subReqMsg.EventTriggerDefinition.TypeOfMessage {
+		return false
+	}
+
+	if s.SubReqMsg.EventTriggerDefinition.InterfaceId.GlobalEnbId.Present != subReqMsg.EventTriggerDefinition.InterfaceId.GlobalEnbId.Present ||
+		s.SubReqMsg.EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId != subReqMsg.EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId ||
+		s.SubReqMsg.EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.Val[0] != subReqMsg.EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.Val[0] ||
+		s.SubReqMsg.EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.Val[1] != subReqMsg.EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.Val[1] ||
+		s.SubReqMsg.EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.Val[2] != subReqMsg.EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.Val[2] {
+		return false
+	}
+
+	if s.SubReqMsg.EventTriggerDefinition.InterfaceId.GlobalGnbId.Present != subReqMsg.EventTriggerDefinition.InterfaceId.GlobalGnbId.Present ||
+		s.SubReqMsg.EventTriggerDefinition.InterfaceId.GlobalGnbId.NodeId != subReqMsg.EventTriggerDefinition.InterfaceId.GlobalGnbId.NodeId ||
+		s.SubReqMsg.EventTriggerDefinition.InterfaceId.GlobalGnbId.PlmnIdentity.Val[0] != subReqMsg.EventTriggerDefinition.InterfaceId.GlobalGnbId.PlmnIdentity.Val[0] ||
+		s.SubReqMsg.EventTriggerDefinition.InterfaceId.GlobalGnbId.PlmnIdentity.Val[1] != subReqMsg.EventTriggerDefinition.InterfaceId.GlobalGnbId.PlmnIdentity.Val[1] ||
+		s.SubReqMsg.EventTriggerDefinition.InterfaceId.GlobalGnbId.PlmnIdentity.Val[2] != subReqMsg.EventTriggerDefinition.InterfaceId.GlobalGnbId.PlmnIdentity.Val[2] {
+		return false
+	}
+
+	// Actions check
+	if len(s.SubReqMsg.ActionSetups) != len(subReqMsg.ActionSetups) {
+		return false
+	}
+
+	for _, acts := range s.SubReqMsg.ActionSetups {
+		for _, actt := range subReqMsg.ActionSetups {
+			if acts.ActionId != actt.ActionId {
+				return false
+			}
+			if acts.ActionType != actt.ActionType {
+				return false
+			}
+
+			if acts.ActionDefinition.Present != actt.ActionDefinition.Present ||
+				acts.ActionDefinition.StyleId != actt.ActionDefinition.StyleId ||
+				acts.ActionDefinition.ParamId != actt.ActionDefinition.ParamId {
+				return false
+			}
+			if acts.SubsequentAction.Present != actt.SubsequentAction.Present ||
+				acts.SubsequentAction.Type != actt.SubsequentAction.Type ||
+				acts.SubsequentAction.TimetoWait != actt.SubsequentAction.TimetoWait {
+				return false
+			}
+		}
+	}
+
+	return true
 }

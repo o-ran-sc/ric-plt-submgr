@@ -43,6 +43,20 @@ func createSubmgrControl(desc string, rtfile string, port string) *testingSubmgr
 	return mainCtrl
 }
 
+func (mc *testingSubmgrControl) wait_registry_empty(t *testing.T, secs int) bool {
+	cnt := int(0)
+	i := 1
+	for ; i <= secs*2; i++ {
+		cnt = len(mc.c.registry.register)
+		if cnt == 0 {
+			return true
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+	testError(t, "(general) no registry empty within %d secs: %d", secs, cnt)
+	return false
+}
+
 func (mc *testingSubmgrControl) wait_subs_clean(t *testing.T, e2SubsId int, secs int) bool {
 	var subs *Subscription
 	i := 1

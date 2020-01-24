@@ -66,9 +66,9 @@ func (rc *RtmgrClient) SubscriptionRequestUpdate(subRouteAction SubRouteInfo) er
 		deleteHandle.WithXappSubscriptionData(&deleteData)
 		_, _, err = rc.rtClient.Handle.DeleteXappSubscriptionHandle(deleteHandle)
 	case UPDATE:
-		updateData := rtmgr_models.XappList{}
+		var updateData rtmgr_models.XappList
 		for i := range subRouteAction.EpList.Endpoints {
-			updateData[i] = &rtmgr_models.XappElement{Address: &subRouteAction.EpList.Endpoints[i].Addr, Port: &subRouteAction.EpList.Endpoints[i].Port}
+			updateData = append(updateData, &rtmgr_models.XappElement{Address: &subRouteAction.EpList.Endpoints[i].Addr, Port: &subRouteAction.EpList.Endpoints[i].Port})
 		}
 		updateHandle := rtmgrhandle.NewUpdateXappSubscriptionHandleParamsWithTimeout(10 * time.Second)
 		updateHandle.WithSubscriptionID(subRouteAction.SubID)
