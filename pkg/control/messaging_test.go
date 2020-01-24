@@ -362,7 +362,39 @@ func (e2termConn *testingE2termControl) handle_e2term_subs_resp(t *testing.T, re
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-func (e2termConn *testingE2termControl) handle_e2term_subs_fail(t *testing.T, req *e2ap.E2APSubscriptionRequest, msg *RMRParams) {
+type test_subs_fail_params struct {
+	req  *e2ap.E2APSubscriptionRequest
+	fail *e2ap.E2APSubscriptionFailure
+}
+
+func (p *test_subs_fail_params) Set(req *e2ap.E2APSubscriptionRequest) {
+	p.req = req
+
+	p.fail = &e2ap.E2APSubscriptionFailure{}
+	p.fail.RequestId.Id = p.req.RequestId.Id
+	p.fail.RequestId.Seq = p.req.RequestId.Seq
+	p.fail.FunctionId = p.req.FunctionId
+	p.fail.ActionNotAdmittedList.Items = make([]e2ap.ActionNotAdmittedItem, len(p.req.ActionSetups))
+	for index := int(0); index < len(p.fail.ActionNotAdmittedList.Items); index++ {
+		p.fail.ActionNotAdmittedList.Items[index].ActionId = p.req.ActionSetups[index].ActionId
+		p.SetCauseVal(index, 5, 1)
+	}
+}
+
+func (p *test_subs_fail_params) SetCauseVal(ind int, content uint8, causeval uint8) {
+
+	if ind < 0 {
+		for index := int(0); index < len(p.fail.ActionNotAdmittedList.Items); index++ {
+			p.fail.ActionNotAdmittedList.Items[index].Cause.Content = content
+			p.fail.ActionNotAdmittedList.Items[index].Cause.CauseVal = causeval
+		}
+		return
+	}
+	p.fail.ActionNotAdmittedList.Items[ind].Cause.Content = content
+	p.fail.ActionNotAdmittedList.Items[ind].Cause.CauseVal = causeval
+}
+
+func (e2termConn *testingE2termControl) handle_e2term_subs_fail(t *testing.T, fparams *test_subs_fail_params, msg *RMRParams) {
 	xapp.Logger.Info("(%s) handle_e2term_subs_fail", e2termConn.desc)
 	e2SubsFail := e2asnpacker.NewPackerSubscriptionFailure()
 
@@ -371,19 +403,7 @@ func (e2termConn *testingE2termControl) handle_e2term_subs_fail(t *testing.T, re
 	//---------------------------------
 	xapp.Logger.Info("(%s) Send Subs Fail", e2termConn.desc)
 
-	resp := &e2ap.E2APSubscriptionFailure{}
-	resp.RequestId.Id = req.RequestId.Id
-	resp.RequestId.Seq = req.RequestId.Seq
-	resp.FunctionId = req.FunctionId
-
-	resp.ActionNotAdmittedList.Items = make([]e2ap.ActionNotAdmittedItem, len(resp.ActionNotAdmittedList.Items))
-	for index := int(0); index < len(resp.ActionNotAdmittedList.Items); index++ {
-		resp.ActionNotAdmittedList.Items[index].ActionId = req.ActionSetups[index].ActionId
-		resp.ActionNotAdmittedList.Items[index].Cause.Content = 3  // CauseMisc
-		resp.ActionNotAdmittedList.Items[index].Cause.CauseVal = 4 // unspecified
-	}
-
-	e2SubsFail.Set(resp)
+	e2SubsFail.Set(fparams.fail)
 	xapp.Logger.Debug("%s", e2SubsFail.String())
 	packerr, packedMsg := e2SubsFail.Pack(nil)
 	if packerr != nil {
@@ -1236,7 +1256,9 @@ func TestSubReqSubFailRespInSubmgr(t *testing.T) {
 
 	// E2t: Receive SubsReq and send SubsFail
 	crereq, cremsg := e2termConn.handle_e2term_subs_req(t)
-	e2termConn.handle_e2term_subs_fail(t, crereq, cremsg)
+	fparams := &test_subs_fail_params{}
+	fparams.Set(crereq)
+	e2termConn.handle_e2term_subs_fail(t, fparams, cremsg)
 
 	// Xapp: Receive SubsFail
 	e2SubsId := xappConn1.handle_xapp_subs_fail(t, cretrans)

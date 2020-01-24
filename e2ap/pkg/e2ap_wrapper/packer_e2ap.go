@@ -326,10 +326,11 @@ func (item *e2apEntryNotAdmittedList) set(data *e2ap.ActionNotAdmittedList) erro
 	item.entry.contentLength = 0
 	for i := 0; i < len(data.Items); i++ {
 		item.entry.RICActionNotAdmittedItem[item.entry.contentLength].ricActionID = (C.ulong)(data.Items[i].ActionId)
-		item.entry.RICActionNotAdmittedItem[item.entry.contentLength].ricCause.content = (C.uchar)(data.Items[i].Cause.Content) // C.cRICCauseRadioNetwork
+		item.entry.RICActionNotAdmittedItem[item.entry.contentLength].ricCause.content = (C.uchar)(data.Items[i].Cause.Content)
 		item.entry.RICActionNotAdmittedItem[item.entry.contentLength].ricCause.cause = (C.uchar)(data.Items[i].Cause.CauseVal)
 		item.entry.contentLength++
 	}
+
 	return nil
 }
 

@@ -394,7 +394,7 @@ func (c *Control) sendE2TSubscriptionDeleteRequest(subs *Subscription, trans *Tr
 	subDelReqMsg := &e2ap.E2APSubscriptionDeleteRequest{}
 	subDelReqMsg.RequestId.Id = 123
 	subDelReqMsg.RequestId.Seq = uint32(subs.GetSubId())
-	subDelReqMsg.FunctionId = 0
+	subDelReqMsg.FunctionId = subs.SubReqMsg.FunctionId
 	trans.Mtype, trans.Payload, err = c.e2ap.PackSubscriptionDeleteRequest(subDelReqMsg)
 	if err != nil {
 		xapp.Logger.Error("SUBS-SubDelReq: %s parent %s", idstring(trans, subs, err), parentTrans.String())
