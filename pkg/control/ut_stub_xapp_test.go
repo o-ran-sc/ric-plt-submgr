@@ -111,7 +111,42 @@ func (tc *testingXappStub) Consume(params *xapp.RMRParams) (err error) {
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-func (xappConn *testingXappStub) handle_xapp_subs_req(t *testing.T, oldTrans *xappTransaction) *xappTransaction {
+type test_subs_req_params struct {
+	req *e2ap.E2APSubscriptionRequest
+}
+
+func (p *test_subs_req_params) Init() {
+	p.req = &e2ap.E2APSubscriptionRequest{}
+
+	p.req.RequestId.Id = 1
+	p.req.RequestId.Seq = 0
+	p.req.FunctionId = 1
+
+	p.req.EventTriggerDefinition.InterfaceId.GlobalEnbId.Present = true
+	p.req.EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.StringPut("310150")
+	p.req.EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Id = 123
+	p.req.EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Bits = e2ap.E2AP_ENBIDHomeBits28
+
+	// gnb -> enb outgoing
+	// enb -> gnb incoming
+	// X2 36423-f40.doc
+	p.req.EventTriggerDefinition.InterfaceDirection = e2ap.E2AP_InterfaceDirectionIncoming
+	p.req.EventTriggerDefinition.ProcedureCode = 5 //28 35
+	p.req.EventTriggerDefinition.TypeOfMessage = e2ap.E2AP_InitiatingMessage
+
+	p.req.ActionSetups = make([]e2ap.ActionToBeSetupItem, 1)
+	p.req.ActionSetups[0].ActionId = 0
+	p.req.ActionSetups[0].ActionType = e2ap.E2AP_ActionTypeReport
+	p.req.ActionSetups[0].ActionDefinition.Present = false
+	//p.req.ActionSetups[index].ActionDefinition.StyleId = 255
+	//p.req.ActionSetups[index].ActionDefinition.ParamId = 222
+	p.req.ActionSetups[0].SubsequentAction.Present = true
+	p.req.ActionSetups[0].SubsequentAction.Type = e2ap.E2AP_SubSeqActionTypeContinue
+	p.req.ActionSetups[0].SubsequentAction.TimetoWait = e2ap.E2AP_TimeToWaitZero
+
+}
+
+func (xappConn *testingXappStub) handle_xapp_subs_req(t *testing.T, rparams *test_subs_req_params, oldTrans *xappTransaction) *xappTransaction {
 	xapp.Logger.Info("(%s) handle_xapp_subs_req", xappConn.desc)
 	e2SubsReq := xapp_e2asnpacker.NewPackerSubscriptionRequest()
 
@@ -120,35 +155,14 @@ func (xappConn *testingXappStub) handle_xapp_subs_req(t *testing.T, oldTrans *xa
 	//---------------------------------
 	xapp.Logger.Info("(%s) Send Subs Req", xappConn.desc)
 
-	req := &e2ap.E2APSubscriptionRequest{}
+	myparams := rparams
 
-	req.RequestId.Id = 1
-	req.RequestId.Seq = 0
-	req.FunctionId = 1
+	if myparams == nil {
+		myparams = &test_subs_req_params{}
+		myparams.Init()
+	}
 
-	req.EventTriggerDefinition.InterfaceId.GlobalEnbId.Present = true
-	req.EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.StringPut("310150")
-	req.EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Id = 123
-	req.EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Bits = e2ap.E2AP_ENBIDHomeBits28
-
-	// gnb -> enb outgoing
-	// enb -> gnb incoming
-	// X2 36423-f40.doc
-	req.EventTriggerDefinition.InterfaceDirection = e2ap.E2AP_InterfaceDirectionIncoming
-	req.EventTriggerDefinition.ProcedureCode = 5 //28 35
-	req.EventTriggerDefinition.TypeOfMessage = e2ap.E2AP_InitiatingMessage
-
-	req.ActionSetups = make([]e2ap.ActionToBeSetupItem, 1)
-	req.ActionSetups[0].ActionId = 0
-	req.ActionSetups[0].ActionType = e2ap.E2AP_ActionTypeReport
-	req.ActionSetups[0].ActionDefinition.Present = false
-	//req.ActionSetups[index].ActionDefinition.StyleId = 255
-	//req.ActionSetups[index].ActionDefinition.ParamId = 222
-	req.ActionSetups[0].SubsequentAction.Present = true
-	req.ActionSetups[0].SubsequentAction.Type = e2ap.E2AP_SubSeqActionTypeContinue
-	req.ActionSetups[0].SubsequentAction.TimetoWait = e2ap.E2AP_TimeToWaitZero
-
-	e2SubsReq.Set(req)
+	e2SubsReq.Set(myparams.req)
 	xapp.Logger.Debug("%s", e2SubsReq.String())
 	err, packedMsg := e2SubsReq.Pack(nil)
 	if err != nil {
@@ -327,7 +341,7 @@ func (xappConn *testingXappStub) handle_xapp_subs_del_resp(t *testing.T, trans *
 		if msg.Mtype != xapp.RICMessageTypes["RIC_SUB_DEL_RESP"] {
 			testError(t, "(%s) Received RIC_SUB_DEL_RESP wrong mtype expected %s got %s, error", xappConn.desc, "RIC_SUB_DEL_RESP", xapp.RicMessageTypeToName[msg.Mtype])
 			return
-		} else if msg.Xid != trans.xid {
+		} else if trans != nil && msg.Xid != trans.xid {
 			testError(t, "(%s) Received RIC_SUB_DEL_RESP wrong xid expected %s got %s, error", xappConn.desc, trans.xid, msg.Xid)
 			return
 		} else {
