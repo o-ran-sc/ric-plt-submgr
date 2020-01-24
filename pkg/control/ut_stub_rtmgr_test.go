@@ -84,12 +84,22 @@ func (hc *testingHttpRtmgrStub) http_handler(w http.ResponseWriter, r *http.Requ
 	hc.Lock()
 	defer hc.Unlock()
 
-	var req rtmgr_models.XappSubscriptionData
-	err := json.NewDecoder(r.Body).Decode(&req)
-	if err != nil {
-		xapp.Logger.Error("%s", err.Error())
+	if r.Method == http.MethodPost || r.Method == http.MethodDelete {
+		var req rtmgr_models.XappSubscriptionData
+		err := json.NewDecoder(r.Body).Decode(&req)
+		if err != nil {
+			xapp.Logger.Error("%s", err.Error())
+		}
+		xapp.Logger.Info("(%s) handling SubscriptionID=%d Address=%s Port=%d", hc.desc, *req.SubscriptionID, *req.Address, *req.Port)
 	}
-	xapp.Logger.Info("(%s) handling Address=%s Port=%d SubscriptionID=%d", hc.desc, *req.Address, *req.Port, *req.SubscriptionID)
+	if r.Method == http.MethodPut {
+		var req rtmgr_models.XappList
+		err := json.NewDecoder(r.Body).Decode(&req)
+		if err != nil {
+			xapp.Logger.Error("%s", err.Error())
+		}
+		xapp.Logger.Info("(%s) handling put", hc.desc)
+	}
 
 	var code int = 0
 	switch r.Method {
@@ -102,6 +112,13 @@ func (hc *testingHttpRtmgrStub) http_handler(w http.ResponseWriter, r *http.Requ
 		}
 	case http.MethodDelete:
 		code = 200
+		if hc.eventWaiter != nil {
+			if hc.eventWaiter.nextActionOk == false {
+				code = 400
+			}
+		}
+	case http.MethodPut:
+		code = 201
 		if hc.eventWaiter != nil {
 			if hc.eventWaiter.nextActionOk == false {
 				code = 400
