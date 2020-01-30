@@ -30,22 +30,21 @@ import (
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-type RmrDatagram struct {
-	MessageType    int
-	SubscriptionId uint16
-	Payload        []byte
-}
-
-//-----------------------------------------------------------------------------
-//
-//-----------------------------------------------------------------------------
 type RmrEndpoint struct {
 	Addr string // xapp addr
 	Port uint16 // xapp port
 }
 
 func (endpoint RmrEndpoint) String() string {
-	return endpoint.Get()
+	return endpoint.Addr + ":" + strconv.FormatUint(uint64(endpoint.Port), 10)
+}
+
+func (endpoint *RmrEndpoint) Equal(ep *RmrEndpoint) bool {
+	if (endpoint.Addr == ep.Addr) &&
+		(endpoint.Port == ep.Port) {
+		return true
+	}
+	return false
 }
 
 func (endpoint *RmrEndpoint) GetAddr() string {
@@ -54,10 +53,6 @@ func (endpoint *RmrEndpoint) GetAddr() string {
 
 func (endpoint *RmrEndpoint) GetPort() uint16 {
 	return endpoint.Port
-}
-
-func (endpoint *RmrEndpoint) Get() string {
-	return endpoint.Addr + ":" + strconv.FormatUint(uint64(endpoint.Port), 10)
 }
 
 func (endpoint *RmrEndpoint) Set(src string) bool {
@@ -97,7 +92,7 @@ func (eplist *RmrEndpointList) Size() int {
 
 func (eplist *RmrEndpointList) AddEndpoint(ep *RmrEndpoint) bool {
 	for i := range eplist.Endpoints {
-		if (eplist.Endpoints[i].Addr == ep.Addr) && (eplist.Endpoints[i].Port == ep.Port) {
+		if eplist.Endpoints[i].Equal(ep) {
 			return false
 		}
 	}
@@ -107,7 +102,7 @@ func (eplist *RmrEndpointList) AddEndpoint(ep *RmrEndpoint) bool {
 
 func (eplist *RmrEndpointList) DelEndpoint(ep *RmrEndpoint) bool {
 	for i := range eplist.Endpoints {
-		if (eplist.Endpoints[i].Addr == ep.Addr) && (eplist.Endpoints[i].Port == ep.Port) {
+		if eplist.Endpoints[i].Equal(ep) {
 			eplist.Endpoints[i] = eplist.Endpoints[len(eplist.Endpoints)-1]
 			eplist.Endpoints[len(eplist.Endpoints)-1] = RmrEndpoint{"", 0}
 			eplist.Endpoints = eplist.Endpoints[:len(eplist.Endpoints)-1]
@@ -120,7 +115,7 @@ func (eplist *RmrEndpointList) DelEndpoint(ep *RmrEndpoint) bool {
 func (eplist *RmrEndpointList) DelEndpoints(otheplist *RmrEndpointList) bool {
 	var retval bool = false
 	for i := range otheplist.Endpoints {
-		if eplist.DelEndpoint(&eplist.Endpoints[i]) {
+		if eplist.DelEndpoint(&otheplist.Endpoints[i]) {
 			retval = true
 		}
 	}
@@ -129,7 +124,7 @@ func (eplist *RmrEndpointList) DelEndpoints(otheplist *RmrEndpointList) bool {
 
 func (eplist *RmrEndpointList) HasEndpoint(ep *RmrEndpoint) bool {
 	for i := range eplist.Endpoints {
-		if (eplist.Endpoints[i].Addr == ep.Addr) && (eplist.Endpoints[i].Port == ep.Port) {
+		if eplist.Endpoints[i].Equal(ep) {
 			return true
 		}
 	}
@@ -142,25 +137,6 @@ func NewRmrEndpoint(src string) *RmrEndpoint {
 		return nil
 	}
 	return ep
-}
-
-//-----------------------------------------------------------------------------
-//
-//-----------------------------------------------------------------------------
-type Action int
-
-func (act Action) String() string {
-	actions := [...]string{
-		"CREATE",
-		"UPDATE",
-		"NONE",
-		"DELETE",
-	}
-
-	if act < CREATE || act > DELETE {
-		return "UNKNOWN"
-	}
-	return actions[act]
 }
 
 //-----------------------------------------------------------------------------
