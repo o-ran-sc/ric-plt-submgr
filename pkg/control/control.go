@@ -57,13 +57,6 @@ type RMRMeid struct {
 	RanName string
 }
 
-const (
-	CREATE Action = 0
-	UPDATE Action = 1
-	NONE   Action = 2
-	DELETE Action = 3
-)
-
 func init() {
 	xapp.Logger.Info("SUBMGR")
 	viper.AutomaticEnv()
@@ -263,7 +256,7 @@ func (c *Control) handleXAPPSubscriptionDeleteRequest(params *RMRParams) {
 	}
 	defer trans.Release()
 
-	subs, err := c.registry.GetSubscriptionFirstMatch([]uint16{uint16(subDelReqMsg.RequestId.Seq), uint16(params.SubId)})
+	subs, err := c.registry.GetSubscriptionFirstMatch([]uint32{subDelReqMsg.RequestId.Seq, uint32(params.SubId)})
 	if err != nil {
 		xapp.Logger.Error("XAPP-SubDelReq: %s", idstring(trans, nil, err))
 		return
@@ -386,8 +379,7 @@ func (c *Control) sendE2TSubscriptionRequest(subs *Subscription, trans *Transact
 	var timedOut bool = false
 
 	subReqMsg := subs.SubReqMsg
-	subReqMsg.RequestId.Id = 123
-	subReqMsg.RequestId.Seq = uint32(subs.GetSubId())
+	subReqMsg.RequestId = subs.GetReqId()
 	trans.Mtype, trans.Payload, err = c.e2ap.PackSubscriptionRequest(subReqMsg)
 	if err != nil {
 		xapp.Logger.Error("SUBS-SubReq: %s parent %s", idstring(trans, subs, err), parentTrans.String())
@@ -417,8 +409,7 @@ func (c *Control) sendE2TSubscriptionDeleteRequest(subs *Subscription, trans *Tr
 	var timedOut bool
 
 	subDelReqMsg := &e2ap.E2APSubscriptionDeleteRequest{}
-	subDelReqMsg.RequestId.Id = 123
-	subDelReqMsg.RequestId.Seq = uint32(subs.GetSubId())
+	subDelReqMsg.RequestId = subs.GetReqId()
 	subDelReqMsg.FunctionId = subs.SubReqMsg.FunctionId
 	trans.Mtype, trans.Payload, err = c.e2ap.PackSubscriptionDeleteRequest(subDelReqMsg)
 	if err != nil {
@@ -449,7 +440,7 @@ func (c *Control) handleE2TSubscriptionResponse(params *RMRParams) {
 		xapp.Logger.Error("MSG-SubResp %s", idstring(params, nil, err))
 		return
 	}
-	subs, err := c.registry.GetSubscriptionFirstMatch([]uint16{uint16(subRespMsg.RequestId.Seq), uint16(params.SubId)})
+	subs, err := c.registry.GetSubscriptionFirstMatch([]uint32{subRespMsg.RequestId.Seq, uint32(params.SubId)})
 	if err != nil {
 		xapp.Logger.Error("MSG-SubResp: %s", idstring(params, nil, err))
 		return
@@ -478,7 +469,7 @@ func (c *Control) handleE2TSubscriptionFailure(params *RMRParams) {
 		xapp.Logger.Error("MSG-SubFail %s", idstring(params, nil, err))
 		return
 	}
-	subs, err := c.registry.GetSubscriptionFirstMatch([]uint16{uint16(subFailMsg.RequestId.Seq), uint16(params.SubId)})
+	subs, err := c.registry.GetSubscriptionFirstMatch([]uint32{subFailMsg.RequestId.Seq, uint32(params.SubId)})
 	if err != nil {
 		xapp.Logger.Error("MSG-SubFail: %s", idstring(params, nil, err))
 		return
@@ -507,7 +498,7 @@ func (c *Control) handleE2TSubscriptionDeleteResponse(params *RMRParams) (err er
 		xapp.Logger.Error("SUBS-SubDelResp: %s", idstring(params, nil, err))
 		return
 	}
-	subs, err := c.registry.GetSubscriptionFirstMatch([]uint16{uint16(subDelRespMsg.RequestId.Seq), uint16(params.SubId)})
+	subs, err := c.registry.GetSubscriptionFirstMatch([]uint32{subDelRespMsg.RequestId.Seq, uint32(params.SubId)})
 	if err != nil {
 		xapp.Logger.Error("SUBS-SubDelResp: %s", idstring(params, nil, err))
 		return
@@ -536,7 +527,7 @@ func (c *Control) handleE2TSubscriptionDeleteFailure(params *RMRParams) {
 		xapp.Logger.Error("MSG-SubDelFail: %s", idstring(params, nil, err))
 		return
 	}
-	subs, err := c.registry.GetSubscriptionFirstMatch([]uint16{uint16(subDelFailMsg.RequestId.Seq), uint16(params.SubId)})
+	subs, err := c.registry.GetSubscriptionFirstMatch([]uint32{subDelFailMsg.RequestId.Seq, uint32(params.SubId)})
 	if err != nil {
 		xapp.Logger.Error("MSG-SubDelFail: %s", idstring(params, nil, err))
 		return

@@ -39,7 +39,7 @@ func TestRmrEndpoint(t *testing.T) {
 			testError(t, "Endpoint elems for value %s expected addr %s port %d got addr %s port %d", val, expect.GetAddr(), expect.GetPort(), res.GetAddr(), res.GetPort())
 		}
 		if expect.String() != res.String() {
-			testError(t, "Endpoint string for value %s expected %s got %s", val, expect.String(), res.Get())
+			testError(t, "Endpoint string for value %s expected %s got %s", val, expect.String(), res.String())
 		}
 
 	}
@@ -52,20 +52,71 @@ func TestRmrEndpoint(t *testing.T) {
 	testEp(t, "", nil)
 }
 
-func TestAction(t *testing.T) {
+func TestRmrEndpointList(t *testing.T) {
+	epl := &RmrEndpointList{}
 
-	testActionString := func(t *testing.T, val int, str string) {
-		if Action(val).String() != str {
-			testError(t, "String for value %d expected %s got %s", val, str, Action(val).String())
-		}
+	// Simple add / has / delete
+	if epl.AddEndpoint(NewRmrEndpoint("127.0.0.1:8080")) == false {
+		testError(t, "RmrEndpointList: 8080 add failed")
+	}
+	if epl.AddEndpoint(NewRmrEndpoint("127.0.0.1:8080")) == true {
+		testError(t, "RmrEndpointList: 8080 duplicate add success")
+	}
+	if epl.AddEndpoint(NewRmrEndpoint("127.0.0.1:8081")) == false {
+		testError(t, "RmrEndpointList: 8081 add failed")
+	}
+	if epl.HasEndpoint(NewRmrEndpoint("127.0.0.1:8081")) == false {
+		testError(t, "RmrEndpointList: 8081 has failed")
+	}
+	if epl.DelEndpoint(NewRmrEndpoint("127.0.0.1:8081")) == false {
+		testError(t, "RmrEndpointList: 8081 del failed")
+	}
+	if epl.HasEndpoint(NewRmrEndpoint("127.0.0.1:8081")) == true {
+		testError(t, "RmrEndpointList: 8081 has non existing success")
+	}
+	if epl.DelEndpoint(NewRmrEndpoint("127.0.0.1:8081")) == true {
+		testError(t, "RmrEndpointList: 8081 del non existing success")
+	}
+	if epl.DelEndpoint(NewRmrEndpoint("127.0.0.1:8080")) == false {
+		testError(t, "RmrEndpointList: 8080 del failed")
 	}
 
-	testActionString(t, 0, "CREATE")
-	testActionString(t, 1, "UPDATE")
-	testActionString(t, 2, "NONE")
-	testActionString(t, 3, "DELETE")
-	testActionString(t, 5, "UNKNOWN")
-	testActionString(t, 6, "UNKNOWN")
-	testActionString(t, 7, "UNKNOWN")
-	testActionString(t, 10, "UNKNOWN")
+	// list delete
+	if epl.AddEndpoint(NewRmrEndpoint("127.0.0.1:8080")) == false {
+		testError(t, "RmrEndpointList: 8080 add failed")
+	}
+	if epl.AddEndpoint(NewRmrEndpoint("127.0.0.1:8081")) == false {
+		testError(t, "RmrEndpointList: 8081 add failed")
+	}
+	if epl.AddEndpoint(NewRmrEndpoint("127.0.0.1:8082")) == false {
+		testError(t, "RmrEndpointList: 8082 add failed")
+	}
+
+	epl2 := &RmrEndpointList{}
+	if epl2.AddEndpoint(NewRmrEndpoint("127.0.0.1:9080")) == false {
+		testError(t, "RmrEndpointList: othlist add 9080 failed")
+	}
+
+	if epl.DelEndpoints(epl2) == true {
+		testError(t, "RmrEndpointList: delete list not existing successs")
+	}
+
+	if epl2.AddEndpoint(NewRmrEndpoint("127.0.0.1:8080")) == false {
+		testError(t, "RmrEndpointList: othlist add 8080 failed")
+	}
+	if epl.DelEndpoints(epl2) == false {
+		testError(t, "RmrEndpointList: delete list 8080,9080 failed")
+	}
+
+	if epl2.AddEndpoint(NewRmrEndpoint("127.0.0.1:8081")) == false {
+		testError(t, "RmrEndpointList: othlist add 8081 failed")
+	}
+	if epl2.AddEndpoint(NewRmrEndpoint("127.0.0.1:8082")) == false {
+		testError(t, "RmrEndpointList: othlist add 8082 failed")
+	}
+
+	if epl.DelEndpoints(epl2) == false {
+		testError(t, "RmrEndpointList: delete list 8080,8081,8082,9080 failed")
+	}
+
 }

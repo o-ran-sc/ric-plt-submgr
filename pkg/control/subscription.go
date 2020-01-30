@@ -22,7 +22,6 @@ package control
 import (
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
-	"strconv"
 	"sync"
 )
 
@@ -33,7 +32,7 @@ type Subscription struct {
 	mutex      sync.Mutex                     // Lock
 	valid      bool                           // valid
 	registry   *Registry                      // Registry
-	Seq        uint16                         // SubsId
+	ReqId      e2ap.RequestId                 // ReqId (Requestor Id + Seq Nro a.k.a subsid)
 	Meid       *xapp.RMRMeid                  // Meid/ RanName
 	EpList     RmrEndpointList                // Endpoints
 	TransLock  sync.Mutex                     // Lock transactions, only one executed per time for subs
@@ -44,13 +43,31 @@ type Subscription struct {
 }
 
 func (s *Subscription) String() string {
-	return "subs(" + strconv.FormatUint(uint64(s.Seq), 10) + "/" + s.Meid.RanName + "/" + s.EpList.String() + ")"
+	return "subs(" + s.ReqId.String() + "/" + s.Meid.RanName + "/" + s.EpList.String() + ")"
 }
 
-func (s *Subscription) GetSubId() uint16 {
+func (s *Subscription) GetReqId() e2ap.RequestId {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	return s.Seq
+	return s.ReqId
+}
+
+func (s *Subscription) GetRequestorId() uint32 {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	return s.ReqId.Id
+}
+
+func (s *Subscription) GetSeq() uint32 {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	return s.ReqId.Seq
+}
+
+func (s *Subscription) GetSubId() uint32 {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	return s.ReqId.Seq
 }
 
 func (s *Subscription) GetMeid() *xapp.RMRMeid {
@@ -94,7 +111,7 @@ func (s *Subscription) ReleaseTransactionTurn(trans *Transaction) {
 	s.TransLock.Unlock()
 }
 
-func (s *Subscription) IsSame(trans *Transaction, subReqMsg *e2ap.E2APSubscriptionRequest) bool {
+func (s *Subscription) IsMergeable(trans *Transaction, subReqMsg *e2ap.E2APSubscriptionRequest) bool {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -107,15 +124,6 @@ func (s *Subscription) IsSame(trans *Transaction, subReqMsg *e2ap.E2APSubscripti
 	}
 
 	if s.Meid.RanName != trans.Meid.RanName {
-		return false
-	}
-
-	if s.EpList.Size() == 0 {
-		return false
-	}
-
-	//Somehow special case ... ?
-	if s.EpList.HasEndpoint(trans.GetEndpoint()) == true {
 		return false
 	}
 
@@ -153,6 +161,10 @@ func (s *Subscription) IsSame(trans *Transaction, subReqMsg *e2ap.E2APSubscripti
 				return false
 			}
 			if acts.ActionType != actt.ActionType {
+				return false
+			}
+
+			if acts.ActionType != e2ap.E2AP_ActionTypeReport {
 				return false
 			}
 
