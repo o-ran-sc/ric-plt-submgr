@@ -194,10 +194,10 @@ func (xappConn *testingXappStub) handle_xapp_subs_req(t *testing.T, rparams *tes
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-func (xappConn *testingXappStub) handle_xapp_subs_resp(t *testing.T, trans *xappTransaction) int {
+func (xappConn *testingXappStub) handle_xapp_subs_resp(t *testing.T, trans *xappTransaction) uint32 {
 	xapp.Logger.Info("(%s) handle_xapp_subs_resp", xappConn.desc)
 	e2SubsResp := xapp_e2asnpacker.NewPackerSubscriptionResponse()
-	var e2SubsId int
+	var e2SubsId uint32
 
 	//---------------------------------
 	// xapp activity: Recv Subs Resp
@@ -207,14 +207,18 @@ func (xappConn *testingXappStub) handle_xapp_subs_resp(t *testing.T, trans *xapp
 		xappConn.DecMsgCnt()
 		if msg.Mtype != xapp.RICMessageTypes["RIC_SUB_RESP"] {
 			testError(t, "(%s) Received RIC_SUB_RESP wrong mtype expected %s got %s, error", xappConn.desc, "RIC_SUB_RESP", xapp.RicMessageTypeToName[msg.Mtype])
-			return -1
+			return 0
 		} else if msg.Xid != trans.xid {
 			testError(t, "(%s) Received RIC_SUB_RESP wrong xid expected %s got %s, error", xappConn.desc, trans.xid, msg.Xid)
-			return -1
+			return 0
 		} else {
 			packedData := &packer.PackedData{}
 			packedData.Buf = msg.Payload
-			e2SubsId = msg.SubId
+			if msg.SubId > 0 {
+				e2SubsId = uint32(msg.SubId)
+			} else {
+				e2SubsId = 0
+			}
 			unpackerr := e2SubsResp.UnPack(packedData)
 
 			if unpackerr != nil {
@@ -230,18 +234,18 @@ func (xappConn *testingXappStub) handle_xapp_subs_resp(t *testing.T, trans *xapp
 		}
 	case <-time.After(15 * time.Second):
 		testError(t, "(%s) Not Received RIC_SUB_RESP within 15 secs", xappConn.desc)
-		return -1
+		return 0
 	}
-	return -1
+	return 0
 }
 
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-func (xappConn *testingXappStub) handle_xapp_subs_fail(t *testing.T, trans *xappTransaction) int {
+func (xappConn *testingXappStub) handle_xapp_subs_fail(t *testing.T, trans *xappTransaction) uint32 {
 	xapp.Logger.Info("(%s) handle_xapp_subs_fail", xappConn.desc)
 	e2SubsFail := xapp_e2asnpacker.NewPackerSubscriptionFailure()
-	var e2SubsId int
+	var e2SubsId uint32
 
 	//-------------------------------
 	// xapp activity: Recv Subs Fail
@@ -251,14 +255,18 @@ func (xappConn *testingXappStub) handle_xapp_subs_fail(t *testing.T, trans *xapp
 		xappConn.DecMsgCnt()
 		if msg.Mtype != xapp.RICMessageTypes["RIC_SUB_FAILURE"] {
 			testError(t, "(%s) Received RIC_SUB_FAILURE wrong mtype expected %s got %s, error", xappConn.desc, "RIC_SUB_FAILURE", xapp.RicMessageTypeToName[msg.Mtype])
-			return -1
+			return 0
 		} else if msg.Xid != trans.xid {
 			testError(t, "(%s) Received RIC_SUB_FAILURE wrong xid expected %s got %s, error", xappConn.desc, trans.xid, msg.Xid)
-			return -1
+			return 0
 		} else {
 			packedData := &packer.PackedData{}
 			packedData.Buf = msg.Payload
-			e2SubsId = msg.SubId
+			if msg.SubId > 0 {
+				e2SubsId = uint32(msg.SubId)
+			} else {
+				e2SubsId = 0
+			}
 			unpackerr := e2SubsFail.UnPack(packedData)
 
 			if unpackerr != nil {
@@ -274,15 +282,15 @@ func (xappConn *testingXappStub) handle_xapp_subs_fail(t *testing.T, trans *xapp
 		}
 	case <-time.After(15 * time.Second):
 		testError(t, "(%s) Not Received RIC_SUB_FAILURE within 15 secs", xappConn.desc)
-		return -1
+		return 0
 	}
-	return -1
+	return 0
 }
 
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-func (xappConn *testingXappStub) handle_xapp_subs_del_req(t *testing.T, oldTrans *xappTransaction, e2SubsId int) *xappTransaction {
+func (xappConn *testingXappStub) handle_xapp_subs_del_req(t *testing.T, oldTrans *xappTransaction, e2SubsId uint32) *xappTransaction {
 	xapp.Logger.Info("(%s) handle_xapp_subs_del_req", xappConn.desc)
 	e2SubsDelReq := xapp_e2asnpacker.NewPackerSubscriptionDeleteRequest()
 
@@ -293,7 +301,7 @@ func (xappConn *testingXappStub) handle_xapp_subs_del_req(t *testing.T, oldTrans
 
 	req := &e2ap.E2APSubscriptionDeleteRequest{}
 	req.RequestId.Id = 1
-	req.RequestId.Seq = uint32(e2SubsId)
+	req.RequestId.Seq = e2SubsId
 	req.FunctionId = 1
 
 	e2SubsDelReq.Set(req)
@@ -311,7 +319,7 @@ func (xappConn *testingXappStub) handle_xapp_subs_del_req(t *testing.T, oldTrans
 
 	params := &RMRParams{&xapp.RMRParams{}}
 	params.Mtype = xapp.RIC_SUB_DEL_REQ
-	params.SubId = e2SubsId
+	params.SubId = int(e2SubsId)
 	params.Payload = packedMsg.Buf
 	params.Meid = trans.meid
 	params.Xid = trans.xid

@@ -26,7 +26,7 @@ RUN apt update && apt install -y iputils-ping net-tools curl tcpdump gdb
 
 WORKDIR /tmp
 
-ARG RMRVERSION=1.13.1
+ARG RMRVERSION=3.0.5
 # Install RMr shared library
 RUN wget --content-disposition https://packagecloud.io/o-ran-sc/staging/packages/debian/stretch/rmr_${RMRVERSION}_amd64.deb/download.deb && dpkg -i rmr_${RMRVERSION}_amd64.deb && rm -rf rmr_${RMRVERSION}_amd64.deb
 # Install RMr development header files
