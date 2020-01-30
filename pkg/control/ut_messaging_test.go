@@ -56,7 +56,7 @@ func TestSubReqAndRouteNok(t *testing.T) {
 	waiter.WaitResult(t)
 
 	//Wait that subs is cleaned
-	mainCtrl.wait_subs_clean(t, int(newSubsId), 10)
+	mainCtrl.wait_subs_clean(t, newSubsId, 10)
 
 	xappConn1.TestMsgCnt(t)
 	xappConn2.TestMsgCnt(t)
@@ -585,7 +585,7 @@ func TestSubReqRetryNoRespSubDelRespInSubmgr(t *testing.T) {
 	e2termConn.handle_e2term_subs_del_resp(t, delreq, delmsg)
 
 	// Wait that subs is cleaned
-	mainCtrl.wait_subs_clean(t, int(delreq.RequestId.Seq), 10)
+	mainCtrl.wait_subs_clean(t, delreq.RequestId.Seq, 10)
 
 	xappConn1.TestMsgCnt(t)
 	xappConn2.TestMsgCnt(t)
@@ -642,7 +642,7 @@ func TestSubReqTwoRetriesNoRespAtAllInSubmgr(t *testing.T) {
 	delreq, _ := e2termConn.handle_e2term_subs_del_req(t)
 
 	// Wait that subs is cleaned
-	mainCtrl.wait_subs_clean(t, int(delreq.RequestId.Seq), 15)
+	mainCtrl.wait_subs_clean(t, delreq.RequestId.Seq, 15)
 
 	xappConn1.TestMsgCnt(t)
 	xappConn2.TestMsgCnt(t)
@@ -1156,7 +1156,7 @@ func TestSubReqAndSubDelNoAnswerSameActionParallel(t *testing.T) {
 	e2termConn.handle_e2term_subs_del_resp(t, delreq1, delmsg1)
 
 	//Wait that subs is cleaned
-	mainCtrl.wait_subs_clean(t, int(delreq1.RequestId.Seq), 10)
+	mainCtrl.wait_subs_clean(t, delreq1.RequestId.Seq, 10)
 
 	xappConn1.TestMsgCnt(t)
 	xappConn2.TestMsgCnt(t)

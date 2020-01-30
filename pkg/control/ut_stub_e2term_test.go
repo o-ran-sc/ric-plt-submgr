@@ -132,7 +132,7 @@ func (e2termConn *testingE2termStub) handle_e2term_subs_resp(t *testing.T, req *
 	}
 
 	e2SubsResp.Set(resp)
-	xapp.Logger.Debug("%s", e2SubsResp.String())
+	xapp.Logger.Debug("(%s) %s", e2termConn.desc, e2SubsResp.String())
 	packerr, packedMsg := e2SubsResp.Pack(nil)
 	if packerr != nil {
 		testError(t, "(%s) pack NOK %s", e2termConn.desc, packerr.Error())
@@ -198,7 +198,7 @@ func (e2termConn *testingE2termStub) handle_e2term_subs_fail(t *testing.T, fpara
 	xapp.Logger.Info("(%s) Send Subs Fail", e2termConn.desc)
 
 	e2SubsFail.Set(fparams.fail)
-	xapp.Logger.Debug("%s", e2SubsFail.String())
+	xapp.Logger.Debug("(%s) %s", e2termConn.desc, e2SubsFail.String())
 	packerr, packedMsg := e2SubsFail.Pack(nil)
 	if packerr != nil {
 		testError(t, "(%s) pack NOK %s", e2termConn.desc, packerr.Error())
@@ -276,7 +276,7 @@ func (e2termConn *testingE2termStub) handle_e2term_subs_del_resp(t *testing.T, r
 	resp.FunctionId = req.FunctionId
 
 	e2SubsDelResp.Set(resp)
-	xapp.Logger.Debug("%s", e2SubsDelResp.String())
+	xapp.Logger.Debug("(%s) %s", e2termConn.desc, e2SubsDelResp.String())
 	packerr, packedMsg := e2SubsDelResp.Pack(nil)
 	if packerr != nil {
 		testError(t, "(%s) pack NOK %s", e2termConn.desc, packerr.Error())
@@ -316,7 +316,7 @@ func (e2termConn *testingE2termStub) handle_e2term_subs_del_fail(t *testing.T, r
 	resp.Cause.CauseVal = 4 // unspecified
 
 	e2SubsDelFail.Set(resp)
-	xapp.Logger.Debug("%s", e2SubsDelFail.String())
+	xapp.Logger.Debug("(%s) %s", e2termConn.desc, e2SubsDelFail.String())
 	packerr, packedMsg := e2SubsDelFail.Pack(nil)
 	if packerr != nil {
 		testError(t, "(%s) pack NOK %s", e2termConn.desc, packerr.Error())

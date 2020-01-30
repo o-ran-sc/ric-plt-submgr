@@ -22,7 +22,6 @@ package control
 import (
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
-	"strconv"
 	"sync"
 )
 
@@ -30,27 +29,40 @@ import (
 //
 //-----------------------------------------------------------------------------
 type Subscription struct {
-	mutex      sync.Mutex                     // Lock
-	valid      bool                           // valid
-	registry   *Registry                      // Registry
-	Seq        uint16                         // SubsId
-	Meid       *xapp.RMRMeid                  // Meid/ RanName
-	EpList     RmrEndpointList                // Endpoints
-	TransLock  sync.Mutex                     // Lock transactions, only one executed per time for subs
-	TheTrans   *Transaction                   // Ongoing transaction from xapp
-	SubReqMsg  *e2ap.E2APSubscriptionRequest  // Subscription information
-	SubRespMsg *e2ap.E2APSubscriptionResponse // Subscription information
-	SubFailMsg *e2ap.E2APSubscriptionFailure  // Subscription information
+	mutex     sync.Mutex                    // Lock
+	valid     bool                          // valid
+	registry  *Registry                     // Registry
+	ReqId     RequestId                     // ReqId (Requestor Id + Seq Nro a.k.a subsid)
+	Meid      *xapp.RMRMeid                 // Meid/ RanName
+	EpList    RmrEndpointList               // Endpoints
+	TransLock sync.Mutex                    // Lock transactions, only one executed per time for subs
+	TheTrans  TransactionIf                 // Ongoing transaction
+	SubReqMsg *e2ap.E2APSubscriptionRequest // Subscription information
+	SubRFMsg  interface{}                   // Subscription information
 }
 
 func (s *Subscription) String() string {
-	return "subs(" + strconv.FormatUint(uint64(s.Seq), 10) + "/" + s.Meid.RanName + "/" + s.EpList.String() + ")"
+	return "subs(" + s.ReqId.String() + "/" + s.Meid.RanName + "/" + s.EpList.String() + ")"
 }
 
-func (s *Subscription) GetSubId() uint16 {
+func (s *Subscription) GetCachedResponse() (interface{}, bool) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	return s.Seq
+	return s.SubRFMsg, s.valid
+}
+
+func (s *Subscription) SetCachedResponse(subRFMsg interface{}, valid bool) (interface{}, bool) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	s.SubRFMsg = subRFMsg
+	s.valid = valid
+	return s.SubRFMsg, s.valid
+}
+
+func (s *Subscription) GetReqId() *RequestId {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	return &s.ReqId
 }
 
 func (s *Subscription) GetMeid() *xapp.RMRMeid {
@@ -62,30 +74,20 @@ func (s *Subscription) GetMeid() *xapp.RMRMeid {
 	return nil
 }
 
-func (s *Subscription) IsTransactionReserved() bool {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-	if s.TheTrans != nil {
-		return true
-	}
-	return false
-
-}
-
-func (s *Subscription) GetTransaction() *Transaction {
+func (s *Subscription) GetTransaction() TransactionIf {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	return s.TheTrans
 }
 
-func (s *Subscription) WaitTransactionTurn(trans *Transaction) {
+func (s *Subscription) WaitTransactionTurn(trans TransactionIf) {
 	s.TransLock.Lock()
 	s.mutex.Lock()
 	s.TheTrans = trans
 	s.mutex.Unlock()
 }
 
-func (s *Subscription) ReleaseTransactionTurn(trans *Transaction) {
+func (s *Subscription) ReleaseTransactionTurn(trans TransactionIf) {
 	s.mutex.Lock()
 	if trans != nil && trans == s.TheTrans {
 		s.TheTrans = nil
@@ -94,7 +96,7 @@ func (s *Subscription) ReleaseTransactionTurn(trans *Transaction) {
 	s.TransLock.Unlock()
 }
 
-func (s *Subscription) IsSame(trans *Transaction, subReqMsg *e2ap.E2APSubscriptionRequest) bool {
+func (s *Subscription) IsMergeable(trans *TransactionXapp, subReqMsg *e2ap.E2APSubscriptionRequest) bool {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -107,15 +109,6 @@ func (s *Subscription) IsSame(trans *Transaction, subReqMsg *e2ap.E2APSubscripti
 	}
 
 	if s.Meid.RanName != trans.Meid.RanName {
-		return false
-	}
-
-	if s.EpList.Size() == 0 {
-		return false
-	}
-
-	//Somehow special case ... ?
-	if s.EpList.HasEndpoint(trans.GetEndpoint()) == true {
 		return false
 	}
 
@@ -153,6 +146,10 @@ func (s *Subscription) IsSame(trans *Transaction, subReqMsg *e2ap.E2APSubscripti
 				return false
 			}
 			if acts.ActionType != actt.ActionType {
+				return false
+			}
+
+			if acts.ActionType != e2ap.E2AP_ActionTypeReport {
 				return false
 			}
 

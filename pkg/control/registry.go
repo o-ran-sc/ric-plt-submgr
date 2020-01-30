@@ -30,22 +30,23 @@ import (
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
+
 type Registry struct {
 	mutex       sync.Mutex
-	register    map[uint16]*Subscription
-	subIds      []uint16
+	register    map[uint32]*Subscription
+	subIds      []uint32
 	rtmgrClient *RtmgrClient
 }
 
 func (r *Registry) Initialize() {
-	r.register = make(map[uint16]*Subscription)
-	var i uint16
+	r.register = make(map[uint32]*Subscription)
+	var i uint32
 	for i = 0; i < 65535; i++ {
 		r.subIds = append(r.subIds, i+1)
 	}
 }
 
-func (r *Registry) allocateSubs(trans *Transaction, subReqMsg *e2ap.E2APSubscriptionRequest) (*Subscription, error) {
+func (r *Registry) allocateSubs(trans *TransactionXapp, subReqMsg *e2ap.E2APSubscriptionRequest) (*Subscription, error) {
 	if len(r.subIds) > 0 {
 		sequenceNumber := r.subIds[0]
 		r.subIds = r.subIds[1:]
@@ -55,14 +56,15 @@ func (r *Registry) allocateSubs(trans *Transaction, subReqMsg *e2ap.E2APSubscrip
 		}
 		subs := &Subscription{
 			registry:  r,
-			Seq:       sequenceNumber,
 			Meid:      trans.Meid,
 			SubReqMsg: subReqMsg,
 			valid:     true,
 		}
+		subs.ReqId.Id = 123
+		subs.ReqId.Seq = sequenceNumber
 
 		if subs.EpList.AddEndpoint(trans.GetEndpoint()) == false {
-			r.subIds = append(r.subIds, subs.Seq)
+			r.subIds = append(r.subIds, subs.ReqId.Seq)
 			return nil, fmt.Errorf("Registry: Endpoint existing already in subscription")
 		}
 
@@ -71,9 +73,10 @@ func (r *Registry) allocateSubs(trans *Transaction, subReqMsg *e2ap.E2APSubscrip
 	return nil, fmt.Errorf("Registry: Failed to reserve subscription no free ids")
 }
 
-func (r *Registry) findExistingSubs(trans *Transaction, subReqMsg *e2ap.E2APSubscriptionRequest) *Subscription {
+func (r *Registry) findExistingSubs(trans *TransactionXapp, subReqMsg *e2ap.E2APSubscriptionRequest) *Subscription {
+
 	for _, subs := range r.register {
-		if subs.IsSame(trans, subReqMsg) {
+		if subs.IsMergeable(trans, subReqMsg) {
 
 			//
 			// check if there has been race conditions
@@ -84,6 +87,11 @@ func (r *Registry) findExistingSubs(trans *Transaction, subReqMsg *e2ap.E2APSubs
 				subs.mutex.Unlock()
 				continue
 			}
+			// If size is zero, entry is to be deleted
+			if subs.EpList.Size() == 0 {
+				subs.mutex.Unlock()
+				continue
+			}
 			// try to add to endpointlist.
 			if subs.EpList.AddEndpoint(trans.GetEndpoint()) == false {
 				subs.mutex.Unlock()
@@ -91,15 +99,14 @@ func (r *Registry) findExistingSubs(trans *Transaction, subReqMsg *e2ap.E2APSubs
 			}
 			subs.mutex.Unlock()
 
-			//Race collision during parallel incoming and deleted
-			xapp.Logger.Debug("Registry: Identical subs found %s for %s", subs.String(), trans.String())
+			xapp.Logger.Debug("Registry: Mergeable subs found %s for %s", subs.String(), trans.String())
 			return subs
 		}
 	}
 	return nil
 }
 
-func (r *Registry) AssignToSubscription(trans *Transaction, subReqMsg *e2ap.E2APSubscriptionRequest) (*Subscription, error) {
+func (r *Registry) AssignToSubscription(trans *TransactionXapp, subReqMsg *e2ap.E2APSubscriptionRequest) (*Subscription, error) {
 	var err error
 	var newAlloc bool
 	r.mutex.Lock()
@@ -128,31 +135,31 @@ func (r *Registry) AssignToSubscription(trans *Transaction, subReqMsg *e2ap.E2AP
 	// Subscription route updates
 	//
 	if epamount == 1 {
-		subRouteAction := SubRouteInfo{CREATE, subs.EpList, subs.Seq}
-		err = r.rtmgrClient.SubscriptionRequestUpdate(subRouteAction)
+		subRouteAction := SubRouteInfo{subs.EpList, uint16(subs.ReqId.Seq)}
+		err = r.rtmgrClient.SubscriptionRequestCreate(subRouteAction)
 	} else {
-		subRouteAction := SubRouteInfo{UPDATE, subs.EpList, subs.Seq}
+		subRouteAction := SubRouteInfo{subs.EpList, uint16(subs.ReqId.Seq)}
 		err = r.rtmgrClient.SubscriptionRequestUpdate(subRouteAction)
 	}
 	r.mutex.Lock()
 
 	if err != nil {
 		if newAlloc {
-			r.subIds = append(r.subIds, subs.Seq)
+			r.subIds = append(r.subIds, subs.ReqId.Seq)
 		}
 		return nil, err
 	}
 
 	if newAlloc {
-		r.register[subs.Seq] = subs
+		r.register[subs.ReqId.Seq] = subs
 	}
-	xapp.Logger.Debug("Registry: Create %s", subs.String())
+	xapp.Logger.Debug("CREATE %s", subs.String())
 	xapp.Logger.Debug("Registry: substable=%v", r.register)
 	return subs, nil
 }
 
-// TODO: Needs better logic when there is concurrent calls
-func (r *Registry) RemoveFromSubscription(subs *Subscription, trans *Transaction, waitRouteClean time.Duration) error {
+// TODO: Works with concurrent calls, but check if can be improved
+func (r *Registry) RemoveFromSubscription(subs *Subscription, trans *TransactionXapp, waitRouteClean time.Duration) error {
 
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
@@ -161,17 +168,12 @@ func (r *Registry) RemoveFromSubscription(subs *Subscription, trans *Transaction
 
 	delStatus := subs.EpList.DelEndpoint(trans.GetEndpoint())
 	epamount := subs.EpList.Size()
+	seqId := subs.ReqId.Seq
 
-	//
-	// If last endpoint remove from register map
-	//
-	if epamount == 0 {
-		if _, ok := r.register[subs.Seq]; ok {
-			xapp.Logger.Debug("Registry: Delete %s", subs.String())
-			delete(r.register, subs.Seq)
-			xapp.Logger.Debug("Registry: substable=%v", r.register)
-		}
+	if delStatus == false {
+		return nil
 	}
+
 	r.mutex.Unlock()
 
 	//
@@ -183,35 +185,38 @@ func (r *Registry) RemoveFromSubscription(subs *Subscription, trans *Transaction
 		subs.mutex.Lock()
 	}
 
-	xapp.Logger.Info("Registry: Cleaning %s", subs.String())
+	xapp.Logger.Info("CLEAN %s", subs.String())
 
 	//
 	// Subscription route updates
 	//
-	if delStatus {
-		if epamount == 0 {
-			tmpList := RmrEndpointList{}
-			tmpList.AddEndpoint(trans.GetEndpoint())
-			subRouteAction := SubRouteInfo{DELETE, tmpList, subs.Seq}
-			r.rtmgrClient.SubscriptionRequestUpdate(subRouteAction)
-		} else {
-			subRouteAction := SubRouteInfo{UPDATE, subs.EpList, subs.Seq}
-			r.rtmgrClient.SubscriptionRequestUpdate(subRouteAction)
-		}
+	if epamount == 0 {
+		tmpList := RmrEndpointList{}
+		tmpList.AddEndpoint(trans.GetEndpoint())
+		subRouteAction := SubRouteInfo{tmpList, uint16(seqId)}
+		r.rtmgrClient.SubscriptionRequestDelete(subRouteAction)
+	} else if subs.EpList.Size() > 0 {
+		subRouteAction := SubRouteInfo{subs.EpList, uint16(seqId)}
+		r.rtmgrClient.SubscriptionRequestUpdate(subRouteAction)
 	}
 
 	r.mutex.Lock()
 	//
-	// If last endpoint free seq nro
+	// If last endpoint, release and free seqid
 	//
 	if epamount == 0 {
-		r.subIds = append(r.subIds, subs.Seq)
+		if _, ok := r.register[seqId]; ok {
+			xapp.Logger.Debug("RELEASE %s", subs.String())
+			delete(r.register, seqId)
+			xapp.Logger.Debug("Registry: substable=%v", r.register)
+		}
+		r.subIds = append(r.subIds, seqId)
 	}
 
 	return nil
 }
 
-func (r *Registry) GetSubscription(sn uint16) *Subscription {
+func (r *Registry) GetSubscription(sn uint32) *Subscription {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 	if _, ok := r.register[sn]; ok {
@@ -220,7 +225,7 @@ func (r *Registry) GetSubscription(sn uint16) *Subscription {
 	return nil
 }
 
-func (r *Registry) GetSubscriptionFirstMatch(ids []uint16) (*Subscription, error) {
+func (r *Registry) GetSubscriptionFirstMatch(ids []uint32) (*Subscription, error) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 	for _, id := range ids {

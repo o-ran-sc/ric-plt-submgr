@@ -57,11 +57,11 @@ func (mc *testingSubmgrControl) wait_registry_empty(t *testing.T, secs int) bool
 	return false
 }
 
-func (mc *testingSubmgrControl) wait_subs_clean(t *testing.T, e2SubsId int, secs int) bool {
+func (mc *testingSubmgrControl) wait_subs_clean(t *testing.T, e2SubsId uint32, secs int) bool {
 	var subs *Subscription
 	i := 1
 	for ; i <= secs*2; i++ {
-		subs = mc.c.registry.GetSubscription(uint16(e2SubsId))
+		subs = mc.c.registry.GetSubscription(e2SubsId)
 		if subs == nil {
 			return true
 		}
@@ -75,11 +75,11 @@ func (mc *testingSubmgrControl) wait_subs_clean(t *testing.T, e2SubsId int, secs
 	return false
 }
 
-func (mc *testingSubmgrControl) wait_subs_trans_clean(t *testing.T, e2SubsId int, secs int) bool {
-	var trans *Transaction
+func (mc *testingSubmgrControl) wait_subs_trans_clean(t *testing.T, e2SubsId uint32, secs int) bool {
+	var trans TransactionIf
 	i := 1
 	for ; i <= secs*2; i++ {
-		subs := mc.c.registry.GetSubscription(uint16(e2SubsId))
+		subs := mc.c.registry.GetSubscription(e2SubsId)
 		if subs == nil {
 			return true
 		}
@@ -97,13 +97,13 @@ func (mc *testingSubmgrControl) wait_subs_trans_clean(t *testing.T, e2SubsId int
 	return false
 }
 
-func (mc *testingSubmgrControl) get_subid(t *testing.T) uint16 {
+func (mc *testingSubmgrControl) get_subid(t *testing.T) uint32 {
 	mc.c.registry.mutex.Lock()
 	defer mc.c.registry.mutex.Unlock()
 	return mc.c.registry.subIds[0]
 }
 
-func (mc *testingSubmgrControl) wait_subid_change(t *testing.T, origSubId uint16, secs int) (uint16, bool) {
+func (mc *testingSubmgrControl) wait_subid_change(t *testing.T, origSubId uint32, secs int) (uint32, bool) {
 	i := 1
 	for ; i <= secs*2; i++ {
 		mc.c.registry.mutex.Lock()

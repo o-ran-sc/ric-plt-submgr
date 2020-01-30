@@ -30,18 +30,33 @@ import (
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
+type TransactionIf interface {
+	String() string
+	Release()
+	SendEvent(interface{}, time.Duration) (bool, bool)
+	WaitEvent(time.Duration) (interface{}, bool)
+}
 
-type TransactionBase struct {
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+
+type Transaction struct {
 	mutex     sync.Mutex         //
-	Seq       uint64             //
+	Seq       uint64             //transaction sequence
 	tracker   *Tracker           //tracker instance
 	Meid      *xapp.RMRMeid      //meid transaction related
+	ReqId     RequestId          //
 	Mtype     int                //Encoded message type to be send
 	Payload   *packer.PackedData //Encoded message to be send
 	EventChan chan interface{}
 }
 
-func (t *TransactionBase) SendEvent(event interface{}, waittime time.Duration) (bool, bool) {
+func (t *Transaction) String() string {
+	return "trans(" + strconv.FormatUint(uint64(t.Seq), 10) + "/" + t.Meid.RanName + "/" + t.ReqId.String() + ")"
+}
+
+func (t *Transaction) SendEvent(event interface{}, waittime time.Duration) (bool, bool) {
 	if waittime > 0 {
 		select {
 		case t.EventChan <- event:
@@ -55,7 +70,7 @@ func (t *TransactionBase) SendEvent(event interface{}, waittime time.Duration) (
 	return true, false
 }
 
-func (t *TransactionBase) WaitEvent(waittime time.Duration) (interface{}, bool) {
+func (t *Transaction) WaitEvent(waittime time.Duration) (interface{}, bool) {
 	if waittime > 0 {
 		select {
 		case event := <-t.EventChan:
@@ -68,13 +83,19 @@ func (t *TransactionBase) WaitEvent(waittime time.Duration) (interface{}, bool) 
 	return event, false
 }
 
-func (t *TransactionBase) GetMtype() int {
+func (t *Transaction) GetReqId() *RequestId {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+	return &t.ReqId
+}
+
+func (t *Transaction) GetMtype() int {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 	return t.Mtype
 }
 
-func (t *TransactionBase) GetMeid() *xapp.RMRMeid {
+func (t *Transaction) GetMeid() *xapp.RMRMeid {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 	if t.Meid != nil {
@@ -83,10 +104,28 @@ func (t *TransactionBase) GetMeid() *xapp.RMRMeid {
 	return nil
 }
 
-func (t *TransactionBase) GetPayload() *packer.PackedData {
+func (t *Transaction) GetPayload() *packer.PackedData {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 	return t.Payload
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type TransactionSubs struct {
+	Transaction //
+}
+
+func (t *TransactionSubs) String() string {
+	return "transsubs(" + t.Transaction.String() + ")"
+}
+
+func (t *TransactionSubs) Release() {
+	t.mutex.Lock()
+	xapp.Logger.Debug("RELEASE %s", t.String())
+	t.tracker = nil
+	t.mutex.Unlock()
 }
 
 //-----------------------------------------------------------------------------
@@ -104,20 +143,20 @@ func (key *TransactionXappKey) String() string {
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-type Transaction struct {
-	TransactionBase                     //
-	XappKey         *TransactionXappKey //
+type TransactionXapp struct {
+	Transaction                     //
+	XappKey     *TransactionXappKey //
 }
 
-func (t *Transaction) String() string {
+func (t *TransactionXapp) String() string {
 	var transkey string = "transkey(N/A)"
 	if t.XappKey != nil {
 		transkey = t.XappKey.String()
 	}
-	return "trans(" + strconv.FormatUint(uint64(t.Seq), 10) + "/" + t.Meid.RanName + "/" + transkey + ")"
+	return "transxapp(" + t.Transaction.String() + "/" + transkey + ")"
 }
 
-func (t *Transaction) GetEndpoint() *RmrEndpoint {
+func (t *TransactionXapp) GetEndpoint() *RmrEndpoint {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 	if t.XappKey != nil {
@@ -126,7 +165,7 @@ func (t *Transaction) GetEndpoint() *RmrEndpoint {
 	return nil
 }
 
-func (t *Transaction) GetXid() string {
+func (t *TransactionXapp) GetXid() string {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 	if t.XappKey != nil {
@@ -135,7 +174,7 @@ func (t *Transaction) GetXid() string {
 	return ""
 }
 
-func (t *Transaction) GetSrc() string {
+func (t *TransactionXapp) GetSrc() string {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 	if t.XappKey != nil {
@@ -144,9 +183,9 @@ func (t *Transaction) GetSrc() string {
 	return ""
 }
 
-func (t *Transaction) Release() {
+func (t *TransactionXapp) Release() {
 	t.mutex.Lock()
-	xapp.Logger.Debug("Transaction: Release %s", t.String())
+	xapp.Logger.Debug("RELEASE %s", t.String())
 	tracker := t.tracker
 	xappkey := t.XappKey
 	t.tracker = nil
