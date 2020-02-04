@@ -55,6 +55,9 @@ import (
 	"unsafe"
 )
 
+const cMsgBufferMaxSize = 40960
+const cMsgBufferExtra = 512
+
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
@@ -471,14 +474,6 @@ func (e2apMsg *e2apMessage) MessageInfo() *packer.MessageInfo {
 	return nil
 }
 
-func (e2apMsg *e2apMessage) UnPack(msg *packer.PackedData) *packer.MessageInfo {
-	err := packer.PduPackerUnPack(e2apMsg, msg)
-	if err != nil {
-		return nil
-	}
-	return e2apMsg.MessageInfo()
-}
-
 func (e2apMsg *e2apMessage) String() string {
 	msgInfo := e2apMsg.MessageInfo()
 	if msgInfo == nil {
@@ -496,48 +491,69 @@ type e2apMsgSubscriptionRequest struct {
 	msgC *C.RICSubscriptionRequest_t
 }
 
-func (e2apMsg *e2apMsgSubscriptionRequest) Set(data *e2ap.E2APSubscriptionRequest) error {
+func (e2apMsg *e2apMsgSubscriptionRequest) PduPack(logBuf []byte) (error, *packer.PackedData) {
+	p := C.malloc(C.size_t(cMsgBufferMaxSize))
+	defer C.free(p)
+	plen := C.size_t(cMsgBufferMaxSize) - cMsgBufferExtra
+	errorNro := C.packRICSubscriptionRequest(&plen, (*C.uchar)(p), (*C.char)(unsafe.Pointer(&logBuf[0])), e2apMsg.msgC)
+	if errorNro != C.e2err_OK {
+		return fmt.Errorf("%s", C.GoString(C.getE2ErrorString(errorNro))), nil
+	}
+	return nil, &packer.PackedData{C.GoBytes(p, C.int(plen))}
+}
+
+func (e2apMsg *e2apMsgSubscriptionRequest) PduUnPack(logBuf []byte, data *packer.PackedData) error {
+	e2apMsg.msgC = &C.RICSubscriptionRequest_t{}
+	C.initSubsRequest(e2apMsg.msgC)
+	e2apMsg.e2apMessage.PduUnPack(logBuf, data)
+	if e2apMsg.e2apMessage.messageInfo.messageType != C.cE2InitiatingMessage || e2apMsg.e2apMessage.messageInfo.messageId != C.cRICSubscriptionRequest {
+		return fmt.Errorf("unpackE2AP_pdu failed -> %s", e2apMsg.e2apMessage.String())
+	}
+	errorNro := C.getRICSubscriptionRequestData(e2apMsg.e2apMessage.pdu, e2apMsg.msgC)
+	if errorNro != C.e2err_OK {
+		return fmt.Errorf("%s", C.GoString(C.getE2ErrorString(errorNro)))
+	}
+	return nil
+}
+
+func (e2apMsg *e2apMsgSubscriptionRequest) Pack(data *e2ap.E2APSubscriptionRequest) (error, *packer.PackedData) {
 
 	e2apMsg.msgC = &C.RICSubscriptionRequest_t{}
 	C.initSubsRequest(e2apMsg.msgC)
-
 	e2apMsg.msgC.ranFunctionID = (C.uint16_t)(data.FunctionId)
-
 	if err := (&e2apEntryRequestID{entry: &e2apMsg.msgC.ricRequestID}).set(&data.RequestId); err != nil {
-		return err
+		return err, nil
 	}
 	if err := (&e2apEntryEventTrigger{entry: &e2apMsg.msgC.ricSubscription.ricEventTriggerDefinition}).set(&data.EventTriggerDefinition); err != nil {
-		return err
+		return err, nil
 	}
-
 	if len(data.ActionSetups) > 16 {
-		return fmt.Errorf("IndicationMessage.InterfaceMessage: too long %d while allowed %d", len(data.ActionSetups), 16)
+		return fmt.Errorf("IndicationMessage.InterfaceMessage: too long %d while allowed %d", len(data.ActionSetups), 16), nil
 	}
-
 	e2apMsg.msgC.ricSubscription.ricActionToBeSetupItemIEs.contentLength = 0
 	for i := 0; i < len(data.ActionSetups); i++ {
 		item := &e2apEntryActionToBeSetupItem{entry: &e2apMsg.msgC.ricSubscription.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[e2apMsg.msgC.ricSubscription.ricActionToBeSetupItemIEs.contentLength]}
 		e2apMsg.msgC.ricSubscription.ricActionToBeSetupItemIEs.contentLength += 1
 		if err := item.set(&data.ActionSetups[i]); err != nil {
-			return err
+			return err, nil
 		}
 	}
-	return nil
+
+	return packer.PduPackerPack(e2apMsg)
 }
 
-func (e2apMsg *e2apMsgSubscriptionRequest) Get() (error, *e2ap.E2APSubscriptionRequest) {
-
+func (e2apMsg *e2apMsgSubscriptionRequest) UnPack(msg *packer.PackedData) (error, *e2ap.E2APSubscriptionRequest) {
 	data := &e2ap.E2APSubscriptionRequest{}
-
+	if err := packer.PduPackerUnPack(e2apMsg, msg); err != nil {
+		return err, data
+	}
 	data.FunctionId = (e2ap.FunctionId)(e2apMsg.msgC.ranFunctionID)
-
 	if err := (&e2apEntryRequestID{entry: &e2apMsg.msgC.ricRequestID}).get(&data.RequestId); err != nil {
 		return err, data
 	}
 	if err := (&e2apEntryEventTrigger{entry: &e2apMsg.msgC.ricSubscription.ricEventTriggerDefinition}).get(&data.EventTriggerDefinition); err != nil {
 		return err, data
 	}
-
 	conlen := (int)(e2apMsg.msgC.ricSubscription.ricActionToBeSetupItemIEs.contentLength)
 	data.ActionSetups = make([]e2ap.ActionToBeSetupItem, conlen)
 	for i := 0; i < conlen; i++ {
@@ -548,57 +564,6 @@ func (e2apMsg *e2apMsgSubscriptionRequest) Get() (error, *e2ap.E2APSubscriptionR
 	}
 	return nil, data
 
-}
-
-func (e2apMsg *e2apMsgSubscriptionRequest) PduPack(logBuf []byte, data *packer.PackedData) error {
-	/*
-	   Not needed anymore
-
-	   	evtTrig := e2apEntryEventTrigger{entry: &e2apMsg.msgC.ricSubscription.ricEventTriggerDefinition}
-	   	if err := evtTrig.pack(); err != nil {
-	   		return err
-	   	}
-	*/
-	var buflen uint32 = (uint32)(len(data.Buf))
-	errorNro := C.packRICSubscriptionRequest((*C.size_t)(unsafe.Pointer(&buflen)), (*C.uchar)(unsafe.Pointer(&data.Buf[0])), (*C.char)(unsafe.Pointer(&logBuf[0])), e2apMsg.msgC)
-	if errorNro != C.e2err_OK {
-		return fmt.Errorf("%s", C.GoString(C.getE2ErrorString(errorNro)))
-	}
-	data.Buf = data.Buf[0:buflen]
-	return nil
-
-}
-
-func (e2apMsg *e2apMsgSubscriptionRequest) PduUnPack(logBuf []byte, data *packer.PackedData) error {
-
-	e2apMsg.msgC = &C.RICSubscriptionRequest_t{}
-	C.initSubsRequest(e2apMsg.msgC)
-
-	e2apMsg.e2apMessage.PduUnPack(logBuf, data)
-	if e2apMsg.e2apMessage.messageInfo.messageType != C.cE2InitiatingMessage || e2apMsg.e2apMessage.messageInfo.messageId != C.cRICSubscriptionRequest {
-		return fmt.Errorf("unpackE2AP_pdu failed -> %s", e2apMsg.e2apMessage.String())
-	}
-	errorNro := C.getRICSubscriptionRequestData(e2apMsg.e2apMessage.pdu, e2apMsg.msgC)
-	if errorNro != C.e2err_OK {
-		return fmt.Errorf("%s", C.GoString(C.getE2ErrorString(errorNro)))
-	}
-	/*
-	   Not needed anymore
-
-	   	evtTrig := e2apEntryEventTrigger{entry: &e2apMsg.msgC.ricSubscription.ricEventTriggerDefinition}
-	   	if err := evtTrig.unpack(); err != nil {
-	   		return err
-	   	}
-	*/
-	return nil
-}
-
-func (e2apMsg *e2apMsgSubscriptionRequest) Pack(trg *packer.PackedData) (error, *packer.PackedData) {
-	return packer.PduPackerPackAllocTrg(e2apMsg, trg)
-}
-
-func (e2apMsg *e2apMsgSubscriptionRequest) UnPack(msg *packer.PackedData) error {
-	return packer.PduPackerUnPack(e2apMsg, msg)
 }
 
 func (e2apMsg *e2apMsgSubscriptionRequest) String() string {
@@ -664,62 +629,15 @@ type e2apMsgSubscriptionResponse struct {
 	msgC *C.RICSubscriptionResponse_t
 }
 
-func (e2apMsg *e2apMsgSubscriptionResponse) Set(data *e2ap.E2APSubscriptionResponse) error {
-
-	e2apMsg.msgC = &C.RICSubscriptionResponse_t{}
-	C.initSubsResponse(e2apMsg.msgC)
-
-	e2apMsg.msgC.ranFunctionID = (C.uint16_t)(data.FunctionId)
-
-	if err := (&e2apEntryRequestID{entry: &e2apMsg.msgC.ricRequestID}).set(&data.RequestId); err != nil {
-		return err
-	}
-
-	if err := (&e2apEntryAdmittedList{entry: &e2apMsg.msgC.ricActionAdmittedList}).set(&data.ActionAdmittedList); err != nil {
-		return err
-	}
-
-	e2apMsg.msgC.ricActionNotAdmittedListPresent = false
-	if len(data.ActionNotAdmittedList.Items) > 0 {
-		e2apMsg.msgC.ricActionNotAdmittedListPresent = true
-		if err := (&e2apEntryNotAdmittedList{entry: &e2apMsg.msgC.ricActionNotAdmittedList}).set(&data.ActionNotAdmittedList); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (e2apMsg *e2apMsgSubscriptionResponse) Get() (error, *e2ap.E2APSubscriptionResponse) {
-
-	data := &e2ap.E2APSubscriptionResponse{}
-
-	data.FunctionId = (e2ap.FunctionId)(e2apMsg.msgC.ranFunctionID)
-
-	if err := (&e2apEntryRequestID{entry: &e2apMsg.msgC.ricRequestID}).get(&data.RequestId); err != nil {
-		return err, data
-	}
-
-	if err := (&e2apEntryAdmittedList{entry: &e2apMsg.msgC.ricActionAdmittedList}).get(&data.ActionAdmittedList); err != nil {
-		return err, data
-	}
-
-	if e2apMsg.msgC.ricActionNotAdmittedListPresent == true {
-		if err := (&e2apEntryNotAdmittedList{entry: &e2apMsg.msgC.ricActionNotAdmittedList}).get(&data.ActionNotAdmittedList); err != nil {
-			return err, data
-		}
-	}
-	return nil, data
-
-}
-
-func (e2apMsg *e2apMsgSubscriptionResponse) PduPack(logBuf []byte, data *packer.PackedData) error {
-	var buflen uint32 = (uint32)(len(data.Buf))
-	errorNro := C.packRICSubscriptionResponse((*C.size_t)(unsafe.Pointer(&buflen)), (*C.uchar)(unsafe.Pointer(&data.Buf[0])), (*C.char)(unsafe.Pointer(&logBuf[0])), e2apMsg.msgC)
+func (e2apMsg *e2apMsgSubscriptionResponse) PduPack(logBuf []byte) (error, *packer.PackedData) {
+	p := C.malloc(C.size_t(cMsgBufferMaxSize))
+	defer C.free(p)
+	plen := C.size_t(cMsgBufferMaxSize) - cMsgBufferExtra
+	errorNro := C.packRICSubscriptionResponse(&plen, (*C.uchar)(p), (*C.char)(unsafe.Pointer(&logBuf[0])), e2apMsg.msgC)
 	if errorNro != C.e2err_OK {
-		return fmt.Errorf("%s", C.GoString(C.getE2ErrorString(errorNro)))
+		return fmt.Errorf("%s", C.GoString(C.getE2ErrorString(errorNro))), nil
 	}
-	data.Buf = data.Buf[0:buflen]
-	return nil
+	return nil, &packer.PackedData{C.GoBytes(p, C.int(plen))}
 }
 
 func (e2apMsg *e2apMsgSubscriptionResponse) PduUnPack(logBuf []byte, data *packer.PackedData) error {
@@ -737,12 +655,47 @@ func (e2apMsg *e2apMsgSubscriptionResponse) PduUnPack(logBuf []byte, data *packe
 	return nil
 }
 
-func (e2apMsg *e2apMsgSubscriptionResponse) Pack(trg *packer.PackedData) (error, *packer.PackedData) {
-	return packer.PduPackerPackAllocTrg(e2apMsg, trg)
+func (e2apMsg *e2apMsgSubscriptionResponse) Pack(data *e2ap.E2APSubscriptionResponse) (error, *packer.PackedData) {
+	e2apMsg.msgC = &C.RICSubscriptionResponse_t{}
+	C.initSubsResponse(e2apMsg.msgC)
+	e2apMsg.msgC.ranFunctionID = (C.uint16_t)(data.FunctionId)
+	if err := (&e2apEntryRequestID{entry: &e2apMsg.msgC.ricRequestID}).set(&data.RequestId); err != nil {
+		return err, nil
+	}
+	if err := (&e2apEntryAdmittedList{entry: &e2apMsg.msgC.ricActionAdmittedList}).set(&data.ActionAdmittedList); err != nil {
+		return err, nil
+	}
+	e2apMsg.msgC.ricActionNotAdmittedListPresent = false
+	if len(data.ActionNotAdmittedList.Items) > 0 {
+		e2apMsg.msgC.ricActionNotAdmittedListPresent = true
+		if err := (&e2apEntryNotAdmittedList{entry: &e2apMsg.msgC.ricActionNotAdmittedList}).set(&data.ActionNotAdmittedList); err != nil {
+			return err, nil
+		}
+	}
+	return packer.PduPackerPack(e2apMsg)
 }
 
-func (e2apMsg *e2apMsgSubscriptionResponse) UnPack(msg *packer.PackedData) error {
-	return packer.PduPackerUnPack(e2apMsg, msg)
+func (e2apMsg *e2apMsgSubscriptionResponse) UnPack(msg *packer.PackedData) (error, *e2ap.E2APSubscriptionResponse) {
+	data := &e2ap.E2APSubscriptionResponse{}
+
+	if err := packer.PduPackerUnPack(e2apMsg, msg); err != nil {
+		return err, data
+	}
+
+	data.FunctionId = (e2ap.FunctionId)(e2apMsg.msgC.ranFunctionID)
+	if err := (&e2apEntryRequestID{entry: &e2apMsg.msgC.ricRequestID}).get(&data.RequestId); err != nil {
+		return err, data
+	}
+	if err := (&e2apEntryAdmittedList{entry: &e2apMsg.msgC.ricActionAdmittedList}).get(&data.ActionAdmittedList); err != nil {
+		return err, data
+	}
+	if e2apMsg.msgC.ricActionNotAdmittedListPresent == true {
+		if err := (&e2apEntryNotAdmittedList{entry: &e2apMsg.msgC.ricActionNotAdmittedList}).get(&data.ActionNotAdmittedList); err != nil {
+			return err, data
+		}
+	}
+	return nil, data
+
 }
 
 func (e2apMsg *e2apMsgSubscriptionResponse) String() string {
@@ -783,71 +736,20 @@ type e2apMsgSubscriptionFailure struct {
 	msgC *C.RICSubscriptionFailure_t
 }
 
-func (e2apMsg *e2apMsgSubscriptionFailure) Set(data *e2ap.E2APSubscriptionFailure) error {
-
-	e2apMsg.msgC = &C.RICSubscriptionFailure_t{}
-	C.initSubsFailure(e2apMsg.msgC)
-
-	e2apMsg.msgC.ranFunctionID = (C.uint16_t)(data.FunctionId)
-
-	if err := (&e2apEntryRequestID{entry: &e2apMsg.msgC.ricRequestID}).set(&data.RequestId); err != nil {
-		return err
-	}
-
-	if err := (&e2apEntryNotAdmittedList{entry: &e2apMsg.msgC.ricActionNotAdmittedList}).set(&data.ActionNotAdmittedList); err != nil {
-		return err
-	}
-
-	e2apMsg.msgC.criticalityDiagnosticsPresent = false
-	if data.CriticalityDiagnostics.Present {
-		e2apMsg.msgC.criticalityDiagnosticsPresent = true
-		if err := (&e2apEntryCriticalityDiagnostic{entry: &e2apMsg.msgC.criticalityDiagnostics}).set(&data.CriticalityDiagnostics); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (e2apMsg *e2apMsgSubscriptionFailure) Get() (error, *e2ap.E2APSubscriptionFailure) {
-
-	data := &e2ap.E2APSubscriptionFailure{}
-
-	data.FunctionId = (e2ap.FunctionId)(e2apMsg.msgC.ranFunctionID)
-
-	if err := (&e2apEntryRequestID{entry: &e2apMsg.msgC.ricRequestID}).get(&data.RequestId); err != nil {
-		return err, data
-	}
-
-	if err := (&e2apEntryNotAdmittedList{entry: &e2apMsg.msgC.ricActionNotAdmittedList}).get(&data.ActionNotAdmittedList); err != nil {
-		return err, data
-	}
-
-	if e2apMsg.msgC.criticalityDiagnosticsPresent == true {
-		data.CriticalityDiagnostics.Present = true
-		if err := (&e2apEntryCriticalityDiagnostic{entry: &e2apMsg.msgC.criticalityDiagnostics}).get(&data.CriticalityDiagnostics); err != nil {
-			return err, data
-		}
-	}
-
-	return nil, data
-}
-
-func (e2apMsg *e2apMsgSubscriptionFailure) PduPack(logBuf []byte, data *packer.PackedData) error {
-	var buflen uint32 = (uint32)(len(data.Buf))
-	errorNro := C.packRICSubscriptionFailure((*C.size_t)(unsafe.Pointer(&buflen)), (*C.uchar)(unsafe.Pointer(&data.Buf[0])), (*C.char)(unsafe.Pointer(&logBuf[0])), e2apMsg.msgC)
+func (e2apMsg *e2apMsgSubscriptionFailure) PduPack(logBuf []byte) (error, *packer.PackedData) {
+	p := C.malloc(C.size_t(cMsgBufferMaxSize))
+	defer C.free(p)
+	plen := C.size_t(cMsgBufferMaxSize) - cMsgBufferExtra
+	errorNro := C.packRICSubscriptionFailure(&plen, (*C.uchar)(p), (*C.char)(unsafe.Pointer(&logBuf[0])), e2apMsg.msgC)
 	if errorNro != C.e2err_OK {
-		return fmt.Errorf("%s", C.GoString(C.getE2ErrorString(errorNro)))
+		return fmt.Errorf("%s", C.GoString(C.getE2ErrorString(errorNro))), nil
 	}
-	data.Buf = data.Buf[0:buflen]
-	return nil
+	return nil, &packer.PackedData{C.GoBytes(p, C.int(plen))}
 }
 
 func (e2apMsg *e2apMsgSubscriptionFailure) PduUnPack(logBuf []byte, data *packer.PackedData) error {
-
 	e2apMsg.msgC = &C.RICSubscriptionFailure_t{}
 	C.initSubsFailure(e2apMsg.msgC)
-
 	e2apMsg.e2apMessage.PduUnPack(logBuf, data)
 	if e2apMsg.e2apMessage.messageInfo.messageType != C.cE2UnsuccessfulOutcome || e2apMsg.e2apMessage.messageInfo.messageId != C.cRICSubscriptionFailure {
 		return fmt.Errorf("unpackE2AP_pdu failed -> %s", e2apMsg.e2apMessage.String())
@@ -860,12 +762,45 @@ func (e2apMsg *e2apMsgSubscriptionFailure) PduUnPack(logBuf []byte, data *packer
 
 }
 
-func (e2apMsg *e2apMsgSubscriptionFailure) Pack(trg *packer.PackedData) (error, *packer.PackedData) {
-	return packer.PduPackerPackAllocTrg(e2apMsg, trg)
+func (e2apMsg *e2apMsgSubscriptionFailure) Pack(data *e2ap.E2APSubscriptionFailure) (error, *packer.PackedData) {
+	e2apMsg.msgC = &C.RICSubscriptionFailure_t{}
+	C.initSubsFailure(e2apMsg.msgC)
+	e2apMsg.msgC.ranFunctionID = (C.uint16_t)(data.FunctionId)
+	if err := (&e2apEntryRequestID{entry: &e2apMsg.msgC.ricRequestID}).set(&data.RequestId); err != nil {
+		return err, nil
+	}
+	if err := (&e2apEntryNotAdmittedList{entry: &e2apMsg.msgC.ricActionNotAdmittedList}).set(&data.ActionNotAdmittedList); err != nil {
+		return err, nil
+	}
+	e2apMsg.msgC.criticalityDiagnosticsPresent = false
+	if data.CriticalityDiagnostics.Present {
+		e2apMsg.msgC.criticalityDiagnosticsPresent = true
+		if err := (&e2apEntryCriticalityDiagnostic{entry: &e2apMsg.msgC.criticalityDiagnostics}).set(&data.CriticalityDiagnostics); err != nil {
+			return err, nil
+		}
+	}
+	return packer.PduPackerPack(e2apMsg)
 }
 
-func (e2apMsg *e2apMsgSubscriptionFailure) UnPack(msg *packer.PackedData) error {
-	return packer.PduPackerUnPack(e2apMsg, msg)
+func (e2apMsg *e2apMsgSubscriptionFailure) UnPack(msg *packer.PackedData) (error, *e2ap.E2APSubscriptionFailure) {
+	data := &e2ap.E2APSubscriptionFailure{}
+	if err := packer.PduPackerUnPack(e2apMsg, msg); err != nil {
+		return err, data
+	}
+	data.FunctionId = (e2ap.FunctionId)(e2apMsg.msgC.ranFunctionID)
+	if err := (&e2apEntryRequestID{entry: &e2apMsg.msgC.ricRequestID}).get(&data.RequestId); err != nil {
+		return err, data
+	}
+	if err := (&e2apEntryNotAdmittedList{entry: &e2apMsg.msgC.ricActionNotAdmittedList}).get(&data.ActionNotAdmittedList); err != nil {
+		return err, data
+	}
+	if e2apMsg.msgC.criticalityDiagnosticsPresent == true {
+		data.CriticalityDiagnostics.Present = true
+		if err := (&e2apEntryCriticalityDiagnostic{entry: &e2apMsg.msgC.criticalityDiagnostics}).get(&data.CriticalityDiagnostics); err != nil {
+			return err, data
+		}
+	}
+	return nil, data
 }
 
 func (e2apMsg *e2apMsgSubscriptionFailure) String() string {
@@ -918,48 +853,20 @@ type e2apMsgSubscriptionDeleteRequest struct {
 	msgC *C.RICSubscriptionDeleteRequest_t
 }
 
-func (e2apMsg *e2apMsgSubscriptionDeleteRequest) Set(data *e2ap.E2APSubscriptionDeleteRequest) error {
-
-	e2apMsg.msgC = &C.RICSubscriptionDeleteRequest_t{}
-	C.initSubsDeleteRequest(e2apMsg.msgC)
-
-	e2apMsg.msgC.ranFunctionID = (C.uint16_t)(data.FunctionId)
-
-	if err := (&e2apEntryRequestID{entry: &e2apMsg.msgC.ricRequestID}).set(&data.RequestId); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (e2apMsg *e2apMsgSubscriptionDeleteRequest) Get() (error, *e2ap.E2APSubscriptionDeleteRequest) {
-
-	data := &e2ap.E2APSubscriptionDeleteRequest{}
-
-	data.FunctionId = (e2ap.FunctionId)(e2apMsg.msgC.ranFunctionID)
-
-	if err := (&e2apEntryRequestID{entry: &e2apMsg.msgC.ricRequestID}).get(&data.RequestId); err != nil {
-		return err, data
-	}
-
-	return nil, data
-}
-
-func (e2apMsg *e2apMsgSubscriptionDeleteRequest) PduPack(logBuf []byte, data *packer.PackedData) error {
-	var buflen uint32 = (uint32)(len(data.Buf))
-	errorNro := C.packRICSubscriptionDeleteRequest((*C.size_t)(unsafe.Pointer(&buflen)), (*C.uchar)(unsafe.Pointer(&data.Buf[0])), (*C.char)(unsafe.Pointer(&logBuf[0])), e2apMsg.msgC)
+func (e2apMsg *e2apMsgSubscriptionDeleteRequest) PduPack(logBuf []byte) (error, *packer.PackedData) {
+	p := C.malloc(C.size_t(cMsgBufferMaxSize))
+	defer C.free(p)
+	plen := C.size_t(cMsgBufferMaxSize) - cMsgBufferExtra
+	errorNro := C.packRICSubscriptionDeleteRequest(&plen, (*C.uchar)(p), (*C.char)(unsafe.Pointer(&logBuf[0])), e2apMsg.msgC)
 	if errorNro != C.e2err_OK {
-		return fmt.Errorf("%s", C.GoString(C.getE2ErrorString(errorNro)))
+		return fmt.Errorf("%s", C.GoString(C.getE2ErrorString(errorNro))), nil
 	}
-	data.Buf = data.Buf[0:buflen]
-	return nil
-
+	return nil, &packer.PackedData{C.GoBytes(p, C.int(plen))}
 }
 
 func (e2apMsg *e2apMsgSubscriptionDeleteRequest) PduUnPack(logBuf []byte, data *packer.PackedData) error {
-
 	e2apMsg.msgC = &C.RICSubscriptionDeleteRequest_t{}
 	C.initSubsDeleteRequest(e2apMsg.msgC)
-
 	e2apMsg.e2apMessage.PduUnPack(logBuf, data)
 	if e2apMsg.e2apMessage.messageInfo.messageType != C.cE2InitiatingMessage || e2apMsg.e2apMessage.messageInfo.messageId != C.cRICSubscriptionDeleteRequest {
 		return fmt.Errorf("unpackE2AP_pdu failed -> %s", e2apMsg.e2apMessage.String())
@@ -971,12 +878,41 @@ func (e2apMsg *e2apMsgSubscriptionDeleteRequest) PduUnPack(logBuf []byte, data *
 	return nil
 }
 
-func (e2apMsg *e2apMsgSubscriptionDeleteRequest) Pack(trg *packer.PackedData) (error, *packer.PackedData) {
-	return packer.PduPackerPackAllocTrg(e2apMsg, trg)
+func (e2apMsg *e2apMsgSubscriptionDeleteRequest) Pack(data *e2ap.E2APSubscriptionDeleteRequest) (error, *packer.PackedData) {
+	e2apMsg.msgC = &C.RICSubscriptionDeleteRequest_t{}
+	C.initSubsDeleteRequest(e2apMsg.msgC)
+	e2apMsg.msgC.ranFunctionID = (C.uint16_t)(data.FunctionId)
+	if err := (&e2apEntryRequestID{entry: &e2apMsg.msgC.ricRequestID}).set(&data.RequestId); err != nil {
+		return err, nil
+	}
+	return packer.PduPackerPack(e2apMsg)
 }
 
-func (e2apMsg *e2apMsgSubscriptionDeleteRequest) UnPack(msg *packer.PackedData) error {
-	return packer.PduPackerUnPack(e2apMsg, msg)
+func (e2apMsg *e2apMsgSubscriptionDeleteRequest) Pack21(data *e2ap.E2APSubscriptionDeleteRequest) (error, *packer.PackedData) {
+	e2apMsg.msgC = &C.RICSubscriptionDeleteRequest_t{}
+	C.initSubsDeleteRequest(e2apMsg.msgC)
+	e2apMsg.msgC.ranFunctionID = (C.uint16_t)(data.FunctionId)
+	if err := (&e2apEntryRequestID{entry: &e2apMsg.msgC.ricRequestID}).set(&data.RequestId); err != nil {
+		return err, nil
+	}
+	return nil, nil
+}
+
+func (e2apMsg *e2apMsgSubscriptionDeleteRequest) Pack22(data *e2ap.E2APSubscriptionDeleteRequest) (error, *packer.PackedData) {
+	return packer.PduPackerPack(e2apMsg)
+}
+
+func (e2apMsg *e2apMsgSubscriptionDeleteRequest) UnPack(msg *packer.PackedData) (error, *e2ap.E2APSubscriptionDeleteRequest) {
+	data := &e2ap.E2APSubscriptionDeleteRequest{}
+	if err := packer.PduPackerUnPack(e2apMsg, msg); err != nil {
+		return err, data
+	}
+	data.FunctionId = (e2ap.FunctionId)(e2apMsg.msgC.ranFunctionID)
+	if err := (&e2apEntryRequestID{entry: &e2apMsg.msgC.ricRequestID}).get(&data.RequestId); err != nil {
+		return err, data
+	}
+	return nil, data
+
 }
 
 func (e2apMsg *e2apMsgSubscriptionDeleteRequest) String() string {
@@ -997,45 +933,20 @@ type e2apMsgSubscriptionDeleteResponse struct {
 	msgC *C.RICSubscriptionDeleteResponse_t
 }
 
-func (e2apMsg *e2apMsgSubscriptionDeleteResponse) Set(data *e2ap.E2APSubscriptionDeleteResponse) error {
-
-	e2apMsg.msgC = &C.RICSubscriptionDeleteResponse_t{}
-	C.initSubsDeleteResponse(e2apMsg.msgC)
-
-	e2apMsg.msgC.ranFunctionID = (C.uint16_t)(data.FunctionId)
-
-	if err := (&e2apEntryRequestID{entry: &e2apMsg.msgC.ricRequestID}).set(&data.RequestId); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (e2apMsg *e2apMsgSubscriptionDeleteResponse) Get() (error, *e2ap.E2APSubscriptionDeleteResponse) {
-
-	data := &e2ap.E2APSubscriptionDeleteResponse{}
-
-	data.FunctionId = (e2ap.FunctionId)(e2apMsg.msgC.ranFunctionID)
-
-	if err := (&e2apEntryRequestID{entry: &e2apMsg.msgC.ricRequestID}).get(&data.RequestId); err != nil {
-		return err, data
-	}
-
-	return nil, data
-}
-func (e2apMsg *e2apMsgSubscriptionDeleteResponse) PduPack(logBuf []byte, data *packer.PackedData) error {
-	var buflen uint32 = (uint32)(len(data.Buf))
-	errorNro := C.packRICSubscriptionDeleteResponse((*C.size_t)(unsafe.Pointer(&buflen)), (*C.uchar)(unsafe.Pointer(&data.Buf[0])), (*C.char)(unsafe.Pointer(&logBuf[0])), e2apMsg.msgC)
+func (e2apMsg *e2apMsgSubscriptionDeleteResponse) PduPack(logBuf []byte) (error, *packer.PackedData) {
+	p := C.malloc(C.size_t(cMsgBufferMaxSize))
+	defer C.free(p)
+	plen := C.size_t(cMsgBufferMaxSize) - cMsgBufferExtra
+	errorNro := C.packRICSubscriptionDeleteResponse(&plen, (*C.uchar)(p), (*C.char)(unsafe.Pointer(&logBuf[0])), e2apMsg.msgC)
 	if errorNro != C.e2err_OK {
-		return fmt.Errorf("%s", C.GoString(C.getE2ErrorString(errorNro)))
+		return fmt.Errorf("%s", C.GoString(C.getE2ErrorString(errorNro))), nil
 	}
-	data.Buf = data.Buf[0:buflen]
-	return nil
+	return nil, &packer.PackedData{C.GoBytes(p, C.int(plen))}
 }
 
 func (e2apMsg *e2apMsgSubscriptionDeleteResponse) PduUnPack(logBuf []byte, data *packer.PackedData) error {
 	e2apMsg.msgC = &C.RICSubscriptionDeleteResponse_t{}
 	C.initSubsDeleteResponse(e2apMsg.msgC)
-
 	e2apMsg.e2apMessage.PduUnPack(logBuf, data)
 	if e2apMsg.e2apMessage.messageInfo.messageType != C.cE2SuccessfulOutcome || e2apMsg.e2apMessage.messageInfo.messageId != C.cRICsubscriptionDeleteResponse {
 		return fmt.Errorf("unpackE2AP_pdu failed -> %s", e2apMsg.e2apMessage.String())
@@ -1047,12 +958,26 @@ func (e2apMsg *e2apMsgSubscriptionDeleteResponse) PduUnPack(logBuf []byte, data 
 	return nil
 }
 
-func (e2apMsg *e2apMsgSubscriptionDeleteResponse) Pack(trg *packer.PackedData) (error, *packer.PackedData) {
-	return packer.PduPackerPackAllocTrg(e2apMsg, trg)
+func (e2apMsg *e2apMsgSubscriptionDeleteResponse) Pack(data *e2ap.E2APSubscriptionDeleteResponse) (error, *packer.PackedData) {
+	e2apMsg.msgC = &C.RICSubscriptionDeleteResponse_t{}
+	C.initSubsDeleteResponse(e2apMsg.msgC)
+	e2apMsg.msgC.ranFunctionID = (C.uint16_t)(data.FunctionId)
+	if err := (&e2apEntryRequestID{entry: &e2apMsg.msgC.ricRequestID}).set(&data.RequestId); err != nil {
+		return err, nil
+	}
+	return packer.PduPackerPack(e2apMsg)
 }
 
-func (e2apMsg *e2apMsgSubscriptionDeleteResponse) UnPack(msg *packer.PackedData) error {
-	return packer.PduPackerUnPack(e2apMsg, msg)
+func (e2apMsg *e2apMsgSubscriptionDeleteResponse) UnPack(msg *packer.PackedData) (error, *e2ap.E2APSubscriptionDeleteResponse) {
+	data := &e2ap.E2APSubscriptionDeleteResponse{}
+	if err := packer.PduPackerUnPack(e2apMsg, msg); err != nil {
+		return err, data
+	}
+	data.FunctionId = (e2ap.FunctionId)(e2apMsg.msgC.ranFunctionID)
+	if err := (&e2apEntryRequestID{entry: &e2apMsg.msgC.ricRequestID}).get(&data.RequestId); err != nil {
+		return err, data
+	}
+	return nil, data
 }
 
 func (e2apMsg *e2apMsgSubscriptionDeleteResponse) String() string {
@@ -1073,67 +998,20 @@ type e2apMsgSubscriptionDeleteFailure struct {
 	msgC *C.RICSubscriptionDeleteFailure_t
 }
 
-func (e2apMsg *e2apMsgSubscriptionDeleteFailure) Set(data *e2ap.E2APSubscriptionDeleteFailure) error {
-
-	e2apMsg.msgC = &C.RICSubscriptionDeleteFailure_t{}
-	C.initSubsDeleteFailure(e2apMsg.msgC)
-
-	e2apMsg.msgC.ranFunctionID = (C.uint16_t)(data.FunctionId)
-
-	if err := (&e2apEntryRequestID{entry: &e2apMsg.msgC.ricRequestID}).set(&data.RequestId); err != nil {
-		return err
-	}
-
-	e2apMsg.msgC.ricCause.content = (C.uchar)(data.Cause.Content)
-	e2apMsg.msgC.ricCause.cause = (C.uchar)(data.Cause.CauseVal)
-
-	e2apMsg.msgC.criticalityDiagnosticsPresent = false
-	if data.CriticalityDiagnostics.Present {
-		e2apMsg.msgC.criticalityDiagnosticsPresent = true
-		if err := (&e2apEntryCriticalityDiagnostic{entry: &e2apMsg.msgC.criticalityDiagnostics}).set(&data.CriticalityDiagnostics); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (e2apMsg *e2apMsgSubscriptionDeleteFailure) Get() (error, *e2ap.E2APSubscriptionDeleteFailure) {
-
-	data := &e2ap.E2APSubscriptionDeleteFailure{}
-
-	data.FunctionId = (e2ap.FunctionId)(e2apMsg.msgC.ranFunctionID)
-
-	if err := (&e2apEntryRequestID{entry: &e2apMsg.msgC.ricRequestID}).get(&data.RequestId); err != nil {
-		return err, data
-	}
-
-	data.Cause.Content = (uint8)(e2apMsg.msgC.ricCause.content)
-	data.Cause.CauseVal = (uint8)(e2apMsg.msgC.ricCause.cause)
-
-	if e2apMsg.msgC.criticalityDiagnosticsPresent == true {
-		data.CriticalityDiagnostics.Present = true
-		if err := (&e2apEntryCriticalityDiagnostic{entry: &e2apMsg.msgC.criticalityDiagnostics}).get(&data.CriticalityDiagnostics); err != nil {
-			return err, data
-		}
-	}
-	return nil, data
-}
-
-func (e2apMsg *e2apMsgSubscriptionDeleteFailure) PduPack(logBuf []byte, data *packer.PackedData) error {
-	var buflen uint32 = (uint32)(len(data.Buf))
-	errorNro := C.packRICSubscriptionDeleteFailure((*C.size_t)(unsafe.Pointer(&buflen)), (*C.uchar)(unsafe.Pointer(&data.Buf[0])), (*C.char)(unsafe.Pointer(&logBuf[0])), e2apMsg.msgC)
+func (e2apMsg *e2apMsgSubscriptionDeleteFailure) PduPack(logBuf []byte) (error, *packer.PackedData) {
+	p := C.malloc(C.size_t(cMsgBufferMaxSize))
+	defer C.free(p)
+	plen := C.size_t(cMsgBufferMaxSize) - cMsgBufferExtra
+	errorNro := C.packRICSubscriptionDeleteFailure(&plen, (*C.uchar)(p), (*C.char)(unsafe.Pointer(&logBuf[0])), e2apMsg.msgC)
 	if errorNro != C.e2err_OK {
-		return fmt.Errorf("%s", C.GoString(C.getE2ErrorString(errorNro)))
+		return fmt.Errorf("%s", C.GoString(C.getE2ErrorString(errorNro))), nil
 	}
-	data.Buf = data.Buf[0:buflen]
-	return nil
+	return nil, &packer.PackedData{C.GoBytes(p, C.int(plen))}
 }
 
 func (e2apMsg *e2apMsgSubscriptionDeleteFailure) PduUnPack(logBuf []byte, data *packer.PackedData) error {
-
 	e2apMsg.msgC = &C.RICSubscriptionDeleteFailure_t{}
 	C.initSubsDeleteFailure(e2apMsg.msgC)
-
 	e2apMsg.e2apMessage.PduUnPack(logBuf, data)
 	if e2apMsg.e2apMessage.messageInfo.messageType != C.cE2UnsuccessfulOutcome || e2apMsg.e2apMessage.messageInfo.messageId != C.cRICsubscriptionDeleteFailure {
 		return fmt.Errorf("unpackE2AP_pdu failed -> %s", e2apMsg.e2apMessage.String())
@@ -1146,12 +1024,44 @@ func (e2apMsg *e2apMsgSubscriptionDeleteFailure) PduUnPack(logBuf []byte, data *
 
 }
 
-func (e2apMsg *e2apMsgSubscriptionDeleteFailure) Pack(trg *packer.PackedData) (error, *packer.PackedData) {
-	return packer.PduPackerPackAllocTrg(e2apMsg, trg)
+func (e2apMsg *e2apMsgSubscriptionDeleteFailure) Pack(data *e2ap.E2APSubscriptionDeleteFailure) (error, *packer.PackedData) {
+	e2apMsg.msgC = &C.RICSubscriptionDeleteFailure_t{}
+	C.initSubsDeleteFailure(e2apMsg.msgC)
+	e2apMsg.msgC.ranFunctionID = (C.uint16_t)(data.FunctionId)
+	if err := (&e2apEntryRequestID{entry: &e2apMsg.msgC.ricRequestID}).set(&data.RequestId); err != nil {
+		return err, nil
+	}
+	e2apMsg.msgC.ricCause.content = (C.uchar)(data.Cause.Content)
+	e2apMsg.msgC.ricCause.cause = (C.uchar)(data.Cause.CauseVal)
+	e2apMsg.msgC.criticalityDiagnosticsPresent = false
+	if data.CriticalityDiagnostics.Present {
+		e2apMsg.msgC.criticalityDiagnosticsPresent = true
+		if err := (&e2apEntryCriticalityDiagnostic{entry: &e2apMsg.msgC.criticalityDiagnostics}).set(&data.CriticalityDiagnostics); err != nil {
+			return err, nil
+		}
+	}
+
+	return packer.PduPackerPack(e2apMsg)
 }
 
-func (e2apMsg *e2apMsgSubscriptionDeleteFailure) UnPack(msg *packer.PackedData) error {
-	return packer.PduPackerUnPack(e2apMsg, msg)
+func (e2apMsg *e2apMsgSubscriptionDeleteFailure) UnPack(msg *packer.PackedData) (error, *e2ap.E2APSubscriptionDeleteFailure) {
+	data := &e2ap.E2APSubscriptionDeleteFailure{}
+	if err := packer.PduPackerUnPack(e2apMsg, msg); err != nil {
+		return err, data
+	}
+	data.FunctionId = (e2ap.FunctionId)(e2apMsg.msgC.ranFunctionID)
+	if err := (&e2apEntryRequestID{entry: &e2apMsg.msgC.ricRequestID}).get(&data.RequestId); err != nil {
+		return err, data
+	}
+	data.Cause.Content = (uint8)(e2apMsg.msgC.ricCause.content)
+	data.Cause.CauseVal = (uint8)(e2apMsg.msgC.ricCause.cause)
+	if e2apMsg.msgC.criticalityDiagnosticsPresent == true {
+		data.CriticalityDiagnostics.Present = true
+		if err := (&e2apEntryCriticalityDiagnostic{entry: &e2apMsg.msgC.criticalityDiagnostics}).get(&data.CriticalityDiagnostics); err != nil {
+			return err, data
+		}
+	}
+	return nil, data
 }
 
 func (e2apMsg *e2apMsgSubscriptionDeleteFailure) String() string {
@@ -1214,11 +1124,6 @@ func (*cppasn1E2APPacker) NewPackerSubscriptionDeleteResponse() e2ap.E2APMsgPack
 
 func (*cppasn1E2APPacker) NewPackerSubscriptionDeleteFailure() e2ap.E2APMsgPackerSubscriptionDeleteFailureIf {
 	return &e2apMsgSubscriptionDeleteFailure{}
-}
-
-func (*cppasn1E2APPacker) MessageInfo(msg *packer.PackedData) *packer.MessageInfo {
-	e2apMsg := &e2apMessage{}
-	return e2apMsg.UnPack(msg)
 }
 
 func NewAsn1E2Packer() e2ap.E2APPackerIf {

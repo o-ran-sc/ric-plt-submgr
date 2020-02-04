@@ -39,9 +39,12 @@ var xapp_e2asnpacker e2ap.E2APPackerIf = e2ap_wrapper.NewAsn1E2Packer()
 //
 //-----------------------------------------------------------------------------
 type xappTransaction struct {
-	tc   *testingXappStub
 	xid  string
 	meid *xapp.RMRMeid
+}
+
+func (trans *xappTransaction) String() string {
+	return "trans(" + trans.xid + "/" + trans.meid.RanName + ")"
 }
 
 type testingXappStub struct {
@@ -62,25 +65,16 @@ func createNewXappStub(desc string, rtfile string, port string, stat string) *te
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-func (tc *testingXappStub) newXid() string {
-	var xid string
-	xid = tc.desc + "_XID_" + strconv.FormatUint(uint64(tc.xid_seq), 10)
-	tc.xid_seq++
-	return xid
-}
-
-//-----------------------------------------------------------------------------
-//
-//-----------------------------------------------------------------------------
-func (tc *testingXappStub) newXappTransaction(xid *string, ranname string) *xappTransaction {
+func (tc *testingXappStub) newXappTransaction(xid string, ranname string) *xappTransaction {
 	trans := &xappTransaction{}
-	trans.tc = tc
-	if xid == nil {
-		trans.xid = tc.newXid()
+	if len(xid) == 0 {
+		trans.xid = tc.GetDesc() + "_XID_" + strconv.FormatUint(uint64(tc.xid_seq), 10)
+		tc.xid_seq++
 	} else {
-		trans.xid = *xid
+		trans.xid = xid
 	}
 	trans.meid = &xapp.RMRMeid{RanName: ranname}
+	xapp.Logger.Info("(%s) New test %s", tc.GetDesc(), trans.String())
 	return trans
 }
 
@@ -93,17 +87,17 @@ func (tc *testingXappStub) Consume(params *xapp.RMRParams) (err error) {
 	msg := &RMRParams{params}
 
 	if params.Mtype == 55555 {
-		xapp.Logger.Info("(%s) Testing message ignore %s", tc.desc, msg.String())
+		xapp.Logger.Info("(%s) Testing message ignore %s", tc.GetDesc(), msg.String())
 		tc.active = true
 		return
 	}
 
-	if strings.Contains(msg.Xid, tc.desc) {
-		xapp.Logger.Info("(%s) Consume %s", tc.desc, msg.String())
+	if strings.Contains(msg.Xid, tc.GetDesc()) {
+		xapp.Logger.Info("(%s) Consume %s", tc.GetDesc(), msg.String())
 		tc.IncMsgCnt()
 		tc.rmrConChan <- msg
 	} else {
-		xapp.Logger.Info("(%s) Ignore %s", tc.desc, msg.String())
+		xapp.Logger.Info("(%s) Ignore %s", tc.GetDesc(), msg.String())
 	}
 	return
 }
@@ -147,13 +141,19 @@ func (p *test_subs_req_params) Init() {
 }
 
 func (xappConn *testingXappStub) handle_xapp_subs_req(t *testing.T, rparams *test_subs_req_params, oldTrans *xappTransaction) *xappTransaction {
-	xapp.Logger.Info("(%s) handle_xapp_subs_req", xappConn.desc)
+
+	trans := oldTrans
+	if oldTrans == nil {
+		trans = xappConn.newXappTransaction("", "RAN_NAME_1")
+	}
+
+	xapp.Logger.Info("(%s) handle_xapp_subs_req %s", xappConn.GetDesc(), trans.String())
 	e2SubsReq := xapp_e2asnpacker.NewPackerSubscriptionRequest()
 
 	//---------------------------------
 	// xapp activity: Send Subs Req
 	//---------------------------------
-	xapp.Logger.Info("(%s) Send Subs Req", xappConn.desc)
+	xapp.Logger.Info("(%s) Send Subs Req %s", xappConn.GetDesc(), trans.String())
 
 	myparams := rparams
 
@@ -162,18 +162,12 @@ func (xappConn *testingXappStub) handle_xapp_subs_req(t *testing.T, rparams *tes
 		myparams.Init()
 	}
 
-	e2SubsReq.Set(myparams.req)
-	xapp.Logger.Debug("%s", e2SubsReq.String())
-	err, packedMsg := e2SubsReq.Pack(nil)
+	err, packedMsg := e2SubsReq.Pack(myparams.req)
 	if err != nil {
-		testError(t, "(%s) pack NOK %s", xappConn.desc, err.Error())
+		testError(t, "(%s) pack NOK %s %s", xappConn.GetDesc(), trans.String(), err.Error())
 		return nil
 	}
-
-	var trans *xappTransaction = oldTrans
-	if trans == nil {
-		trans = xappConn.newXappTransaction(nil, "RAN_NAME_1")
-	}
+	xapp.Logger.Debug("(%s) %s %s", xappConn.GetDesc(), trans.String(), e2SubsReq.String())
 
 	params := &RMRParams{&xapp.RMRParams{}}
 	params.Mtype = xapp.RIC_SUB_REQ
@@ -185,7 +179,7 @@ func (xappConn *testingXappStub) handle_xapp_subs_req(t *testing.T, rparams *tes
 
 	snderr := xappConn.RmrSend(params)
 	if snderr != nil {
-		testError(t, "(%s) RMR SEND FAILED: %s", xappConn.desc, snderr.Error())
+		testError(t, "(%s) RMR SEND FAILED: %s %s", xappConn.GetDesc(), trans.String(), snderr.Error())
 		return nil
 	}
 	return trans
@@ -195,7 +189,7 @@ func (xappConn *testingXappStub) handle_xapp_subs_req(t *testing.T, rparams *tes
 //
 //-----------------------------------------------------------------------------
 func (xappConn *testingXappStub) handle_xapp_subs_resp(t *testing.T, trans *xappTransaction) uint32 {
-	xapp.Logger.Info("(%s) handle_xapp_subs_resp", xappConn.desc)
+	xapp.Logger.Info("(%s) handle_xapp_subs_resp", xappConn.GetDesc())
 	e2SubsResp := xapp_e2asnpacker.NewPackerSubscriptionResponse()
 	var e2SubsId uint32
 
@@ -206,10 +200,10 @@ func (xappConn *testingXappStub) handle_xapp_subs_resp(t *testing.T, trans *xapp
 	case msg := <-xappConn.rmrConChan:
 		xappConn.DecMsgCnt()
 		if msg.Mtype != xapp.RICMessageTypes["RIC_SUB_RESP"] {
-			testError(t, "(%s) Received RIC_SUB_RESP wrong mtype expected %s got %s, error", xappConn.desc, "RIC_SUB_RESP", xapp.RicMessageTypeToName[msg.Mtype])
+			testError(t, "(%s) Received RIC_SUB_RESP wrong mtype expected %s got %s, error", xappConn.GetDesc(), "RIC_SUB_RESP", xapp.RicMessageTypeToName[msg.Mtype])
 			return 0
 		} else if msg.Xid != trans.xid {
-			testError(t, "(%s) Received RIC_SUB_RESP wrong xid expected %s got %s, error", xappConn.desc, trans.xid, msg.Xid)
+			testError(t, "(%s) Received RIC_SUB_RESP wrong xid expected %s got %s, error", xappConn.GetDesc(), trans.xid, msg.Xid)
 			return 0
 		} else {
 			packedData := &packer.PackedData{}
@@ -219,21 +213,15 @@ func (xappConn *testingXappStub) handle_xapp_subs_resp(t *testing.T, trans *xapp
 			} else {
 				e2SubsId = 0
 			}
-			unpackerr := e2SubsResp.UnPack(packedData)
-
+			unpackerr, resp := e2SubsResp.UnPack(packedData)
 			if unpackerr != nil {
-				testError(t, "(%s) RIC_SUB_RESP unpack failed err: %s", xappConn.desc, unpackerr.Error())
+				testError(t, "(%s) RIC_SUB_RESP unpack failed err: %s", xappConn.GetDesc(), unpackerr.Error())
 			}
-			geterr, resp := e2SubsResp.Get()
-			if geterr != nil {
-				testError(t, "(%s) RIC_SUB_RESP get failed err: %s", xappConn.desc, geterr.Error())
-			}
-
-			xapp.Logger.Info("(%s) Recv Subs Resp rmr: xid=%s subid=%d, asn: seqnro=%d", xappConn.desc, msg.Xid, msg.SubId, resp.RequestId.Seq)
+			xapp.Logger.Info("(%s) Recv Subs Resp rmr: xid=%s subid=%d, asn: seqnro=%d", xappConn.GetDesc(), msg.Xid, msg.SubId, resp.RequestId.Seq)
 			return e2SubsId
 		}
 	case <-time.After(15 * time.Second):
-		testError(t, "(%s) Not Received RIC_SUB_RESP within 15 secs", xappConn.desc)
+		testError(t, "(%s) Not Received RIC_SUB_RESP within 15 secs", xappConn.GetDesc())
 		return 0
 	}
 	return 0
@@ -243,7 +231,7 @@ func (xappConn *testingXappStub) handle_xapp_subs_resp(t *testing.T, trans *xapp
 //
 //-----------------------------------------------------------------------------
 func (xappConn *testingXappStub) handle_xapp_subs_fail(t *testing.T, trans *xappTransaction) uint32 {
-	xapp.Logger.Info("(%s) handle_xapp_subs_fail", xappConn.desc)
+	xapp.Logger.Info("(%s) handle_xapp_subs_fail", xappConn.GetDesc())
 	e2SubsFail := xapp_e2asnpacker.NewPackerSubscriptionFailure()
 	var e2SubsId uint32
 
@@ -254,10 +242,10 @@ func (xappConn *testingXappStub) handle_xapp_subs_fail(t *testing.T, trans *xapp
 	case msg := <-xappConn.rmrConChan:
 		xappConn.DecMsgCnt()
 		if msg.Mtype != xapp.RICMessageTypes["RIC_SUB_FAILURE"] {
-			testError(t, "(%s) Received RIC_SUB_FAILURE wrong mtype expected %s got %s, error", xappConn.desc, "RIC_SUB_FAILURE", xapp.RicMessageTypeToName[msg.Mtype])
+			testError(t, "(%s) Received RIC_SUB_FAILURE wrong mtype expected %s got %s, error", xappConn.GetDesc(), "RIC_SUB_FAILURE", xapp.RicMessageTypeToName[msg.Mtype])
 			return 0
 		} else if msg.Xid != trans.xid {
-			testError(t, "(%s) Received RIC_SUB_FAILURE wrong xid expected %s got %s, error", xappConn.desc, trans.xid, msg.Xid)
+			testError(t, "(%s) Received RIC_SUB_FAILURE wrong xid expected %s got %s, error", xappConn.GetDesc(), trans.xid, msg.Xid)
 			return 0
 		} else {
 			packedData := &packer.PackedData{}
@@ -267,21 +255,15 @@ func (xappConn *testingXappStub) handle_xapp_subs_fail(t *testing.T, trans *xapp
 			} else {
 				e2SubsId = 0
 			}
-			unpackerr := e2SubsFail.UnPack(packedData)
-
+			unpackerr, resp := e2SubsFail.UnPack(packedData)
 			if unpackerr != nil {
-				testError(t, "(%s) RIC_SUB_FAILURE unpack failed err: %s", xappConn.desc, unpackerr.Error())
+				testError(t, "(%s) RIC_SUB_FAILURE unpack failed err: %s", xappConn.GetDesc(), unpackerr.Error())
 			}
-			geterr, resp := e2SubsFail.Get()
-			if geterr != nil {
-				testError(t, "(%s) RIC_SUB_FAILURE get failed err: %s", xappConn.desc, geterr.Error())
-			}
-
-			xapp.Logger.Info("(%s) Recv Subs Fail rmr: xid=%s subid=%d, asn: seqnro=%d", xappConn.desc, msg.Xid, msg.SubId, resp.RequestId.Seq)
+			xapp.Logger.Info("(%s) Recv Subs Fail rmr: xid=%s subid=%d, asn: seqnro=%d", xappConn.GetDesc(), msg.Xid, msg.SubId, resp.RequestId.Seq)
 			return e2SubsId
 		}
 	case <-time.After(15 * time.Second):
-		testError(t, "(%s) Not Received RIC_SUB_FAILURE within 15 secs", xappConn.desc)
+		testError(t, "(%s) Not Received RIC_SUB_FAILURE within 15 secs", xappConn.GetDesc())
 		return 0
 	}
 	return 0
@@ -291,31 +273,30 @@ func (xappConn *testingXappStub) handle_xapp_subs_fail(t *testing.T, trans *xapp
 //
 //-----------------------------------------------------------------------------
 func (xappConn *testingXappStub) handle_xapp_subs_del_req(t *testing.T, oldTrans *xappTransaction, e2SubsId uint32) *xappTransaction {
-	xapp.Logger.Info("(%s) handle_xapp_subs_del_req", xappConn.desc)
-	e2SubsDelReq := xapp_e2asnpacker.NewPackerSubscriptionDeleteRequest()
 
+	trans := oldTrans
+	if oldTrans == nil {
+		trans = xappConn.newXappTransaction("", "RAN_NAME_1")
+	}
+
+	xapp.Logger.Info("(%s) handle_xapp_subs_del_req %s", xappConn.GetDesc(), trans.String())
+	e2SubsDelReq := xapp_e2asnpacker.NewPackerSubscriptionDeleteRequest()
 	//---------------------------------
 	// xapp activity: Send Subs Del Req
 	//---------------------------------
-	xapp.Logger.Info("(%s) Send Subs Del Req", xappConn.desc)
+	xapp.Logger.Info("(%s) Send Subs Del Req  %s", xappConn.GetDesc(), trans.String())
 
 	req := &e2ap.E2APSubscriptionDeleteRequest{}
 	req.RequestId.Id = 1
 	req.RequestId.Seq = e2SubsId
 	req.FunctionId = 1
 
-	e2SubsDelReq.Set(req)
-	xapp.Logger.Debug("%s", e2SubsDelReq.String())
-	err, packedMsg := e2SubsDelReq.Pack(nil)
+	err, packedMsg := e2SubsDelReq.Pack(req)
 	if err != nil {
-		testError(t, "(%s) pack NOK %s", xappConn.desc, err.Error())
+		testError(t, "(%s) pack NOK %s %s", xappConn.GetDesc(), trans.String(), err.Error())
 		return nil
 	}
-
-	var trans *xappTransaction = oldTrans
-	if trans == nil {
-		trans = xappConn.newXappTransaction(nil, "RAN_NAME_1")
-	}
+	xapp.Logger.Debug("(%s) %s %s", xappConn.GetDesc(), trans.String(), e2SubsDelReq.String())
 
 	params := &RMRParams{&xapp.RMRParams{}}
 	params.Mtype = xapp.RIC_SUB_DEL_REQ
@@ -326,8 +307,9 @@ func (xappConn *testingXappStub) handle_xapp_subs_del_req(t *testing.T, oldTrans
 	params.Mbuf = nil
 
 	snderr := xappConn.RmrSend(params)
+
 	if snderr != nil {
-		testError(t, "(%s) RMR SEND FAILED: %s", xappConn.desc, snderr.Error())
+		testError(t, "(%s) RMR SEND FAILED: %s %s", xappConn.GetDesc(), trans.String(), snderr.Error())
 		return nil
 	}
 	return trans
@@ -337,7 +319,7 @@ func (xappConn *testingXappStub) handle_xapp_subs_del_req(t *testing.T, oldTrans
 //
 //-----------------------------------------------------------------------------
 func (xappConn *testingXappStub) handle_xapp_subs_del_resp(t *testing.T, trans *xappTransaction) {
-	xapp.Logger.Info("(%s) handle_xapp_subs_del_resp", xappConn.desc)
+	xapp.Logger.Info("(%s) handle_xapp_subs_del_resp", xappConn.GetDesc())
 	e2SubsDelResp := xapp_e2asnpacker.NewPackerSubscriptionDeleteResponse()
 
 	//---------------------------------
@@ -347,26 +329,22 @@ func (xappConn *testingXappStub) handle_xapp_subs_del_resp(t *testing.T, trans *
 	case msg := <-xappConn.rmrConChan:
 		xappConn.DecMsgCnt()
 		if msg.Mtype != xapp.RICMessageTypes["RIC_SUB_DEL_RESP"] {
-			testError(t, "(%s) Received RIC_SUB_DEL_RESP wrong mtype expected %s got %s, error", xappConn.desc, "RIC_SUB_DEL_RESP", xapp.RicMessageTypeToName[msg.Mtype])
+			testError(t, "(%s) Received RIC_SUB_DEL_RESP wrong mtype expected %s got %s, error", xappConn.GetDesc(), "RIC_SUB_DEL_RESP", xapp.RicMessageTypeToName[msg.Mtype])
 			return
 		} else if trans != nil && msg.Xid != trans.xid {
-			testError(t, "(%s) Received RIC_SUB_DEL_RESP wrong xid expected %s got %s, error", xappConn.desc, trans.xid, msg.Xid)
+			testError(t, "(%s) Received RIC_SUB_DEL_RESP wrong xid expected %s got %s, error", xappConn.GetDesc(), trans.xid, msg.Xid)
 			return
 		} else {
 			packedData := &packer.PackedData{}
 			packedData.Buf = msg.Payload
-			unpackerr := e2SubsDelResp.UnPack(packedData)
+			unpackerr, resp := e2SubsDelResp.UnPack(packedData)
 			if unpackerr != nil {
-				testError(t, "(%s) RIC_SUB_DEL_RESP unpack failed err: %s", xappConn.desc, unpackerr.Error())
+				testError(t, "(%s) RIC_SUB_DEL_RESP unpack failed err: %s", xappConn.GetDesc(), unpackerr.Error())
 			}
-			geterr, resp := e2SubsDelResp.Get()
-			if geterr != nil {
-				testError(t, "(%s) RIC_SUB_DEL_RESP get failed err: %s", xappConn.desc, geterr.Error())
-			}
-			xapp.Logger.Info("(%s) Recv Subs Del Resp rmr: xid=%s subid=%d, asn: seqnro=%d", xappConn.desc, msg.Xid, msg.SubId, resp.RequestId.Seq)
+			xapp.Logger.Info("(%s) Recv Subs Del Resp rmr: xid=%s subid=%d, asn: seqnro=%d", xappConn.GetDesc(), msg.Xid, msg.SubId, resp.RequestId.Seq)
 			return
 		}
 	case <-time.After(15 * time.Second):
-		testError(t, "(%s) Not Received RIC_SUB_DEL_RESP within 15 secs", xappConn.desc)
+		testError(t, "(%s) Not Received RIC_SUB_DEL_RESP within 15 secs", xappConn.GetDesc())
 	}
 }
