@@ -24,8 +24,7 @@ import (
 	"strings"
 )
 
-const cLogBufferMaxSize = 1024
-const cMsgBufferMaxSize = 2048
+const cLogBufferMaxSize = 40960
 
 //-----------------------------------------------------------------------------
 //
@@ -35,31 +34,16 @@ type PduPackerIf interface {
 	PduPack(logBuf []byte, data *PackedData) error
 }
 
-func PduPackerPack(entry PduPackerIf, trgBuf *PackedData) error {
-
+func PduPackerPack(entry PduPackerIf) (error, *PackedData) {
 	var logBuffer []byte = make([]byte, cLogBufferMaxSize)
 	logBuffer[0] = 0
 
-	if trgBuf != nil {
-		trgBuf.Buf = make([]byte, cMsgBufferMaxSize)
-	}
+	trgBuf := &PackedData{}
 	err := entry.PduPack(logBuffer, trgBuf)
 	if err == nil {
-		return nil
+		return nil, trgBuf
 	}
-	return fmt.Errorf("Pack failed: err: %s, logbuffer: %s", err.Error(), logBuffer[:strings.Index(string(logBuffer[:]), "\000")])
-}
-
-func PduPackerPackAllocTrg(entry PduPackerIf, trgBuf *PackedData) (error, *PackedData) {
-	dataPacked := trgBuf
-	if dataPacked == nil {
-		dataPacked = &PackedData{}
-	}
-	err := PduPackerPack(entry, dataPacked)
-	if err != nil {
-		return err, nil
-	}
-	return nil, dataPacked
+	return fmt.Errorf("Pack failed: err: %s, logbuffer: %s", err.Error(), logBuffer[:strings.Index(string(logBuffer[:]), "\000")]), nil
 }
 
 //-----------------------------------------------------------------------------
@@ -71,8 +55,10 @@ type PduUnPackerIf interface {
 }
 
 func PduPackerUnPack(entry PduUnPackerIf, data *PackedData) error {
+	if data == nil {
+		return fmt.Errorf("Unpack failed: data is nil")
+	}
 	var logBuffer []byte = make([]byte, cLogBufferMaxSize)
-
 	logBuffer[0] = 0
 	err := entry.PduUnPack(logBuffer, data)
 	if err == nil {

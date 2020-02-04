@@ -47,11 +47,7 @@ func (c *E2ap) UnpackSubscriptionRequest(payload []byte) (*e2ap.E2APSubscription
 	e2SubReq := packerif.NewPackerSubscriptionRequest()
 	packedData := &packer.PackedData{}
 	packedData.Buf = payload
-	err := e2SubReq.UnPack(packedData)
-	if err != nil {
-		return nil, fmt.Errorf("%s buf[%s]", err.Error(), hex.EncodeToString(payload))
-	}
-	err, subReq := e2SubReq.Get()
+	err, subReq := e2SubReq.UnPack(packedData)
 	if err != nil {
 		return nil, fmt.Errorf("%s buf[%s]", err.Error(), hex.EncodeToString(payload))
 	}
@@ -60,11 +56,7 @@ func (c *E2ap) UnpackSubscriptionRequest(payload []byte) (*e2ap.E2APSubscription
 
 func (c *E2ap) PackSubscriptionRequest(req *e2ap.E2APSubscriptionRequest) (int, *packer.PackedData, error) {
 	e2SubReq := packerif.NewPackerSubscriptionRequest()
-	err := e2SubReq.Set(req)
-	if err != nil {
-		return 0, nil, err
-	}
-	err, packedData := e2SubReq.Pack(nil)
+	err, packedData := e2SubReq.Pack(req)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -78,11 +70,7 @@ func (c *E2ap) UnpackSubscriptionResponse(payload []byte) (*e2ap.E2APSubscriptio
 	e2SubResp := packerif.NewPackerSubscriptionResponse()
 	packedData := &packer.PackedData{}
 	packedData.Buf = payload
-	err := e2SubResp.UnPack(packedData)
-	if err != nil {
-		return nil, fmt.Errorf("%s buf[%s]", err.Error(), hex.EncodeToString(payload))
-	}
-	err, subResp := e2SubResp.Get()
+	err, subResp := e2SubResp.UnPack(packedData)
 	if err != nil {
 		return nil, fmt.Errorf("%s buf[%s]", err.Error(), hex.EncodeToString(payload))
 	}
@@ -91,11 +79,7 @@ func (c *E2ap) UnpackSubscriptionResponse(payload []byte) (*e2ap.E2APSubscriptio
 
 func (c *E2ap) PackSubscriptionResponse(req *e2ap.E2APSubscriptionResponse) (int, *packer.PackedData, error) {
 	e2SubResp := packerif.NewPackerSubscriptionResponse()
-	err := e2SubResp.Set(req)
-	if err != nil {
-		return 0, nil, err
-	}
-	err, packedData := e2SubResp.Pack(nil)
+	err, packedData := e2SubResp.Pack(req)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -109,11 +93,7 @@ func (c *E2ap) UnpackSubscriptionFailure(payload []byte) (*e2ap.E2APSubscription
 	e2SubFail := packerif.NewPackerSubscriptionFailure()
 	packedData := &packer.PackedData{}
 	packedData.Buf = payload
-	err := e2SubFail.UnPack(packedData)
-	if err != nil {
-		return nil, fmt.Errorf("%s buf[%s]", err.Error(), hex.EncodeToString(payload))
-	}
-	err, subFail := e2SubFail.Get()
+	err, subFail := e2SubFail.UnPack(packedData)
 	if err != nil {
 		return nil, fmt.Errorf("%s buf[%s]", err.Error(), hex.EncodeToString(payload))
 	}
@@ -122,11 +102,7 @@ func (c *E2ap) UnpackSubscriptionFailure(payload []byte) (*e2ap.E2APSubscription
 
 func (c *E2ap) PackSubscriptionFailure(req *e2ap.E2APSubscriptionFailure) (int, *packer.PackedData, error) {
 	e2SubFail := packerif.NewPackerSubscriptionFailure()
-	err := e2SubFail.Set(req)
-	if err != nil {
-		return 0, nil, err
-	}
-	err, packedData := e2SubFail.Pack(nil)
+	err, packedData := e2SubFail.Pack(req)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -140,11 +116,7 @@ func (c *E2ap) UnpackSubscriptionDeleteRequest(payload []byte) (*e2ap.E2APSubscr
 	e2SubDelReq := packerif.NewPackerSubscriptionDeleteRequest()
 	packedData := &packer.PackedData{}
 	packedData.Buf = payload
-	err := e2SubDelReq.UnPack(packedData)
-	if err != nil {
-		return nil, fmt.Errorf("%s buf[%s]", err.Error(), hex.EncodeToString(payload))
-	}
-	err, subDelReq := e2SubDelReq.Get()
+	err, subDelReq := e2SubDelReq.UnPack(packedData)
 	if err != nil {
 		return nil, fmt.Errorf("%s buf[%s]", err.Error(), hex.EncodeToString(payload))
 	}
@@ -153,11 +125,7 @@ func (c *E2ap) UnpackSubscriptionDeleteRequest(payload []byte) (*e2ap.E2APSubscr
 
 func (c *E2ap) PackSubscriptionDeleteRequest(req *e2ap.E2APSubscriptionDeleteRequest) (int, *packer.PackedData, error) {
 	e2SubDelReq := packerif.NewPackerSubscriptionDeleteRequest()
-	err := e2SubDelReq.Set(req)
-	if err != nil {
-		return 0, nil, err
-	}
-	err, packedData := e2SubDelReq.Pack(nil)
+	err, packedData := e2SubDelReq.Pack(req)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -171,11 +139,7 @@ func (c *E2ap) UnpackSubscriptionDeleteResponse(payload []byte) (*e2ap.E2APSubsc
 	e2SubDelResp := packerif.NewPackerSubscriptionDeleteResponse()
 	packedData := &packer.PackedData{}
 	packedData.Buf = payload
-	err := e2SubDelResp.UnPack(packedData)
-	if err != nil {
-		return nil, fmt.Errorf("%s buf[%s]", err.Error(), hex.EncodeToString(payload))
-	}
-	err, subDelResp := e2SubDelResp.Get()
+	err, subDelResp := e2SubDelResp.UnPack(packedData)
 	if err != nil {
 		return nil, fmt.Errorf("%s buf[%s]", err.Error(), hex.EncodeToString(payload))
 	}
@@ -184,11 +148,7 @@ func (c *E2ap) UnpackSubscriptionDeleteResponse(payload []byte) (*e2ap.E2APSubsc
 
 func (c *E2ap) PackSubscriptionDeleteResponse(req *e2ap.E2APSubscriptionDeleteResponse) (int, *packer.PackedData, error) {
 	e2SubDelResp := packerif.NewPackerSubscriptionDeleteResponse()
-	err := e2SubDelResp.Set(req)
-	if err != nil {
-		return 0, nil, err
-	}
-	err, packedData := e2SubDelResp.Pack(nil)
+	err, packedData := e2SubDelResp.Pack(req)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -202,11 +162,7 @@ func (c *E2ap) UnpackSubscriptionDeleteFailure(payload []byte) (*e2ap.E2APSubscr
 	e2SubDelFail := packerif.NewPackerSubscriptionDeleteFailure()
 	packedData := &packer.PackedData{}
 	packedData.Buf = payload
-	err := e2SubDelFail.UnPack(packedData)
-	if err != nil {
-		return nil, fmt.Errorf("%s buf[%s]", err.Error(), hex.EncodeToString(payload))
-	}
-	err, subDelFail := e2SubDelFail.Get()
+	err, subDelFail := e2SubDelFail.UnPack(packedData)
 	if err != nil {
 		return nil, fmt.Errorf("%s buf[%s]", err.Error(), hex.EncodeToString(payload))
 	}
@@ -215,11 +171,7 @@ func (c *E2ap) UnpackSubscriptionDeleteFailure(payload []byte) (*e2ap.E2APSubscr
 
 func (c *E2ap) PackSubscriptionDeleteFailure(req *e2ap.E2APSubscriptionDeleteFailure) (int, *packer.PackedData, error) {
 	e2SubDelFail := packerif.NewPackerSubscriptionDeleteFailure()
-	err := e2SubDelFail.Set(req)
-	if err != nil {
-		return 0, nil, err
-	}
-	err, packedData := e2SubDelFail.Pack(nil)
+	err, packedData := e2SubDelFail.Pack(req)
 	if err != nil {
 		return 0, nil, err
 	}

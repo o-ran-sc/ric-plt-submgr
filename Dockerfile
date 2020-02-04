@@ -22,7 +22,7 @@
 #
 FROM nexus3.o-ran-sc.org:10004/bldr-ubuntu18-c-go:3-u18.04-nng as submgrprebuild
 
-RUN apt update && apt install -y iputils-ping net-tools curl tcpdump gdb
+RUN apt update && apt install -y iputils-ping net-tools curl tcpdump gdb valgrind
 
 WORKDIR /tmp
 
@@ -32,16 +32,16 @@ RUN wget --content-disposition https://packagecloud.io/o-ran-sc/staging/packages
 # Install RMr development header files
 RUN wget --content-disposition https://packagecloud.io/o-ran-sc/staging/packages/debian/stretch/rmr-dev_${RMRVERSION}_amd64.deb/download.deb && dpkg -i rmr-dev_${RMRVERSION}_amd64.deb && rm -rf rmr-dev_${RMRVERSION}_amd64.deb
 
-# "PULLING LOG and COMPILING LOG"
-#RUN git clone "https://gerrit.o-ran-sc.org/r/com/log" /opt/log && cd /opt/log && \
-# ./autogen.sh && ./configure && make install && ldconfig
-
 # "Installing Swagger"
 RUN cd /usr/local/go/bin \
     && wget --quiet https://github.com/go-swagger/go-swagger/releases/download/v0.19.0/swagger_linux_amd64 \
     && mv swagger_linux_amd64 swagger \
     && chmod +x swagger
 
+
+ENV GOPATH=/root/.go
+ENV PATH=$PATH:/root/.go/bin
+RUN /usr/local/go/bin/go get -u github.com/go-delve/delve/cmd/dlv
 
 WORKDIR /opt/submgr
 
@@ -55,16 +55,16 @@ ENV CGO_CFLAGS="-DASN_DISABLE_OER_SUPPORT"
 
 COPY 3rdparty 3rdparty
 RUN cd 3rdparty/libe2ap && \
-    gcc -c ${CFLAGS} -I. -fPIC *.c  && \
-    gcc *.o -shared -o libe2ap.so && \
+    gcc -c ${CFLAGS} -I. -g -fPIC *.c  && \
+    gcc *.o -g -shared -o libe2ap.so && \
     cp libe2ap.so /usr/local/lib/ && \
     cp *.h /usr/local/include/ && \
     ldconfig
 
 COPY e2ap e2ap
 RUN cd e2ap/libe2ap_wrapper && \
-    gcc -c ${CFLAGS} -fPIC *.c  && \
-    gcc *.o -shared -o libe2ap_wrapper.so && \
+    gcc -c ${CFLAGS} -g -fPIC *.c  && \
+    gcc *.o -g -shared -o libe2ap_wrapper.so && \
     cp libe2ap_wrapper.so /usr/local/lib/ && \
     cp *.h /usr/local/include/ && \
     ldconfig
@@ -119,12 +119,16 @@ RUN /usr/local/go/bin/go mod tidy
 COPY test/config-file.json test/config-file.json
 ENV CFG_FILE=/opt/submgr/test/config-file.json
 
-RUN /usr/local/go/bin/go test -test.coverprofile /tmp/submgr_cover.out -count=1 -v ./pkg/control
+RUN /usr/local/go/bin/go test -test.coverprofile /tmp/submgr_cover.out -count=1 -v ./pkg/control 
+
+#-c -o submgr_test
+#RUN ./submgr_test -test.coverprofile /tmp/submgr_cover.out
 
 RUN /usr/local/go/bin/go tool cover -html=/tmp/submgr_cover.out -o /tmp/submgr_cover.html
 
 # test formating (not important)
 RUN test -z "$(/usr/local/go/bin/gofmt -l pkg/control/*.go)"
+
 
 #
 #
