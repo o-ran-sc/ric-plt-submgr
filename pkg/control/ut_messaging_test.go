@@ -288,7 +288,7 @@ func TestSubDelReqCollision(t *testing.T) {
 
 	// Subs Delete colliding
 	seqBef := mainCtrl.get_msgcounter(t)
-	deltranscol2 := xappConn1.newXappTransaction(nil, "RAN_NAME_1")
+	deltranscol2 := xappConn1.newXappTransaction("", "RAN_NAME_1")
 	xappConn1.handle_xapp_subs_del_req(t, deltranscol2, e2SubsId) //Colliding SubDelReq
 	mainCtrl.wait_msgcounter_change(t, seqBef, 10)
 
@@ -438,21 +438,21 @@ func TestSameSubsDiffRan(t *testing.T) {
 	xapp.Logger.Info("TestSameSubsDiffRan")
 
 	//Req1
-	cretrans1 := xappConn1.newXappTransaction(nil, "RAN_NAME_1")
+	cretrans1 := xappConn1.newXappTransaction("", "RAN_NAME_1")
 	xappConn1.handle_xapp_subs_req(t, nil, cretrans1)
 	crereq1, cremsg1 := e2termConn.handle_e2term_subs_req(t)
 	e2termConn.handle_e2term_subs_resp(t, crereq1, cremsg1)
 	e2SubsId1 := xappConn1.handle_xapp_subs_resp(t, cretrans1)
 
 	//Req2
-	cretrans2 := xappConn1.newXappTransaction(nil, "RAN_NAME_2")
+	cretrans2 := xappConn1.newXappTransaction("", "RAN_NAME_2")
 	xappConn1.handle_xapp_subs_req(t, nil, cretrans2)
 	crereq2, cremsg2 := e2termConn.handle_e2term_subs_req(t)
 	e2termConn.handle_e2term_subs_resp(t, crereq2, cremsg2)
 	e2SubsId2 := xappConn1.handle_xapp_subs_resp(t, cretrans2)
 
 	//Del1
-	deltrans1 := xappConn1.newXappTransaction(nil, "RAN_NAME_1")
+	deltrans1 := xappConn1.newXappTransaction("", "RAN_NAME_1")
 	xappConn1.handle_xapp_subs_del_req(t, deltrans1, e2SubsId1)
 	delreq1, delmsg1 := e2termConn.handle_e2term_subs_del_req(t)
 	e2termConn.handle_e2term_subs_del_resp(t, delreq1, delmsg1)
@@ -461,7 +461,7 @@ func TestSameSubsDiffRan(t *testing.T) {
 	mainCtrl.wait_subs_clean(t, e2SubsId1, 10)
 
 	//Del2
-	deltrans2 := xappConn1.newXappTransaction(nil, "RAN_NAME_2")
+	deltrans2 := xappConn1.newXappTransaction("", "RAN_NAME_2")
 	xappConn1.handle_xapp_subs_del_req(t, deltrans2, e2SubsId2)
 	delreq2, delmsg2 := e2termConn.handle_e2term_subs_del_req(t)
 	e2termConn.handle_e2term_subs_del_resp(t, delreq2, delmsg2)

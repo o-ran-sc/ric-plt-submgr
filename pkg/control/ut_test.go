@@ -25,6 +25,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -34,11 +35,24 @@ import (
 //-----------------------------------------------------------------------------
 type testingRmrControl struct {
 	desc     string
+	mutex    sync.Mutex
 	syncChan chan struct{}
 }
 
+func (tc *testingRmrControl) Lock() {
+	tc.mutex.Lock()
+}
+
+func (tc *testingRmrControl) Unlock() {
+	tc.mutex.Unlock()
+}
+
+func (tc *testingRmrControl) GetDesc() string {
+	return tc.desc
+}
+
 func (tc *testingRmrControl) ReadyCB(data interface{}) {
-	xapp.Logger.Info("testingRmrControl(%s) ReadyCB", tc.desc)
+	xapp.Logger.Info("testingRmrControl(%s) ReadyCB", tc.GetDesc())
 	tc.syncChan <- struct{}{}
 	return
 }
@@ -83,7 +97,7 @@ func (tc *testingRmrStubControl) DecMsgCnt() {
 
 func (tc *testingRmrStubControl) TestMsgCnt(t *testing.T) {
 	if tc.GetMsgCnt() > 0 {
-		testError(t, "(%s) message count expected 0 but is %d", tc.desc, tc.GetMsgCnt())
+		testError(t, "(%s) message count expected 0 but is %d", tc.GetDesc(), tc.GetMsgCnt())
 	}
 }
 
@@ -91,18 +105,18 @@ func (tc *testingRmrStubControl) RmrSend(params *RMRParams) (err error) {
 	//
 	//NOTE: Do this way until xapp-frame sending is improved
 	//
-	xapp.Logger.Info("(%s) RmrSend %s", tc.desc, params.String())
+	xapp.Logger.Info("(%s) RmrSend %s", tc.GetDesc(), params.String())
 	status := false
 	i := 1
 	for ; i <= 10 && status == false; i++ {
 		status = tc.rmrClientTest.SendMsg(params.RMRParams)
 		if status == false {
-			xapp.Logger.Info("(%s) RmrSend failed. Retry count %v, %s", tc.desc, i, params.String())
+			xapp.Logger.Info("(%s) RmrSend failed. Retry count %v, %s", tc.GetDesc(), i, params.String())
 			time.Sleep(500 * time.Millisecond)
 		}
 	}
 	if status == false {
-		err = fmt.Errorf("(%s) RmrSend failed. Retry count %v, %s", tc.desc, i, params.String())
+		err = fmt.Errorf("(%s) RmrSend failed. Retry count %v, %s", tc.GetDesc(), i, params.String())
 		xapp.Rmr.Free(params.Mbuf)
 	}
 	return

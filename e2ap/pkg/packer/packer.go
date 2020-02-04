@@ -24,42 +24,41 @@ import (
 	"strings"
 )
 
-const cLogBufferMaxSize = 1024
-const cMsgBufferMaxSize = 2048
+const cLogBufferMaxSize = 40960
 
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
 
+type PduLoggerBuf struct {
+	logBuffer []byte
+}
+
+func (lb *PduLoggerBuf) String() string {
+	return "logbuffer(" + string(lb.logBuffer[:strings.Index(string(lb.logBuffer[:]), "\000")]) + ")"
+}
+
+func NewPduLoggerBuf() *PduLoggerBuf {
+	lb := &PduLoggerBuf{}
+	lb.logBuffer = make([]byte, cLogBufferMaxSize)
+	lb.logBuffer[0] = 0
+	return lb
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
 type PduPackerIf interface {
-	PduPack(logBuf []byte, data *PackedData) error
+	PduPack(logBuf []byte) (error, *PackedData)
 }
 
-func PduPackerPack(entry PduPackerIf, trgBuf *PackedData) error {
-
-	var logBuffer []byte = make([]byte, cLogBufferMaxSize)
-	logBuffer[0] = 0
-
-	if trgBuf != nil {
-		trgBuf.Buf = make([]byte, cMsgBufferMaxSize)
-	}
-	err := entry.PduPack(logBuffer, trgBuf)
+func PduPackerPack(entry PduPackerIf) (error, *PackedData) {
+	lb := NewPduLoggerBuf()
+	err, buf := entry.PduPack(lb.logBuffer)
 	if err == nil {
-		return nil
+		return nil, buf
 	}
-	return fmt.Errorf("Pack failed: err: %s, logbuffer: %s", err.Error(), logBuffer[:strings.Index(string(logBuffer[:]), "\000")])
-}
-
-func PduPackerPackAllocTrg(entry PduPackerIf, trgBuf *PackedData) (error, *PackedData) {
-	dataPacked := trgBuf
-	if dataPacked == nil {
-		dataPacked = &PackedData{}
-	}
-	err := PduPackerPack(entry, dataPacked)
-	if err != nil {
-		return err, nil
-	}
-	return nil, dataPacked
+	return fmt.Errorf("Pack failed: err(%s), %s", err.Error(), lb.String()), nil
 }
 
 //-----------------------------------------------------------------------------
@@ -71,12 +70,13 @@ type PduUnPackerIf interface {
 }
 
 func PduPackerUnPack(entry PduUnPackerIf, data *PackedData) error {
-	var logBuffer []byte = make([]byte, cLogBufferMaxSize)
-
-	logBuffer[0] = 0
-	err := entry.PduUnPack(logBuffer, data)
+	if data == nil {
+		return fmt.Errorf("Unpack failed: data is nil")
+	}
+	lb := NewPduLoggerBuf()
+	err := entry.PduUnPack(lb.logBuffer, data)
 	if err == nil {
 		return nil
 	}
-	return fmt.Errorf("Unpack failed: err: %s, logbuffer: %s", err.Error(), logBuffer[:strings.Index(string(logBuffer[:]), "\000")])
+	return fmt.Errorf("Unpack failed: err(%s), %s", err.Error(), lb.String())
 }
