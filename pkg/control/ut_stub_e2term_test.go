@@ -22,7 +22,6 @@ package control
 import (
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap_wrapper"
-	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/packer"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"testing"
 	"time"
@@ -85,7 +84,7 @@ func (e2termConn *testingE2termStub) handle_e2term_subs_req(t *testing.T) (*e2ap
 			testError(t, "(%s) Received wrong mtype expected %s got %s, error", e2termConn.GetDesc(), "RIC_SUB_REQ", xapp.RicMessageTypeToName[msg.Mtype])
 		} else {
 			xapp.Logger.Info("(%s) Recv Subs Req", e2termConn.GetDesc())
-			packedData := &packer.PackedData{}
+			packedData := &e2ap.PackedData{}
 			packedData.Buf = msg.Payload
 			unpackerr, req := e2SubsReq.UnPack(packedData)
 			if unpackerr != nil {
@@ -230,7 +229,7 @@ func (e2termConn *testingE2termStub) handle_e2term_subs_del_req(t *testing.T) (*
 		} else {
 			xapp.Logger.Info("(%s) Recv Subs Del Req", e2termConn.GetDesc())
 
-			packedData := &packer.PackedData{}
+			packedData := &e2ap.PackedData{}
 			packedData.Buf = msg.Payload
 			unpackerr, req := e2SubsDelReq.UnPack(packedData)
 			if unpackerr != nil {

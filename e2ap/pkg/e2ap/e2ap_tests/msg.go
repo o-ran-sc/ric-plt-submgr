@@ -23,7 +23,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
-	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/packer"
 	"github.com/google/go-cmp/cmp"
 	"log"
 	"os"
@@ -78,13 +77,13 @@ type E2ApTests struct {
 	packerif e2ap.E2APPackerIf
 }
 
-func (testCtxt *E2ApTests) toPackedData(t *testing.T, buffer string) *packer.PackedData {
+func (testCtxt *E2ApTests) toPackedData(t *testing.T, buffer string) *e2ap.PackedData {
 	msg, err := hex.DecodeString(buffer)
 	if err != nil {
 		testCtxt.testError(t, "Hex DecodeString Failed: %s [%s]", err.Error(), buffer)
 		return nil
 	}
-	packedData := &packer.PackedData{}
+	packedData := &e2ap.PackedData{}
 	packedData.Buf = msg
 	return packedData
 }

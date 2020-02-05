@@ -22,7 +22,6 @@ package control
 import (
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap_wrapper"
-	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/packer"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"strconv"
 	"strings"
@@ -206,7 +205,7 @@ func (xappConn *testingXappStub) handle_xapp_subs_resp(t *testing.T, trans *xapp
 			testError(t, "(%s) Received RIC_SUB_RESP wrong xid expected %s got %s, error", xappConn.GetDesc(), trans.xid, msg.Xid)
 			return 0
 		} else {
-			packedData := &packer.PackedData{}
+			packedData := &e2ap.PackedData{}
 			packedData.Buf = msg.Payload
 			if msg.SubId > 0 {
 				e2SubsId = uint32(msg.SubId)
@@ -248,7 +247,7 @@ func (xappConn *testingXappStub) handle_xapp_subs_fail(t *testing.T, trans *xapp
 			testError(t, "(%s) Received RIC_SUB_FAILURE wrong xid expected %s got %s, error", xappConn.GetDesc(), trans.xid, msg.Xid)
 			return 0
 		} else {
-			packedData := &packer.PackedData{}
+			packedData := &e2ap.PackedData{}
 			packedData.Buf = msg.Payload
 			if msg.SubId > 0 {
 				e2SubsId = uint32(msg.SubId)
@@ -335,7 +334,7 @@ func (xappConn *testingXappStub) handle_xapp_subs_del_resp(t *testing.T, trans *
 			testError(t, "(%s) Received RIC_SUB_DEL_RESP wrong xid expected %s got %s, error", xappConn.GetDesc(), trans.xid, msg.Xid)
 			return
 		} else {
-			packedData := &packer.PackedData{}
+			packedData := &e2ap.PackedData{}
 			packedData.Buf = msg.Payload
 			unpackerr, resp := e2SubsDelResp.UnPack(packedData)
 			if unpackerr != nil {

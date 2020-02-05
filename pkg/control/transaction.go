@@ -20,7 +20,7 @@
 package control
 
 import (
-	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/packer"
+	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"strconv"
 	"sync"
@@ -42,13 +42,13 @@ type TransactionIf interface {
 //-----------------------------------------------------------------------------
 
 type Transaction struct {
-	mutex     sync.Mutex         //
-	Seq       uint64             //transaction sequence
-	tracker   *Tracker           //tracker instance
-	Meid      *xapp.RMRMeid      //meid transaction related
-	ReqId     RequestId          //
-	Mtype     int                //Encoded message type to be send
-	Payload   *packer.PackedData //Encoded message to be send
+	mutex     sync.Mutex       //
+	Seq       uint64           //transaction sequence
+	tracker   *Tracker         //tracker instance
+	Meid      *xapp.RMRMeid    //meid transaction related
+	ReqId     RequestId        //
+	Mtype     int              //Encoded message type to be send
+	Payload   *e2ap.PackedData //Encoded message to be send
 	EventChan chan interface{}
 }
 
@@ -104,7 +104,7 @@ func (t *Transaction) GetMeid() *xapp.RMRMeid {
 	return nil
 }
 
-func (t *Transaction) GetPayload() *packer.PackedData {
+func (t *Transaction) GetPayload() *e2ap.PackedData {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 	return t.Payload
