@@ -20,6 +20,7 @@
 package control
 
 import (
+	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/teststub"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"testing"
 	"time"
@@ -29,17 +30,18 @@ import (
 //
 //-----------------------------------------------------------------------------
 type testingSubmgrControl struct {
-	testingRmrControl
+	teststub.RmrControl
 	c *Control
 }
 
-func createSubmgrControl(desc string, rtfile string, port string) *testingSubmgrControl {
+func createSubmgrControl(rtfile string, port string) *testingSubmgrControl {
 	mainCtrl = &testingSubmgrControl{}
-	mainCtrl.testingRmrControl.init(desc, rtfile, port)
+	mainCtrl.RmrControl.Init("SUBMGRCTL", rtfile, port)
 	mainCtrl.c = NewControl()
 	xapp.SetReadyCB(mainCtrl.ReadyCB, nil)
 	go xapp.RunWithParams(mainCtrl.c, false)
 	mainCtrl.WaitCB()
+	mainCtrl.c.ReadyCB(nil)
 	return mainCtrl
 }
 
@@ -53,7 +55,7 @@ func (mc *testingSubmgrControl) wait_registry_empty(t *testing.T, secs int) bool
 		}
 		time.Sleep(500 * time.Millisecond)
 	}
-	testError(t, "(general) no registry empty within %d secs: %d", secs, cnt)
+	mc.TestError(t, "(submgr) no registry empty within %d secs: %d", secs, cnt)
 	return false
 }
 
@@ -68,9 +70,9 @@ func (mc *testingSubmgrControl) wait_subs_clean(t *testing.T, e2SubsId uint32, s
 		time.Sleep(500 * time.Millisecond)
 	}
 	if subs != nil {
-		testError(t, "(general) no clean within %d secs: %s", secs, subs.String())
+		mc.TestError(t, "(submgr) no clean within %d secs: %s", secs, subs.String())
 	} else {
-		testError(t, "(general) no clean within %d secs: subs(N/A)", secs)
+		mc.TestError(t, "(submgr) no clean within %d secs: subs(N/A)", secs)
 	}
 	return false
 }
@@ -90,9 +92,9 @@ func (mc *testingSubmgrControl) wait_subs_trans_clean(t *testing.T, e2SubsId uin
 		time.Sleep(500 * time.Millisecond)
 	}
 	if trans != nil {
-		testError(t, "(general) no clean within %d secs: %s", secs, trans.String())
+		mc.TestError(t, "(submgr) no clean within %d secs: %s", secs, trans.String())
 	} else {
-		testError(t, "(general) no clean within %d secs: trans(N/A)", secs)
+		mc.TestError(t, "(submgr) no clean within %d secs: trans(N/A)", secs)
 	}
 	return false
 }
@@ -114,23 +116,23 @@ func (mc *testingSubmgrControl) wait_subid_change(t *testing.T, origSubId uint32
 		}
 		time.Sleep(500 * time.Millisecond)
 	}
-	testError(t, "(general) no subId change within %d secs", secs)
+	mc.TestError(t, "(submgr) no subId change within %d secs", secs)
 	return 0, false
 }
 
 func (mc *testingSubmgrControl) get_msgcounter(t *testing.T) uint64 {
-	return mc.c.msgCounter
+	return mc.c.CntRecvMsg
 }
 
 func (mc *testingSubmgrControl) wait_msgcounter_change(t *testing.T, orig uint64, secs int) (uint64, bool) {
 	i := 1
 	for ; i <= secs*2; i++ {
-		curr := mc.c.msgCounter
+		curr := mc.c.CntRecvMsg
 		if curr != orig {
 			return curr, true
 		}
 		time.Sleep(500 * time.Millisecond)
 	}
-	testError(t, "(general) no msg counter change within %d secs", secs)
+	mc.TestError(t, "(submgr) no msg counter change within %d secs", secs)
 	return 0, false
 }
