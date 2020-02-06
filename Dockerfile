@@ -128,6 +128,10 @@ RUN /usr/local/go/bin/go tool cover -html=/tmp/submgr_cover.out -o /tmp/submgr_c
 
 # test formating (not important)
 RUN test -z "$(/usr/local/go/bin/gofmt -l pkg/control/*.go)"
+RUN test -z "$(/usr/local/go/bin/gofmt -l pkg/teststub/*.go)"
+RUN test -z "$(/usr/local/go/bin/gofmt -l pkg/teststubdummy/*.go)"
+RUN test -z "$(/usr/local/go/bin/gofmt -l pkg/teststube2ap/*.go)"
+RUN test -z "$(/usr/local/go/bin/gofmt -l pkg/xapptweaks/*.go)"
 
 
 #
