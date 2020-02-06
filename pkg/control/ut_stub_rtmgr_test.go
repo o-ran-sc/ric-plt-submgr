@@ -22,6 +22,7 @@ package control
 import (
 	"encoding/json"
 	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/rtmgr_models"
+	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/teststub"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"net/http"
 	"sync"
@@ -33,24 +34,24 @@ import (
 //
 //-----------------------------------------------------------------------------
 
-type httpEventWaiter struct {
+type HttpEventWaiter struct {
 	resultChan   chan bool
 	nextActionOk bool
 }
 
-func (msg *httpEventWaiter) SetResult(res bool) {
+func (msg *HttpEventWaiter) SetResult(res bool) {
 	msg.resultChan <- res
 }
 
-func (msg *httpEventWaiter) WaitResult(t *testing.T) bool {
+func (msg *HttpEventWaiter) WaitResult(t *testing.T) bool {
 	select {
 	case result := <-msg.resultChan:
 		return result
 	case <-time.After(15 * time.Second):
-		testError(t, "Waiter not received result status from case within 15 secs")
+		teststub.TestError(t, "Waiter not received result status from case within 15 secs")
 		return false
 	}
-	testError(t, "Waiter error in default branch")
+	teststub.TestError(t, "Waiter error in default branch")
 	return false
 }
 
@@ -61,28 +62,28 @@ type testingHttpRtmgrStub struct {
 	sync.Mutex
 	desc        string
 	port        string
-	eventWaiter *httpEventWaiter
+	eventWaiter *HttpEventWaiter
 }
 
-func (hc *testingHttpRtmgrStub) NextEvent(eventWaiter *httpEventWaiter) {
-	hc.Lock()
-	defer hc.Unlock()
-	hc.eventWaiter = eventWaiter
+func (tc *testingHttpRtmgrStub) NextEvent(eventWaiter *HttpEventWaiter) {
+	tc.Lock()
+	defer tc.Unlock()
+	tc.eventWaiter = eventWaiter
 }
 
-func (hc *testingHttpRtmgrStub) AllocNextEvent(nextAction bool) *httpEventWaiter {
-	eventWaiter := &httpEventWaiter{
+func (tc *testingHttpRtmgrStub) AllocNextEvent(nextAction bool) *HttpEventWaiter {
+	eventWaiter := &HttpEventWaiter{
 		resultChan:   make(chan bool),
 		nextActionOk: nextAction,
 	}
-	hc.NextEvent(eventWaiter)
+	tc.NextEvent(eventWaiter)
 	return eventWaiter
 }
 
-func (hc *testingHttpRtmgrStub) http_handler(w http.ResponseWriter, r *http.Request) {
+func (tc *testingHttpRtmgrStub) http_handler(w http.ResponseWriter, r *http.Request) {
 
-	hc.Lock()
-	defer hc.Unlock()
+	tc.Lock()
+	defer tc.Unlock()
 
 	if r.Method == http.MethodPost || r.Method == http.MethodDelete {
 		var req rtmgr_models.XappSubscriptionData
@@ -90,7 +91,7 @@ func (hc *testingHttpRtmgrStub) http_handler(w http.ResponseWriter, r *http.Requ
 		if err != nil {
 			xapp.Logger.Error("%s", err.Error())
 		}
-		xapp.Logger.Info("(%s) handling SubscriptionID=%d Address=%s Port=%d", hc.desc, *req.SubscriptionID, *req.Address, *req.Port)
+		xapp.Logger.Info("(%s) handling SubscriptionID=%d Address=%s Port=%d", tc.desc, *req.SubscriptionID, *req.Address, *req.Port)
 	}
 	if r.Method == http.MethodPut {
 		var req rtmgr_models.XappList
@@ -98,29 +99,29 @@ func (hc *testingHttpRtmgrStub) http_handler(w http.ResponseWriter, r *http.Requ
 		if err != nil {
 			xapp.Logger.Error("%s", err.Error())
 		}
-		xapp.Logger.Info("(%s) handling put", hc.desc)
+		xapp.Logger.Info("(%s) handling put", tc.desc)
 	}
 
 	var code int = 0
 	switch r.Method {
 	case http.MethodPost:
 		code = 201
-		if hc.eventWaiter != nil {
-			if hc.eventWaiter.nextActionOk == false {
+		if tc.eventWaiter != nil {
+			if tc.eventWaiter.nextActionOk == false {
 				code = 400
 			}
 		}
 	case http.MethodDelete:
 		code = 200
-		if hc.eventWaiter != nil {
-			if hc.eventWaiter.nextActionOk == false {
+		if tc.eventWaiter != nil {
+			if tc.eventWaiter.nextActionOk == false {
 				code = 400
 			}
 		}
 	case http.MethodPut:
 		code = 201
-		if hc.eventWaiter != nil {
-			if hc.eventWaiter.nextActionOk == false {
+		if tc.eventWaiter != nil {
+			if tc.eventWaiter.nextActionOk == false {
 				code = 400
 			}
 		}
@@ -128,24 +129,24 @@ func (hc *testingHttpRtmgrStub) http_handler(w http.ResponseWriter, r *http.Requ
 		code = 200
 	}
 
-	waiter := hc.eventWaiter
-	hc.eventWaiter = nil
+	waiter := tc.eventWaiter
+	tc.eventWaiter = nil
 	if waiter != nil {
 		waiter.SetResult(true)
 	}
-	xapp.Logger.Info("(%s) Method=%s Reply with code %d", hc.desc, r.Method, code)
+	xapp.Logger.Info("(%s) Method=%s Reply with code %d", tc.desc, r.Method, code)
 	w.WriteHeader(code)
 
 }
 
-func (hc *testingHttpRtmgrStub) run() {
-	http.HandleFunc("/", hc.http_handler)
-	http.ListenAndServe("localhost:"+hc.port, nil)
+func (tc *testingHttpRtmgrStub) run() {
+	http.HandleFunc("/", tc.http_handler)
+	http.ListenAndServe("localhost:"+tc.port, nil)
 }
 
 func createNewHttpRtmgrStub(desc string, port string) *testingHttpRtmgrStub {
-	hc := &testingHttpRtmgrStub{}
-	hc.desc = desc
-	hc.port = port
-	return hc
+	tc := &testingHttpRtmgrStub{}
+	tc.desc = desc
+	tc.port = port
+	return tc
 }

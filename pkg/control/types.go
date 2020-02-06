@@ -20,10 +20,7 @@
 package control
 
 import (
-	"bytes"
-	"fmt"
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
-	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"strconv"
 	"strings"
 )
@@ -148,17 +145,4 @@ func NewRmrEndpoint(src string) *RmrEndpoint {
 		return nil
 	}
 	return ep
-}
-
-//-----------------------------------------------------------------------------
-// To add own method for rmrparams
-//-----------------------------------------------------------------------------
-type RMRParams struct {
-	*xapp.RMRParams
-}
-
-func (params *RMRParams) String() string {
-	var b bytes.Buffer
-	fmt.Fprintf(&b, "params(Src=%s Mtype=%s(%d) SubId=%v Xid=%s Meid=%s)", params.Src, xapp.RicMessageTypeToName[params.Mtype], params.Mtype, params.SubId, params.Xid, params.Meid.RanName)
-	return b.String()
 }
