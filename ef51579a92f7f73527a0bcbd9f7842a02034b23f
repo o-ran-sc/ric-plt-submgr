@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "5525afdc_255d18f5",
+        "filename": "pkg/control/registry.go",
+        "patchSetId": 1
+      },
+      "lineNbr": 120,
+      "author": {
+        "id": 1000011
+      },
+      "writtenOn": "2020-02-11T22:29:00Z",
+      "side": 1,
+      "message": "This line causes problems as zeros cached response as this subs might not be selected if \"actionType \u003d\u003d e2ap.E2AP_ActionTypePolicy\" fails.\n\nWhat about check if subs got already request endpoint and what about if there is also other endpoints in this subs? Multiple endpoints means that this subs is \"merged\".",
+      "revId": "ef51579a92f7f73527a0bcbd9f7842a02034b23f",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "02a3d9a5_092bdc45",
+        "filename": "pkg/control/ut_messaging_test.go",
+        "patchSetId": 1
+      },
+      "lineNbr": 1206,
+      "author": {
+        "id": 1000011
+      },
+      "writtenOn": "2020-02-11T22:29:00Z",
+      "side": 1,
+      "message": "rtmgrHttp handling is automatic and sends always ok cause. Not needed in normal testcases, so waiter lines can be remove (Lines 1206 and 1211)",
+      "revId": "ef51579a92f7f73527a0bcbd9f7842a02034b23f",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": true
+    }
+  ]
+}
