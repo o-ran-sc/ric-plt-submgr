@@ -112,8 +112,27 @@ func (r *Registry) AssignToSubscription(trans *TransactionXapp, subReqMsg *e2ap.
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
-	subs := r.findExistingSubs(trans, subReqMsg)
+	//
+	// Check validity of subscription action types
+	//
+	actionType, err := r.CheckActionTypes(subReqMsg)
+	if err != nil {
+		xapp.Logger.Debug("CREATE %s", err)
+		return nil, err
+	}
 
+	//
+	// Find possible existing Policy subscription
+	//
+	if actionType == e2ap.E2AP_ActionTypePolicy {
+		if subs, ok := r.register[subReqMsg.RequestId.Seq]; ok {
+			xapp.Logger.Debug("CREATE %s. Existing subscription for Policy found", subs.String())
+			subs.SetCachedResponse(nil, true)
+			return subs, nil
+		}
+	}
+
+	subs := r.findExistingSubs(trans, subReqMsg)
 	if subs == nil {
 		subs, err = r.allocateSubs(trans, subReqMsg)
 		if err != nil {
@@ -156,6 +175,30 @@ func (r *Registry) AssignToSubscription(trans *TransactionXapp, subReqMsg *e2ap.
 	xapp.Logger.Debug("CREATE %s", subs.String())
 	xapp.Logger.Debug("Registry: substable=%v", r.register)
 	return subs, nil
+}
+
+func (r *Registry) CheckActionTypes(subReqMsg *e2ap.E2APSubscriptionRequest) (uint64, error) {
+	var reportFound bool = false
+	var policyFound bool = false
+
+	for _, acts := range subReqMsg.ActionSetups {
+		if acts.ActionType == e2ap.E2AP_ActionTypeReport {
+			reportFound = true
+		}
+		if acts.ActionType == e2ap.E2AP_ActionTypePolicy {
+			policyFound = true
+		}
+	}
+	if reportFound == true && policyFound == true {
+		return e2ap.E2AP_ActionTypeInvalid, fmt.Errorf("Report and Policy in same RICactions-ToBeSetup-List")
+	}
+	if reportFound == true {
+		return e2ap.E2AP_ActionTypeReport, nil
+	}
+	if policyFound == true {
+		return e2ap.E2AP_ActionTypePolicy, nil
+	}
+	return e2ap.E2AP_ActionTypeInvalid, fmt.Errorf("Invalid action type in RICactions-ToBeSetup-List")
 }
 
 // TODO: Works with concurrent calls, but check if can be improved

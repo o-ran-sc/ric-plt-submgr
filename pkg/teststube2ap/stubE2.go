@@ -116,15 +116,15 @@ func (p *E2StubSubsReqParams) Init() {
 	p.Req.EventTriggerDefinition.TypeOfMessage = e2ap.E2AP_InitiatingMessage
 
 	p.Req.ActionSetups = make([]e2ap.ActionToBeSetupItem, 1)
+
 	p.Req.ActionSetups[0].ActionId = 0
 	p.Req.ActionSetups[0].ActionType = e2ap.E2AP_ActionTypeReport
-	p.Req.ActionSetups[0].ActionDefinition.Present = false
+	p.Req.ActionSetups[0].ActionDefinition.Present = false // Not supported
 	//p.Req.ActionSetups[index].ActionDefinition.StyleId = 255
 	//p.Req.ActionSetups[index].ActionDefinition.ParamId = 222
 	p.Req.ActionSetups[0].SubsequentAction.Present = true
 	p.Req.ActionSetups[0].SubsequentAction.Type = e2ap.E2AP_SubSeqActionTypeContinue
 	p.Req.ActionSetups[0].SubsequentAction.TimetoWait = e2ap.E2AP_TimeToWaitZero
-
 }
 
 //-----------------------------------------------------------------------------
