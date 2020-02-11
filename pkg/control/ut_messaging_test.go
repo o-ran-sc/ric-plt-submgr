@@ -20,6 +20,7 @@
 package control
 
 import (
+	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
 	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/teststube2ap"
 	"testing"
 )
@@ -1162,4 +1163,154 @@ func TestSubReqAndSubDelNoAnswerSameActionParallel(t *testing.T) {
 	xappConn2.TestMsgChanEmpty(t)
 	e2termConn.TestMsgChanEmpty(t)
 	mainCtrl.wait_registry_empty(t, 15)
+}
+
+//-----------------------------  Policy cases ---------------------------------
+//-----------------------------------------------------------------------------
+// TestSubReqPolicyAndSubDelOk
+//
+//   stub                          stub
+// +-------+     +---------+    +---------+
+// | xapp  |     | submgr  |    | e2term  |
+// +-------+     +---------+    +---------+
+//     |              |              |
+//     | SubReq       |              |
+//     |------------->|              |
+//     |              |              |
+//     |              | SubReq       |
+//     |              |------------->|
+//     |              |              |
+//     |              |      SubResp |
+//     |              |<-------------|
+//     |              |              |
+//     |      SubResp |              |
+//     |<-------------|              |
+//     |              |              |
+//     |              |              |
+//     | SubDelReq    |              |
+//     |------------->|              |
+//     |              |              |
+//     |              | SubDelReq    |
+//     |              |------------->|
+//     |              |              |
+//     |              |   SubDelResp |
+//     |              |<-------------|
+//     |              |              |
+//     |   SubDelResp |              |
+//     |<-------------|              |
+//
+//-----------------------------------------------------------------------------
+func TestSubReqPolicyAndSubDelOk(t *testing.T) {
+	CaseBegin("TestSubReqAndSubDelOk")
+
+	waiter := rtmgrHttp.AllocNextEvent(true)
+	rparams1 := &teststube2ap.E2StubSubsReqParams{}
+	rparams1.Init()
+	rparams1.Req.ActionSetups[0].ActionType = e2ap.E2AP_ActionTypePolicy
+	cretrans := xappConn1.SendSubsReq(t, rparams1, nil)
+	waiter.WaitResult(t)
+
+	crereq, cremsg := e2termConn.RecvSubsReq(t)
+	e2termConn.SendSubsResp(t, crereq, cremsg)
+	e2SubsId := xappConn1.RecvSubsResp(t, cretrans)
+	deltrans := xappConn1.SendSubsDelReq(t, nil, e2SubsId)
+	delreq, delmsg := e2termConn.RecvSubsDelReq(t)
+
+	waiter = rtmgrHttp.AllocNextEvent(true)
+	e2termConn.SendSubsDelResp(t, delreq, delmsg)
+	xappConn1.RecvSubsDelResp(t, deltrans)
+	waiter.WaitResult(t)
+
+	//Wait that subs is cleaned
+	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
+
+	xappConn1.TestMsgChanEmpty(t)
+	xappConn2.TestMsgChanEmpty(t)
+	e2termConn.TestMsgChanEmpty(t)
+	mainCtrl.wait_registry_empty(t, 10)
+}
+
+//-----------------------------------------------------------------------------
+// TestSubReqPolicyChangeAndSubDelOk
+//
+//   stub                          stub
+// +-------+     +---------+    +---------+
+// | xapp  |     | submgr  |    | e2term  |
+// +-------+     +---------+    +---------+
+//     |              |              |
+//     | SubReq       |              |
+//     |------------->|              |
+//     |              |              |
+//     |              | SubReq       |
+//     |              |------------->|
+//     |              |              |
+//     |              |      SubResp |
+//     |              |<-------------|
+//     |              |              |
+//     |      SubResp |              |
+//     |<-------------|              |
+//     |              |              |
+//     | SubReq       |              |
+//     |------------->|              |
+//     |              |              |
+//     |              | SubReq       |
+//     |              |------------->|
+//     |              |              |
+//     |              |      SubResp |
+//     |              |<-------------|
+//     |              |              |
+//     |      SubResp |              |
+//     |<-------------|              |
+//     |              |              |
+//     | SubDelReq    |              |
+//     |------------->|              |
+//     |              |              |
+//     |              | SubDelReq    |
+//     |              |------------->|
+//     |              |              |
+//     |              |   SubDelResp |
+//     |              |<-------------|
+//     |              |              |
+//     |   SubDelResp |              |
+//     |<-------------|              |
+//
+//-----------------------------------------------------------------------------
+
+func TestSubReqPolicyChangeAndSubDelOk(t *testing.T) {
+	CaseBegin("TestSubReqAndSubDelOk")
+
+	waiter := rtmgrHttp.AllocNextEvent(true)
+	rparams1 := &teststube2ap.E2StubSubsReqParams{}
+	rparams1.Init()
+	rparams1.Req.ActionSetups[0].ActionType = e2ap.E2AP_ActionTypePolicy
+	cretrans := xappConn1.SendSubsReq(t, rparams1, nil)
+	waiter.WaitResult(t)
+
+	crereq, cremsg := e2termConn.RecvSubsReq(t)
+	e2termConn.SendSubsResp(t, crereq, cremsg)
+	e2SubsId := xappConn1.RecvSubsResp(t, cretrans)
+
+	//Policy change
+	rparams1.Req.RequestId.Seq = e2SubsId
+	rparams1.Req.ActionSetups[0].SubsequentAction.TimetoWait = e2ap.E2AP_TimeToWaitW200ms
+	xappConn1.SendSubsReq(t, rparams1, cretrans)
+
+	crereq, cremsg = e2termConn.RecvSubsReq(t)
+	e2termConn.SendSubsResp(t, crereq, cremsg)
+	e2SubsId = xappConn1.RecvSubsResp(t, cretrans)
+	deltrans := xappConn1.SendSubsDelReq(t, nil, e2SubsId)
+	delreq, delmsg := e2termConn.RecvSubsDelReq(t)
+
+	waiter = rtmgrHttp.AllocNextEvent(true)
+	e2termConn.SendSubsDelResp(t, delreq, delmsg)
+	xappConn1.RecvSubsDelResp(t, deltrans)
+	waiter.WaitResult(t)
+
+	//Wait that subs is cleaned
+	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
+
+	xappConn1.TestMsgChanEmpty(t)
+	xappConn2.TestMsgChanEmpty(t)
+	e2termConn.TestMsgChanEmpty(t)
+	mainCtrl.wait_registry_empty(t, 10)
 }

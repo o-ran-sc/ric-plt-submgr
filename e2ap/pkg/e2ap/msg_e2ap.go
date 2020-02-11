@@ -108,9 +108,10 @@ const (
 //
 //-----------------------------------------------------------------------------
 const (
-	E2AP_ActionTypeReport uint64 = 0
-	E2AP_ActionTypeInsert uint64 = 1
-	E2AP_ActionTypePolicy uint64 = 2
+	E2AP_ActionTypeReport  uint64 = 0
+	E2AP_ActionTypeInsert  uint64 = 1
+	E2AP_ActionTypePolicy  uint64 = 2
+	E2AP_ActionTypeInvalid uint64 = 99 // For RIC internal usage only
 )
 
 //-----------------------------------------------------------------------------
