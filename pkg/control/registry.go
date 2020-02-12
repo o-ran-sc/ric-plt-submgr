@@ -217,44 +217,46 @@ func (r *Registry) RemoveFromSubscription(subs *Subscription, trans *Transaction
 		return nil
 	}
 
-	r.mutex.Unlock()
-
-	//
-	// Wait some time before really do route updates
-	//
-	if waitRouteClean > 0 {
-		subs.mutex.Unlock()
-		time.Sleep(waitRouteClean)
-		subs.mutex.Lock()
-	}
-
-	xapp.Logger.Info("CLEAN %s", subs.String())
-
-	//
-	// Subscription route updates
-	//
-	if epamount == 0 {
-		tmpList := RmrEndpointList{}
-		tmpList.AddEndpoint(trans.GetEndpoint())
-		subRouteAction := SubRouteInfo{tmpList, uint16(seqId)}
-		r.rtmgrClient.SubscriptionRequestDelete(subRouteAction)
-	} else if subs.EpList.Size() > 0 {
-		subRouteAction := SubRouteInfo{subs.EpList, uint16(seqId)}
-		r.rtmgrClient.SubscriptionRequestUpdate(subRouteAction)
-	}
-
-	r.mutex.Lock()
-	//
-	// If last endpoint, release and free seqid
-	//
-	if epamount == 0 {
-		if _, ok := r.register[seqId]; ok {
-			xapp.Logger.Debug("RELEASE %s", subs.String())
-			delete(r.register, seqId)
-			xapp.Logger.Debug("Registry: substable=%v", r.register)
+	go func() {
+		if waitRouteClean > 0 {
+			time.Sleep(waitRouteClean)
 		}
-		r.subIds = append(r.subIds, seqId)
-	}
+
+		subs.mutex.Lock()
+		defer subs.mutex.Unlock()
+		xapp.Logger.Info("CLEAN %s", subs.String())
+
+		if epamount == 0 {
+			//
+			// Subscription route delete
+			//
+			tmpList := RmrEndpointList{}
+			tmpList.AddEndpoint(trans.GetEndpoint())
+			subRouteAction := SubRouteInfo{tmpList, uint16(seqId)}
+			r.rtmgrClient.SubscriptionRequestDelete(subRouteAction)
+
+			//
+			// Subscription release
+			//
+			r.mutex.Lock()
+			defer r.mutex.Unlock()
+
+			if _, ok := r.register[seqId]; ok {
+				xapp.Logger.Debug("RELEASE %s", subs.String())
+				delete(r.register, seqId)
+				xapp.Logger.Debug("Registry: substable=%v", r.register)
+			}
+			r.subIds = append(r.subIds, seqId)
+
+		} else if subs.EpList.Size() > 0 {
+			//
+			// Subscription route updates
+			//
+			subRouteAction := SubRouteInfo{subs.EpList, uint16(seqId)}
+			r.rtmgrClient.SubscriptionRequestUpdate(subRouteAction)
+		}
+
+	}()
 
 	return nil
 }

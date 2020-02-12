@@ -232,7 +232,7 @@ func (c *Control) handleXAPPSubscriptionRequest(params *xapptweaks.RMRParams) {
 		}
 	}
 	xapp.Logger.Info("XAPP-SubReq: failed %s", idstring(err, trans, subs))
-	go c.registry.RemoveFromSubscription(subs, trans, 5*time.Second)
+	c.registry.RemoveFromSubscription(subs, trans, 5*time.Second)
 }
 
 //-------------------------------------------------------------------
@@ -283,7 +283,7 @@ func (c *Control) handleXAPPSubscriptionDeleteRequest(params *xapptweaks.RMRPara
 		c.rmrSendToXapp("", subs, trans)
 	}
 
-	go c.registry.RemoveFromSubscription(subs, trans, 5*time.Second)
+	c.registry.RemoveFromSubscription(subs, trans, 5*time.Second)
 }
 
 //-------------------------------------------------------------------
