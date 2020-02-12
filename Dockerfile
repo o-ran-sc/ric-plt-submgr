@@ -20,7 +20,7 @@
 #	Abstract:	Builds a container to compile Subscription Manager's code
 #	Date:		28 May 2019
 #
-FROM nexus3.o-ran-sc.org:10004/bldr-ubuntu18-c-go:3-u18.04-nng as submgrprebuild
+FROM nexus3.o-ran-sc.org:10004/bldr-ubuntu18-c-go:4-u18.04-nng as submgrprebuild
 
 RUN apt update && apt install -y iputils-ping net-tools curl tcpdump gdb valgrind
 
@@ -33,15 +33,15 @@ RUN wget --content-disposition https://packagecloud.io/o-ran-sc/staging/packages
 RUN wget --content-disposition https://packagecloud.io/o-ran-sc/staging/packages/debian/stretch/rmr-dev_${RMRVERSION}_amd64.deb/download.deb && dpkg -i rmr-dev_${RMRVERSION}_amd64.deb && rm -rf rmr-dev_${RMRVERSION}_amd64.deb
 
 # "Installing Swagger"
-RUN cd /usr/local/go/bin \
-    && wget --quiet https://github.com/go-swagger/go-swagger/releases/download/v0.19.0/swagger_linux_amd64 \
+RUN wget --quiet https://github.com/go-swagger/go-swagger/releases/download/v0.19.0/swagger_linux_amd64 \
     && mv swagger_linux_amd64 swagger \
-    && chmod +x swagger
-
+    && chmod +x swagger \
+    && mkdir -p /root/.go/bin \
+    && mv swagger /root/.go/bin
 
 ENV GOPATH=/root/.go
 ENV PATH=$PATH:/root/.go/bin
-RUN /usr/local/go/bin/go get -u github.com/go-delve/delve/cmd/dlv
+RUN go get -u github.com/go-delve/delve/cmd/dlv
 
 WORKDIR /opt/submgr
 
@@ -70,14 +70,14 @@ RUN cd e2ap/libe2ap_wrapper && \
     ldconfig
 
 # unittest
-RUN cd e2ap && /usr/local/go/bin/go test -v ./pkg/conv
-RUN cd e2ap && /usr/local/go/bin/go test -v ./pkg/e2ap_wrapper
+RUN cd e2ap && go test -v ./pkg/conv
+RUN cd e2ap && go test -v ./pkg/e2ap_wrapper
 
 # test formating (not important)
-RUN cd e2ap && test -z "$(/usr/local/go/bin/gofmt -l pkg/conv/*.go)"
-RUN cd e2ap && test -z "$(/usr/local/go/bin/gofmt -l pkg/e2ap_wrapper/*.go)"
-RUN cd e2ap && test -z "$(/usr/local/go/bin/gofmt -l pkg/e2ap/*.go)"
-RUN cd e2ap && test -z "$(/usr/local/go/bin/gofmt -l pkg/e2ap/e2ap_tests/*.go)"
+RUN cd e2ap && test -z "$(gofmt -l pkg/conv/*.go)"
+RUN cd e2ap && test -z "$(gofmt -l pkg/e2ap_wrapper/*.go)"
+RUN cd e2ap && test -z "$(gofmt -l pkg/e2ap/*.go)"
+RUN cd e2ap && test -z "$(gofmt -l pkg/e2ap/e2ap_tests/*.go)"
 
 
 FROM submgrprebuild as submgrbuild
@@ -87,7 +87,7 @@ FROM submgrprebuild as submgrbuild
 COPY go.mod go.mod
 COPY go.sum go.sum
 
-RUN /usr/local/go/bin/go mod download
+RUN go mod download
 
 #
 #
@@ -100,7 +100,7 @@ RUN git clone "https://gerrit.o-ran-sc.org/r/ric-plt/rtmgr" \
     && rm -rf rtmgr
 
 RUN mkdir -p /root/go && \
-    /usr/local/go/bin/swagger generate client -f api/routing_manager.yaml -t pkg/ -m rtmgr_models -c rtmgr_client
+    swagger generate client -f api/routing_manager.yaml -t pkg/ -m rtmgr_models -c rtmgr_client
 
 #
 #
@@ -109,29 +109,29 @@ COPY pkg pkg
 COPY cmd cmd
 
 RUN mkdir -p /opt/bin && \
-    /usr/local/go/bin/go build -o /opt/bin/submgr cmd/submgr.go && \
+    go build -o /opt/bin/submgr cmd/submgr.go && \
     mkdir -p /opt/build/container/usr/local
 
 
-RUN /usr/local/go/bin/go mod tidy
+RUN go mod tidy
 
 # unittest
 COPY test/config-file.json test/config-file.json
 ENV CFG_FILE=/opt/submgr/test/config-file.json
 
-RUN /usr/local/go/bin/go test -test.coverprofile /tmp/submgr_cover.out -count=1 -v ./pkg/control 
+RUN go test -test.coverprofile /tmp/submgr_cover.out -count=1 -v ./pkg/control 
 
 #-c -o submgr_test
 #RUN ./submgr_test -test.coverprofile /tmp/submgr_cover.out
 
-RUN /usr/local/go/bin/go tool cover -html=/tmp/submgr_cover.out -o /tmp/submgr_cover.html
+RUN go tool cover -html=/tmp/submgr_cover.out -o /tmp/submgr_cover.html
 
 # test formating (not important)
-RUN test -z "$(/usr/local/go/bin/gofmt -l pkg/control/*.go)"
-RUN test -z "$(/usr/local/go/bin/gofmt -l pkg/teststub/*.go)"
-RUN test -z "$(/usr/local/go/bin/gofmt -l pkg/teststubdummy/*.go)"
-RUN test -z "$(/usr/local/go/bin/gofmt -l pkg/teststube2ap/*.go)"
-RUN test -z "$(/usr/local/go/bin/gofmt -l pkg/xapptweaks/*.go)"
+RUN test -z "$(gofmt -l pkg/control/*.go)"
+RUN test -z "$(gofmt -l pkg/teststub/*.go)"
+RUN test -z "$(gofmt -l pkg/teststubdummy/*.go)"
+RUN test -z "$(gofmt -l pkg/teststube2ap/*.go)"
+RUN test -z "$(gofmt -l pkg/xapptweaks/*.go)"
 
 
 #
