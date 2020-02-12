@@ -1214,10 +1214,8 @@ func TestSubReqPolicyAndSubDelOk(t *testing.T) {
 	deltrans := xappConn1.SendSubsDelReq(t, nil, e2SubsId)
 	delreq, delmsg := e2termConn.RecvSubsDelReq(t)
 
-	waiter := rtmgrHttp.AllocNextEvent(true)
 	e2termConn.SendSubsDelResp(t, delreq, delmsg)
 	xappConn1.RecvSubsDelResp(t, deltrans)
-	waiter.WaitResult(t)
 
 	//Wait that subs is cleaned
 	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
@@ -1277,12 +1275,10 @@ func TestSubReqPolicyAndSubDelOk(t *testing.T) {
 func TestSubReqPolicyChangeAndSubDelOk(t *testing.T) {
 	CaseBegin("TestSubReqAndSubDelOk")
 
-	waiter := rtmgrHttp.AllocNextEvent(true)
 	rparams1 := &teststube2ap.E2StubSubsReqParams{}
 	rparams1.Init()
 	rparams1.Req.ActionSetups[0].ActionType = e2ap.E2AP_ActionTypePolicy
 	cretrans := xappConn1.SendSubsReq(t, rparams1, nil)
-	waiter.WaitResult(t)
 
 	crereq, cremsg := e2termConn.RecvSubsReq(t)
 	e2termConn.SendSubsResp(t, crereq, cremsg)
@@ -1299,10 +1295,8 @@ func TestSubReqPolicyChangeAndSubDelOk(t *testing.T) {
 	deltrans := xappConn1.SendSubsDelReq(t, nil, e2SubsId)
 	delreq, delmsg := e2termConn.RecvSubsDelReq(t)
 
-	waiter = rtmgrHttp.AllocNextEvent(true)
 	e2termConn.SendSubsDelResp(t, delreq, delmsg)
 	xappConn1.RecvSubsDelResp(t, deltrans)
-	waiter.WaitResult(t)
 
 	//Wait that subs is cleaned
 	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
