@@ -20,7 +20,11 @@
 #	Abstract:	Builds a container to compile Subscription Manager's code
 #	Date:		28 May 2019
 #
-FROM nexus3.o-ran-sc.org:10004/bldr-ubuntu18-c-go:3-u18.04-nng as submgrprebuild
+
+###########################################################
+#
+###########################################################
+FROM nexus3.o-ran-sc.org:10004/bldr-ubuntu18-c-go:3-u18.04-nng as submgrcore
 
 RUN apt update && apt install -y iputils-ping net-tools curl tcpdump gdb valgrind
 
@@ -45,11 +49,12 @@ RUN /usr/local/go/bin/go get -u github.com/go-delve/delve/cmd/dlv
 
 WORKDIR /opt/submgr
 
-RUN mkdir pkg
+###########################################################
+#
+###########################################################
+FROM submgrcore as submgre2apbuild
 
-#
-#
-#
+
 ENV CFLAGS="-DASN_DISABLE_OER_SUPPORT"
 ENV CGO_CFLAGS="-DASN_DISABLE_OER_SUPPORT"
 
@@ -80,7 +85,10 @@ RUN cd e2ap && test -z "$(/usr/local/go/bin/gofmt -l pkg/e2ap/*.go)"
 RUN cd e2ap && test -z "$(/usr/local/go/bin/gofmt -l pkg/e2ap/e2ap_tests/*.go)"
 
 
-FROM submgrprebuild as submgrbuild
+###########################################################
+#
+###########################################################
+FROM submgre2apbuild as submgrbuild
 #
 #
 #
@@ -92,12 +100,17 @@ RUN /usr/local/go/bin/go mod download
 #
 #
 #
+RUN mkdir pkg
 COPY api api
 
-# "Getting and generating routing managers api client"
+
+ARG RTMGRVERSION=cd7867c8f527f46fd8702b0b8d6b380a8e134bea
+
 RUN git clone "https://gerrit.o-ran-sc.org/r/ric-plt/rtmgr" \
+    && git -C "rtmgr" checkout $RTMGRVERSION \
     && cp rtmgr/api/routing_manager.yaml api/ \
     && rm -rf rtmgr
+
 
 RUN mkdir -p /root/go && \
     /usr/local/go/bin/swagger generate client -f api/routing_manager.yaml -t pkg/ -m rtmgr_models -c rtmgr_client
@@ -134,9 +147,9 @@ RUN test -z "$(/usr/local/go/bin/gofmt -l pkg/teststube2ap/*.go)"
 RUN test -z "$(/usr/local/go/bin/gofmt -l pkg/xapptweaks/*.go)"
 
 
+###########################################################
 #
-#
-#
+###########################################################
 FROM ubuntu:18.04
 
 RUN apt update && apt install -y iputils-ping net-tools curl tcpdump
