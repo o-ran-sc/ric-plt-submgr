@@ -24,6 +24,7 @@ Welcome to O-RAN Subscription Manager Documentation
    :caption: Contents:
 
    release-notes.rst
+   user-guide.rst
 
 * :ref:`genindex`
 * :ref:`modindex`
