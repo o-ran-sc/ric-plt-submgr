@@ -114,6 +114,7 @@ RUN git clone "https://gerrit.o-ran-sc.org/r/ric-plt/rtmgr" \
 RUN mkdir -p /root/go && \
     swagger generate client -f api/routing_manager.yaml -t pkg/ -m rtmgr_models -c rtmgr_client
 
+
 #
 #
 #

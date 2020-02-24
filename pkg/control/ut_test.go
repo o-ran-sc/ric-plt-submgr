@@ -119,23 +119,27 @@ func ut_test_init() {
 	//
 	//---------------------------------
 	rt := &teststub.RmrRouteTable{}
-	rt.AddEntry(12010, "", -1, "localhost:14560")
-	rt.AddEntry(12010, "localhost:14560", -1, "localhost:15560")
-	rt.AddEntry(12011, "localhost:15560", -1, "localhost:14560")
-	rt.AddEntry(12012, "localhost:15560", -1, "localhost:14560")
-	rt.AddEntry(12011, "localhost:14560", -1, "localhost:13660;localhost:13560")
-	rt.AddEntry(12012, "localhost:14560", -1, "localhost:13660;localhost:13560")
-	rt.AddEntry(12020, "", -1, "localhost:14560")
-	rt.AddEntry(12020, "localhost:14560", -1, "localhost:15560")
-	rt.AddEntry(12021, "localhost:15560", -1, "localhost:14560")
-	rt.AddEntry(12022, "localhost:15560", -1, "localhost:14560")
-	rt.AddEntry(12021, "localhost:14560", -1, "localhost:13660;localhost:13560")
-	rt.AddEntry(12022, "localhost:14560", -1, "localhost:13660;localhost:13560")
-	rt.AddEntry(55555, "", -1, "localhost:13660;localhost:13560;localhost:15560;localhost:16560")
+	rt.AddRoute(12010, "", -1, "localhost:14560")
+	//rt.AddRoute(12010, "localhost:14560", -1, "localhost:15560")
+	rt.AddRoute(12010, "localhost:14560", -1, "%meid")
+	rt.AddRoute(12011, "localhost:15560", -1, "localhost:14560")
+	rt.AddRoute(12012, "localhost:15560", -1, "localhost:14560")
+	rt.AddRoute(12011, "localhost:14560", -1, "localhost:13660;localhost:13560")
+	rt.AddRoute(12012, "localhost:14560", -1, "localhost:13660;localhost:13560")
+	rt.AddRoute(12020, "", -1, "localhost:14560")
+	//rt.AddRoute(12020, "localhost:14560", -1, "localhost:15560")
+	rt.AddRoute(12020, "localhost:14560", -1, "%meid")
+	rt.AddRoute(12021, "localhost:15560", -1, "localhost:14560")
+	rt.AddRoute(12022, "localhost:15560", -1, "localhost:14560")
+	rt.AddRoute(12021, "localhost:14560", -1, "localhost:13660;localhost:13560")
+	rt.AddRoute(12022, "localhost:14560", -1, "localhost:13660;localhost:13560")
+	rt.AddRoute(55555, "", -1, "localhost:13660;localhost:13560;localhost:15560;localhost:16560")
 
-	rtfilename, _ := teststub.CreateTmpFile(rt.GetRt())
+	rt.AddMeid("localhost:15560", []string{"RAN_NAME_1", "RAN_NAME_2"})
+
+	rtfilename, _ := teststub.CreateTmpFile(rt.GetTable())
 	defer os.Remove(rtfilename)
-
+	tent.Logger.Info("table[%s]", rt.GetTable())
 	//---------------------------------
 	//
 	//---------------------------------
