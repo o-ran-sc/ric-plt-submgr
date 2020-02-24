@@ -4,7 +4,7 @@ module gerrit.o-ran-sc.org/r/ric-plt/submgr
 
 require (
 	gerrit.o-ran-sc.org/r/ric-plt/e2ap v0.0.0-00010101000000-000000000000
-	gerrit.o-ran-sc.org/r/ric-plt/xapp-frame v0.0.23
+	gerrit.o-ran-sc.org/r/ric-plt/xapp-frame v0.0.28
 	github.com/go-openapi/errors v0.19.2
 	github.com/go-openapi/runtime v0.19.7
 	github.com/go-openapi/strfmt v0.19.3
@@ -15,7 +15,7 @@ require (
 
 replace gerrit.o-ran-sc.org/r/ric-plt/sdlgo => gerrit.o-ran-sc.org/r/ric-plt/sdlgo.git v0.2.0
 
-replace gerrit.o-ran-sc.org/r/ric-plt/xapp-frame => gerrit.o-ran-sc.org/r/ric-plt/xapp-frame.git v0.0.23
+replace gerrit.o-ran-sc.org/r/ric-plt/xapp-frame => gerrit.o-ran-sc.org/r/ric-plt/xapp-frame.git v0.0.28
 
 replace gerrit.o-ran-sc.org/r/com/golog => gerrit.o-ran-sc.org/r/com/golog.git v0.0.1
 

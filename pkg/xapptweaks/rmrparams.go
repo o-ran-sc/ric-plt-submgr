@@ -34,7 +34,7 @@ type RMRParams struct {
 
 func (params *RMRParams) String() string {
 	var b bytes.Buffer
-	fmt.Fprintf(&b, "params(Src=%s Mtype=%d SubId=%d Xid=%s Meid=%s)", params.Src, params.Mtype, params.SubId, params.Xid, params.Meid.RanName)
+	fmt.Fprintf(&b, "params(Src=%s Mtype=%d SubId=%d Xid=%s Meid=%s Paylens=%d/%d)", params.Src, params.Mtype, params.SubId, params.Xid, params.Meid.RanName, params.PayloadLen, len(params.Payload))
 	return b.String()
 }
 

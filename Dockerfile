@@ -29,7 +29,7 @@ RUN apt update && apt install -y iputils-ping net-tools curl tcpdump gdb valgrin
 
 WORKDIR /tmp
 
-ARG RMRVERSION=3.2.0
+ARG RMRVERSION=3.2.4
 # Install RMr shared library
 RUN wget --content-disposition https://packagecloud.io/o-ran-sc/staging/packages/debian/stretch/rmr_${RMRVERSION}_amd64.deb/download.deb && dpkg -i rmr_${RMRVERSION}_amd64.deb && rm -rf rmr_${RMRVERSION}_amd64.deb
 # Install RMr development header files
@@ -95,6 +95,7 @@ COPY go.mod go.mod
 COPY go.sum go.sum
 
 RUN go mod download
+RUN go mod tidy
 
 #
 #
@@ -113,6 +114,7 @@ RUN git clone "https://gerrit.o-ran-sc.org/r/ric-plt/rtmgr" \
 
 RUN mkdir -p /root/go && \
     swagger generate client -f api/routing_manager.yaml -t pkg/ -m rtmgr_models -c rtmgr_client
+
 
 #
 #
