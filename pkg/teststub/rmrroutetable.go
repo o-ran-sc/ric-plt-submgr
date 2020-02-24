@@ -28,10 +28,11 @@ import (
 //-----------------------------------------------------------------------------
 
 type RmrRouteTable struct {
-	lines []string
+	routes []string
+	meids  []string
 }
 
-func (rrt *RmrRouteTable) AddEntry(mtype int, src string, subid int, trg string) {
+func (rrt *RmrRouteTable) AddRoute(mtype int, src string, subid int, trg string) {
 
 	line := "mse|"
 	line += strconv.FormatInt(int64(mtype), 10)
@@ -42,14 +43,41 @@ func (rrt *RmrRouteTable) AddEntry(mtype int, src string, subid int, trg string)
 	line += strconv.FormatInt(int64(subid), 10)
 	line += "|"
 	line += trg
-	rrt.lines = append(rrt.lines, line)
+	rrt.routes = append(rrt.routes, line)
 }
 
-func (rrt *RmrRouteTable) GetRt() string {
+func (rrt *RmrRouteTable) AddMeid(trg string, meids []string) {
+
+	line := "mme_ar"
+	line += "|"
+	line += trg
+	line += "|"
+	for _, str := range meids {
+		line += " " + str
+	}
+	rrt.meids = append(rrt.meids, line)
+}
+
+func (rrt *RmrRouteTable) DelMeid(meids []string) {
+
+	line := "mme_del"
+	line += "|"
+	for _, str := range meids {
+		line += " " + str
+	}
+	rrt.meids = append(rrt.meids, line)
+}
+
+func (rrt *RmrRouteTable) GetTable() string {
 	allrt := "newrt|start\n"
-	for _, val := range rrt.lines {
+	for _, val := range rrt.routes {
 		allrt += val + "\n"
 	}
 	allrt += "newrt|end\n"
+	allrt += "meid_map | start\n"
+	for _, val := range rrt.meids {
+		allrt += val + "\n"
+	}
+	allrt += "meid_map | end | " + strconv.FormatInt(int64(len(rrt.meids)), 10) + "\n"
 	return allrt
 }
