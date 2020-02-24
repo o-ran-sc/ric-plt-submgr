@@ -42,7 +42,8 @@ func CaseBegin(desc string) *teststub.TestWrapper {
 
 var xappConn1 *teststube2ap.E2Stub
 var xappConn2 *teststube2ap.E2Stub
-var e2termConn *teststube2ap.E2Stub
+var e2termConn1 *teststube2ap.E2Stub
+var e2termConn2 *teststube2ap.E2Stub
 var rtmgrHttp *testingHttpRtmgrStub
 var mainCtrl *testingSubmgrControl
 
@@ -112,30 +113,38 @@ func ut_test_init() {
 	// Port    Entity
 	// -------------------
 	// 14560   submgr
-	// 15560   e2term stub
+	// 15560   e2term1 stub
+	// 15660   e2term2 stub
 	// 13560   xapp1 stub
 	// 13660   xapp2 stub
 	// 16560   dummy stub
 	//
 	//---------------------------------
 	rt := &teststub.RmrRouteTable{}
-	rt.AddEntry(12010, "", -1, "localhost:14560")
-	rt.AddEntry(12010, "localhost:14560", -1, "localhost:15560")
-	rt.AddEntry(12011, "localhost:15560", -1, "localhost:14560")
-	rt.AddEntry(12012, "localhost:15560", -1, "localhost:14560")
-	rt.AddEntry(12011, "localhost:14560", -1, "localhost:13660;localhost:13560")
-	rt.AddEntry(12012, "localhost:14560", -1, "localhost:13660;localhost:13560")
-	rt.AddEntry(12020, "", -1, "localhost:14560")
-	rt.AddEntry(12020, "localhost:14560", -1, "localhost:15560")
-	rt.AddEntry(12021, "localhost:15560", -1, "localhost:14560")
-	rt.AddEntry(12022, "localhost:15560", -1, "localhost:14560")
-	rt.AddEntry(12021, "localhost:14560", -1, "localhost:13660;localhost:13560")
-	rt.AddEntry(12022, "localhost:14560", -1, "localhost:13660;localhost:13560")
-	rt.AddEntry(55555, "", -1, "localhost:13660;localhost:13560;localhost:15560;localhost:16560")
+	rt.AddRoute(12010, "", -1, "localhost:14560")
+	rt.AddRoute(12010, "localhost:14560", -1, "%meid")
+	rt.AddRoute(12011, "localhost:15560", -1, "localhost:14560")
+	rt.AddRoute(12012, "localhost:15560", -1, "localhost:14560")
+	rt.AddRoute(12011, "localhost:15660", -1, "localhost:14560")
+	rt.AddRoute(12012, "localhost:15660", -1, "localhost:14560")
+	rt.AddRoute(12011, "localhost:14560", -1, "localhost:13660;localhost:13560")
+	rt.AddRoute(12012, "localhost:14560", -1, "localhost:13660;localhost:13560")
+	rt.AddRoute(12020, "", -1, "localhost:14560")
+	rt.AddRoute(12020, "localhost:14560", -1, "%meid")
+	rt.AddRoute(12021, "localhost:15560", -1, "localhost:14560")
+	rt.AddRoute(12022, "localhost:15560", -1, "localhost:14560")
+	rt.AddRoute(12021, "localhost:15660", -1, "localhost:14560")
+	rt.AddRoute(12022, "localhost:15660", -1, "localhost:14560")
+	rt.AddRoute(12021, "localhost:14560", -1, "localhost:13660;localhost:13560")
+	rt.AddRoute(12022, "localhost:14560", -1, "localhost:13660;localhost:13560")
+	rt.AddRoute(55555, "", -1, "localhost:13660;localhost:13560;localhost:15560;localhost:15660;localhost:16560")
 
-	rtfilename, _ := teststub.CreateTmpFile(rt.GetRt())
+	rt.AddMeid("localhost:15560", []string{"RAN_NAME_1", "RAN_NAME_2"})
+	rt.AddMeid("localhost:15660", []string{"RAN_NAME_11", "RAN_NAME_12"})
+
+	rtfilename, _ := teststub.CreateTmpFile(rt.GetTable())
 	defer os.Remove(rtfilename)
-
+	tent.Logger.Info("table[%s]", rt.GetTable())
 	//---------------------------------
 	//
 	//---------------------------------
@@ -157,8 +166,14 @@ func ut_test_init() {
 	//---------------------------------
 	//
 	//---------------------------------
-	tent.Logger.Info("### e2term stub run ###")
-	e2termConn = teststube2ap.CreateNewE2termStub("e2termstub", rtfilename, "15560", "RMRE2TERMSTUB", 55555)
+	tent.Logger.Info("### e2term1 stub run ###")
+	e2termConn1 = teststube2ap.CreateNewE2termStub("e2termstub1", rtfilename, "15560", "RMRE2TERMSTUB1", 55555)
+
+	//---------------------------------
+	//
+	//---------------------------------
+	tent.Logger.Info("### e2term2 stub run ###")
+	e2termConn2 = teststube2ap.CreateNewE2termStub("e2termstub2", rtfilename, "15660", "RMRE2TERMSTUB2", 55555)
 
 	//---------------------------------
 	// Just to test dummy stub
