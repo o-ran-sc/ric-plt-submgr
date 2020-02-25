@@ -21,6 +21,7 @@ package xapptweaks
 
 import (
 	"bytes"
+	"crypto/md5"
 	"fmt"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 )
@@ -34,7 +35,8 @@ type RMRParams struct {
 
 func (params *RMRParams) String() string {
 	var b bytes.Buffer
-	fmt.Fprintf(&b, "params(Src=%s Mtype=%d SubId=%d Xid=%s Meid=%s Paylens=%d/%d)", params.Src, params.Mtype, params.SubId, params.Xid, params.Meid.RanName, params.PayloadLen, len(params.Payload))
+	sum := md5.Sum(params.Payload)
+	fmt.Fprintf(&b, "params(Src=%s Mtype=%d SubId=%d Xid=%s Meid=%s Paylens=%d/%d Payhash=%x)", params.Src, params.Mtype, params.SubId, params.Xid, params.Meid.RanName, params.PayloadLen, len(params.Payload), sum)
 	return b.String()
 }
 

@@ -198,6 +198,7 @@ func (tc *E2Stub) SendSubsReq(t *testing.T, rparams *E2StubSubsReqParams, oldTra
 	params.Mtype = xapp.RIC_SUB_REQ
 	params.SubId = -1
 	params.Payload = packedMsg.Buf
+	params.PayloadLen = len(packedMsg.Buf)
 	params.Meid = trans.meid
 	params.Xid = trans.xid
 	params.Mbuf = nil
@@ -282,6 +283,7 @@ func (tc *E2Stub) SendSubsResp(t *testing.T, req *e2ap.E2APSubscriptionRequest, 
 	//params.SubId = msg.SubId
 	params.SubId = -1
 	params.Payload = packedMsg.Buf
+	params.PayloadLen = len(packedMsg.Buf)
 	params.Meid = msg.Meid
 	//params.Xid = msg.Xid
 	params.Mbuf = nil
@@ -354,6 +356,7 @@ func (tc *E2Stub) SendSubsFail(t *testing.T, fparams *E2StubSubsFailParams, msg 
 	params.Mtype = xapp.RIC_SUB_FAILURE
 	params.SubId = msg.SubId
 	params.Payload = packedMsg.Buf
+	params.PayloadLen = len(packedMsg.Buf)
 	params.Meid = msg.Meid
 	params.Xid = msg.Xid
 	params.Mbuf = nil
@@ -436,6 +439,7 @@ func (tc *E2Stub) SendSubsDelReq(t *testing.T, oldTrans *RmrTransactionId, e2Sub
 	params.Mtype = xapp.RIC_SUB_DEL_REQ
 	params.SubId = int(e2SubsId)
 	params.Payload = packedMsg.Buf
+	params.PayloadLen = len(packedMsg.Buf)
 	params.Meid = trans.meid
 	params.Xid = trans.xid
 	params.Mbuf = nil
@@ -505,6 +509,7 @@ func (tc *E2Stub) SendSubsDelResp(t *testing.T, req *e2ap.E2APSubscriptionDelete
 	params.Mtype = xapp.RIC_SUB_DEL_RESP
 	params.SubId = msg.SubId
 	params.Payload = packedMsg.Buf
+	params.PayloadLen = len(packedMsg.Buf)
 	params.Meid = msg.Meid
 	params.Xid = msg.Xid
 	params.Mbuf = nil
@@ -576,6 +581,7 @@ func (tc *E2Stub) SendSubsDelFail(t *testing.T, req *e2ap.E2APSubscriptionDelete
 	params.Mtype = xapp.RIC_SUB_DEL_FAILURE
 	params.SubId = msg.SubId
 	params.Payload = packedMsg.Buf
+	params.PayloadLen = len(packedMsg.Buf)
 	params.Meid = msg.Meid
 	params.Xid = msg.Xid
 	params.Mbuf = nil
