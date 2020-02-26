@@ -5,11 +5,11 @@ module gerrit.o-ran-sc.org/r/ric-plt/submgr
 require (
 	gerrit.o-ran-sc.org/r/ric-plt/e2ap v0.0.0-00010101000000-000000000000
 	gerrit.o-ran-sc.org/r/ric-plt/xapp-frame v0.0.28
-	github.com/go-openapi/errors v0.19.2
+	github.com/go-openapi/errors v0.19.3
 	github.com/go-openapi/runtime v0.19.7
-	github.com/go-openapi/strfmt v0.19.3
-	github.com/go-openapi/swag v0.19.5
-	github.com/go-openapi/validate v0.19.3
+	github.com/go-openapi/strfmt v0.19.4
+	github.com/go-openapi/swag v0.19.7
+	github.com/go-openapi/validate v0.19.6
 	github.com/spf13/viper v1.5.0
 )
 

@@ -219,6 +219,7 @@ func (c *Control) handleXAPPSubscriptionRequest(params *xapptweaks.RMRParams) {
 		case *e2ap.E2APSubscriptionResponse:
 			trans.Mtype, trans.Payload, err = c.e2ap.PackSubscriptionResponse(themsg)
 			if err == nil {
+				trans.Release()
 				c.rmrSendToXapp("", subs, trans)
 				return
 			}
