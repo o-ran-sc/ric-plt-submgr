@@ -77,28 +77,32 @@ func (testCtxt *E2ApTests) E2ApTestMsgSubscriptionRequest(t *testing.T) {
 	}
 
 	areqenc.EventTriggerDefinition.InterfaceId.GlobalEnbId.Present = true
-	areqenc.EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.StringPut("310150")
+	areqenc.EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.Mcc = "310"
+	areqenc.EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.Mnc = "150"
 	areqenc.EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Bits = e2ap.E2AP_ENBIDHomeBits28
 	areqenc.EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Id = 202251
 	testCtxt.SetDesc("SubsReq-28bit")
 	testCtxt.E2ApTestMsgSubscriptionRequestWithData(t, &areqenc)
 
 	//areqenc.EventTriggerDefinition.InterfaceId.GlobalEnbId.Present = true
-	//areqenc.EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.StringPut("310150")
+	//areqenc.EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.Mcc = "310"
+	//areqenc.EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.Mnc = "150"
 	//areqenc.EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Bits = e2ap.E2AP_ENBIDShortMacroits18
 	//areqenc.EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Id = 55
 	//testCtxt.SetDesc("SubsReq-18bit")
 	//testCtxt.E2ApTestMsgSubscriptionRequestWithData(t,&areqenc)
 
 	//areqenc.EventTriggerDefinition.InterfaceId.GlobalEnbId.Present = true
-	//areqenc.EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.StringPut("310150")
+	//areqenc.EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.Mcc = "310"
+	//areqenc.EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.Mnc = "150"
 	//areqenc.EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Bits = e2ap.E2AP_ENBIDMacroPBits20
 	//areqenc.EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Id = 55
 	//testCtxt.SetDesc("SubsReq-20bit")
 	//testCtxt.E2ApTestMsgSubscriptionRequestWithData(t,&areqenc)
 
 	//areqenc.EventTriggerDefinition.InterfaceId.GlobalEnbId.Present = true
-	//areqenc.EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.StringPut("310150")
+	//areqenc.EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.Mcc = "310"
+	//areqenc.EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.Mnc = "150"
 	//areqenc.EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Bits = e2ap.E2AP_ENBIDlongMacroBits21
 	//areqenc.EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Id = 55
 	//testCtxt.SetDesc("SubsReq-21bit")

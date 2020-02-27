@@ -121,17 +121,13 @@ func (s *Subscription) IsMergeable(trans *TransactionXapp, subReqMsg *e2ap.E2APS
 
 	if s.SubReqMsg.EventTriggerDefinition.InterfaceId.GlobalEnbId.Present != subReqMsg.EventTriggerDefinition.InterfaceId.GlobalEnbId.Present ||
 		s.SubReqMsg.EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId != subReqMsg.EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId ||
-		s.SubReqMsg.EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.Val[0] != subReqMsg.EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.Val[0] ||
-		s.SubReqMsg.EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.Val[1] != subReqMsg.EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.Val[1] ||
-		s.SubReqMsg.EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.Val[2] != subReqMsg.EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.Val[2] {
+		s.SubReqMsg.EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.String() != subReqMsg.EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.String() {
 		return false
 	}
 
 	if s.SubReqMsg.EventTriggerDefinition.InterfaceId.GlobalGnbId.Present != subReqMsg.EventTriggerDefinition.InterfaceId.GlobalGnbId.Present ||
 		s.SubReqMsg.EventTriggerDefinition.InterfaceId.GlobalGnbId.NodeId != subReqMsg.EventTriggerDefinition.InterfaceId.GlobalGnbId.NodeId ||
-		s.SubReqMsg.EventTriggerDefinition.InterfaceId.GlobalGnbId.PlmnIdentity.Val[0] != subReqMsg.EventTriggerDefinition.InterfaceId.GlobalGnbId.PlmnIdentity.Val[0] ||
-		s.SubReqMsg.EventTriggerDefinition.InterfaceId.GlobalGnbId.PlmnIdentity.Val[1] != subReqMsg.EventTriggerDefinition.InterfaceId.GlobalGnbId.PlmnIdentity.Val[1] ||
-		s.SubReqMsg.EventTriggerDefinition.InterfaceId.GlobalGnbId.PlmnIdentity.Val[2] != subReqMsg.EventTriggerDefinition.InterfaceId.GlobalGnbId.PlmnIdentity.Val[2] {
+		s.SubReqMsg.EventTriggerDefinition.InterfaceId.GlobalGnbId.PlmnIdentity.String() != subReqMsg.EventTriggerDefinition.InterfaceId.GlobalGnbId.PlmnIdentity.String() {
 		return false
 	}
 

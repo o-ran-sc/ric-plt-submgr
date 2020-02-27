@@ -226,7 +226,7 @@ func (nid *NodeId) String() string {
 //-----------------------------------------------------------------------------
 type GlobalNodeId struct {
 	Present      bool
-	PlmnIdentity conv.PlmnIdentity
+	PlmnIdentity conv.PlmnIdentityTbcd
 	NodeId       NodeId
 }
 

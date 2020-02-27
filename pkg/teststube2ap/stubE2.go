@@ -104,7 +104,8 @@ func (p *E2StubSubsReqParams) Init() {
 	p.Req.FunctionId = 1
 
 	p.Req.EventTriggerDefinition.InterfaceId.GlobalEnbId.Present = true
-	p.Req.EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.StringPut("310150")
+	p.Req.EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.Mcc = "310"
+	p.Req.EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.Mnc = "150"
 	p.Req.EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Id = 123
 	p.Req.EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Bits = e2ap.E2AP_ENBIDHomeBits28
 
