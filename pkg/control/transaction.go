@@ -46,14 +46,13 @@ type Transaction struct {
 	Seq       uint64           //transaction sequence
 	tracker   *Tracker         //tracker instance
 	Meid      *xapp.RMRMeid    //meid transaction related
-	ReqId     RequestId        //
 	Mtype     int              //Encoded message type to be send
 	Payload   *e2ap.PackedData //Encoded message to be send
 	EventChan chan interface{}
 }
 
 func (t *Transaction) String() string {
-	return "trans(" + strconv.FormatUint(uint64(t.Seq), 10) + "/" + t.Meid.RanName + "/" + t.ReqId.String() + ")"
+	return "trans(" + strconv.FormatUint(uint64(t.Seq), 10) + "/" + t.Meid.RanName + ")"
 }
 
 func (t *Transaction) SendEvent(event interface{}, waittime time.Duration) (bool, bool) {
@@ -81,12 +80,6 @@ func (t *Transaction) WaitEvent(waittime time.Duration) (interface{}, bool) {
 	}
 	event := <-t.EventChan
 	return event, false
-}
-
-func (t *Transaction) GetReqId() *RequestId {
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
-	return &t.ReqId
 }
 
 func (t *Transaction) GetMtype() int {
@@ -144,8 +137,9 @@ func (key *TransactionXappKey) String() string {
 //
 //-----------------------------------------------------------------------------
 type TransactionXapp struct {
-	Transaction                     //
-	XappKey     *TransactionXappKey //
+	Transaction
+	XappKey *TransactionXappKey
+	SubId   uint32
 }
 
 func (t *TransactionXapp) String() string {
@@ -153,7 +147,7 @@ func (t *TransactionXapp) String() string {
 	if t.XappKey != nil {
 		transkey = t.XappKey.String()
 	}
-	return "transxapp(" + t.Transaction.String() + "/" + transkey + ")"
+	return "transxapp(" + t.Transaction.String() + "/" + transkey + "/" + strconv.FormatUint(uint64(t.SubId), 10) + ")"
 }
 
 func (t *TransactionXapp) GetEndpoint() *RmrEndpoint {
@@ -181,6 +175,12 @@ func (t *TransactionXapp) GetSrc() string {
 		return t.XappKey.RmrEndpoint.String()
 	}
 	return ""
+}
+
+func (t *TransactionXapp) GetSubId() uint32 {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+	return t.SubId
 }
 
 func (t *TransactionXapp) Release() {

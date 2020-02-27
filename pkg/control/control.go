@@ -188,7 +188,7 @@ func (c *Control) handleXAPPSubscriptionRequest(params *xapptweaks.RMRParams) {
 		return
 	}
 
-	trans := c.tracker.NewXappTransaction(NewRmrEndpoint(params.Src), params.Xid, &RequestId{subReqMsg.RequestId}, params.Meid)
+	trans := c.tracker.NewXappTransaction(NewRmrEndpoint(params.Src), params.Xid, subReqMsg.RequestId.Seq, params.Meid)
 	if trans == nil {
 		xapp.Logger.Error("XAPP-SubReq: %s", idstring(fmt.Errorf("transaction not created"), params))
 		return
@@ -248,7 +248,7 @@ func (c *Control) handleXAPPSubscriptionDeleteRequest(params *xapptweaks.RMRPara
 		return
 	}
 
-	trans := c.tracker.NewXappTransaction(NewRmrEndpoint(params.Src), params.Xid, &RequestId{subDelReqMsg.RequestId}, params.Meid)
+	trans := c.tracker.NewXappTransaction(NewRmrEndpoint(params.Src), params.Xid, subDelReqMsg.RequestId.Seq, params.Meid)
 	if trans == nil {
 		xapp.Logger.Error("XAPP-SubDelReq: %s", idstring(fmt.Errorf("transaction not created"), params))
 		return
@@ -261,7 +261,7 @@ func (c *Control) handleXAPPSubscriptionDeleteRequest(params *xapptweaks.RMRPara
 		return
 	}
 
-	subs, err := c.registry.GetSubscriptionFirstMatch([]uint32{subDelReqMsg.RequestId.Seq})
+	subs, err := c.registry.GetSubscriptionFirstMatch([]uint32{trans.GetSubId()})
 	if err != nil {
 		xapp.Logger.Error("XAPP-SubDelReq: %s", idstring(err, trans))
 		return
@@ -277,7 +277,7 @@ func (c *Control) handleXAPPSubscriptionDeleteRequest(params *xapptweaks.RMRPara
 
 	// Whatever is received send ok delete response
 	subDelRespMsg := &e2ap.E2APSubscriptionDeleteResponse{}
-	subDelRespMsg.RequestId = subs.SubReqMsg.RequestId
+	subDelRespMsg.RequestId = subs.GetReqId().RequestId
 	subDelRespMsg.FunctionId = subs.SubReqMsg.FunctionId
 	trans.Mtype, trans.Payload, err = c.e2ap.PackSubscriptionDeleteResponse(subDelRespMsg)
 	if err == nil {
@@ -342,10 +342,7 @@ func (c *Control) handleSubscriptionDelete(subs *Subscription, parentTrans *Tran
 		subs.mutex.Unlock()
 	}
 
-	subDelRespMsg := &e2ap.E2APSubscriptionDeleteResponse{}
-	subDelRespMsg.RequestId = subs.SubReqMsg.RequestId
-	subDelRespMsg.FunctionId = subs.SubReqMsg.FunctionId
-	parentTrans.SendEvent(subDelRespMsg, 0)
+	parentTrans.SendEvent(nil, 0)
 }
 
 //-------------------------------------------------------------------

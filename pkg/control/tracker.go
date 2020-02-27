@@ -50,10 +50,6 @@ func (t *Tracker) initTransaction(transBase *Transaction) {
 func (t *Tracker) NewSubsTransaction(subs *Subscription) *TransactionSubs {
 	trans := &TransactionSubs{}
 	trans.Meid = subs.GetMeid()
-	rid := subs.GetReqId()
-	if rid != nil {
-		trans.ReqId = *rid
-	}
 	t.initTransaction(&trans.Transaction)
 	xapp.Logger.Debug("CREATE %s", trans.String())
 	return trans
@@ -62,15 +58,13 @@ func (t *Tracker) NewSubsTransaction(subs *Subscription) *TransactionSubs {
 func (t *Tracker) NewXappTransaction(
 	endpoint *RmrEndpoint,
 	xid string,
-	reqId *RequestId,
+	subid uint32,
 	meid *xapp.RMRMeid) *TransactionXapp {
 
 	trans := &TransactionXapp{}
 	trans.XappKey = &TransactionXappKey{*endpoint, xid}
 	trans.Meid = meid
-	if reqId != nil {
-		trans.ReqId = *reqId
-	}
+	trans.SubId = subid
 	t.initTransaction(&trans.Transaction)
 	xapp.Logger.Debug("CREATE %s", trans.String())
 	return trans
