@@ -19,77 +19,155 @@
 
 package conv
 
+import (
+	"io"
+)
+
 //-----------------------------------------------------------------------------
 //
-// MCC 3 digits MNC 2 digits
-// BCD Coded format: 0xC2C1 0xfC3 0xN2N1
-// String format   : C1C2C3N1N2
-//
-// MCC 3 digits MNC 3 digits
-// BCD Coded format: 0xC2C1 0xN3C3 0xN2N1
-// String format   : C1C2C3N1N2N3
+//-----------------------------------------------------------------------------
+type PlmnIdentityIf interface {
+	String() string
+	MccString() string
+	MncString() string
+	EncodeTo(writer io.Writer) (int, error)
+	DecodeFrom(reader io.Reader) (int, error)
+}
+
+//-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
 
 type PlmnIdentity struct {
-	Val [3]uint8
+	Mcc string
+	Mnc string
 }
 
 func (plmnid *PlmnIdentity) String() string {
-	bcd := NewBcd("0123456789?????f")
-
-	str := bcd.Decode(plmnid.Val[:])
-
-	if str[3] == 'f' {
-		return string(str[0:3]) + string(str[4:])
-	}
-	return string(str[0:3]) + string(str[4:]) + string(str[3])
+	return plmnid.MccString() + plmnid.MncString()
 }
 
 func (plmnid *PlmnIdentity) MccString() string {
-	fullstr := plmnid.String()
-	return string(fullstr[0:3])
+	return plmnid.Mcc
 }
 
 func (plmnid *PlmnIdentity) MncString() string {
-	fullstr := plmnid.String()
-	return string(fullstr[3:])
+	return plmnid.Mnc
 }
 
-func (plmnid *PlmnIdentity) StringPut(str string) bool {
+func (plmnid *PlmnIdentity) Set(str string) {
+	plmnid.Mcc = str[0:3]
+	plmnid.Mnc = str[3:]
+}
+
+//-----------------------------------------------------------------------------
+//
+// MCC 3 digits MNC 2 digits
+// String format      : C1C2C3N1N2
+// Pre encode format  : C1C2C3FN1N2
+// TBCD Coded format  : 0xC2C1 0xfC3 0xN2N1
+// Post decode format : C1C2C3FN1N2
+// String format      : C1C2C3N1N2
+//
+// MCC 3 digits MNC 3 digits
+// String format      : C1C2C3N1N2N3
+// Pre encode format  : C1C2C3N3N1N2
+// TBCD Coded format  : 0xC2C1 0xN3C3 0xN2N1
+// Post decode format : C1C2C3N3N1N2
+// String format      : C1C2C3N1N2N3
+//
+//-----------------------------------------------------------------------------
+
+type PlmnIdentityTbcd struct {
+	PlmnIdentity
+}
+
+func (plmnid *PlmnIdentityTbcd) EncodeTo(writer io.Writer) (int, error) {
 
 	var tmpStr string
 	switch {
-
-	case len(str) == 5:
-		//C1 C2 C3 N1 N2 -->
-		//C2C1 0fC3 N2N1
-		tmpStr = string(str[0:3]) + string("f") + string(str[3:])
-	case len(str) == 6:
-		//C1 C2 C3 N1 N2 N3 -->
-		//C2C1 N3C3 N2N1
-		tmpStr = string(str[0:3]) + string(str[5]) + string(str[3:5])
+	case len(plmnid.Mnc) == 2:
+		tmpStr = plmnid.Mcc + string("f") + plmnid.Mnc
+	case len(plmnid.Mnc) == 3:
+		tmpStr = plmnid.Mcc + string(plmnid.Mnc[2]) + string(plmnid.Mnc[0:2])
 	default:
-		return false
+		return 0, nil
 	}
 
-	bcd := NewBcd("0123456789?????f")
-	buf := bcd.Encode(tmpStr)
-
-	if buf == nil {
-		return false
-	}
-
-	return plmnid.BcdPut(buf)
+	buf := TBCD.Encode(tmpStr)
+	return writer.Write(buf)
 }
 
-func (plmnid *PlmnIdentity) BcdPut(val []uint8) bool {
+func (plmnid *PlmnIdentityTbcd) DecodeFrom(reader io.Reader) (int, error) {
+	tmpBytes := make([]byte, 3)
+	n, err := reader.Read(tmpBytes)
+	if err != nil {
+		return n, err
+	}
+	str := TBCD.Decode(tmpBytes)
 
-	if len(val) != 3 {
-		return false
+	if str[3] == 'f' {
+		plmnid.Mcc = string(str[0:3])
+		plmnid.Mnc = string(str[4:])
+	} else {
+		plmnid.Mcc = string(str[0:3])
+		plmnid.Mnc = string(str[4:]) + string(str[3])
 	}
-	for i := 0; i < 3; i++ {
-		plmnid.Val[i] = val[i]
+	return n, nil
+}
+
+//-----------------------------------------------------------------------------
+//
+// MCC 3 digits MNC 2 digits
+// String format      : C1C2C3N1N2
+// Pre encode format  : C1C2C3FN1N2
+// BCD Coded format   : 0xC2C1 0xC3f 0xN1N2
+// Post decode format : C1C2C3FN1N2
+// String format      : C1C2C3N1N2
+//
+// MCC 3 digits MNC 3 digits
+// String format      : C1C2C3N1N2N3
+// Pre encode format  : C1C2C3N1N2N3
+// BCD Coded format   : 0xC2C1 0xC3N1 0xN2N3
+// Post decode format : C1C2C3N1N2N3
+// String format      : C1C2C3N1N2N3
+//
+//-----------------------------------------------------------------------------
+
+type PlmnIdentityBcd struct {
+	PlmnIdentity
+}
+
+func (plmnid *PlmnIdentityBcd) EncodeTo(writer io.Writer) (int, error) {
+
+	var tmpStr string
+	switch {
+	case len(plmnid.Mnc) == 2:
+		tmpStr = plmnid.Mcc + string("f") + plmnid.Mnc
+	case len(plmnid.Mnc) == 3:
+		tmpStr = plmnid.Mcc + plmnid.Mnc
+	default:
+		return 0, nil
 	}
-	return true
+
+	buf := BCD.Encode(tmpStr)
+	return writer.Write(buf)
+}
+
+func (plmnid *PlmnIdentityBcd) DecodeFrom(reader io.Reader) (int, error) {
+	tmpBytes := make([]byte, 3)
+	n, err := reader.Read(tmpBytes)
+	if err != nil {
+		return n, err
+	}
+	str := BCD.Decode(tmpBytes)
+
+	if str[3] == 'f' {
+		plmnid.Mcc = string(str[0:3])
+		plmnid.Mnc = string(str[4:])
+	} else {
+		plmnid.Mcc = string(str[0:3])
+		plmnid.Mnc = string(str[3:])
+	}
+	return n, nil
 }

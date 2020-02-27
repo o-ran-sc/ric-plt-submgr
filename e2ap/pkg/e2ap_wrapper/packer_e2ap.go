@@ -175,22 +175,26 @@ type e2apEntryPlmnIdentity struct {
 	entry *C.PLMNIdentity_t
 }
 
-func (plmnId *e2apEntryPlmnIdentity) set(id *conv.PlmnIdentity) error {
+func (plmnId *e2apEntryPlmnIdentity) set(id conv.PlmnIdentityIf) error {
 
-	plmnId.entry.contentLength = (C.uint8_t)(len(id.Val))
-	for i := 0; i < len(id.Val); i++ {
-		plmnId.entry.pLMNIdentityVal[i] = (C.uint8_t)(id.Val[i])
+	buf := new(bytes.Buffer)
+	id.EncodeTo(buf)
+	data := buf.Bytes()
+	plmnId.entry.contentLength = (C.uint8_t)(len(data))
+	for i := 0; i < len(data); i++ {
+		plmnId.entry.pLMNIdentityVal[i] = (C.uint8_t)(data[i])
 	}
 	return nil
 }
 
-func (plmnId *e2apEntryPlmnIdentity) get(id *conv.PlmnIdentity) error {
+func (plmnId *e2apEntryPlmnIdentity) get(id conv.PlmnIdentityIf) error {
 	conlen := (int)(plmnId.entry.contentLength)
 	bcdBuf := make([]uint8, conlen)
 	for i := 0; i < conlen; i++ {
 		bcdBuf[i] = (uint8)(plmnId.entry.pLMNIdentityVal[i])
 	}
-	id.BcdPut(bcdBuf)
+	reader := bytes.NewReader(bcdBuf)
+	id.DecodeFrom(reader)
 	return nil
 }
 
