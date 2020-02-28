@@ -22,6 +22,7 @@ package control
 import (
 	"fmt"
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
+	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/models"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"sync"
 	"time"
@@ -44,6 +45,19 @@ func (r *Registry) Initialize() {
 	for i = 0; i < 65535; i++ {
 		r.subIds = append(r.subIds, i+1)
 	}
+}
+
+func (r *Registry) QueryHandler() (models.SubscriptionList, error) {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
+	resp := models.SubscriptionList{}
+	for _, subs := range r.register {
+		subs.mutex.Lock()
+		resp = append(resp, &models.SubscriptionData{SubscriptionID: int64(subs.ReqId.Seq), Meid: subs.Meid.RanName, Endpoint: subs.EpList.StringList()})
+		subs.mutex.Unlock()
+	}
+	return resp, nil
 }
 
 func (r *Registry) allocateSubs(trans *TransactionXapp, subReqMsg *e2ap.E2APSubscriptionRequest) (*Subscription, error) {

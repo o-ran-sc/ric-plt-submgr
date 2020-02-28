@@ -22,6 +22,8 @@ package control
 import (
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
 	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/teststube2ap"
+	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
@@ -102,20 +104,22 @@ func TestSubReqAndRouteNok(t *testing.T) {
 func TestSubReqAndSubDelOk(t *testing.T) {
 	CaseBegin("TestSubReqAndSubDelOk")
 
-	waiter := rtmgrHttp.AllocNextEvent(true)
 	cretrans := xappConn1.SendSubsReq(t, nil, nil)
-	waiter.WaitResult(t)
 
 	crereq, cremsg := e2termConn1.RecvSubsReq(t)
 	e2termConn1.SendSubsResp(t, crereq, cremsg)
 	e2SubsId := xappConn1.RecvSubsResp(t, cretrans)
+
+	resp, _ := xapp.Subscription.QuerySubscriptions()
+	assert.Equal(t, resp[0].SubscriptionID, int64(e2SubsId))
+	assert.Equal(t, resp[0].Meid, "RAN_NAME_1")
+	assert.Equal(t, resp[0].Endpoint, []string{"localhost:13560"})
+
 	deltrans := xappConn1.SendSubsDelReq(t, nil, e2SubsId)
 	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
 
-	waiter = rtmgrHttp.AllocNextEvent(true)
 	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
 	xappConn1.RecvSubsDelResp(t, deltrans)
-	waiter.WaitResult(t)
 
 	//Wait that subs is cleaned
 	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
@@ -936,6 +940,11 @@ func TestSubReqAndSubDelOkSameAction(t *testing.T) {
 	//crereq2, cremsg2 := e2termConn1.RecvSubsReq(t)
 	//e2termConn1.SendSubsResp(t, crereq2, cremsg2)
 	e2SubsId2 := xappConn2.RecvSubsResp(t, cretrans2)
+
+	resp, _ := xapp.Subscription.QuerySubscriptions()
+	assert.Equal(t, resp[0].SubscriptionID, int64(e2SubsId1))
+	assert.Equal(t, resp[0].Meid, "RAN_NAME_1")
+	assert.Equal(t, resp[0].Endpoint, []string{"localhost:13560", "localhost:13660"})
 
 	//Del1
 	deltrans1 := xappConn1.SendSubsDelReq(t, nil, e2SubsId1)

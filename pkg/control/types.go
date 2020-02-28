@@ -86,12 +86,17 @@ type RmrEndpointList struct {
 }
 
 func (eplist *RmrEndpointList) String() string {
+	valuesText := eplist.StringList()
+	return strings.Join(valuesText, ",")
+}
+
+func (eplist *RmrEndpointList) StringList() []string {
 	tmpList := eplist.Endpoints
 	valuesText := []string{}
 	for i := range tmpList {
 		valuesText = append(valuesText, tmpList[i].String())
 	}
-	return strings.Join(valuesText, ",")
+	return valuesText
 }
 
 func (eplist *RmrEndpointList) Size() int {
