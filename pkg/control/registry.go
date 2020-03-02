@@ -48,10 +48,10 @@ func (r *Registry) Initialize() {
 
 func (r *Registry) allocateSubs(trans *TransactionXapp, subReqMsg *e2ap.E2APSubscriptionRequest) (*Subscription, error) {
 	if len(r.subIds) > 0 {
-		sequenceNumber := r.subIds[0]
+		subId := r.subIds[0]
 		r.subIds = r.subIds[1:]
-		if _, ok := r.register[sequenceNumber]; ok == true {
-			r.subIds = append(r.subIds, sequenceNumber)
+		if _, ok := r.register[subId]; ok == true {
+			r.subIds = append(r.subIds, subId)
 			return nil, fmt.Errorf("Registry: Failed to reserve subscription exists")
 		}
 		subs := &Subscription{
@@ -61,10 +61,10 @@ func (r *Registry) allocateSubs(trans *TransactionXapp, subReqMsg *e2ap.E2APSubs
 			valid:     true,
 		}
 		subs.ReqId.Id = 123
-		subs.ReqId.Seq = sequenceNumber
+		subs.ReqId.InstanceId = subId
 
 		if subs.EpList.AddEndpoint(trans.GetEndpoint()) == false {
-			r.subIds = append(r.subIds, subs.ReqId.Seq)
+			r.subIds = append(r.subIds, subs.ReqId.InstanceId)
 			return nil, fmt.Errorf("Registry: Endpoint existing already in subscription")
 		}
 
@@ -125,7 +125,7 @@ func (r *Registry) AssignToSubscription(trans *TransactionXapp, subReqMsg *e2ap.
 	// Find possible existing Policy subscription
 	//
 	if actionType == e2ap.E2AP_ActionTypePolicy {
-		if subs, ok := r.register[subReqMsg.RequestId.Seq]; ok {
+		if subs, ok := r.register[subReqMsg.RequestId.InstanceId]; ok {
 			xapp.Logger.Debug("CREATE %s. Existing subscription for Policy found", subs.String())
 			subs.SetCachedResponse(nil, true)
 			return subs, nil
@@ -154,23 +154,23 @@ func (r *Registry) AssignToSubscription(trans *TransactionXapp, subReqMsg *e2ap.
 	// Subscription route updates
 	//
 	if epamount == 1 {
-		subRouteAction := SubRouteInfo{subs.EpList, uint16(subs.ReqId.Seq)}
+		subRouteAction := SubRouteInfo{subs.EpList, uint16(subs.ReqId.InstanceId)}
 		err = r.rtmgrClient.SubscriptionRequestCreate(subRouteAction)
 	} else {
-		subRouteAction := SubRouteInfo{subs.EpList, uint16(subs.ReqId.Seq)}
+		subRouteAction := SubRouteInfo{subs.EpList, uint16(subs.ReqId.InstanceId)}
 		err = r.rtmgrClient.SubscriptionRequestUpdate(subRouteAction)
 	}
 	r.mutex.Lock()
 
 	if err != nil {
 		if newAlloc {
-			r.subIds = append(r.subIds, subs.ReqId.Seq)
+			r.subIds = append(r.subIds, subs.ReqId.InstanceId)
 		}
 		return nil, err
 	}
 
 	if newAlloc {
-		r.register[subs.ReqId.Seq] = subs
+		r.register[subs.ReqId.InstanceId] = subs
 	}
 	xapp.Logger.Debug("CREATE %s", subs.String())
 	xapp.Logger.Debug("Registry: substable=%v", r.register)
@@ -211,7 +211,7 @@ func (r *Registry) RemoveFromSubscription(subs *Subscription, trans *Transaction
 
 	delStatus := subs.EpList.DelEndpoint(trans.GetEndpoint())
 	epamount := subs.EpList.Size()
-	seqId := subs.ReqId.Seq
+	subId := subs.ReqId.InstanceId
 
 	if delStatus == false {
 		return nil
@@ -232,7 +232,7 @@ func (r *Registry) RemoveFromSubscription(subs *Subscription, trans *Transaction
 			//
 			tmpList := RmrEndpointList{}
 			tmpList.AddEndpoint(trans.GetEndpoint())
-			subRouteAction := SubRouteInfo{tmpList, uint16(seqId)}
+			subRouteAction := SubRouteInfo{tmpList, uint16(subId)}
 			r.rtmgrClient.SubscriptionRequestDelete(subRouteAction)
 
 			//
@@ -241,18 +241,18 @@ func (r *Registry) RemoveFromSubscription(subs *Subscription, trans *Transaction
 			r.mutex.Lock()
 			defer r.mutex.Unlock()
 
-			if _, ok := r.register[seqId]; ok {
+			if _, ok := r.register[subId]; ok {
 				xapp.Logger.Debug("RELEASE %s", subs.String())
-				delete(r.register, seqId)
+				delete(r.register, subId)
 				xapp.Logger.Debug("Registry: substable=%v", r.register)
 			}
-			r.subIds = append(r.subIds, seqId)
+			r.subIds = append(r.subIds, subId)
 
 		} else if subs.EpList.Size() > 0 {
 			//
 			// Subscription route updates
 			//
-			subRouteAction := SubRouteInfo{subs.EpList, uint16(seqId)}
+			subRouteAction := SubRouteInfo{subs.EpList, uint16(subId)}
 			r.rtmgrClient.SubscriptionRequestUpdate(subRouteAction)
 		}
 
@@ -261,22 +261,22 @@ func (r *Registry) RemoveFromSubscription(subs *Subscription, trans *Transaction
 	return nil
 }
 
-func (r *Registry) GetSubscription(sn uint32) *Subscription {
+func (r *Registry) GetSubscription(subId uint32) *Subscription {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
-	if _, ok := r.register[sn]; ok {
-		return r.register[sn]
+	if _, ok := r.register[subId]; ok {
+		return r.register[subId]
 	}
 	return nil
 }
 
-func (r *Registry) GetSubscriptionFirstMatch(ids []uint32) (*Subscription, error) {
+func (r *Registry) GetSubscriptionFirstMatch(subIds []uint32) (*Subscription, error) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
-	for _, id := range ids {
-		if _, ok := r.register[id]; ok {
-			return r.register[id], nil
+	for _, subId := range subIds {
+		if _, ok := r.register[subId]; ok {
+			return r.register[subId], nil
 		}
 	}
-	return nil, fmt.Errorf("No valid subscription found with ids %v", ids)
+	return nil, fmt.Errorf("No valid subscription found with subIds %v", subIds)
 }

@@ -35,6 +35,7 @@ func (testCtxt *E2ApTests) E2ApTestMsgSubscriptionRequestWithData(t *testing.T, 
 	testCtxt.testPrint("########## ##########")
 	testCtxt.testPrint("init")
 	testCtxt.testPrint("pack")
+
 	err, packedMsg := e2SubsReq.Pack(areqenc)
 	if err != nil {
 		testCtxt.testError(t, "Pack failed: %s", err.Error())
@@ -42,6 +43,7 @@ func (testCtxt *E2ApTests) E2ApTestMsgSubscriptionRequestWithData(t *testing.T, 
 	}
 	testCtxt.testPrint("print:\n%s", e2SubsReq.String())
 	testCtxt.testPrint("unpack")
+
 	err, areqdec := e2SubsReq.UnPack(packedMsg)
 	if err != nil {
 		testCtxt.testError(t, "UnPack failed: %s", err.Error())
@@ -56,20 +58,44 @@ func (testCtxt *E2ApTests) E2ApTestMsgSubscriptionRequest(t *testing.T) {
 
 	areqenc := e2ap.E2APSubscriptionRequest{}
 	areqenc.RequestId.Id = 1
-	areqenc.RequestId.Seq = 22
+	areqenc.RequestId.InstanceId = 22
 	areqenc.FunctionId = 33
 	//Bits 20, 28(works), 18, 21 (asn1 problems)
 	areqenc.EventTriggerDefinition.InterfaceDirection = e2ap.E2AP_InterfaceDirectionIncoming
 	areqenc.EventTriggerDefinition.ProcedureCode = 35
 	areqenc.EventTriggerDefinition.TypeOfMessage = e2ap.E2AP_InitiatingMessage
-	for index := 0; index < 16; index++ {
+	for index := 0; index < 1; /*16*/ index++ {
 		item := e2ap.ActionToBeSetupItem{}
 		item.ActionId = uint64(index)
 		item.ActionType = e2ap.E2AP_ActionTypeInsert
-		// NOT SUPPORTED CURRENTLY
-		//item.ActionDefinition.Present = true
-		//item.ActionDefinition.StyleId = 255
-		//item.ActionDefinition.ParamId = 222
+
+		item.RicActionDefinitionPresent = true
+		item.ActionDefinitionChoice.ActionDefinitionFormat1Present = false
+		item.ActionDefinitionChoice.ActionDefinitionFormat2Present = true
+		// 1..15
+		for index2 := 0; index2 < 1; index2++ {
+			ranUEgroupItem := e2ap.RANueGroupItem{}
+			// 1..255
+			for index3 := 0; index3 < 1; index3++ {
+				ranUEGroupDefItem := e2ap.RANueGroupDefItem{}
+				ranUEGroupDefItem.RanParameterID = 22
+				ranUEGroupDefItem.RanParameterTest = e2ap.RANParameterTest_equal
+				ranUEGroupDefItem.RanParameterValue.ValueIntPresent = true
+				ranUEGroupDefItem.RanParameterValue.ValueInt = 100
+				ranUEgroupItem.RanUEgroupDefinition.RanUEGroupDefItems = append(ranUEgroupItem.RanUEgroupDefinition.RanUEGroupDefItems, ranUEGroupDefItem)
+			}
+			// 1..255
+			for index4 := 0; index4 < 1; index4++ {
+				ranParameterItem := e2ap.RANParameterItem{}
+				ranParameterItem.RanParameterID = 33
+				ranParameterItem.RanParameterValue.ValueIntPresent = true
+				ranParameterItem.RanParameterValue.ValueInt = 100
+				ranUEgroupItem.RanPolicy.RanParameterItems = append(ranUEgroupItem.RanPolicy.RanParameterItems, ranParameterItem)
+			}
+			ranUEgroupItem.RanUEgroupID = 2
+			item.ActionDefinitionChoice.ActionDefinitionFormat2.RanUEgroupItems = append(item.ActionDefinitionChoice.ActionDefinitionFormat2.RanUEgroupItems, ranUEgroupItem)
+		}
+
 		item.SubsequentAction.Present = true
 		item.SubsequentAction.Type = e2ap.E2AP_SubSeqActionTypeContinue
 		item.SubsequentAction.TimetoWait = e2ap.E2AP_TimeToWaitW100ms
@@ -117,7 +143,7 @@ func (testCtxt *E2ApTests) E2ApTestMsgSubscriptionResponse(t *testing.T) {
 
 	arespenc := e2ap.E2APSubscriptionResponse{}
 	arespenc.RequestId.Id = 1
-	arespenc.RequestId.Seq = 22
+	arespenc.RequestId.InstanceId = 22
 	arespenc.FunctionId = 33
 	for index := uint64(0); index < 16; index++ {
 		item := e2ap.ActionAdmittedItem{}
@@ -160,7 +186,7 @@ func (testCtxt *E2ApTests) E2ApTestMsgSubscriptionFailure(t *testing.T) {
 
 	afailenc := e2ap.E2APSubscriptionFailure{}
 	afailenc.RequestId.Id = 1
-	afailenc.RequestId.Seq = 22
+	afailenc.RequestId.InstanceId = 22
 	afailenc.FunctionId = 33
 	for index := uint64(0); index < 16; index++ {
 		item := e2ap.ActionNotAdmittedItem{}

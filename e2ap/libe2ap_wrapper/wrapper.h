@@ -31,9 +31,9 @@
 #include "RICsubscriptionFailure.h"
 #include "RICsubscriptionDeleteFailure.h"
 #include "E2AP-PDU.h"
-#include "RICInitiatingMessage.h"
-#include "RICSuccessfulOutcome.h"
-#include "RICUnsuccessfulOutcome.h"
+#include "InitiatingMessage.h"
+#include "SuccessfulOutcome.h"
+#include "UnsuccessfulOutcome.h"
 #include "ProtocolIE-Container.h"
 #include "ProtocolIE-Field.h"
 
@@ -42,7 +42,7 @@ E2AP_PDU_t* decode_E2AP_PDU(const void* buffer, size_t buf_size);
 
 long e2ap_get_ric_subscription_request_sequence_number(void *buffer, size_t buf_size);
 ssize_t  e2ap_set_ric_subscription_request_sequence_number(void *buffer, size_t buf_size, long sequence_number);
-RICsubscription_t* e2ap_get_ric_subscription_request_ric_subscription(void *buffer, size_t buffer_size);
+//RICsubscription_t* e2ap_get_ric_subscription_request_ric_subscription(void *buffer, size_t buffer_size);
 
 /* RICsubscriptionResponse */
 long e2ap_get_ric_subscription_response_sequence_number(void *buffer, size_t buf_size);

@@ -196,12 +196,12 @@ func (msgInfo *MessageInfo) String() string {
 //
 //-----------------------------------------------------------------------------
 type RequestId struct {
-	Id  uint32
-	Seq uint32
+	Id         uint32
+	InstanceId uint32
 }
 
 func (rid *RequestId) String() string {
-	return strconv.FormatUint((uint64)(rid.Id), 10) + string(":") + strconv.FormatUint((uint64)(rid.Seq), 10)
+	return strconv.FormatUint((uint64)(rid.Id), 10) + string(":") + strconv.FormatUint((uint64)(rid.InstanceId), 10)
 }
 
 //-----------------------------------------------------------------------------
@@ -261,14 +261,104 @@ type CallProcessId struct {
 }
 */
 
+type ActionDefinitionChoice struct {
+	ActionDefinitionFormat1Present bool
+	//ActionDefinitionFormat1 E2SMgNBX2actionDefinition
+	ActionDefinitionFormat2Present bool
+	ActionDefinitionFormat2        ActionDefinitionFormat2
+}
+
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-type ActionDefinition struct {
-	Present bool
-	StyleId uint64
-	ParamId uint32
-	//ParamValue
+type ActionDefinitionFormat2 struct {
+	RanUEgroupItems []RANueGroupItem // 1 .. 15
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type RANueGroupItem struct {
+	RanUEgroupID         int64
+	RanUEgroupDefinition RANueGroupDefinition
+	RanPolicy            RANimperativePolicy
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type RANueGroupDefinition struct {
+	RanUEGroupDefItems []RANueGroupDefItem // 1 .. 255
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type RANimperativePolicy struct {
+	RanParameterItems []RANParameterItem // 1 .. 255
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type RANueGroupDefItem struct {
+	RanParameterID    uint32 // 1 .. 255
+	RanParameterTest  uint8
+	RanParameterValue RANParameterValue
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type RANParameterItem struct {
+	RanParameterID    uint8 // 1 .. 255
+	RanParameterValue RANParameterValue
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+const ( // enum RANParameterTest
+	RANParameterTest_equal = iota
+	RANParameterTest_greaterthan
+	RANParameterTest_lessthan
+	RANParameterTest_contains
+	RANParameterTest_present
+)
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type RANParameterValue struct {
+	ValueIntPresent  bool
+	ValueInt         int64
+	ValueEnumPresent bool
+	ValueEnum        int64
+	ValueBoolPresent bool
+	ValueBool        bool
+	ValueBitSPresent bool
+	ValueBitS        BitString
+	ValueOctSPresent bool
+	ValueOctS        OctetString
+	ValuePrtSPresent bool
+	ValuePrtS        OctetString
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type BitString struct {
+	UnusedBits uint8
+	Length     uint64
+	Data       []uint8
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type OctetString struct {
+	Length uint64
+	Data   []uint8
 }
 
 //-----------------------------------------------------------------------------
@@ -284,9 +374,10 @@ type SubsequentAction struct {
 //
 //-----------------------------------------------------------------------------
 type ActionToBeSetupItem struct {
-	ActionId   uint64
-	ActionType uint64
-	ActionDefinition
+	ActionId                   uint64
+	ActionType                 uint64
+	RicActionDefinitionPresent bool
+	ActionDefinitionChoice
 	SubsequentAction
 }
 
