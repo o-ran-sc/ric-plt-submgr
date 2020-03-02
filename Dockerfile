@@ -58,10 +58,17 @@ ENV CFLAGS="-DASN_DISABLE_OER_SUPPORT"
 ENV CGO_CFLAGS="-DASN_DISABLE_OER_SUPPORT"
 
 COPY 3rdparty 3rdparty
-RUN cd 3rdparty/libe2ap && \
+RUN cd 3rdparty/E2AP-v01.00.00 && \
     gcc -c ${CFLAGS} -I. -g -fPIC *.c  && \
     gcc *.o -g -shared -o libe2ap.so && \
     cp libe2ap.so /usr/local/lib/ && \
+    cp *.h /usr/local/include/ && \
+    ldconfig
+
+RUN cd 3rdparty/E2SM-gNB-X2-V3.0.8 && \
+    gcc -c ${CFLAGS} -I. -g -fPIC *.c  && \
+    gcc *.o -g -shared -o libgnbx2.so && \
+    cp libgnbx2.so /usr/local/lib/ && \
     cp *.h /usr/local/include/ && \
     ldconfig
 

@@ -26,65 +26,159 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <ProcedureCode.h>
+#include <PrintableString.h>
+#include "memtrack.h"
 
 #ifdef	__cplusplus
 extern "C" {
 #endif
 
+extern const int cCauseRICRequest;
+extern const int cCauseRICService;
+extern const int cCauseTransport;
+extern const int cCauseProtocol;
+extern const int cCauseMisc;
+
 typedef unsigned char byte;
 
-extern const int64_t cMaxNrOfErrors;
+//extern const int64_t cMaxNrOfErrors;
 
 extern const uint64_t cMaxSizeOfOctetString;
 
 typedef struct { // Octet string in ASN.1 does not have maximum length!
     size_t contentLength;
-    uint8_t data[1024]; // table size is const cMaxSizeOfOctetString
+    uint8_t data[1024]; // Table size is const cMaxSizeOfOctetString
 } OctetString_t;
 
+typedef struct { // Octet string in ASN.1 does not have maximum length!
+    size_t length;
+    uint8_t* data;
+} DynOctetString_t;
+
 typedef struct {
-    uint8_t unusedbits; // trailing unused bits 0 - 7
-    size_t byteLength;  // length in bytes
-    uint8_t data[1024];
-} Bitstring_t;
+    uint8_t unusedBits; // Trailing unused bits 0 - 7
+    size_t byteLength;  // Length in bytes
+    uint8_t* data;
+} DynBitString_t;
 
 typedef struct  {
-	uint32_t ricRequestorID;
-	uint32_t ricRequestSequenceNumber;
+	uint32_t ricRequestorID; // 0..65535
+	uint32_t ricInstanceID;  // 0..65535
 } RICRequestID_t;
 
-typedef uint16_t RANFunctionID_t;
+typedef uint16_t RANFunctionID_t; // 0..4095
 
-typedef uint64_t RICActionID_t;
+typedef uint64_t RICActionID_t; // 0..255
 
 enum RICActionType_t {
-     RICActionType_report
-    ,RICActionType_insert
-    ,RICActionType_policy
+     RICActionType_report,
+     RICActionType_insert,
+     RICActionType_policy
 };
 
 typedef uint64_t StyleID_t;
 
-typedef uint32_t ParameterID_t;
+typedef uint32_t ParameterID_t;  // 0..255 (maxofActionParameters)
 
-typedef struct {
-    uint32_t dummy; // This data type has no content. This dummy is added here to solve problem with Golang. Golang do not like empty types.
-} ParameterValue_t;
+typedef struct { // CHOICE. Only one value can be present
+    bool valueIntPresent;
+	int64_t valueInt;
+	bool valueEnumPresent;
+	int64_t valueEnum;
+    bool valueBoolPresent;
+	bool valueBool;
+    bool valueBitSPresent;
+	DynBitString_t valueBitS;
+    bool valueOctSPresent;
+	DynOctetString_t valueOctS;
+	bool valuePrtSPresent;
+	DynOctetString_t valuePrtS;
+} ActionParameterValue_t;
 
 typedef struct {
     ParameterID_t parameterID;
-    ParameterValue_t ParameterValue;
-} SequenceOfActionParameters_t;
+    ActionParameterValue_t actionParameterValue;
+} ActionParameterItem_t;
 
 typedef struct {
     StyleID_t styleID;
-    SequenceOfActionParameters_t sequenceOfActionParameters;
-} RICActionDefinition_t;
+    uint8_t actionParameterCount;
+    ActionParameterItem_t actionParameterItem[255]; // OPTIONAL. 1..255 (maxofRANParameters)
+} E2SMgNBX2actionDefinition_t;
+
+enum RANParameterTest_t {
+	RANParameterTest_equal,
+	RANParameterTest_greaterthan,
+	RANParameterTest_lessthan,
+	RANParameterTest_contains,
+	RANParameterTest_present
+};
+
+typedef struct {
+    bool valueIntPresent;
+	int64_t valueInt;
+	bool valueEnumPresent;
+	int64_t valueEnum;
+    bool valueBoolPresent;
+	bool valueBool;
+    bool valueBitSPresent;
+	DynBitString_t valueBitS;
+    bool valueOctSPresent;
+	DynOctetString_t valueOctS;
+	bool valuePrtSPresent;
+	DynOctetString_t valuePrtS;
+} RANParameterValue_t;
+
+typedef int64_t RANueGroupID_t; // INTEGER
+typedef uint32_t RANParameterID_t; // 0..255 (maxofRANParameters)
+
+typedef struct {
+	RANParameterID_t ranParameterID;
+	RANParameterValue_t ranParameterValue;
+} RANParameterItem_t;
+
+typedef struct {
+	RANParameterID_t ranParameterID;
+	uint8_t ranParameterTest;               // This is type of enum RANParameterTest_t
+	RANParameterValue_t ranParameterValue;
+} RANueGroupDefItem_t;
+
+typedef struct {
+    uint8_t ranUeGroupDefCount;
+	RANueGroupDefItem_t ranUeGroupDefItem[255]; //OPTIONAL. 1..255 (maxofRANParameters)
+} RANueGroupDefinition_t;
+
+typedef struct {
+    uint8_t ranParameterCount;
+	RANParameterItem_t ranParameterItem[255]; //OPTIONAL. 1..255 (maxofRANParameters)
+} RANimperativePolicy_t;
+
+typedef struct {
+    RANueGroupID_t ranUEgroupID;
+	RANueGroupDefinition_t ranUEgroupDefinition;
+	RANimperativePolicy_t ranPolicy;
+} RANueGroupItem_t;
+
+typedef struct {
+    uint8_t ranUeGroupCount;
+    RANueGroupItem_t ranUeGroupItem[15];  // OPTIONAL. 1..15 (maxofUEgroup)
+} E2SMgNBX2ActionDefinitionFormat2_t;
 
 enum RICSubsequentActionType_t {
 	RICSubsequentActionType_Continue,
 	RICSubsequentActionType_wait
 };
+
+typedef struct {
+    OctetString_t octetString;   // This element is E2AP spec format, the other elements below are for E2SM-gNB-X2 format
+    // CHOICE. Only one value can be present
+    bool actionDefinitionFormat1Present;
+	E2SMgNBX2actionDefinition_t* actionDefinitionFormat1;
+	bool actionDefinitionFormat2Present;
+	E2SMgNBX2ActionDefinitionFormat2_t* actionDefinitionFormat2;
+} RICActionDefinitionChoice_t;
+
 
 enum RICTimeToWait_t {
 	RICTimeToWait_zero,
@@ -108,15 +202,15 @@ enum RICTimeToWait_t {
 };
 
 typedef struct {
-	uint64_t ricSubsequentActionType;  // this is type of enum RICSubsequentActionType_t
-	uint64_t ricTimeToWait;  // this is type of enum RICTimeToWait_t
+	uint64_t ricSubsequentActionType;  // This is type of enum RICSubsequentActionType_t
+	uint64_t ricTimeToWait;  // This is type of enum RICTimeToWait_t
 } RICSubsequentAction_t;
 
 typedef struct  {
 	RICActionID_t ricActionID;
-	uint64_t ricActionType;  // this is type of enum RICActionType_t
+	uint64_t ricActionType;  // This is type of enum RICActionType_t
 	bool ricActionDefinitionPresent;
-	RICActionDefinition_t ricActionDefinition;
+	RICActionDefinitionChoice_t ricActionDefinitionChoice;
 	bool ricSubsequentActionPresent;
 	RICSubsequentAction_t ricSubsequentAction;
 } RICActionToBeSetupItem_t;
@@ -125,7 +219,7 @@ static const uint64_t cMaxofRICactionID = 16;
 
 typedef struct  {
     uint8_t contentLength;
-    RICActionToBeSetupItem_t ricActionToBeSetupItem[16];  // table size is const cMaxofRICactionID
+    RICActionToBeSetupItem_t ricActionToBeSetupItem[16];  // 1..16 // Table size is const cMaxofRICactionID
 } RICActionToBeSetupList_t;
 
 typedef struct {
@@ -163,14 +257,21 @@ enum InterfaceDirection__t {
 
 typedef uint8_t ProcedureCode__t;
 
+enum TypeOfMessage_t {
+    TypeOfMessage_nothing,
+    TypeOfMessage_InitiatingMessage,
+    TypeOfMessage_SuccessfulOutcome,
+    TypeOfMessage_UnsuccessfulOutcome
+};
+
 typedef struct  {
 	ProcedureCode__t procedureCode;
-	uint8_t typeOfMessage;  // This is X2AP-PDU, CHOICE of InitiatingMessage or SuccessfulOutcome or UnsuccessfulOutcome
-} RICInterfaceMessageType_t;
+	uint8_t typeOfMessage;  // This is type of enum TypeOfMessage_t
+} InterfaceMessageType_t;
 
 typedef uint32_t InterfaceProtocolIEID_t;
 
-enum ProtocolIEtestCondition_t {
+enum InterfaceProtocolIETest_t {
 	ProtocolIEtestCondition_equal,
 	ProtocolIEtestCondition_greaterthan,
 	ProtocolIEtestCondition_lessthan,
@@ -180,83 +281,74 @@ enum ProtocolIEtestCondition_t {
 
 typedef struct {   // CHOICE. Only one value can be present
     bool valueIntPresent;
-	int64_t integer;           // INTEGER;
+	int64_t valueInt;
 	bool valueEnumPresent;
-	int64_t valueEnum;         // INTEGER
+	int64_t valueEnum;
     bool valueBoolPresent;
-	bool valueBool;	           // BOOLEAN
-    bool valueBitSPresent;
-	Bitstring_t octetstring;   // OCTET STRING,
+	bool valueBool;
+    bool valueBitStringPresent;
+	DynBitString_t valueBitString;
     bool octetstringPresent;
-	OctetString_t octetString; // OCTET STRING,
+	DynOctetString_t octetString;
 } InterfaceProtocolIEValue_t;
 
 typedef struct {
     InterfaceProtocolIEID_t interfaceProtocolIEID;
-    //ProtocolIEtestCondition_t protocolIEtestCondition;  Golang do not like this line. We do not need this right now.
+    uint8_t interfaceProtocolIETest;                        // This is type of enum InterfaceProtocolIETest_t
     InterfaceProtocolIEValue_t  interfaceProtocolIEValue;
-} SequenceOfProtocolIE_t;
+} InterfacProtocolIE_t;
 
-static const uint64_t cMaxofProtocolIE = 16;
-
-typedef struct {
-    SequenceOfProtocolIE_t sequenceOfProtocolIE[16]; // table size is const cMaxofProtocolIE
-} SequenceOfProtocolIEList_t;
+static const uint64_t cMaxofProtocolIE = 15;
 
 typedef struct {
-    OctetString_t octetString;   // E2AP spec format, the other elements for E2SM-X2 format
+    InterfacProtocolIE_t InterfacProtocolIE[15]; // Table size is const cMaxofProtocolIE
+} InterfaceProtocolIEList_t;
+
+typedef struct {
     InterfaceID_t interfaceID;
-    uint8_t interfaceDirection;  // this is type of enum InterfaceDirection_t
-    RICInterfaceMessageType_t interfaceMessageType ;
-    bool sequenceOfProtocolIEListPresent;
-    SequenceOfProtocolIEList_t SequenceOfProtocolIEList;
+    uint8_t interfaceDirection;  // This is type of enum InterfaceDirection_t
+    InterfaceMessageType_t interfaceMessageType;
+    bool interfaceProtocolIEListPresent;
+    InterfaceProtocolIEList_t interfaceProtocolIEList;  // OPTIONAL. Not used in RIC currently
+} E2SMgNBX2eventTriggerDefinition_t;
+
+typedef struct {
+    OctetString_t octetString;   // This element is E2AP spec format
+
+    // CHOICE. Only one value can be present. Note only one choice specified so far
+    bool E2SMgNBX2EventTriggerDefinitionPresent;
+    E2SMgNBX2eventTriggerDefinition_t e2SMgNBX2eventTriggerDefinition;  // This element is E2SM-gNB-X2 eventTriggerDefinition-Format1
 } RICEventTriggerDefinition_t;
 
 typedef struct {
     RICEventTriggerDefinition_t ricEventTriggerDefinition;
     RICActionToBeSetupList_t ricActionToBeSetupItemIEs;
-} RICSubscription_t;
+} RICSubscriptionDetails_t;
 
 typedef struct {
     uint8_t contentLength;
-	RICActionID_t ricActionID[16]; // table size is const cMaxofRICactionID
+	RICActionID_t ricActionID[16]; // Table size is const cMaxofRICactionID
 } RICActionAdmittedList_t;
 
-enum CauseRIC_t {
-	CauseRIC__function_id_Invalid,
-	CauseRIC__action_not_supported,
-	CauseRIC__excessive_actions,
-	CauseRIC__duplicate_action,
-	CauseRIC__duplicate_event,
-	CauseRIC__function_resource_limit,
-	CauseRIC__request_id_unknown,
-	CauseRIC__inconsistent_action_subsequent_action_sequence,
-	CauseRIC__control_message_invalid,
-	CauseRIC__call_process_id_invalid,
-	CauseRIC__function_not_required,
-	CauseRIC__excessive_functions,
-	CauseRIC__ric_resource_limit
-};
-
-extern const int cRICCauseRadioNetwork; // this is content of type RICCause_t
-extern const int cRICCauseTransport; // this is content of type RICCause_t
-extern const int cRICCauseProtocol; // this is content of type RICCause_t
-extern const int cRICCauseMisc; // this is content of type RICCause_t
-extern const int cRICCauseRic; // this is content of type RICCause_t
+extern const int cCauseRIC; // This is content of type CauseRIC_t
+extern const int cCauseRICService; // This is content of type CauseRICservice_t
+extern const int cRICCauseTransport; // This is content of type CauseTransport_t
+extern const int cRICCauseProtocol; // This is content of type CauseProtocol_t
+extern const int cRICCauseMisc; // This is content of type CauseMisc_t
 
 typedef struct {
     uint8_t content; // See above constants
-    uint8_t cause; // this is type of enum CauseRIC_t
+    uint8_t causeVal; // This is type of enum CauseRIC_t
 } RICCause_t;
 
 typedef struct {
 	RICActionID_t ricActionID;
-    RICCause_t ricCause;
+    RICCause_t cause;
 } RICActionNotAdmittedItem_t;
 
 typedef struct {
     uint8_t contentLength;
-    RICActionNotAdmittedItem_t RICActionNotAdmittedItem[16];  // table size is const cMaxofRICactionID
+    RICActionNotAdmittedItem_t RICActionNotAdmittedItem[16];  // Table size is const cMaxofRICactionID
 } RICActionNotAdmittedList_t;
 
 enum Criticality_t {
@@ -279,24 +371,24 @@ enum TypeOfError_t {
 };
 
 typedef struct {
-	uint8_t iECriticality; // this is type of enum Criticality_t
+	uint8_t iECriticality; // This is type of enum Criticality_t
 	ProtocolIE_ID__t iE_ID;
-	uint8_t typeOfError; // this is type of enum TypeOfError_t
+	uint8_t typeOfError; // This is type of enum TypeOfError_t
 	//iE-Extensions  // This has no content in E2AP ASN.1 specification
 } CriticalityDiagnosticsIEListItem_t;
 
 typedef struct {
     bool procedureCodePresent;
-	ProcedureCode__t procedureCode;
+	ProcedureCode__t procedureCode;  // OPTIONAL
 	bool triggeringMessagePresent;
-	uint8_t triggeringMessage; // this is type of enum TriggeringMessage_t
+	uint8_t triggeringMessage;       // OPTIONAL. This is type of enum TriggeringMessage_t
 	bool procedureCriticalityPresent;
-	uint8_t procedureCriticality; // this is type of enum Criticality_t
+	uint8_t procedureCriticality;    // OPTIONAL. This is type of enum Criticality_t
+	bool ricRequestorIDPresent;
+    RICRequestID_t ricRequestorID;   //OPTIONAL
 	bool iEsCriticalityDiagnosticsPresent;
-    uint16_t criticalityDiagnosticsIELength;
-	CriticalityDiagnosticsIEListItem_t criticalityDiagnosticsIEListItem[256];  // table size is const cMaxNrOfErrors
-	//iE-Extensions	  // This has no content in E2AP ASN.1 specification
-
+    uint16_t criticalityDiagnosticsIELength; // 1..256
+	CriticalityDiagnosticsIEListItem_t criticalityDiagnosticsIEListItem[256];  // OPTIONAL. Table size is const cMaxNrOfErrors
 } CriticalityDiagnostics__t;
 
 typedef struct {
@@ -312,6 +404,46 @@ enum e2err {
     e2err_RICSubscriptionRequestAllocRANfunctionIDFail,
     e2err_RICSubscriptionRequestAllocRICeventTriggerDefinitionBufFail,
     e2err_RICSubscriptionRequestAllocRICaction_ToBeSetup_ItemIEsFail,
+
+    e2err_RICSubscriptionRequestAllocactionParameterValueValueBitSFail,
+    e2err_RICSubscriptionRequestAllocactionParameterValueValueOctSFail,
+    e2err_RICSubscriptionRequestAllocactionParameterValueValuePrtsSFail,
+
+    e2err_RICSubscriptionRequestAllocactionRanParameterValueValueBitSFail,
+    e2err_RICSubscriptionRequestAllocactionRanParameterValueValueOctSFail,
+    e2err_RICSubscriptionRequestAllocactionRanParameterValueValuePrtsSFail,
+
+    e2err_RICSubscriptionRequestAllocactionRanParameterValue2ValueBitSFail,
+    e2err_RICSubscriptionRequestAllocactionRanParameterValue2ValueOctSFail,
+    e2err_RICSubscriptionRequestAllocactionRanParameterValue2ValuePrtsSFail,
+
+    e2err_RICSubscriptionRequestAllocactionDefinitionFormat1Fail,
+    e2err_RICSubscriptionRequestAllocactionDefinitionFormat2Fail,
+
+    e2err_RICSubscriptionRequestAllocRICactionDefinitionBufFail,
+    e2err_RICSubscriptionRequestAllocRICactionDefinitionFail,
+    e2err_RICSubscriptionRequestRICActionDefinitionEmptyE2_E2SM_gNB_X2_actionDefinition,
+    e2err_RICSubscriptionRequestActionParameterItemFail,
+    e2err_RICActionDefinitionChoicePackFail_1,
+    e2err_RICActionDefinitionChoicePackFail_2,
+
+    e2err_RICSubscriptionRequestAllocE2_RANueGroupDef_ItemFail,
+    e2err_RICSubscriptionRequestAllocRANParameter_ItemFail,
+    e2err_RICSubscriptionRequestRanranUeGroupDefItemParameterValueEmptyFail,
+    e2err_RICSubscriptionRequestRanParameterItemRanParameterValueEmptyFail,
+
+    e2err_RICSubscriptionRequestAllocActionDefinitionFail,
+
+    e2err_RICSubscriptionRequestAsn_set_addE2_ActionParameter_ItemFail,
+    e2err_RICSubscriptionRequestAsn_set_addRANueGroupDef_ItemFail,
+    e2err_RICSubscriptionRequestAsn_set_addE2_RANParameter_ItemFail,
+
+
+    e2err_RICActionDefinitionChoiceWMOREFail,
+    e2err_RICActionDefinitionChoiceDecodeFAIL,
+    e2err_RICActionDefinitionChoiceDecodeDefaultFail,
+    e2err_RICSubscriptionRequestAllocE2_E2SM_gNB_X2_ActionDefinitionChoiceFail,
+
     e2err_RICSubscriptionRequestAllocRICsubsequentActionFail,
     e2err_RICSubscriptionRequestAllocRICsubscriptionRequest_IEsFail,
     e2err_RICSubscriptionRequestEncodeFail,
@@ -391,6 +523,45 @@ static const char* const E2ErrorStrings[] = {
     "e2err_RICSubscriptionRequestAllocRANfunctionIDFail",
     "e2err_RICSubscriptionRequestAllocRICeventTriggerDefinitionBufFail",
     "e2err_RICSubscriptionRequestAllocRICaction_ToBeSetup_ItemIEsFail",
+
+    "e2err_RICSubscriptionRequestAllocactionParameterValueValueBitSFail",
+    "e2err_RICSubscriptionRequestAllocactionParameterValueValueOctSFail",
+    "e2err_RICSubscriptionRequestAllocactionParameterValueValuePrtsSFail",
+
+    "e2err_RICSubscriptionRequestAllocactionRanParameterValueValueBitSFail",
+    "e2err_RICSubscriptionRequestAllocactionRanParameterValueValueOctSFail",
+    "e2err_RICSubscriptionRequestAllocactionRanParameterValueValuePrtsSFail",
+
+    "e2err_RICSubscriptionRequestAllocactionRanParameterValue2ValueBitSFail",
+    "e2err_RICSubscriptionRequestAllocactionRanParameterValue2ValueOctSFail",
+    "e2err_RICSubscriptionRequestAllocactionRanParameterValue2ValuePrtsSFail",
+
+    "e2err_RICSubscriptionRequestAllocactionDefinitionFormat1Fail",
+    "e2err_RICSubscriptionRequestAllocactionDefinitionFormat2Fail",
+
+    "e2err_RICSubscriptionRequestAllocRICactionDefinitionBufFail",
+    "e2err_RICSubscriptionRequestAllocRICactionDefinitionFail",
+    "e2err_RICSubscriptionRequestRICActionDefinitionEmptyE2_E2SM_gNB_X2_actionDefinition",
+    "e2err_RICSubscriptionRequestActionParameterItemFail",
+    "e2err_RICActionDefinitionChoicePackFail_1",
+    "e2err_RICActionDefinitionChoicePackFail_2",
+
+    "e2err_RICSubscriptionRequestAllocE2_RANueGroupDef_ItemFail",
+    "e2err_RICSubscriptionRequestAllocRANParameter_ItemFail",
+    "e2err_RICSubscriptionRequestRanranUeGroupDefItemParameterValueEmptyFail",
+    "e2err_RICSubscriptionRequestRanParameterItemRanParameterValueEmptyFail",
+
+    "e2err_RICSubscriptionRequestAllocActionDefinitionFail",
+
+    "e2err_RICSubscriptionRequestAsn_set_addE2_ActionParameter_ItemFail",
+    "e2err_RICSubscriptionRequestAsn_set_addRANueGroupDef_ItemFail",
+    "e2err_RICSubscriptionRequestAsn_set_addE2_RANParameter_ItemFail",
+
+    "e2err_RICActionDefinitionChoiceWMOREFail",
+    "e2err_RICActionDefinitionChoiceDecodeFAIL",
+    "e2err_RICActionDefinitionChoiceDecodeDefaultFail",
+    "e2err_RICSubscriptionRequestAllocE2_E2SM_gNB_X2_ActionDefinitionChoiceFail",
+
     "e2err_RICSubscriptionRequestAllocRICsubsequentActionFail",
     "e2err_RICSubscriptionRequestAllocRICsubscriptionRequest_IEsFail",
     "e2err_RICSubscriptionRequestEncodeFail",
@@ -494,7 +665,7 @@ extern const uint64_t cRICsubscriptionDeleteFailure;
 typedef struct {
     RICRequestID_t ricRequestID;
     RANFunctionID_t ranFunctionID;
-    RICSubscription_t ricSubscription;
+    RICSubscriptionDetails_t ricSubscriptionDetails;
 } RICSubscriptionRequest_t;
 
 typedef struct {
@@ -504,7 +675,6 @@ typedef struct {
     bool ricActionNotAdmittedListPresent;
     RICActionNotAdmittedList_t ricActionNotAdmittedList;
 } RICSubscriptionResponse_t;
-
 
 typedef struct {
     RICRequestID_t ricRequestID;
@@ -527,9 +697,9 @@ typedef struct  {
 typedef struct  {
     RICRequestID_t ricRequestID;
     RANFunctionID_t ranFunctionID;
-    RICCause_t ricCause;
+    RICCause_t cause;
     bool criticalityDiagnosticsPresent;
-    CriticalityDiagnostics__t criticalityDiagnostics; // Not used in RIC currently
+    CriticalityDiagnostics__t criticalityDiagnostics; // OPTIONAL. Not used in RIC currently
 } RICSubscriptionDeleteFailure_t;
 
 //////////////////////////////////////////////////////////////////////
@@ -541,6 +711,7 @@ typedef void* e2ap_pdu_ptr_t;
 
 uint64_t packRICSubscriptionRequest(size_t*, byte*, char*,RICSubscriptionRequest_t*);
 uint64_t packRICEventTriggerDefinition(char*,RICEventTriggerDefinition_t*);
+uint64_t packRICActionDefinition(char*, RICActionDefinitionChoice_t*);
 uint64_t packRICSubscriptionResponse(size_t*, byte*, char*,RICSubscriptionResponse_t*);
 uint64_t packRICSubscriptionFailure(size_t*, byte*, char*,RICSubscriptionFailure_t*);
 uint64_t packRICSubscriptionDeleteRequest(size_t*, byte*, char*,RICSubscriptionDeleteRequest_t*);
@@ -548,13 +719,24 @@ uint64_t packRICSubscriptionDeleteResponse(size_t*, byte*, char*,RICSubscription
 uint64_t packRICSubscriptionDeleteFailure(size_t*, byte*, char*,RICSubscriptionDeleteFailure_t*);
 
 e2ap_pdu_ptr_t* unpackE2AP_pdu(const size_t, const byte*, char*, E2MessageInfo_t*);
-uint64_t getRICSubscriptionRequestData(e2ap_pdu_ptr_t*, RICSubscriptionRequest_t*);
+uint64_t getRICSubscriptionRequestData(mem_track_hdr_t *, e2ap_pdu_ptr_t*, RICSubscriptionRequest_t*);
 uint64_t getRICEventTriggerDefinitionData(RICEventTriggerDefinition_t*);
+uint64_t getRICActionDefinitionData(mem_track_hdr_t *, RICActionDefinitionChoice_t*);
 uint64_t getRICSubscriptionResponseData(e2ap_pdu_ptr_t*, RICSubscriptionResponse_t*);
 uint64_t getRICSubscriptionFailureData(e2ap_pdu_ptr_t*, RICSubscriptionFailure_t*);
 uint64_t getRICSubscriptionDeleteRequestData(e2ap_pdu_ptr_t*, RICSubscriptionDeleteRequest_t*);
 uint64_t getRICSubscriptionDeleteResponseData(e2ap_pdu_ptr_t*, RICSubscriptionDeleteResponse_t*);
 uint64_t getRICSubscriptionDeleteFailureData(e2ap_pdu_ptr_t*, RICSubscriptionDeleteFailure_t*);
+
+void* allocDynMem(mem_track_hdr_t*, size_t);
+DynOctetString_t* addOctetString(mem_track_hdr_t *, DynOctetString_t*, uint64_t, void*);
+DynBitString_t* addBitString(mem_track_hdr_t *, DynBitString_t*, uint64_t, void*, uint8_t);
+
+uint64_t allocActionDefinitionFormat1(mem_track_hdr_t*, E2SMgNBX2actionDefinition_t**);
+uint64_t allocActionDefinitionFormat2(mem_track_hdr_t*, E2SMgNBX2ActionDefinitionFormat2_t**);
+uint64_t allocateOctetStringBuffer(DynOctetString_t*, uint64_t);
+uint64_t allocateBitStringBuffer(mem_track_hdr_t *, DynBitString_t*, uint64_t);
+
 
 #if DEBUG
 bool TestRICSubscriptionRequest();

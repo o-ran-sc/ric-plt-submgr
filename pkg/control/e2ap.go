@@ -20,8 +20,6 @@
 package control
 
 /*
-#include <wrapper.h>
-
 #cgo LDFLAGS: -le2ap_wrapper -le2ap
 */
 import "C"
