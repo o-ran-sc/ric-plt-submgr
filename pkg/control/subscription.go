@@ -22,6 +22,7 @@ package control
 import (
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
+	"reflect"
 	"sync"
 )
 
@@ -153,11 +154,14 @@ func (s *Subscription) IsMergeable(trans *TransactionXapp, subReqMsg *e2ap.E2APS
 				return false
 			}
 
-			if acts.ActionDefinition.Present != actt.ActionDefinition.Present ||
-				acts.ActionDefinition.StyleId != actt.ActionDefinition.StyleId ||
-				acts.ActionDefinition.ParamId != actt.ActionDefinition.ParamId {
+			if acts.RicActionDefinitionPresent != actt.RicActionDefinitionPresent ||
+				acts.ActionDefinitionChoice.ActionDefinitionFormat2Present !=
+					actt.ActionDefinitionChoice.ActionDefinitionFormat2Present ||
+				reflect.DeepEqual(acts.ActionDefinitionChoice.ActionDefinitionFormat2,
+					actt.ActionDefinitionChoice.ActionDefinitionFormat2) == false {
 				return false
 			}
+
 			if acts.SubsequentAction.Present != actt.SubsequentAction.Present ||
 				acts.SubsequentAction.Type != actt.SubsequentAction.Type ||
 				acts.SubsequentAction.TimetoWait != actt.SubsequentAction.TimetoWait {
