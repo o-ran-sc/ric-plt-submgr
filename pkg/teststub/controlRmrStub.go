@@ -147,6 +147,10 @@ func RmrStubControlWaitAlive(seconds int, mtype int, rmr xapptweaks.XAppWrapperI
 	params.Xid = "TESTPING"
 	params.Mbuf = nil
 
+	if len(allRmrStubs) == 0 {
+		rmr.GetLogger().Info("No rmr stubs so no need to wait those to be alive")
+		return true
+	}
 	status := false
 	i := 1
 	for ; i <= seconds*2 && status == false; i++ {
