@@ -104,7 +104,7 @@ func (testCtxt *E2ApTests) E2ApTestMsgSubscriptionDeleteFailure(t *testing.T) {
 	afailenc.RequestId.Seq = 22
 	afailenc.FunctionId = 33
 	afailenc.Cause.Content = 1
-	afailenc.Cause.CauseVal = 1
+	afailenc.Cause.Value = 1
 	// NOT SUPPORTED CURRENTLY
 	//	afailenc.CriticalityDiagnostics.Present = false
 	//	afailenc.CriticalityDiagnostics.ProcCodePresent = true

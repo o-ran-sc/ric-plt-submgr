@@ -156,12 +156,12 @@ func (p *E2StubSubsFailParams) SetCauseVal(ind int, content uint8, causeval uint
 	if ind < 0 {
 		for index := int(0); index < len(p.Fail.ActionNotAdmittedList.Items); index++ {
 			p.Fail.ActionNotAdmittedList.Items[index].Cause.Content = content
-			p.Fail.ActionNotAdmittedList.Items[index].Cause.CauseVal = causeval
+			p.Fail.ActionNotAdmittedList.Items[index].Cause.Value = causeval
 		}
 		return
 	}
 	p.Fail.ActionNotAdmittedList.Items[ind].Cause.Content = content
-	p.Fail.ActionNotAdmittedList.Items[ind].Cause.CauseVal = causeval
+	p.Fail.ActionNotAdmittedList.Items[ind].Cause.Value = causeval
 }
 
 //-----------------------------------------------------------------------------
@@ -269,7 +269,7 @@ func (tc *E2Stub) SendSubsResp(t *testing.T, req *e2ap.E2APSubscriptionRequest, 
 		item := e2ap.ActionNotAdmittedItem{}
 		item.ActionId = index
 		item.Cause.Content = 1
-		item.Cause.CauseVal = 1
+		item.Cause.Value = 1
 		resp.ActionNotAdmittedList.Items = append(resp.ActionNotAdmittedList.Items, item)
 	}
 
@@ -569,8 +569,8 @@ func (tc *E2Stub) SendSubsDelFail(t *testing.T, req *e2ap.E2APSubscriptionDelete
 	resp.RequestId.Id = req.RequestId.Id
 	resp.RequestId.Seq = req.RequestId.Seq
 	resp.FunctionId = req.FunctionId
-	resp.Cause.Content = 3  // CauseMisc
-	resp.Cause.CauseVal = 4 // unspecified
+	resp.Cause.Content = 3 // CauseMisc
+	resp.Cause.Value = 4   // unspecified
 
 	packerr, packedMsg := e2SubsDelFail.Pack(resp)
 	if packerr != nil {

@@ -132,7 +132,7 @@ func (testCtxt *E2ApTests) E2ApTestMsgSubscriptionResponse(t *testing.T) {
 		item := e2ap.ActionNotAdmittedItem{}
 		item.ActionId = index
 		item.Cause.Content = 1
-		item.Cause.CauseVal = 1
+		item.Cause.Value = 1
 		arespenc.ActionNotAdmittedList.Items = append(arespenc.ActionNotAdmittedList.Items, item)
 	}
 
@@ -170,7 +170,7 @@ func (testCtxt *E2ApTests) E2ApTestMsgSubscriptionFailure(t *testing.T) {
 		item := e2ap.ActionNotAdmittedItem{}
 		item.ActionId = index
 		item.Cause.Content = 1
-		item.Cause.CauseVal = 1
+		item.Cause.Value = 1
 		afailenc.ActionNotAdmittedList.Items = append(afailenc.ActionNotAdmittedList.Items, item)
 	}
 	// NOT SUPPORTED CURRENTLY

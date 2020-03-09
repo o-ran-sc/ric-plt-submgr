@@ -378,7 +378,7 @@ func (item *e2apEntryNotAdmittedList) set(data *e2ap.ActionNotAdmittedList) erro
 	for i := 0; i < len(data.Items); i++ {
 		item.entry.RICActionNotAdmittedItem[item.entry.contentLength].ricActionID = (C.ulong)(data.Items[i].ActionId)
 		item.entry.RICActionNotAdmittedItem[item.entry.contentLength].ricCause.content = (C.uchar)(data.Items[i].Cause.Content)
-		item.entry.RICActionNotAdmittedItem[item.entry.contentLength].ricCause.cause = (C.uchar)(data.Items[i].Cause.CauseVal)
+		item.entry.RICActionNotAdmittedItem[item.entry.contentLength].ricCause.cause = (C.uchar)(data.Items[i].Cause.Value)
 		item.entry.contentLength++
 	}
 
@@ -391,7 +391,7 @@ func (item *e2apEntryNotAdmittedList) get(data *e2ap.ActionNotAdmittedList) erro
 	for i := 0; i < conlen; i++ {
 		data.Items[i].ActionId = (uint64)(item.entry.RICActionNotAdmittedItem[i].ricActionID)
 		data.Items[i].Cause.Content = (uint8)(item.entry.RICActionNotAdmittedItem[i].ricCause.content)
-		data.Items[i].Cause.CauseVal = (uint8)(item.entry.RICActionNotAdmittedItem[i].ricCause.cause)
+		data.Items[i].Cause.Value = (uint8)(item.entry.RICActionNotAdmittedItem[i].ricCause.cause)
 	}
 	return nil
 }
@@ -1044,7 +1044,7 @@ func (e2apMsg *e2apMsgPackerSubscriptionDeleteFailure) Pack(data *e2ap.E2APSubsc
 		return err, nil
 	}
 	e2apMsg.msgC.ricCause.content = (C.uchar)(e2apMsg.msgG.Cause.Content)
-	e2apMsg.msgC.ricCause.cause = (C.uchar)(e2apMsg.msgG.Cause.CauseVal)
+	e2apMsg.msgC.ricCause.cause = (C.uchar)(e2apMsg.msgG.Cause.Value)
 	e2apMsg.msgC.criticalityDiagnosticsPresent = false
 	if e2apMsg.msgG.CriticalityDiagnostics.Present {
 		e2apMsg.msgC.criticalityDiagnosticsPresent = true
@@ -1077,7 +1077,7 @@ func (e2apMsg *e2apMsgPackerSubscriptionDeleteFailure) UnPack(msg *e2ap.PackedDa
 		return err, e2apMsg.msgG
 	}
 	e2apMsg.msgG.Cause.Content = (uint8)(e2apMsg.msgC.ricCause.content)
-	e2apMsg.msgG.Cause.CauseVal = (uint8)(e2apMsg.msgC.ricCause.cause)
+	e2apMsg.msgG.Cause.Value = (uint8)(e2apMsg.msgC.ricCause.cause)
 	if e2apMsg.msgC.criticalityDiagnosticsPresent == true {
 		e2apMsg.msgG.CriticalityDiagnostics.Present = true
 		if err := (&e2apEntryCriticalityDiagnostic{entry: &e2apMsg.msgC.criticalityDiagnostics}).get(&e2apMsg.msgG.CriticalityDiagnostics); err != nil {
