@@ -331,17 +331,37 @@ func (c *Control) handleSubscriptionCreate(subs *Subscription, parentTrans *Tran
 
 	subRfMsg, valid := subs.GetCachedResponse()
 	if subRfMsg == nil && valid == true {
-		event := c.sendE2TSubscriptionRequest(subs, trans, parentTrans)
-		switch event.(type) {
-		case *e2ap.E2APSubscriptionResponse:
-			subRfMsg, valid = subs.SetCachedResponse(event, true)
-		case *e2ap.E2APSubscriptionFailure:
-			subRfMsg, valid = subs.SetCachedResponse(event, false)
-		default:
-			xapp.Logger.Info("SUBS-SubReq: internal delete due event(%s) %s", typeofSubsMessage(event), idstring(nil, trans, subs, parentTrans))
-			subRfMsg, valid = subs.SetCachedResponse(nil, false)
-			c.sendE2TSubscriptionDeleteRequest(subs, trans, parentTrans)
+
+		//
+		// In case of failure
+		// - make internal delete
+		// - in case duplicate cause, retry (currently max 1 retry)
+		//
+		maxRetries := uint64(1)
+		doRetry := true
+		for retries := uint64(0); retries <= maxRetries && doRetry; retries++ {
+			doRetry = false
+
+			event := c.sendE2TSubscriptionRequest(subs, trans, parentTrans)
+			switch themsg := event.(type) {
+			case *e2ap.E2APSubscriptionResponse:
+				subRfMsg, valid = subs.SetCachedResponse(event, true)
+			case *e2ap.E2APSubscriptionFailure:
+				subRfMsg, valid = subs.SetCachedResponse(event, false)
+				if themsg.ActionNotAdmittedList.Items[0].Cause.Content == 5 &&
+					(themsg.ActionNotAdmittedList.Items[0].Cause.CauseVal == 3 ||
+						themsg.ActionNotAdmittedList.Items[0].Cause.CauseVal == 4) {
+					doRetry = true
+				}
+				xapp.Logger.Info("SUBS-SubReq: internal delete and possible retry due event(%s) retry(%t,%d/%d) %s", typeofSubsMessage(event), doRetry, retries, maxRetries, idstring(nil, trans, subs, parentTrans))
+				c.sendE2TSubscriptionDeleteRequest(subs, trans, parentTrans)
+			default:
+				xapp.Logger.Info("SUBS-SubReq: internal delete due event(%s) %s", typeofSubsMessage(event), idstring(nil, trans, subs, parentTrans))
+				subRfMsg, valid = subs.SetCachedResponse(nil, false)
+				c.sendE2TSubscriptionDeleteRequest(subs, trans, parentTrans)
+			}
 		}
+
 		xapp.Logger.Debug("SUBS-SubReq: Handling (e2t response %s) %s", typeofSubsMessage(subRfMsg), idstring(nil, trans, subs, parentTrans))
 	} else {
 		xapp.Logger.Debug("SUBS-SubReq: Handling (cached response %s) %s", typeofSubsMessage(subRfMsg), idstring(nil, trans, subs, parentTrans))
