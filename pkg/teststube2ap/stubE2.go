@@ -205,7 +205,7 @@ func (tc *E2Stub) SendSubsReq(t *testing.T, rparams *E2StubSubsReqParams, oldTra
 	params.Mbuf = nil
 
 	tc.Logger.Info("SEND SUB REQ: %s", params.String())
-	snderr := tc.RmrSend(params)
+	snderr := tc.RmrSend(params, 5)
 	if snderr != nil {
 		tc.TestError(t, "RMR SEND FAILED: %s %s", trans.String(), snderr.Error())
 		return nil
@@ -290,7 +290,7 @@ func (tc *E2Stub) SendSubsResp(t *testing.T, req *e2ap.E2APSubscriptionRequest, 
 	params.Mbuf = nil
 
 	tc.Logger.Info("SEND SUB RESP: %s", params.String())
-	snderr := tc.RmrSend(params)
+	snderr := tc.RmrSend(params, 5)
 	if snderr != nil {
 		tc.TestError(t, "RMR SEND FAILED: %s", snderr.Error())
 	}
@@ -363,7 +363,7 @@ func (tc *E2Stub) SendSubsFail(t *testing.T, fparams *E2StubSubsFailParams, msg 
 	params.Mbuf = nil
 
 	tc.Logger.Info("SEND SUB FAIL: %s", params.String())
-	snderr := tc.RmrSend(params)
+	snderr := tc.RmrSend(params, 5)
 	if snderr != nil {
 		tc.TestError(t, "RMR SEND FAILED: %s", snderr.Error())
 	}
@@ -446,7 +446,7 @@ func (tc *E2Stub) SendSubsDelReq(t *testing.T, oldTrans *RmrTransactionId, e2Sub
 	params.Mbuf = nil
 
 	tc.Logger.Info("SEND SUB DEL REQ: %s", params.String())
-	snderr := tc.RmrSend(params)
+	snderr := tc.RmrSend(params, 5)
 	if snderr != nil {
 		tc.TestError(t, "RMR SEND FAILED: %s %s", trans.String(), snderr.Error())
 		return nil
@@ -516,7 +516,7 @@ func (tc *E2Stub) SendSubsDelResp(t *testing.T, req *e2ap.E2APSubscriptionDelete
 	params.Mbuf = nil
 
 	tc.Logger.Info("SEND SUB DEL RESP: %s", params.String())
-	snderr := tc.RmrSend(params)
+	snderr := tc.RmrSend(params, 5)
 	if snderr != nil {
 		tc.TestError(t, "RMR SEND FAILED: %s", snderr.Error())
 	}
@@ -588,7 +588,7 @@ func (tc *E2Stub) SendSubsDelFail(t *testing.T, req *e2ap.E2APSubscriptionDelete
 	params.Mbuf = nil
 
 	tc.Logger.Info("SEND SUB DEL FAIL: %s", params.String())
-	snderr := tc.RmrSend(params)
+	snderr := tc.RmrSend(params, 5)
 	if snderr != nil {
 		tc.TestError(t, "RMR SEND FAILED: %s", snderr.Error())
 	}

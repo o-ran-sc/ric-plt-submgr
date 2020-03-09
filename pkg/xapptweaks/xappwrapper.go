@@ -20,30 +20,31 @@
 package xapptweaks
 
 import (
-	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
+  "gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
+  "time"
 )
 
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
 type XAppWrapperIf interface {
-	RmrSend(params *RMRParams) (err error)
-	GetLogger() *xapp.Log
+  RmrSend(params *RMRParams, to time.Duration) (err error)
+  GetLogger() *xapp.Log
 }
 
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
 type XappWrapper struct {
-	LogWrapper
-	RmrWrapper
+  LogWrapper
+  RmrWrapper
 }
 
 func (tc *XappWrapper) GetDesc() string {
-	return tc.desc
+  return tc.desc
 }
 
 func (tc *XappWrapper) Init(desc string) {
-	tc.LogWrapper.Init(desc)
-	tc.RmrWrapper.Init()
+  tc.LogWrapper.Init(desc)
+  tc.RmrWrapper.Init()
 }

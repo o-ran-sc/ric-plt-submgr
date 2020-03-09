@@ -47,14 +47,14 @@ func (tc *RmrWrapper) Unlock() {
 func (tc *RmrWrapper) Init() {
 }
 
-func (tc *RmrWrapper) RmrSend(params *RMRParams) (err error) {
+func (tc *RmrWrapper) RmrSend(params *RMRParams, to time.Duration) (err error) {
 	if tc.Rmr == nil {
 		err = fmt.Errorf("Failed rmr object nil for %s", params.String())
 		return
 	}
-	status := false
-	i := 1
-	for ; i <= 10 && status == false; i++ {
+	status := tc.Rmr.Send(params.RMRParams, false)
+	i := 0
+	for ; i <= int(to)*2 && status == false; i++ {
 		tc.Lock()
 		status = tc.Rmr.Send(params.RMRParams, false)
 		tc.Unlock()

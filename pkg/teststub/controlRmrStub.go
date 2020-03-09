@@ -156,7 +156,7 @@ func RmrStubControlWaitAlive(seconds int, mtype int, rmr xapptweaks.XAppWrapperI
 	for ; i <= seconds*2 && status == false; i++ {
 
 		rmr.GetLogger().Info("SEND TESTPING: %s", params.String())
-		rmr.RmrSend(params)
+		rmr.RmrSend(params, 0)
 
 		status = true
 		for _, val := range allRmrStubs {
