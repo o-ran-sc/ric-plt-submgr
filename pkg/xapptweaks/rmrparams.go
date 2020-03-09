@@ -34,6 +34,9 @@ type RMRMeid struct {
 }
 
 func (meid *RMRMeid) String() string {
+	if meid.RMRMeid == nil {
+		return "meid()"
+	}
 	str := "meid("
 	pad := ""
 	if len(meid.PlmnID) > 0 {
