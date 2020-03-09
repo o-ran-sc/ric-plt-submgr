@@ -21,13 +21,14 @@ package xapptweaks
 
 import (
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
+	"time"
 )
 
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
 type XAppWrapperIf interface {
-	RmrSend(params *RMRParams) (err error)
+	RmrSend(params *RMRParams, to time.Duration) (err error)
 	GetLogger() *xapp.Log
 }
 

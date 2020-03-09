@@ -21,6 +21,7 @@ package control
 
 import (
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
+	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/xapptweaks"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"sync"
 )
@@ -42,7 +43,7 @@ type Subscription struct {
 }
 
 func (s *Subscription) String() string {
-	return "subs(" + s.ReqId.String() + "/" + s.Meid.RanName + "/" + s.EpList.String() + ")"
+	return "subs(" + s.ReqId.String() + "/" + (&xapptweaks.RMRMeid{s.Meid}).String() + "/" + s.EpList.String() + ")"
 }
 
 func (s *Subscription) GetCachedResponse() (interface{}, bool) {

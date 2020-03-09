@@ -66,7 +66,7 @@ func (tc *RmrDummyStub) SendReq(t *testing.T) {
 	params.Xid = "TEST"
 	params.Mbuf = nil
 
-	snderr := tc.RmrSend(params)
+	snderr := tc.RmrSend(params, 5)
 	if snderr != nil {
 		tc.TestError(t, "%s", snderr.Error())
 	}
@@ -104,7 +104,7 @@ func RmrDummyHandleMessage(msg *xapptweaks.RMRParams, mtypeseed int, rmr xapptwe
 		params.Xid = msg.Xid
 		params.Mbuf = nil
 		rmr.GetLogger().Info("SEND DUMMY RESP: %s", params.String())
-		err := rmr.RmrSend(params)
+		err := rmr.RmrSend(params, 5)
 		if err != nil {
 			rmr.GetLogger().Error("RmrDummyHandleMessage: err(%s)", err.Error())
 		}

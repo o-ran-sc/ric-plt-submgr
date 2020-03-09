@@ -29,14 +29,46 @@ import (
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
+type RMRMeid struct {
+	*xapp.RMRMeid
+}
+
+func (meid *RMRMeid) String() string {
+	str := "meid("
+	pad := ""
+	if len(meid.PlmnID) > 0 {
+		str += pad + "PlmnID=" + meid.PlmnID
+		pad = " "
+	}
+	if len(meid.EnbID) > 0 {
+		str += pad + "EnbID=" + meid.EnbID
+		pad = " "
+	}
+	if len(meid.RanName) > 0 {
+		str += pad + "RanName=" + meid.RanName
+		pad = " "
+	}
+	str += ")"
+	return str
+}
+
+func NewMeid(meid *xapp.RMRMeid) *RMRMeid {
+	if meid != nil {
+		return &RMRMeid{meid}
+	}
+	return &RMRMeid{&xapp.RMRMeid{}}
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
 type RMRParams struct {
 	*xapp.RMRParams
 }
 
 func (params *RMRParams) String() string {
 	var b bytes.Buffer
-	sum := md5.Sum(params.Payload)
-	fmt.Fprintf(&b, "params(Src=%s Mtype=%d SubId=%d Xid=%s Meid=%s Paylens=%d/%d Payhash=%x)", params.Src, params.Mtype, params.SubId, params.Xid, params.Meid.RanName, params.PayloadLen, len(params.Payload), sum)
+	fmt.Fprintf(&b, "params(Src=%s Mtype=%d SubId=%d Xid=%s Meid=%s Paylens=%d/%d Paymd5=%x)", params.Src, params.Mtype, params.SubId, params.Xid, (&RMRMeid{params.Meid}).String(), params.PayloadLen, len(params.Payload), md5.Sum(params.Payload))
 	return b.String()
 }
 
