@@ -35,8 +35,26 @@ type RMRParams struct {
 
 func (params *RMRParams) String() string {
 	var b bytes.Buffer
+	meid := "N/A"
 	sum := md5.Sum(params.Payload)
-	fmt.Fprintf(&b, "params(Src=%s Mtype=%d SubId=%d Xid=%s Meid=%s Paylens=%d/%d Payhash=%x)", params.Src, params.Mtype, params.SubId, params.Xid, params.Meid.RanName, params.PayloadLen, len(params.Payload), sum)
+	if params.Meid != nil {
+		meid = "meid("
+		pad := ""
+		if len(params.Meid.PlmnID) > 0 {
+			meid += pad + "PlmnID=" + params.Meid.PlmnID
+			pad = " "
+		}
+		if len(params.Meid.EnbID) > 0 {
+			meid += pad + "EnbID=" + params.Meid.EnbID
+			pad = " "
+		}
+		if len(params.Meid.RanName) > 0 {
+			meid += pad + "RanName=" + params.Meid.RanName
+			pad = " "
+		}
+		meid += ")"
+	}
+	fmt.Fprintf(&b, "params(Src=%s Mtype=%d SubId=%d Xid=%s Meid=%s Paylens=%d/%d Paymd5=%x)", params.Src, params.Mtype, params.SubId, params.Xid, meid, params.PayloadLen, len(params.Payload), sum)
 	return b.String()
 }
 
