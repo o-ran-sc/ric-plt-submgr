@@ -21,6 +21,7 @@ package control
 
 import (
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
+	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/xapptweaks"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"strconv"
 	"sync"
@@ -52,7 +53,7 @@ type Transaction struct {
 }
 
 func (t *Transaction) String() string {
-	return "trans(" + strconv.FormatUint(uint64(t.Seq), 10) + "/" + t.Meid.RanName + ")"
+	return "trans(" + strconv.FormatUint(uint64(t.Seq), 10) + "/" + (&xapptweaks.RMRMeid{t.Meid}).String() + ")"
 }
 
 func (t *Transaction) SendEvent(event interface{}, waittime time.Duration) (bool, bool) {

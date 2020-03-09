@@ -158,7 +158,7 @@ func (c *Control) rmrSendToE2T(desc string, subs *Subscription, trans *Transacti
 	params.Payload = trans.Payload.Buf
 	params.Mbuf = nil
 	xapp.Logger.Info("MSG to E2T: %s %s %s", desc, trans.String(), params.String())
-	return c.RmrSend(params)
+	return c.RmrSend(params, 5)
 }
 
 func (c *Control) rmrSendToXapp(desc string, subs *Subscription, trans *TransactionXapp) (err error) {
@@ -173,7 +173,7 @@ func (c *Control) rmrSendToXapp(desc string, subs *Subscription, trans *Transact
 	params.Payload = trans.Payload.Buf
 	params.Mbuf = nil
 	xapp.Logger.Info("MSG to XAPP: %s %s %s", desc, trans.String(), params.String())
-	return c.RmrSend(params)
+	return c.RmrSend(params, 5)
 }
 
 func (c *Control) Consume(params *xapp.RMRParams) (err error) {

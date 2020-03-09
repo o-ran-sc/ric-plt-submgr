@@ -29,6 +29,14 @@ RUN apt update && apt install -y iputils-ping net-tools curl tcpdump gdb valgrin
 
 WORKDIR /tmp
 
+#RUN git clone https://github.com/nokia/asn1c.git
+#RUN cd asn1c && test -f configure || autoreconf -iv
+#RUN cd asn1c &&  ./configure
+#RUN cd asn1c && make
+##RUN cd asn1c && make check
+#RUN cd asn1c && make install
+
+
 ARG RMRVERSION=3.2.4
 # Install RMr shared library
 RUN wget --content-disposition https://packagecloud.io/o-ran-sc/staging/packages/debian/stretch/rmr_${RMRVERSION}_amd64.deb/download.deb && dpkg -i rmr_${RMRVERSION}_amd64.deb && rm -rf rmr_${RMRVERSION}_amd64.deb
