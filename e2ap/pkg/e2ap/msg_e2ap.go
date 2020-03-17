@@ -246,11 +246,33 @@ type InterfaceId struct {
 //
 //-----------------------------------------------------------------------------
 type EventTriggerDefinition struct {
+	NBX2EventTriggerDefinitionPresent bool
+	X2EventTriggerDefinition
+	NBNRTEventTriggerDefinitionPresent bool
+	NBNRTEventTriggerDefinition
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type X2EventTriggerDefinition struct {
 	InterfaceId
 	InterfaceDirection uint32
 	ProcedureCode      uint32
 	TypeOfMessage      uint64
 }
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type NBNRTEventTriggerDefinition struct {
+	TriggerNature uint8
+}
+
+const ( // enum NRTTriggerNature
+	NRTTriggerNature_now = iota
+	NRTTriggerNature_onchange
+)
 
 /*
 //-----------------------------------------------------------------------------
@@ -262,10 +284,19 @@ type CallProcessId struct {
 */
 
 type ActionDefinitionChoice struct {
-	ActionDefinitionFormat1Present bool
-	ActionDefinitionFormat1        E2SMgNBX2actionDefinition
-	ActionDefinitionFormat2Present bool
-	ActionDefinitionFormat2        ActionDefinitionFormat2
+	ActionDefinitionX2Format1Present  bool
+	ActionDefinitionX2Format1         E2SMgNBX2actionDefinition
+	ActionDefinitionX2Format2Present  bool
+	ActionDefinitionX2Format2         ActionDefinitionFormat2
+	ActionDefinitionNRTFormat1Present bool
+	ActionDefinitionNRTFormat1        E2SMgNBNRTActionDefinitionFormat1
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type E2SMgNBNRTActionDefinitionFormat1 struct {
+	RanParameterList []RANParameterItem // 1..255
 }
 
 //-----------------------------------------------------------------------------
