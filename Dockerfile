@@ -65,7 +65,14 @@ RUN cd 3rdparty/E2AP-v01.00.00 && \
     cp *.h /usr/local/include/ && \
     ldconfig
 
-RUN cd 3rdparty/E2SM-gNB-X2-V3.0.8 && \
+RUN cd 3rdparty/E2SM-gNB-NRT_V4.0.1 && \
+    gcc -c ${CFLAGS} -I. -g -fPIC *.c  && \
+    gcc *.o -g -shared -o libgnbnrt.so && \
+    cp libgnbnrt.so /usr/local/lib/ && \
+    cp *.h /usr/local/include/ && \
+    ldconfig
+
+RUN cd 3rdparty/E2SM-gNB-X2-V4.0.1 && \
     gcc -c ${CFLAGS} -I. -g -fPIC *.c  && \
     gcc *.o -g -shared -o libgnbx2.so && \
     cp libgnbx2.so /usr/local/lib/ && \

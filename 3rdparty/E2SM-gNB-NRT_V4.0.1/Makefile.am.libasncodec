@@ -1,0 +1,161 @@
+ASN_MODULE_SRCS=	\
+	E2_ECGI.c	\
+	E2_EUTRANCellIdentifier.c	\
+	E2_NRCellIdentifier.c	\
+	E2_NRCGI.c	\
+	E2_PLMN-Identity.c	\
+	E2_E2SM-gNB-NRT-EventTriggerDefinition.c	\
+	E2_E2SM-gNB-NRT-EventTriggerDefinition-Format1.c	\
+	E2_E2SM-gNB-NRT-ActionDefinition.c	\
+	E2_E2SM-gNB-NRT-ActionDefinition-Format1.c	\
+	E2_E2SM-gNB-NRT-IndicationHeader.c	\
+	E2_E2SM-gNB-NRT-IndicationHeader-Format1.c	\
+	E2_E2SM-gNB-NRT-IndicationMessage.c	\
+	E2_NRT-Record-row-item.c	\
+	E2_NRT-Record-List-item.c	\
+	E2_E2SM-gNB-NRT-IndicationMessage-Format1.c	\
+	E2_E2SM-gNB-NRT-ControlHeader.c	\
+	E2_E2SM-gNB-NRT-ControlHeader-Format1.c	\
+	E2_E2SM-gNB-NRT-ControlMessage.c	\
+	E2_E2SM-gNB-NRT-ControlMessage-Format1.c	\
+	E2_E2SM-gNB-NRT-RANfunction-Definition.c	\
+	E2_NRT-Cell-ID.c	\
+	E2_NRT-ControlCommand.c	\
+	E2_NRT-TableRecord.c	\
+	E2_NRT-TimeStamp.c	\
+	E2_NRT-TriggerNature.c	\
+	E2_RANfunction-Name.c	\
+	E2_RANparameter-Item.c	\
+	E2_RANparameterDef-Item.c	\
+	E2_RANparameter-ID.c	\
+	E2_RANparameter-Name.c	\
+	E2_RANparameter-Test.c	\
+	E2_RANparameter-Type.c	\
+	E2_RANparameter-Value.c	\
+	E2_RIC-ControlStyle-List.c	\
+	E2_RIC-EventTriggerStyle-List.c	\
+	E2_RIC-InsertStyle-List.c	\
+	E2_RIC-PolicyStyle-List.c	\
+	E2_RIC-ReportStyle-List.c	\
+	E2_RIC-Format-Type.c	\
+	E2_RIC-Style-Type.c	\
+	E2_RIC-Style-Name.c
+
+ASN_MODULE_HDRS=	\
+	E2_ECGI.h	\
+	E2_EUTRANCellIdentifier.h	\
+	E2_NRCellIdentifier.h	\
+	E2_NRCGI.h	\
+	E2_PLMN-Identity.h	\
+	E2_E2SM-gNB-NRT-EventTriggerDefinition.h	\
+	E2_E2SM-gNB-NRT-EventTriggerDefinition-Format1.h	\
+	E2_E2SM-gNB-NRT-ActionDefinition.h	\
+	E2_E2SM-gNB-NRT-ActionDefinition-Format1.h	\
+	E2_E2SM-gNB-NRT-IndicationHeader.h	\
+	E2_E2SM-gNB-NRT-IndicationHeader-Format1.h	\
+	E2_E2SM-gNB-NRT-IndicationMessage.h	\
+	E2_NRT-Record-row-item.h	\
+	E2_NRT-Record-List-item.h	\
+	E2_E2SM-gNB-NRT-IndicationMessage-Format1.h	\
+	E2_E2SM-gNB-NRT-ControlHeader.h	\
+	E2_E2SM-gNB-NRT-ControlHeader-Format1.h	\
+	E2_E2SM-gNB-NRT-ControlMessage.h	\
+	E2_E2SM-gNB-NRT-ControlMessage-Format1.h	\
+	E2_E2SM-gNB-NRT-RANfunction-Definition.h	\
+	E2_NRT-Cell-ID.h	\
+	E2_NRT-ControlCommand.h	\
+	E2_NRT-TableRecord.h	\
+	E2_NRT-TimeStamp.h	\
+	E2_NRT-TriggerNature.h	\
+	E2_RANfunction-Name.h	\
+	E2_RANparameter-Item.h	\
+	E2_RANparameterDef-Item.h	\
+	E2_RANparameter-ID.h	\
+	E2_RANparameter-Name.h	\
+	E2_RANparameter-Test.h	\
+	E2_RANparameter-Type.h	\
+	E2_RANparameter-Value.h	\
+	E2_RIC-ControlStyle-List.h	\
+	E2_RIC-EventTriggerStyle-List.h	\
+	E2_RIC-InsertStyle-List.h	\
+	E2_RIC-PolicyStyle-List.h	\
+	E2_RIC-ReportStyle-List.h	\
+	E2_RIC-Format-Type.h	\
+	E2_RIC-Style-Type.h	\
+	E2_RIC-Style-Name.h
+
+ASN_MODULE_HDRS+=OPEN_TYPE.h
+ASN_MODULE_SRCS+=OPEN_TYPE.c
+ASN_MODULE_HDRS+=constr_CHOICE.h
+ASN_MODULE_HDRS+=BOOLEAN.h
+ASN_MODULE_SRCS+=BOOLEAN.c
+ASN_MODULE_HDRS+=INTEGER.h
+ASN_MODULE_SRCS+=INTEGER.c
+ASN_MODULE_HDRS+=NativeEnumerated.h
+ASN_MODULE_SRCS+=NativeEnumerated.c
+ASN_MODULE_HDRS+=NativeInteger.h
+ASN_MODULE_SRCS+=NativeInteger.c
+ASN_MODULE_HDRS+=PrintableString.h
+ASN_MODULE_SRCS+=PrintableString.c
+ASN_MODULE_HDRS+=OCTET_STRING.h
+ASN_MODULE_HDRS+=asn_SEQUENCE_OF.h
+ASN_MODULE_SRCS+=asn_SEQUENCE_OF.c
+ASN_MODULE_HDRS+=asn_SET_OF.h
+ASN_MODULE_SRCS+=asn_SET_OF.c
+ASN_MODULE_SRCS+=constr_CHOICE.c
+ASN_MODULE_HDRS+=constr_SEQUENCE.h
+ASN_MODULE_SRCS+=constr_SEQUENCE.c
+ASN_MODULE_HDRS+=constr_SEQUENCE_OF.h
+ASN_MODULE_SRCS+=constr_SEQUENCE_OF.c
+ASN_MODULE_HDRS+=constr_SET_OF.h
+ASN_MODULE_SRCS+=constr_SET_OF.c
+ASN_MODULE_HDRS+=asn_application.h
+ASN_MODULE_SRCS+=asn_application.c
+ASN_MODULE_HDRS+=asn_ioc.h
+ASN_MODULE_HDRS+=asn_system.h
+ASN_MODULE_HDRS+=asn_codecs.h
+ASN_MODULE_HDRS+=asn_internal.h
+ASN_MODULE_SRCS+=asn_internal.c
+ASN_MODULE_HDRS+=asn_random_fill.h
+ASN_MODULE_SRCS+=asn_random_fill.c
+ASN_MODULE_HDRS+=asn_bit_data.h
+ASN_MODULE_SRCS+=asn_bit_data.c
+ASN_MODULE_SRCS+=OCTET_STRING.c
+ASN_MODULE_HDRS+=BIT_STRING.h
+ASN_MODULE_SRCS+=BIT_STRING.c
+ASN_MODULE_SRCS+=asn_codecs_prim.c
+ASN_MODULE_HDRS+=asn_codecs_prim.h
+ASN_MODULE_HDRS+=ber_tlv_length.h
+ASN_MODULE_SRCS+=ber_tlv_length.c
+ASN_MODULE_HDRS+=ber_tlv_tag.h
+ASN_MODULE_SRCS+=ber_tlv_tag.c
+ASN_MODULE_HDRS+=ber_decoder.h
+ASN_MODULE_SRCS+=ber_decoder.c
+ASN_MODULE_HDRS+=der_encoder.h
+ASN_MODULE_SRCS+=der_encoder.c
+ASN_MODULE_HDRS+=constr_TYPE.h
+ASN_MODULE_SRCS+=constr_TYPE.c
+ASN_MODULE_HDRS+=constraints.h
+ASN_MODULE_SRCS+=constraints.c
+ASN_MODULE_HDRS+=xer_support.h
+ASN_MODULE_SRCS+=xer_support.c
+ASN_MODULE_HDRS+=xer_decoder.h
+ASN_MODULE_SRCS+=xer_decoder.c
+ASN_MODULE_HDRS+=xer_encoder.h
+ASN_MODULE_SRCS+=xer_encoder.c
+ASN_MODULE_HDRS+=per_support.h
+ASN_MODULE_SRCS+=per_support.c
+ASN_MODULE_HDRS+=per_decoder.h
+ASN_MODULE_SRCS+=per_decoder.c
+ASN_MODULE_HDRS+=per_encoder.h
+ASN_MODULE_SRCS+=per_encoder.c
+ASN_MODULE_HDRS+=per_opentype.h
+ASN_MODULE_SRCS+=per_opentype.c
+
+ASN_MODULE_CFLAGS=-DASN_DISABLE_OER_SUPPORT 
+
+lib_LTLIBRARIES+=libasncodec.la
+libasncodec_la_SOURCES=$(ASN_MODULE_SRCS) $(ASN_MODULE_HDRS)
+libasncodec_la_CPPFLAGS=-I$(top_srcdir)/
+libasncodec_la_CFLAGS=$(ASN_MODULE_CFLAGS)
+libasncodec_la_LDFLAGS=-lm

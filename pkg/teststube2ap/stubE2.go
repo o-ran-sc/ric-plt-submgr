@@ -103,49 +103,79 @@ func (p *E2StubSubsReqParams) Init() {
 	p.Req.RequestId.InstanceId = 0
 	p.Req.FunctionId = 1
 
-	p.Req.EventTriggerDefinition.InterfaceId.GlobalEnbId.Present = true
-	p.Req.EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.StringPut("310150")
-	p.Req.EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Id = 123
-	p.Req.EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Bits = e2ap.E2AP_ENBIDHomeBits28
-
 	// gnb -> enb outgoing
 	// enb -> gnb incoming
 	// X2 36423-f40.doc
-	p.Req.EventTriggerDefinition.InterfaceDirection = e2ap.E2AP_InterfaceDirectionIncoming
-	p.Req.EventTriggerDefinition.ProcedureCode = 5 //28 35
-	p.Req.EventTriggerDefinition.TypeOfMessage = e2ap.E2AP_InitiatingMessage
+	p.Req.EventTriggerDefinition.NBX2EventTriggerDefinitionPresent = true
+	p.Req.EventTriggerDefinition.NBNRTEventTriggerDefinitionPresent = false
+	if p.Req.EventTriggerDefinition.NBX2EventTriggerDefinitionPresent == true {
+		p.Req.EventTriggerDefinition.InterfaceId.GlobalEnbId.Present = true
+		p.Req.EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.StringPut("310150")
+		p.Req.EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Id = 123
+		p.Req.EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Bits = e2ap.E2AP_ENBIDHomeBits28
+
+		p.Req.EventTriggerDefinition.InterfaceDirection = e2ap.E2AP_InterfaceDirectionIncoming
+		p.Req.EventTriggerDefinition.ProcedureCode = 5 //28 35
+		p.Req.EventTriggerDefinition.TypeOfMessage = e2ap.E2AP_InitiatingMessage
+	} else if p.Req.EventTriggerDefinition.NBNRTEventTriggerDefinitionPresent == true {
+		p.Req.EventTriggerDefinition.NBNRTEventTriggerDefinition.TriggerNature = e2ap.NRTTriggerNature_now
+	}
 
 	p.Req.ActionSetups = make([]e2ap.ActionToBeSetupItem, 1)
 
 	p.Req.ActionSetups[0].ActionId = 0
 	p.Req.ActionSetups[0].ActionType = e2ap.E2AP_ActionTypeReport
 	p.Req.ActionSetups[0].RicActionDefinitionPresent = true
-	p.Req.ActionSetups[0].ActionDefinitionChoice.ActionDefinitionFormat1Present = false
-	p.Req.ActionSetups[0].ActionDefinitionChoice.ActionDefinitionFormat2Present = true
+	p.Req.ActionSetups[0].ActionDefinitionChoice.ActionDefinitionX2Format1Present = false
+	p.Req.ActionSetups[0].ActionDefinitionChoice.ActionDefinitionX2Format2Present = true
+	p.Req.ActionSetups[0].ActionDefinitionChoice.ActionDefinitionNRTFormat1Present = false
 
-	// 1..15
-	for index2 := 0; index2 < 1; index2++ {
-		ranUEgroupItem := e2ap.RANueGroupItem{}
+	if p.Req.ActionSetups[0].ActionDefinitionChoice.ActionDefinitionX2Format1Present {
+		p.Req.ActionSetups[0].ActionDefinitionChoice.ActionDefinitionX2Format1.StyleID = 99
 		// 1..255
-		for index2 := 0; index2 < 1; index2++ {
-			ranUEGroupDefItem := e2ap.RANueGroupDefItem{}
-			ranUEGroupDefItem.RanParameterID = 22
-			ranUEGroupDefItem.RanParameterTest = e2ap.RANParameterTest_equal
-			ranUEGroupDefItem.RanParameterValue.ValueIntPresent = true
-			ranUEGroupDefItem.RanParameterValue.ValueInt = 100
-			ranUEgroupItem.RanUEgroupDefinition.RanUEGroupDefItems = append(ranUEgroupItem.RanUEgroupDefinition.RanUEGroupDefItems, ranUEGroupDefItem)
+		for index := 0; index < 1; index++ {
+			actionParameterItem := e2ap.ActionParameterItem{}
+			actionParameterItem.ParameterID = 11
+			actionParameterItem.ActionParameterValue.ValueIntPresent = true
+			actionParameterItem.ActionParameterValue.ValueInt = 100
+			p.Req.ActionSetups[0].ActionDefinitionChoice.ActionDefinitionX2Format1.ActionParameterItems =
+				append(p.Req.ActionSetups[0].ActionDefinitionChoice.ActionDefinitionX2Format1.ActionParameterItems, actionParameterItem)
 		}
+	} else if p.Req.ActionSetups[0].ActionDefinitionChoice.ActionDefinitionX2Format2Present {
+		// 1..15
+		for index := 0; index < 1; index++ {
+			ranUEgroupItem := e2ap.RANueGroupItem{}
+			// 1..255
+			for index2 := 0; index2 < 1; index2++ {
+				ranUEGroupDefItem := e2ap.RANueGroupDefItem{}
+				ranUEGroupDefItem.RanParameterID = 22
+				ranUEGroupDefItem.RanParameterTest = e2ap.RANParameterTest_equal
+				ranUEGroupDefItem.RanParameterValue.ValueIntPresent = true
+				ranUEGroupDefItem.RanParameterValue.ValueInt = 100
+				ranUEgroupItem.RanUEgroupDefinition.RanUEGroupDefItems = append(ranUEgroupItem.RanUEgroupDefinition.RanUEGroupDefItems, ranUEGroupDefItem)
+			}
+			// 1..255
+			for index3 := 0; index3 < 1; index3++ {
+				ranParameterItem := e2ap.RANParameterItem{}
+				ranParameterItem.RanParameterID = 33
+				ranParameterItem.RanParameterValue.ValueIntPresent = true
+				ranParameterItem.RanParameterValue.ValueInt = 100
+				ranUEgroupItem.RanPolicy.RanParameterItems = append(ranUEgroupItem.RanPolicy.RanParameterItems, ranParameterItem)
+			}
+			ranUEgroupItem.RanUEgroupID = 2
+			p.Req.ActionSetups[0].ActionDefinitionChoice.ActionDefinitionX2Format2.RanUEgroupItems =
+				append(p.Req.ActionSetups[0].ActionDefinitionChoice.ActionDefinitionX2Format2.RanUEgroupItems, ranUEgroupItem)
+		}
+	} else if p.Req.ActionSetups[0].ActionDefinitionChoice.ActionDefinitionNRTFormat1Present {
 		// 1..255
-		for index3 := 0; index3 < 1; index3++ {
+		for index := 0; index < 1; index++ {
 			ranParameterItem := e2ap.RANParameterItem{}
 			ranParameterItem.RanParameterID = 33
 			ranParameterItem.RanParameterValue.ValueIntPresent = true
 			ranParameterItem.RanParameterValue.ValueInt = 100
-			ranUEgroupItem.RanPolicy.RanParameterItems = append(ranUEgroupItem.RanPolicy.RanParameterItems, ranParameterItem)
+			p.Req.ActionSetups[0].ActionDefinitionChoice.ActionDefinitionNRTFormat1.RanParameterList =
+				append(p.Req.ActionSetups[0].ActionDefinitionChoice.ActionDefinitionNRTFormat1.RanParameterList, ranParameterItem)
 		}
-		ranUEgroupItem.RanUEgroupID = 2
-		p.Req.ActionSetups[0].ActionDefinitionChoice.ActionDefinitionFormat2.RanUEgroupItems =
-			append(p.Req.ActionSetups[0].ActionDefinitionChoice.ActionDefinitionFormat2.RanUEgroupItems, ranUEgroupItem)
 	}
 	p.Req.ActionSetups[0].SubsequentAction.Present = true
 	p.Req.ActionSetups[0].SubsequentAction.Type = e2ap.E2AP_SubSeqActionTypeContinue
