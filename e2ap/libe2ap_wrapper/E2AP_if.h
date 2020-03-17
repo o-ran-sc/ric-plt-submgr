@@ -162,7 +162,7 @@ typedef struct {
 
 typedef struct {
     uint8_t ranUeGroupCount;
-    RANueGroupItem_t ranUeGroupItem[15];  // OPTIONAL. 1..15 (maxofUEgroup)
+    RANueGroupItem_t ranUeGroupItem[15]; // OPTIONAL. 1..15 (maxofUEgroup)
 } E2SMgNBX2ActionDefinitionFormat2_t;
 
 enum RICSubsequentActionType_t {
@@ -171,14 +171,20 @@ enum RICSubsequentActionType_t {
 };
 
 typedef struct {
-    OctetString_t octetString;   // This element is E2AP spec format, the other elements below are for E2SM-gNB-X2 format
-    // CHOICE. Only one value can be present
-    bool actionDefinitionFormat1Present;
-	E2SMgNBX2actionDefinition_t* actionDefinitionFormat1;
-	bool actionDefinitionFormat2Present;
-	E2SMgNBX2ActionDefinitionFormat2_t* actionDefinitionFormat2;
-} RICActionDefinitionChoice_t;
+    uint8_t ranParameterCount;
+	RANParameterItem_t ranParameterList[255];	// OPTIONAL. 1..255 (maxofRANParameters)
+} E2SMgNBNRTActionDefinitionFormat1_t;
 
+typedef struct {
+    OctetString_t octetString;   // This element is E2AP spec format
+    // CHOICE. Only one value can be present
+    bool actionDefinitionX2Format1Present;
+	E2SMgNBX2actionDefinition_t* actionDefinitionX2Format1; // This element is E2SM-gNB-X2 format
+	bool actionDefinitionX2Format2Present;
+	E2SMgNBX2ActionDefinitionFormat2_t* actionDefinitionX2Format2; // This element is E2SM-gNB-X2 format
+	bool actionDefinitionNRTFormat1Present;
+    E2SMgNBNRTActionDefinitionFormat1_t* actionDefinitionNRTFormat1; // This element is E2SM-gNB-NRT format
+} RICActionDefinitionChoice_t;
 
 enum RICTimeToWait_t {
 	RICTimeToWait_zero,
@@ -312,12 +318,26 @@ typedef struct {
     InterfaceProtocolIEList_t interfaceProtocolIEList;  // OPTIONAL. Not used in RIC currently
 } E2SMgNBX2eventTriggerDefinition_t;
 
+enum NRTTriggerNature_t {
+    NRTTriggerNature_t_now,
+    NRTTriggerNature_t_onchange
+};
+
+typedef struct {
+	uint8_t triggerNature;  // This is type of enum NRTTriggerNature_t
+} E2SMgNBNRTEventTriggerDefinitionFormat1_t;
+
+typedef struct {
+    E2SMgNBNRTEventTriggerDefinitionFormat1_t eventDefinitionFormat1;
+} E2SMgNBNRTEventTriggerDefinition_t;
+
 typedef struct {
     OctetString_t octetString;   // This element is E2AP spec format
-
-    // CHOICE. Only one value can be present. Note only one choice specified so far
+    // CHOICE. Only one value can be present.
     bool E2SMgNBX2EventTriggerDefinitionPresent;
-    E2SMgNBX2eventTriggerDefinition_t e2SMgNBX2eventTriggerDefinition;  // This element is E2SM-gNB-X2 eventTriggerDefinition-Format1
+    E2SMgNBX2eventTriggerDefinition_t e2SMgNBX2eventTriggerDefinition;  // This element is E2SM-gNB-X2 spec format
+    bool E2SMgNBNRTEventTriggerDefinitionPresent;
+    E2SMgNBNRTEventTriggerDefinition_t e2SMgNBNRTEventTriggerDefinition; // This element is E2SM-gNB-NRT spec format
 } RICEventTriggerDefinition_t;
 
 typedef struct {
@@ -404,46 +424,56 @@ enum e2err {
     e2err_RICSubscriptionRequestAllocRANfunctionIDFail,
     e2err_RICSubscriptionRequestAllocRICeventTriggerDefinitionBufFail,
     e2err_RICSubscriptionRequestAllocRICaction_ToBeSetup_ItemIEsFail,
-
     e2err_RICSubscriptionRequestAllocactionParameterValueValueBitSFail,
     e2err_RICSubscriptionRequestAllocactionParameterValueValueOctSFail,
     e2err_RICSubscriptionRequestAllocactionParameterValueValuePrtsSFail,
-
     e2err_RICSubscriptionRequestAllocactionRanParameterValueValueBitSFail,
     e2err_RICSubscriptionRequestAllocactionRanParameterValueValueOctSFail,
     e2err_RICSubscriptionRequestAllocactionRanParameterValueValuePrtsSFail,
-
     e2err_RICSubscriptionRequestAllocactionRanParameterValue2ValueBitSFail,
     e2err_RICSubscriptionRequestAllocactionRanParameterValue2ValueOctSFail,
     e2err_RICSubscriptionRequestAllocactionRanParameterValue2ValuePrtsSFail,
-
-    e2err_RICSubscriptionRequestAllocactionDefinitionFormat1Fail,
-    e2err_RICSubscriptionRequestAllocactionDefinitionFormat2Fail,
-
+    e2err_RICSubscriptionRequestAllocactionDefinitionX2Format1Fail,
+    e2err_RICSubscriptionRequestAllocactionDefinitionX2Format2Fail,
+    e2err_RICSubscriptionRequestAllocactionDefinitionNRTFormat1Fail,
     e2err_RICSubscriptionRequestAllocRICactionDefinitionBufFail,
     e2err_RICSubscriptionRequestAllocRICactionDefinitionFail,
+    e2err_RICSubscriptionRequestRICActionDefinitionEmpty,
     e2err_RICSubscriptionRequestRICActionDefinitionEmptyE2_E2SM_gNB_X2_actionDefinition,
+    e2err_RICSubscriptionRequestRICActionDefinitionEmptyE2_E2SM_gNB_NRT_actionDefinition,
     e2err_RICSubscriptionRequestActionParameterItemFail,
     e2err_RICActionDefinitionChoicePackFail_1,
     e2err_RICActionDefinitionChoicePackFail_2,
-
     e2err_RICSubscriptionRequestAllocE2_RANueGroupDef_ItemFail,
     e2err_RICSubscriptionRequestAllocRANParameter_ItemFail,
     e2err_RICSubscriptionRequestRanranUeGroupDefItemParameterValueEmptyFail,
     e2err_RICSubscriptionRequestRanParameterItemRanParameterValueEmptyFail,
-
     e2err_RICSubscriptionRequestAllocActionDefinitionFail,
-
+    e2err_RICSubscriptionRequestAllocNRTRANParameter_ItemFail,
+    e2err_RICSubscriptionRequestAllocactionNRTRanParameterValue2ValueBitSFail,
+    e2err_RICSubscriptionRequestAllocactionNRTRanParameterValue2ValueOctSFail,
+    e2err_RICSubscriptionRequestAllocactionNRTRanParameterValue2ValuePrtsSFail,
+    e2err_RICSubscriptionRequestRanParameterItemNRTRanParameterValueEmptyFail,
     e2err_RICSubscriptionRequestAsn_set_addE2_ActionParameter_ItemFail,
     e2err_RICSubscriptionRequestAsn_set_addRANueGroupDef_ItemFail,
     e2err_RICSubscriptionRequestAsn_set_addE2_RANParameter_ItemFail,
-
-
+    e2err_RICSubscriptionRequestAsn_set_addE2_NRTRANParameter_ItemFail,
     e2err_RICActionDefinitionChoiceWMOREFail,
     e2err_RICActionDefinitionChoiceDecodeFAIL,
     e2err_RICActionDefinitionChoiceDecodeDefaultFail,
+    e2err_RICNRTActionDefinitionChoiceWMOREFail,
+    e2err_RICNRTActionDefinitionChoiceDecodeFAIL,
+    e2err_RICNRTActionDefinitionChoiceDecodeDefaultFail,
+    e2err_RICActionDefinitionChoiceEmptyFAIL,
+    e2err_RICNRTEventTriggerDefinitionDecodeWMOREFail,
+    e2err_RICNRTEventTriggerDefinitionDecodeFAIL,
+    e2err_RICNRTEventTriggerDefinitionDecodeDefaultFail,
+    e2err_RICEventTriggerDefinitionEmptyDecodeDefaultFail,
     e2err_RICSubscriptionRequestAllocE2_E2SM_gNB_X2_ActionDefinitionChoiceFail,
-
+    e2err_RICSubscriptionRequestAllocE2_E2SM_gNB_NRT_ActionDefinitionFormat1Fail,
+    e2err_RICSubscriptionRequestNRTRanParameterItemRanParameterValueEmptyFail,
+    e2err_RICSubscriptionRequestNRTAllocActionDefinitionFail,
+    e2err_RICSubscriptionRequestAllocE2_E2SM_gNB_NRT_ActionDefinitionFail,
     e2err_RICSubscriptionRequestAllocRICsubsequentActionFail,
     e2err_RICSubscriptionRequestAllocRICsubscriptionRequest_IEsFail,
     e2err_RICSubscriptionRequestEncodeFail,
@@ -461,7 +491,11 @@ enum e2err {
     e2err_RICEventTriggerDefinitionIEValueFail_4,
     e2err_RICEventTriggerDefinitionPackFail_1,
     e2err_RICEventTriggerDefinitionPackFail_2,
+    e2err_RICENRTventTriggerDefinitionPackFail_1,
+    e2err_RICNRTEventTriggerDefinitionPackFail_2,
     e2err_RICEventTriggerDefinitionAllocE2SM_gNB_X2_eventTriggerDefinitionFail,
+    e2err_RICEventTriggerDefinitionAllocE2SM_gNB_NRT_eventTriggerDefinitionFail,
+    e2err_RICEventTriggerDefinitionAllocEventTriggerDefinitionEmptyFail,
     e2err_RICSubscriptionResponseAllocRICrequestIDFail,
     e2err_RICSubscriptionResponseAllocRANfunctionIDFail,
     e2err_RICSubscriptionResponseAllocRICaction_Admitted_ItemIEsFail,
@@ -523,45 +557,56 @@ static const char* const E2ErrorStrings[] = {
     "e2err_RICSubscriptionRequestAllocRANfunctionIDFail",
     "e2err_RICSubscriptionRequestAllocRICeventTriggerDefinitionBufFail",
     "e2err_RICSubscriptionRequestAllocRICaction_ToBeSetup_ItemIEsFail",
-
     "e2err_RICSubscriptionRequestAllocactionParameterValueValueBitSFail",
     "e2err_RICSubscriptionRequestAllocactionParameterValueValueOctSFail",
     "e2err_RICSubscriptionRequestAllocactionParameterValueValuePrtsSFail",
-
     "e2err_RICSubscriptionRequestAllocactionRanParameterValueValueBitSFail",
     "e2err_RICSubscriptionRequestAllocactionRanParameterValueValueOctSFail",
     "e2err_RICSubscriptionRequestAllocactionRanParameterValueValuePrtsSFail",
-
     "e2err_RICSubscriptionRequestAllocactionRanParameterValue2ValueBitSFail",
     "e2err_RICSubscriptionRequestAllocactionRanParameterValue2ValueOctSFail",
     "e2err_RICSubscriptionRequestAllocactionRanParameterValue2ValuePrtsSFail",
-
-    "e2err_RICSubscriptionRequestAllocactionDefinitionFormat1Fail",
-    "e2err_RICSubscriptionRequestAllocactionDefinitionFormat2Fail",
-
+    "e2err_RICSubscriptionRequestAllocactionDefinitionX2Format1Fail",
+    "e2err_RICSubscriptionRequestAllocactionDefinitionX2Format2Fail",
+    "e2err_RICSubscriptionRequestAllocactionDefinitionNRTFormat1Fail",
     "e2err_RICSubscriptionRequestAllocRICactionDefinitionBufFail",
     "e2err_RICSubscriptionRequestAllocRICactionDefinitionFail",
+    "e2err_RICSubscriptionRequestRICActionDefinitionEmpty",
     "e2err_RICSubscriptionRequestRICActionDefinitionEmptyE2_E2SM_gNB_X2_actionDefinition",
+    "e2err_RICSubscriptionRequestRICActionDefinitionEmptyE2_E2SM_gNB_NRT_actionDefinition",
     "e2err_RICSubscriptionRequestActionParameterItemFail",
     "e2err_RICActionDefinitionChoicePackFail_1",
     "e2err_RICActionDefinitionChoicePackFail_2",
-
     "e2err_RICSubscriptionRequestAllocE2_RANueGroupDef_ItemFail",
     "e2err_RICSubscriptionRequestAllocRANParameter_ItemFail",
     "e2err_RICSubscriptionRequestRanranUeGroupDefItemParameterValueEmptyFail",
     "e2err_RICSubscriptionRequestRanParameterItemRanParameterValueEmptyFail",
-
     "e2err_RICSubscriptionRequestAllocActionDefinitionFail",
-
+    "e2err_RICSubscriptionRequestAllocNRTRANParameter_ItemFail",
+    "e2err_RICSubscriptionRequestAllocactionNRTRanParameterValue2ValueBitSFail",
+    "e2err_RICSubscriptionRequestAllocactionNRTRanParameterValue2ValueOctSFail",
+    "e2err_RICSubscriptionRequestAllocactionNRTRanParameterValue2ValuePrtsSFail",
+    "e2err_RICSubscriptionRequestRanParameterItemNRTRanParameterValueEmptyFail",
     "e2err_RICSubscriptionRequestAsn_set_addE2_ActionParameter_ItemFail",
     "e2err_RICSubscriptionRequestAsn_set_addRANueGroupDef_ItemFail",
     "e2err_RICSubscriptionRequestAsn_set_addE2_RANParameter_ItemFail",
-
+    "e2err_RICSubscriptionRequestAsn_set_addE2_NRTRANParameter_ItemFail",
     "e2err_RICActionDefinitionChoiceWMOREFail",
     "e2err_RICActionDefinitionChoiceDecodeFAIL",
     "e2err_RICActionDefinitionChoiceDecodeDefaultFail",
+    "e2err_RICNRTActionDefinitionChoiceWMOREFail",
+    "e2err_RICNRTActionDefinitionChoiceDecodeFAIL",
+    "e2err_RICNRTActionDefinitionChoiceDecodeDefaultFail",
+    "e2err_RICActionDefinitionChoiceEmptyFAIL",
+    "e2err_RICNRTEventTriggerDefinitionDecodeWMOREFail",
+    "e2err_RICNRTEventTriggerDefinitionDecodeFAIL",
+    "e2err_RICNRTEventTriggerDefinitionDecodeDefaultFail",
+    "e2err_RICEventTriggerDefinitionEmptyDecodeDefaultFail",
     "e2err_RICSubscriptionRequestAllocE2_E2SM_gNB_X2_ActionDefinitionChoiceFail",
-
+    "e2err_RICSubscriptionRequestAllocE2_E2SM_gNB_NRT_ActionDefinitionFormat1Fail",
+    "e2err_RICSubscriptionRequestNRTRanParameterItemRanParameterValueEmptyFail",
+    "e2err_RICSubscriptionRequestNRTAllocActionDefinitionFail",
+    "e2err_RICSubscriptionRequestAllocE2_E2SM_gNB_NRT_ActionDefinitionFail",
     "e2err_RICSubscriptionRequestAllocRICsubsequentActionFail",
     "e2err_RICSubscriptionRequestAllocRICsubscriptionRequest_IEsFail",
     "e2err_RICSubscriptionRequestEncodeFail",
@@ -579,7 +624,11 @@ static const char* const E2ErrorStrings[] = {
     "e2err_RICEventTriggerDefinitionIEValueFail_4",
     "e2err_RICEventTriggerDefinitionPackFail_1",
     "e2err_RICEventTriggerDefinitionPackFail_2",
+    "e2err_RICENRTventTriggerDefinitionPackFail_1",
+    "e2err_RICNRTEventTriggerDefinitionPackFail_2",
     "e2err_RICEventTriggerDefinitionAllocE2SM_gNB_X2_eventTriggerDefinitionFail",
+    "e2err_RICEventTriggerDefinitionAllocE2SM_gNB_NRT_eventTriggerDefinitionFail",
+    "e2err_RICEventTriggerDefinitionAllocEventTriggerDefinitionEmptyFail",
     "e2err_RICSubscriptionResponseAllocRICrequestIDFail",
     "e2err_RICSubscriptionResponseAllocRANfunctionIDFail",
     "e2err_RICSubscriptionResponseAllocRICaction_Admitted_ItemIEsFail",
@@ -712,6 +761,10 @@ typedef void* e2ap_pdu_ptr_t;
 uint64_t packRICSubscriptionRequest(size_t*, byte*, char*,RICSubscriptionRequest_t*);
 uint64_t packRICEventTriggerDefinition(char*,RICEventTriggerDefinition_t*);
 uint64_t packRICActionDefinition(char*, RICActionDefinitionChoice_t*);
+uint64_t packRICEventTriggerDefinitionX2Format(char* pLogBuffer, RICEventTriggerDefinition_t*);
+uint64_t packRICEventTriggerDefinitionNRTFormat(char* pLogBuffer, RICEventTriggerDefinition_t*);
+uint64_t packActionDefinitionX2Format(char*, RICActionDefinitionChoice_t*);
+uint64_t packActionDefinitionNRTFormat(char*, RICActionDefinitionChoice_t*);
 uint64_t packRICSubscriptionResponse(size_t*, byte*, char*,RICSubscriptionResponse_t*);
 uint64_t packRICSubscriptionFailure(size_t*, byte*, char*,RICSubscriptionFailure_t*);
 uint64_t packRICSubscriptionDeleteRequest(size_t*, byte*, char*,RICSubscriptionDeleteRequest_t*);
@@ -721,7 +774,11 @@ uint64_t packRICSubscriptionDeleteFailure(size_t*, byte*, char*,RICSubscriptionD
 e2ap_pdu_ptr_t* unpackE2AP_pdu(const size_t, const byte*, char*, E2MessageInfo_t*);
 uint64_t getRICSubscriptionRequestData(mem_track_hdr_t *, e2ap_pdu_ptr_t*, RICSubscriptionRequest_t*);
 uint64_t getRICEventTriggerDefinitionData(RICEventTriggerDefinition_t*);
+uint64_t getRICEventTriggerDefinitionDataX2Format(RICEventTriggerDefinition_t*);
+uint64_t getRICEventTriggerDefinitionDataNRTFormat(RICEventTriggerDefinition_t*);
 uint64_t getRICActionDefinitionData(mem_track_hdr_t *, RICActionDefinitionChoice_t*);
+uint64_t getRICActionDefinitionDataX2Format(mem_track_hdr_t*, RICActionDefinitionChoice_t*);
+uint64_t getRICActionDefinitionDataNRTFormat(mem_track_hdr_t*, RICActionDefinitionChoice_t*);
 uint64_t getRICSubscriptionResponseData(e2ap_pdu_ptr_t*, RICSubscriptionResponse_t*);
 uint64_t getRICSubscriptionFailureData(e2ap_pdu_ptr_t*, RICSubscriptionFailure_t*);
 uint64_t getRICSubscriptionDeleteRequestData(e2ap_pdu_ptr_t*, RICSubscriptionDeleteRequest_t*);
@@ -732,11 +789,12 @@ void* allocDynMem(mem_track_hdr_t*, size_t);
 DynOctetString_t* addOctetString(mem_track_hdr_t *, DynOctetString_t*, uint64_t, void*);
 DynBitString_t* addBitString(mem_track_hdr_t *, DynBitString_t*, uint64_t, void*, uint8_t);
 
-uint64_t allocActionDefinitionFormat1(mem_track_hdr_t*, E2SMgNBX2actionDefinition_t**);
-uint64_t allocActionDefinitionFormat2(mem_track_hdr_t*, E2SMgNBX2ActionDefinitionFormat2_t**);
+uint64_t allocActionDefinitionX2Format1(mem_track_hdr_t*, E2SMgNBX2actionDefinition_t**);
+uint64_t allocActionDefinitionX2Format2(mem_track_hdr_t*, E2SMgNBX2ActionDefinitionFormat2_t**);
+uint64_t allocActionDefinitionNRTFormat1(mem_track_hdr_t*, E2SMgNBNRTActionDefinitionFormat1_t**);
+
 uint64_t allocateOctetStringBuffer(DynOctetString_t*, uint64_t);
 uint64_t allocateBitStringBuffer(mem_track_hdr_t *, DynBitString_t*, uint64_t);
-
 
 #if DEBUG
 bool TestRICSubscriptionRequest();

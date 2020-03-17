@@ -60,95 +60,109 @@ func (testCtxt *E2ApTests) E2ApTestMsgSubscriptionRequest(t *testing.T) {
 	areqenc.RequestId.Id = 1
 	areqenc.RequestId.InstanceId = 22
 	areqenc.FunctionId = 33
-	//Bits 20, 28(works), 18, 21 (asn1 problems)
-	areqenc.EventTriggerDefinition.InterfaceDirection = e2ap.E2AP_InterfaceDirectionIncoming
-	areqenc.EventTriggerDefinition.ProcedureCode = 35
-	areqenc.EventTriggerDefinition.TypeOfMessage = e2ap.E2AP_InitiatingMessage
+
+	areqenc.EventTriggerDefinition.NBX2EventTriggerDefinitionPresent = false //true
+	areqenc.EventTriggerDefinition.NBNRTEventTriggerDefinitionPresent = true // false
+	if areqenc.EventTriggerDefinition.NBX2EventTriggerDefinitionPresent {
+		//Bits 20, 28(works), 18, 21 (asn1 problems)
+		areqenc.EventTriggerDefinition.X2EventTriggerDefinition.InterfaceId.GlobalEnbId.Present = true
+		areqenc.EventTriggerDefinition.X2EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.StringPut("310150")
+		areqenc.EventTriggerDefinition.X2EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Bits = e2ap.E2AP_ENBIDHomeBits28
+		areqenc.EventTriggerDefinition.X2EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Id = 202251
+		testCtxt.SetDesc("SubsReq-28bit")
+
+		//areqenc.EventTriggerDefinition.X2EventTriggerDefinition.InterfaceId.GlobalEnbId.Present = true
+		//areqenc.EventTriggerDefinition.X2EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.StringPut("310150")
+		//areqenc.EventTriggerDefinition.X2EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Bits = e2ap.E2AP_ENBIDShortMacroits18
+		//areqenc.EventTriggerDefinition.X2EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Id = 55
+		//testCtxt.SetDesc("SubsReq-18bit")
+
+		//areqenc.EventTriggerDefinition.X2EventTriggerDefinition.InterfaceId.GlobalEnbId.Present = true
+		//areqenc.EventTriggerDefinition.X2EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.StringPut("310150")
+		//areqenc.EventTriggerDefinition.X2EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Bits = e2ap.E2AP_ENBIDMacroPBits20
+		//areqenc.EventTriggerDefinition.X2EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Id = 55
+		//testCtxt.SetDesc("SubsReq-20bit")
+
+		//areqenc.EventTriggerDefinition.X2EventTriggerDefinition.InterfaceId.GlobalEnbId.Present = true
+		//areqenc.EventTriggerDefinition.X2EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.StringPut("310150")
+		//areqenc.EventTriggerDefinition.X2EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Bits = e2ap.E2AP_ENBIDlongMacroBits21
+		//areqenc.EventTriggerDefinition.X2EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Id = 55
+		//testCtxt.SetDesc("SubsReq-21bit")
+
+		areqenc.EventTriggerDefinition.X2EventTriggerDefinition.InterfaceDirection = e2ap.E2AP_InterfaceDirectionIncoming
+		areqenc.EventTriggerDefinition.X2EventTriggerDefinition.ProcedureCode = 35
+		areqenc.EventTriggerDefinition.X2EventTriggerDefinition.TypeOfMessage = e2ap.E2AP_InitiatingMessage
+	} else if areqenc.EventTriggerDefinition.NBNRTEventTriggerDefinitionPresent == true {
+		areqenc.EventTriggerDefinition.NBNRTEventTriggerDefinition.TriggerNature = e2ap.NRTTriggerNature_now
+	}
+
 	for index := 0; index < 1; /*16*/ index++ {
 		item := e2ap.ActionToBeSetupItem{}
 		item.ActionId = uint64(index)
 		item.ActionType = e2ap.E2AP_ActionTypeInsert
 
 		item.RicActionDefinitionPresent = true
-		item.ActionDefinitionChoice.ActionDefinitionFormat1Present = true
-		item.ActionDefinitionChoice.ActionDefinitionFormat2Present = false
+		item.ActionDefinitionChoice.ActionDefinitionX2Format1Present = false //true
+		item.ActionDefinitionChoice.ActionDefinitionX2Format2Present = false
+		item.ActionDefinitionChoice.ActionDefinitionNRTFormat1Present = true // false
 
-		if item.RicActionDefinitionPresent == true &&
-			item.ActionDefinitionChoice.ActionDefinitionFormat1Present == true {
-			item.ActionDefinitionChoice.ActionDefinitionFormat1.StyleID = 99
-			// 1..255
-			for index2 := 0; index2 < 1; index2++ {
-				actionParameterItem := e2ap.ActionParameterItem{}
-				actionParameterItem.ParameterID = 11
-				actionParameterItem.ActionParameterValue.ValueIntPresent = true
-				actionParameterItem.ActionParameterValue.ValueInt = 100
-				item.ActionDefinitionChoice.ActionDefinitionFormat1.ActionParameterItems =
-					append(item.ActionDefinitionChoice.ActionDefinitionFormat1.ActionParameterItems, actionParameterItem)
-			}
-		} else if item.RicActionDefinitionPresent == true &&
-			item.ActionDefinitionChoice.ActionDefinitionFormat2Present == true {
-			// 1..15
-			for index2 := 0; index2 < 1; index2++ {
-				ranUEgroupItem := e2ap.RANueGroupItem{}
+		if item.RicActionDefinitionPresent {
+			if item.ActionDefinitionChoice.ActionDefinitionX2Format1Present {
+				item.ActionDefinitionChoice.ActionDefinitionX2Format1.StyleID = 99
 				// 1..255
-				for index3 := 0; index3 < 1; index3++ {
-					ranUEGroupDefItem := e2ap.RANueGroupDefItem{}
-					ranUEGroupDefItem.RanParameterID = 22
-					ranUEGroupDefItem.RanParameterTest = e2ap.RANParameterTest_equal
-					ranUEGroupDefItem.RanParameterValue.ValueIntPresent = true
-					ranUEGroupDefItem.RanParameterValue.ValueInt = 100
-					ranUEgroupItem.RanUEgroupDefinition.RanUEGroupDefItems =
-						append(ranUEgroupItem.RanUEgroupDefinition.RanUEGroupDefItems, ranUEGroupDefItem)
+				for index2 := 0; index2 < 1; index2++ {
+					actionParameterItem := e2ap.ActionParameterItem{}
+					actionParameterItem.ParameterID = 11
+					actionParameterItem.ActionParameterValue.ValueIntPresent = true
+					actionParameterItem.ActionParameterValue.ValueInt = 100
+					item.ActionDefinitionChoice.ActionDefinitionX2Format1.ActionParameterItems =
+						append(item.ActionDefinitionChoice.ActionDefinitionX2Format1.ActionParameterItems, actionParameterItem)
 				}
+			} else if item.ActionDefinitionChoice.ActionDefinitionX2Format2Present {
+				// 1..15
+				for index2 := 0; index2 < 1; index2++ {
+					ranUEgroupItem := e2ap.RANueGroupItem{}
+					// 1..255
+					for index3 := 0; index3 < 1; index3++ {
+						ranUEGroupDefItem := e2ap.RANueGroupDefItem{}
+						ranUEGroupDefItem.RanParameterID = 22
+						ranUEGroupDefItem.RanParameterTest = e2ap.RANParameterTest_equal
+						ranUEGroupDefItem.RanParameterValue.ValueIntPresent = true
+						ranUEGroupDefItem.RanParameterValue.ValueInt = 100
+						ranUEgroupItem.RanUEgroupDefinition.RanUEGroupDefItems =
+							append(ranUEgroupItem.RanUEgroupDefinition.RanUEGroupDefItems, ranUEGroupDefItem)
+					}
+					// 1..255
+					for index4 := 0; index4 < 1; index4++ {
+						ranParameterItem := e2ap.RANParameterItem{}
+						ranParameterItem.RanParameterID = 33
+						ranParameterItem.RanParameterValue.ValueIntPresent = true
+						ranParameterItem.RanParameterValue.ValueInt = 100
+						ranUEgroupItem.RanPolicy.RanParameterItems =
+							append(ranUEgroupItem.RanPolicy.RanParameterItems, ranParameterItem)
+					}
+					ranUEgroupItem.RanUEgroupID = 2
+					item.ActionDefinitionChoice.ActionDefinitionX2Format2.RanUEgroupItems =
+						append(item.ActionDefinitionChoice.ActionDefinitionX2Format2.RanUEgroupItems, ranUEgroupItem)
+				}
+			} else if item.ActionDefinitionChoice.ActionDefinitionNRTFormat1Present {
 				// 1..255
-				for index4 := 0; index4 < 1; index4++ {
+				for index2 := 0; index2 < 1; index2++ {
 					ranParameterItem := e2ap.RANParameterItem{}
 					ranParameterItem.RanParameterID = 33
 					ranParameterItem.RanParameterValue.ValueIntPresent = true
 					ranParameterItem.RanParameterValue.ValueInt = 100
-					ranUEgroupItem.RanPolicy.RanParameterItems =
-						append(ranUEgroupItem.RanPolicy.RanParameterItems, ranParameterItem)
+					item.ActionDefinitionChoice.ActionDefinitionNRTFormat1.RanParameterList =
+						append(item.ActionDefinitionChoice.ActionDefinitionNRTFormat1.RanParameterList, ranParameterItem)
 				}
-				ranUEgroupItem.RanUEgroupID = 2
-				item.ActionDefinitionChoice.ActionDefinitionFormat2.RanUEgroupItems =
-					append(item.ActionDefinitionChoice.ActionDefinitionFormat2.RanUEgroupItems, ranUEgroupItem)
 			}
 		}
-
 		item.SubsequentAction.Present = true
 		item.SubsequentAction.Type = e2ap.E2AP_SubSeqActionTypeContinue
 		item.SubsequentAction.TimetoWait = e2ap.E2AP_TimeToWaitW100ms
 		areqenc.ActionSetups = append(areqenc.ActionSetups, item)
 	}
-
-	areqenc.EventTriggerDefinition.InterfaceId.GlobalEnbId.Present = true
-	areqenc.EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.StringPut("310150")
-	areqenc.EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Bits = e2ap.E2AP_ENBIDHomeBits28
-	areqenc.EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Id = 202251
-	testCtxt.SetDesc("SubsReq-28bit")
 	testCtxt.E2ApTestMsgSubscriptionRequestWithData(t, &areqenc)
-
-	//areqenc.EventTriggerDefinition.InterfaceId.GlobalEnbId.Present = true
-	//areqenc.EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.StringPut("310150")
-	//areqenc.EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Bits = e2ap.E2AP_ENBIDShortMacroits18
-	//areqenc.EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Id = 55
-	//testCtxt.SetDesc("SubsReq-18bit")
-	//testCtxt.E2ApTestMsgSubscriptionRequestWithData(t,&areqenc)
-
-	//areqenc.EventTriggerDefinition.InterfaceId.GlobalEnbId.Present = true
-	//areqenc.EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.StringPut("310150")
-	//areqenc.EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Bits = e2ap.E2AP_ENBIDMacroPBits20
-	//areqenc.EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Id = 55
-	//testCtxt.SetDesc("SubsReq-20bit")
-	//testCtxt.E2ApTestMsgSubscriptionRequestWithData(t,&areqenc)
-
-	//areqenc.EventTriggerDefinition.InterfaceId.GlobalEnbId.Present = true
-	//areqenc.EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.StringPut("310150")
-	//areqenc.EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Bits = e2ap.E2AP_ENBIDlongMacroBits21
-	//areqenc.EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Id = 55
-	//testCtxt.SetDesc("SubsReq-21bit")
-	//testCtxt.E2ApTestMsgSubscriptionRequestWithData(t,&areqenc)
-
 }
 
 func (testCtxt *E2ApTests) E2ApTestMsgSubscriptionResponse(t *testing.T) {

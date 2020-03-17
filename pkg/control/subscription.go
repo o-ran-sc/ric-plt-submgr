@@ -155,10 +155,7 @@ func (s *Subscription) IsMergeable(trans *TransactionXapp, subReqMsg *e2ap.E2APS
 			}
 
 			if acts.RicActionDefinitionPresent != actt.RicActionDefinitionPresent ||
-				acts.ActionDefinitionChoice.ActionDefinitionFormat2Present !=
-					actt.ActionDefinitionChoice.ActionDefinitionFormat2Present ||
-				reflect.DeepEqual(acts.ActionDefinitionChoice.ActionDefinitionFormat2,
-					actt.ActionDefinitionChoice.ActionDefinitionFormat2) == false {
+				reflect.DeepEqual(acts.ActionDefinitionChoice, actt.ActionDefinitionChoice) == false {
 				return false
 			}
 

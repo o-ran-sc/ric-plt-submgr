@@ -19,7 +19,7 @@
 
 package e2ap_wrapper
 
-// #cgo LDFLAGS: -le2ap_wrapper -le2ap -lgnbx2 -lstdc++
+// #cgo LDFLAGS: -le2ap_wrapper -le2ap -lgnbx2 -lgnbnrt -lstdc++
 // #include <stdlib.h>
 // #include <c_types.h>
 // #include <E2AP_if.h>
@@ -134,7 +134,7 @@ func (e2Item *e2apEntryActionToBeSetupItem) set(dynMemHead *C.mem_track_hdr_t, i
 	e2Item.entry.ricActionType = (C.uint64_t)(id.ActionType)
 	if id.RicActionDefinitionPresent {
 		e2Item.entry.ricActionDefinitionPresent = true
-		if err := (&e2apActionDefinitionChoice{entry: &e2Item.entry.ricActionDefinitionChoice}).set(dynMemHead, &id.ActionDefinitionChoice); err != nil {
+		if err := (&e2apEntryActionDefinitionChoice{entry: &e2Item.entry.ricActionDefinitionChoice}).set(dynMemHead, &id.ActionDefinitionChoice); err != nil {
 			return err
 		}
 	}
@@ -152,7 +152,7 @@ func (e2Item *e2apEntryActionToBeSetupItem) get(id *e2ap.ActionToBeSetupItem) er
 	id.ActionType = (uint64)(e2Item.entry.ricActionType)
 	if e2Item.entry.ricActionDefinitionPresent {
 		id.RicActionDefinitionPresent = true
-		if err := (&e2apActionDefinitionChoice{entry: &e2Item.entry.ricActionDefinitionChoice}).get(&id.ActionDefinitionChoice); err != nil {
+		if err := (&e2apEntryActionDefinitionChoice{entry: &e2Item.entry.ricActionDefinitionChoice}).get(&id.ActionDefinitionChoice); err != nil {
 			return err
 		}
 	}
@@ -167,49 +167,64 @@ func (e2Item *e2apEntryActionToBeSetupItem) get(id *e2ap.ActionToBeSetupItem) er
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-type e2apActionDefinitionChoice struct {
+type e2apEntryActionDefinitionChoice struct {
 	entry *C.RICActionDefinitionChoice_t
 }
 
-func (e2Item *e2apActionDefinitionChoice) set(dynMemHead *C.mem_track_hdr_t, id *e2ap.ActionDefinitionChoice) error {
+func (e2Item *e2apEntryActionDefinitionChoice) set(dynMemHead *C.mem_track_hdr_t, id *e2ap.ActionDefinitionChoice) error {
 
-	if id.ActionDefinitionFormat1Present {
-		e2Item.entry.actionDefinitionFormat1Present = true
-		errorNro := C.allocActionDefinitionFormat1(dynMemHead, &e2Item.entry.actionDefinitionFormat1)
+	if id.ActionDefinitionX2Format1Present {
+		e2Item.entry.actionDefinitionX2Format1Present = true
+		errorNro := C.allocActionDefinitionX2Format1(dynMemHead, &e2Item.entry.actionDefinitionX2Format1)
 		if errorNro != C.e2err_OK {
 			return fmt.Errorf("e2err(%s)", C.GoString(C.getE2ErrorString(errorNro)))
 		}
-		if err := (&e2apE2SMgNBX2actionDefinition{entry: e2Item.entry.actionDefinitionFormat1}).set(dynMemHead, &id.ActionDefinitionFormat1); err != nil {
+		if err := (&e2apEntryE2SMgNBX2actionDefinition{entry: e2Item.entry.actionDefinitionX2Format1}).set(dynMemHead, &id.ActionDefinitionX2Format1); err != nil {
 			return err
 		}
 
-	} else if id.ActionDefinitionFormat2Present {
-		e2Item.entry.actionDefinitionFormat2Present = true
-		errorNro := C.allocActionDefinitionFormat2(dynMemHead, &e2Item.entry.actionDefinitionFormat2)
+	} else if id.ActionDefinitionX2Format2Present {
+		e2Item.entry.actionDefinitionX2Format2Present = true
+		errorNro := C.allocActionDefinitionX2Format2(dynMemHead, &e2Item.entry.actionDefinitionX2Format2)
 		if errorNro != C.e2err_OK {
 			return fmt.Errorf("e2err(%s)", C.GoString(C.getE2ErrorString(errorNro)))
 		}
-		if err := (&e2apActionDefinitionFormat2{entry: e2Item.entry.actionDefinitionFormat2}).set(dynMemHead, &id.ActionDefinitionFormat2); err != nil {
+		if err := (&e2apEntryActionDefinitionFormat2{entry: e2Item.entry.actionDefinitionX2Format2}).set(dynMemHead, &id.ActionDefinitionX2Format2); err != nil {
+			return err
+		}
+	} else if id.ActionDefinitionNRTFormat1Present {
+		e2Item.entry.actionDefinitionNRTFormat1Present = true
+		errorNro := C.allocActionDefinitionNRTFormat1(dynMemHead, &e2Item.entry.actionDefinitionNRTFormat1)
+		if errorNro != C.e2err_OK {
+			return fmt.Errorf("e2err(%s)", C.GoString(C.getE2ErrorString(errorNro)))
+		}
+		if err := (&e2apEntryE2SMgNBNRTactionDefinitionFormat1{entry: e2Item.entry.actionDefinitionNRTFormat1}).set(dynMemHead, &id.ActionDefinitionNRTFormat1); err != nil {
 			return err
 		}
 	} else {
-		return fmt.Errorf("Missing mandatory ActionDefinition element")
+		return fmt.Errorf("Set() Missing mandatory ActionDefinition element")
 	}
 	return nil
 }
 
-func (e2Item *e2apActionDefinitionChoice) get(id *e2ap.ActionDefinitionChoice) error {
-	if e2Item.entry.actionDefinitionFormat1Present {
-		id.ActionDefinitionFormat1Present = true
-		if err := (&e2apE2SMgNBX2actionDefinition{entry: e2Item.entry.actionDefinitionFormat1}).get(&id.ActionDefinitionFormat1); err != nil {
+func (e2Item *e2apEntryActionDefinitionChoice) get(id *e2ap.ActionDefinitionChoice) error {
+	if e2Item.entry.actionDefinitionX2Format1Present {
+		id.ActionDefinitionX2Format1Present = true
+		if err := (&e2apEntryE2SMgNBX2actionDefinition{entry: e2Item.entry.actionDefinitionX2Format1}).get(&id.ActionDefinitionX2Format1); err != nil {
 			return err
 		}
-
-	} else if e2Item.entry.actionDefinitionFormat2Present {
-		id.ActionDefinitionFormat2Present = true
-		if err := (&e2apActionDefinitionFormat2{entry: e2Item.entry.actionDefinitionFormat2}).get(&id.ActionDefinitionFormat2); err != nil {
+	} else if e2Item.entry.actionDefinitionX2Format2Present {
+		id.ActionDefinitionX2Format2Present = true
+		if err := (&e2apEntryActionDefinitionFormat2{entry: e2Item.entry.actionDefinitionX2Format2}).get(&id.ActionDefinitionX2Format2); err != nil {
 			return err
 		}
+	} else if e2Item.entry.actionDefinitionNRTFormat1Present {
+		id.ActionDefinitionNRTFormat1Present = true
+		if err := (&e2apEntryE2SMgNBNRTactionDefinitionFormat1{entry: e2Item.entry.actionDefinitionNRTFormat1}).get(&id.ActionDefinitionNRTFormat1); err != nil {
+			return err
+		}
+	} else {
+		return fmt.Errorf("Get() Missing mandatory ActionDefinition element")
 	}
 	return nil
 }
@@ -217,17 +232,17 @@ func (e2Item *e2apActionDefinitionChoice) get(id *e2ap.ActionDefinitionChoice) e
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-type e2apE2SMgNBX2actionDefinition struct {
+type e2apEntryE2SMgNBX2actionDefinition struct {
 	entry *C.E2SMgNBX2actionDefinition_t
 }
 
-func (e2Item *e2apE2SMgNBX2actionDefinition) set(dynMemHead *C.mem_track_hdr_t, id *e2ap.E2SMgNBX2actionDefinition) error {
+func (e2Item *e2apEntryE2SMgNBX2actionDefinition) set(dynMemHead *C.mem_track_hdr_t, id *e2ap.E2SMgNBX2actionDefinition) error {
 
 	e2Item.entry.styleID = (C.uint64_t)(id.StyleID)
 	// 1..255
 	e2Item.entry.actionParameterCount = 0
 	for i := 0; i < len(id.ActionParameterItems); i++ {
-		if err := (&e2apActionParameterItem{entry: &e2Item.entry.actionParameterItem[i]}).set(dynMemHead, &id.ActionParameterItems[i]); err != nil {
+		if err := (&e2apEntryActionParameterItem{entry: &e2Item.entry.actionParameterItem[i]}).set(dynMemHead, &id.ActionParameterItems[i]); err != nil {
 			return err
 		}
 		e2Item.entry.actionParameterCount++
@@ -235,7 +250,7 @@ func (e2Item *e2apE2SMgNBX2actionDefinition) set(dynMemHead *C.mem_track_hdr_t, 
 	return nil
 }
 
-func (e2Item *e2apE2SMgNBX2actionDefinition) get(id *e2ap.E2SMgNBX2actionDefinition) error {
+func (e2Item *e2apEntryE2SMgNBX2actionDefinition) get(id *e2ap.E2SMgNBX2actionDefinition) error {
 
 	id.StyleID = (uint64)(e2Item.entry.styleID)
 
@@ -243,7 +258,7 @@ func (e2Item *e2apE2SMgNBX2actionDefinition) get(id *e2ap.E2SMgNBX2actionDefinit
 	length := (int)(e2Item.entry.actionParameterCount)
 	id.ActionParameterItems = make([]e2ap.ActionParameterItem, length)
 	for i := 0; i < length; i++ {
-		if err := (&e2apActionParameterItem{entry: &e2Item.entry.actionParameterItem[i]}).get(&id.ActionParameterItems[i]); err != nil {
+		if err := (&e2apEntryActionParameterItem{entry: &e2Item.entry.actionParameterItem[i]}).get(&id.ActionParameterItems[i]); err != nil {
 			return err
 		}
 	}
@@ -253,23 +268,54 @@ func (e2Item *e2apE2SMgNBX2actionDefinition) get(id *e2ap.E2SMgNBX2actionDefinit
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-type e2apActionParameterItem struct {
+type e2apEntryE2SMgNBNRTactionDefinitionFormat1 struct {
+	entry *C.E2SMgNBNRTActionDefinitionFormat1_t
+}
+
+func (e2Item *e2apEntryE2SMgNBNRTactionDefinitionFormat1) set(dynMemHead *C.mem_track_hdr_t, id *e2ap.E2SMgNBNRTActionDefinitionFormat1) error {
+	// 1..255
+	e2Item.entry.ranParameterCount = 0
+	for i := 0; i < len(id.RanParameterList); i++ {
+		if err := (&e2apEntryRANParameterItem{entry: &e2Item.entry.ranParameterList[i]}).set(dynMemHead, &id.RanParameterList[i]); err != nil {
+			return err
+		}
+		e2Item.entry.ranParameterCount++
+	}
+	return nil
+}
+
+func (e2Item *e2apEntryE2SMgNBNRTactionDefinitionFormat1) get(id *e2ap.E2SMgNBNRTActionDefinitionFormat1) error {
+	// 1..255
+	length := (int)(e2Item.entry.ranParameterCount)
+	id.RanParameterList = make([]e2ap.RANParameterItem, length)
+	for i := 0; i < length; i++ {
+		if err := (&e2apEntryRANParameterItem{entry: &e2Item.entry.ranParameterList[i]}).get(&id.RanParameterList[i]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type e2apEntryActionParameterItem struct {
 	entry *C.ActionParameterItem_t
 }
 
-func (e2Item *e2apActionParameterItem) set(dynMemHead *C.mem_track_hdr_t, id *e2ap.ActionParameterItem) error {
+func (e2Item *e2apEntryActionParameterItem) set(dynMemHead *C.mem_track_hdr_t, id *e2ap.ActionParameterItem) error {
 
 	e2Item.entry.parameterID = (C.uint32_t)(id.ParameterID)
-	if err := (&e2apActionParameterValue{entry: &e2Item.entry.actionParameterValue}).set(dynMemHead, &id.ActionParameterValue); err != nil {
+	if err := (&e2apEntryActionParameterValue{entry: &e2Item.entry.actionParameterValue}).set(dynMemHead, &id.ActionParameterValue); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (e2Item *e2apActionParameterItem) get(id *e2ap.ActionParameterItem) error {
+func (e2Item *e2apEntryActionParameterItem) get(id *e2ap.ActionParameterItem) error {
 
 	id.ParameterID = (uint32)(e2Item.entry.parameterID)
-	if err := (&e2apActionParameterValue{entry: &e2Item.entry.actionParameterValue}).get(&id.ActionParameterValue); err != nil {
+	if err := (&e2apEntryActionParameterValue{entry: &e2Item.entry.actionParameterValue}).get(&id.ActionParameterValue); err != nil {
 		return err
 	}
 	return nil
@@ -278,11 +324,11 @@ func (e2Item *e2apActionParameterItem) get(id *e2ap.ActionParameterItem) error {
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-type e2apActionParameterValue struct {
+type e2apEntryActionParameterValue struct {
 	entry *C.ActionParameterValue_t
 }
 
-func (e2Item *e2apActionParameterValue) set(dynMemHead *C.mem_track_hdr_t, id *e2ap.ActionParameterValue) error {
+func (e2Item *e2apEntryActionParameterValue) set(dynMemHead *C.mem_track_hdr_t, id *e2ap.ActionParameterValue) error {
 
 	if id.ValueIntPresent {
 		e2Item.entry.valueInt = (C.int64_t)(id.ValueInt)
@@ -295,24 +341,24 @@ func (e2Item *e2apActionParameterValue) set(dynMemHead *C.mem_track_hdr_t, id *e
 		e2Item.entry.valueBoolPresent = true
 	} else if id.ValueBitSPresent {
 		if C.addBitString(dynMemHead, &e2Item.entry.valueBitS, (C.uint64_t)(id.ValueBitS.Length), unsafe.Pointer(&id.ValueBitS.Data[0]), (C.uint8_t)(id.ValueBitS.UnusedBits)) == nil {
-			return fmt.Errorf("Alloc valueBitS fail)")
+			return fmt.Errorf("Alloc valueBitS fail")
 		}
 		e2Item.entry.valueBitSPresent = true
 	} else if id.ValueOctSPresent {
 		if C.addOctetString(dynMemHead, &e2Item.entry.valueOctS, (C.uint64_t)(id.ValueOctS.Length), unsafe.Pointer(&id.ValueOctS.Data[0])) == nil {
-			return fmt.Errorf("Alloc valueOctS fail)")
+			return fmt.Errorf("Alloc valueOctS fail")
 		}
 		e2Item.entry.valueOctSPresent = true
 	} else if id.ValuePrtSPresent {
 		if C.addOctetString(dynMemHead, &e2Item.entry.valuePrtS, (C.uint64_t)(id.ValuePrtS.Length), unsafe.Pointer(&id.ValuePrtS.Data[0])) == nil {
-			return fmt.Errorf("Alloc valuePrtS fail)")
+			return fmt.Errorf("Alloc valuePrtS fail")
 		}
 		e2Item.entry.valuePrtSPresent = true
 	}
 	return nil
 }
 
-func (e2Item *e2apActionParameterValue) get(id *e2ap.ActionParameterValue) error {
+func (e2Item *e2apEntryActionParameterValue) get(id *e2ap.ActionParameterValue) error {
 
 	if e2Item.entry.valueIntPresent {
 		id.ValueInt = (int64)(e2Item.entry.valueInt)
@@ -343,15 +389,15 @@ func (e2Item *e2apActionParameterValue) get(id *e2ap.ActionParameterValue) error
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-type e2apActionDefinitionFormat2 struct {
+type e2apEntryActionDefinitionFormat2 struct {
 	entry *C.E2SMgNBX2ActionDefinitionFormat2_t
 }
 
-func (e2Item *e2apActionDefinitionFormat2) set(dynMemHead *C.mem_track_hdr_t, id *e2ap.ActionDefinitionFormat2) error {
+func (e2Item *e2apEntryActionDefinitionFormat2) set(dynMemHead *C.mem_track_hdr_t, id *e2ap.ActionDefinitionFormat2) error {
 	// 1..15
 	e2Item.entry.ranUeGroupCount = 0
 	for i := 0; i < len(id.RanUEgroupItems); i++ {
-		if err := (&e2apRANueGroupItem{entry: &e2Item.entry.ranUeGroupItem[i]}).set(dynMemHead, &id.RanUEgroupItems[i]); err != nil {
+		if err := (&e2apEntryRANueGroupItem{entry: &e2Item.entry.ranUeGroupItem[i]}).set(dynMemHead, &id.RanUEgroupItems[i]); err != nil {
 			return err
 		}
 		e2Item.entry.ranUeGroupCount++
@@ -359,12 +405,12 @@ func (e2Item *e2apActionDefinitionFormat2) set(dynMemHead *C.mem_track_hdr_t, id
 	return nil
 }
 
-func (e2Item *e2apActionDefinitionFormat2) get(id *e2ap.ActionDefinitionFormat2) error {
+func (e2Item *e2apEntryActionDefinitionFormat2) get(id *e2ap.ActionDefinitionFormat2) error {
 	// 1..15
 	length := (int)(e2Item.entry.ranUeGroupCount)
 	id.RanUEgroupItems = make([]e2ap.RANueGroupItem, length)
 	for i := 0; i < length; i++ {
-		if err := (&e2apRANueGroupItem{entry: &e2Item.entry.ranUeGroupItem[i]}).get(&id.RanUEgroupItems[i]); err != nil {
+		if err := (&e2apEntryRANueGroupItem{entry: &e2Item.entry.ranUeGroupItem[i]}).get(&id.RanUEgroupItems[i]); err != nil {
 			return err
 		}
 	}
@@ -374,27 +420,27 @@ func (e2Item *e2apActionDefinitionFormat2) get(id *e2ap.ActionDefinitionFormat2)
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-type e2apRANueGroupItem struct {
+type e2apEntryRANueGroupItem struct {
 	entry *C.RANueGroupItem_t
 }
 
-func (e2Item *e2apRANueGroupItem) set(dynMemHead *C.mem_track_hdr_t, id *e2ap.RANueGroupItem) error {
+func (e2Item *e2apEntryRANueGroupItem) set(dynMemHead *C.mem_track_hdr_t, id *e2ap.RANueGroupItem) error {
 	e2Item.entry.ranUEgroupID = (C.int64_t)(id.RanUEgroupID)
-	if err := (&e2apRANueGroupDefinition{entry: &e2Item.entry.ranUEgroupDefinition}).set(dynMemHead, &id.RanUEgroupDefinition); err != nil {
+	if err := (&e2apEntryRANueGroupDefinition{entry: &e2Item.entry.ranUEgroupDefinition}).set(dynMemHead, &id.RanUEgroupDefinition); err != nil {
 		return err
 	}
-	if err := (&e2apRANimperativePolicy{entry: &e2Item.entry.ranPolicy}).set(dynMemHead, &id.RanPolicy); err != nil {
+	if err := (&e2apEntryRANimperativePolicy{entry: &e2Item.entry.ranPolicy}).set(dynMemHead, &id.RanPolicy); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (e2Item *e2apRANueGroupItem) get(id *e2ap.RANueGroupItem) error {
+func (e2Item *e2apEntryRANueGroupItem) get(id *e2ap.RANueGroupItem) error {
 	id.RanUEgroupID = (int64)(e2Item.entry.ranUEgroupID)
-	if err := (&e2apRANueGroupDefinition{entry: &e2Item.entry.ranUEgroupDefinition}).get(&id.RanUEgroupDefinition); err != nil {
+	if err := (&e2apEntryRANueGroupDefinition{entry: &e2Item.entry.ranUEgroupDefinition}).get(&id.RanUEgroupDefinition); err != nil {
 		return err
 	}
-	if err := (&e2apRANimperativePolicy{entry: &e2Item.entry.ranPolicy}).get(&id.RanPolicy); err != nil {
+	if err := (&e2apEntryRANimperativePolicy{entry: &e2Item.entry.ranPolicy}).get(&id.RanPolicy); err != nil {
 		return err
 	}
 	return nil
@@ -403,15 +449,15 @@ func (e2Item *e2apRANueGroupItem) get(id *e2ap.RANueGroupItem) error {
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-type e2apRANueGroupDefinition struct {
+type e2apEntryRANueGroupDefinition struct {
 	entry *C.RANueGroupDefinition_t
 }
 
-func (e2Item *e2apRANueGroupDefinition) set(dynMemHead *C.mem_track_hdr_t, id *e2ap.RANueGroupDefinition) error {
+func (e2Item *e2apEntryRANueGroupDefinition) set(dynMemHead *C.mem_track_hdr_t, id *e2ap.RANueGroupDefinition) error {
 	// 1..255
 	e2Item.entry.ranUeGroupDefCount = 0
 	for i := 0; i < len(id.RanUEGroupDefItems); i++ {
-		if err := (&e2apRANueGroupDefItem{entry: &e2Item.entry.ranUeGroupDefItem[i]}).set(dynMemHead, &id.RanUEGroupDefItems[i]); err != nil {
+		if err := (&e2apEntryRANueGroupDefItem{entry: &e2Item.entry.ranUeGroupDefItem[i]}).set(dynMemHead, &id.RanUEGroupDefItems[i]); err != nil {
 			return err
 		}
 		e2Item.entry.ranUeGroupDefCount++
@@ -419,12 +465,12 @@ func (e2Item *e2apRANueGroupDefinition) set(dynMemHead *C.mem_track_hdr_t, id *e
 	return nil
 }
 
-func (e2Item *e2apRANueGroupDefinition) get(id *e2ap.RANueGroupDefinition) error {
+func (e2Item *e2apEntryRANueGroupDefinition) get(id *e2ap.RANueGroupDefinition) error {
 	// 1..255
 	length := (int)(e2Item.entry.ranUeGroupDefCount)
 	id.RanUEGroupDefItems = make([]e2ap.RANueGroupDefItem, length)
 	for i := 0; i < length; i++ {
-		if err := (&e2apRANueGroupDefItem{entry: &e2Item.entry.ranUeGroupDefItem[i]}).get(&id.RanUEGroupDefItems[i]); err != nil {
+		if err := (&e2apEntryRANueGroupDefItem{entry: &e2Item.entry.ranUeGroupDefItem[i]}).get(&id.RanUEGroupDefItems[i]); err != nil {
 			return err
 		}
 	}
@@ -434,15 +480,15 @@ func (e2Item *e2apRANueGroupDefinition) get(id *e2ap.RANueGroupDefinition) error
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-type e2apRANimperativePolicy struct {
+type e2apEntryRANimperativePolicy struct {
 	entry *C.RANimperativePolicy_t
 }
 
-func (e2Item *e2apRANimperativePolicy) set(dynMemHead *C.mem_track_hdr_t, id *e2ap.RANimperativePolicy) error {
+func (e2Item *e2apEntryRANimperativePolicy) set(dynMemHead *C.mem_track_hdr_t, id *e2ap.RANimperativePolicy) error {
 	// 1..255
 	e2Item.entry.ranParameterCount = 0
 	for i := 0; i < len(id.RanParameterItems); i++ {
-		if err := (&e2apRANParameterItem{entry: &e2Item.entry.ranParameterItem[i]}).set(dynMemHead, &id.RanParameterItems[i]); err != nil {
+		if err := (&e2apEntryRANParameterItem{entry: &e2Item.entry.ranParameterItem[i]}).set(dynMemHead, &id.RanParameterItems[i]); err != nil {
 			return err
 		}
 		e2Item.entry.ranParameterCount++
@@ -450,12 +496,12 @@ func (e2Item *e2apRANimperativePolicy) set(dynMemHead *C.mem_track_hdr_t, id *e2
 	return nil
 }
 
-func (e2Item *e2apRANimperativePolicy) get(id *e2ap.RANimperativePolicy) error {
+func (e2Item *e2apEntryRANimperativePolicy) get(id *e2ap.RANimperativePolicy) error {
 	// 1..255
 	length := (int)(e2Item.entry.ranParameterCount)
 	id.RanParameterItems = make([]e2ap.RANParameterItem, length)
 	for i := 0; i < length; i++ {
-		if err := (&e2apRANParameterItem{entry: &e2Item.entry.ranParameterItem[i]}).get(&id.RanParameterItems[i]); err != nil {
+		if err := (&e2apEntryRANParameterItem{entry: &e2Item.entry.ranParameterItem[i]}).get(&id.RanParameterItems[i]); err != nil {
 			return err
 		}
 	}
@@ -465,25 +511,25 @@ func (e2Item *e2apRANimperativePolicy) get(id *e2ap.RANimperativePolicy) error {
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-type e2apRANueGroupDefItem struct {
+type e2apEntryRANueGroupDefItem struct {
 	entry *C.RANueGroupDefItem_t
 }
 
-func (e2Item *e2apRANueGroupDefItem) set(dynMemHead *C.mem_track_hdr_t, id *e2ap.RANueGroupDefItem) error {
+func (e2Item *e2apEntryRANueGroupDefItem) set(dynMemHead *C.mem_track_hdr_t, id *e2ap.RANueGroupDefItem) error {
 
 	e2Item.entry.ranParameterID = (C.uint32_t)(id.RanParameterID)
 	e2Item.entry.ranParameterTest = (C.uint8_t)(id.RanParameterTest)
-	if err := (&e2apRANParameterValue{entry: &e2Item.entry.ranParameterValue}).set(dynMemHead, &id.RanParameterValue); err != nil {
+	if err := (&e2apEntryRANParameterValue{entry: &e2Item.entry.ranParameterValue}).set(dynMemHead, &id.RanParameterValue); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (e2Item *e2apRANueGroupDefItem) get(id *e2ap.RANueGroupDefItem) error {
+func (e2Item *e2apEntryRANueGroupDefItem) get(id *e2ap.RANueGroupDefItem) error {
 
 	id.RanParameterID = (uint32)(e2Item.entry.ranParameterID)
 	id.RanParameterTest = (uint8)(e2Item.entry.ranParameterTest)
-	if err := (&e2apRANParameterValue{entry: &e2Item.entry.ranParameterValue}).get(&id.RanParameterValue); err != nil {
+	if err := (&e2apEntryRANParameterValue{entry: &e2Item.entry.ranParameterValue}).get(&id.RanParameterValue); err != nil {
 		return err
 	}
 	return nil
@@ -492,23 +538,23 @@ func (e2Item *e2apRANueGroupDefItem) get(id *e2ap.RANueGroupDefItem) error {
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-type e2apRANParameterItem struct {
+type e2apEntryRANParameterItem struct {
 	entry *C.RANParameterItem_t
 }
 
-func (e2Item *e2apRANParameterItem) set(dynMemHead *C.mem_track_hdr_t, id *e2ap.RANParameterItem) error {
+func (e2Item *e2apEntryRANParameterItem) set(dynMemHead *C.mem_track_hdr_t, id *e2ap.RANParameterItem) error {
 
 	e2Item.entry.ranParameterID = (C.uint32_t)(id.RanParameterID)
-	if err := (&e2apRANParameterValue{entry: &e2Item.entry.ranParameterValue}).set(dynMemHead, &id.RanParameterValue); err != nil {
+	if err := (&e2apEntryRANParameterValue{entry: &e2Item.entry.ranParameterValue}).set(dynMemHead, &id.RanParameterValue); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (e2Item *e2apRANParameterItem) get(id *e2ap.RANParameterItem) error {
+func (e2Item *e2apEntryRANParameterItem) get(id *e2ap.RANParameterItem) error {
 
 	id.RanParameterID = (uint8)(e2Item.entry.ranParameterID)
-	if err := (&e2apRANParameterValue{entry: &e2Item.entry.ranParameterValue}).get(&id.RanParameterValue); err != nil {
+	if err := (&e2apEntryRANParameterValue{entry: &e2Item.entry.ranParameterValue}).get(&id.RanParameterValue); err != nil {
 		return err
 	}
 	return nil
@@ -517,11 +563,11 @@ func (e2Item *e2apRANParameterItem) get(id *e2ap.RANParameterItem) error {
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-type e2apRANParameterValue struct {
+type e2apEntryRANParameterValue struct {
 	entry *C.RANParameterValue_t
 }
 
-func (e2Item *e2apRANParameterValue) set(dynMemHead *C.mem_track_hdr_t, id *e2ap.RANParameterValue) error {
+func (e2Item *e2apEntryRANParameterValue) set(dynMemHead *C.mem_track_hdr_t, id *e2ap.RANParameterValue) error {
 
 	if id.ValueIntPresent {
 		e2Item.entry.valueInt = (C.int64_t)(id.ValueInt)
@@ -534,24 +580,24 @@ func (e2Item *e2apRANParameterValue) set(dynMemHead *C.mem_track_hdr_t, id *e2ap
 		e2Item.entry.valueBoolPresent = true
 	} else if id.ValueBitSPresent {
 		if C.addBitString(dynMemHead, &e2Item.entry.valueBitS, (C.uint64_t)(id.ValueBitS.Length), unsafe.Pointer(&id.ValueBitS.Data[0]), (C.uint8_t)(id.ValueBitS.UnusedBits)) == nil {
-			return fmt.Errorf("Alloc valueBitS fail)")
+			return fmt.Errorf("Alloc valueBitS fail")
 		}
 		e2Item.entry.valueBitSPresent = true
 	} else if id.ValueOctSPresent {
 		if C.addOctetString(dynMemHead, &e2Item.entry.valueOctS, (C.uint64_t)(id.ValueOctS.Length), unsafe.Pointer(&id.ValueOctS.Data[0])) == nil {
-			return fmt.Errorf("Alloc valueOctS fail)")
+			return fmt.Errorf("Alloc valueOctS fail")
 		}
 		e2Item.entry.valueOctSPresent = true
 	} else if id.ValuePrtSPresent {
 		if C.addOctetString(dynMemHead, &e2Item.entry.valuePrtS, (C.uint64_t)(id.ValuePrtS.Length), unsafe.Pointer(&id.ValuePrtS.Data[0])) == nil {
-			return fmt.Errorf("Alloc valuePrtS fail)")
+			return fmt.Errorf("Alloc valuePrtS fail")
 		}
 		e2Item.entry.valuePrtSPresent = true
 	}
 	return nil
 }
 
-func (e2Item *e2apRANParameterValue) get(id *e2ap.RANParameterValue) error {
+func (e2Item *e2apEntryRANParameterValue) get(id *e2ap.RANParameterValue) error {
 
 	if e2Item.entry.valueIntPresent {
 		id.ValueInt = (int64)(e2Item.entry.valueInt)
@@ -725,17 +771,65 @@ type e2apEntryEventTrigger struct {
 }
 
 func (evtTrig *e2apEntryEventTrigger) set(id *e2ap.EventTriggerDefinition) error {
-	evtTrig.entry.e2SMgNBX2eventTriggerDefinition.interfaceDirection = (C.uint8_t)(id.InterfaceDirection)
-	evtTrig.entry.e2SMgNBX2eventTriggerDefinition.interfaceMessageType.procedureCode = (C.uint8_t)(id.ProcedureCode)
-	evtTrig.entry.e2SMgNBX2eventTriggerDefinition.interfaceMessageType.typeOfMessage = (C.uint8_t)(id.TypeOfMessage)
-	return (&e2apEntryInterfaceId{entry: &evtTrig.entry.e2SMgNBX2eventTriggerDefinition.interfaceID}).set(&id.InterfaceId)
+	if id.NBX2EventTriggerDefinitionPresent {
+		evtTrig.entry.E2SMgNBX2EventTriggerDefinitionPresent = true
+		return (&e2apEntryX2EventTrigger{entry: &evtTrig.entry.e2SMgNBX2eventTriggerDefinition}).set(&id.X2EventTriggerDefinition)
+
+	} else if id.NBNRTEventTriggerDefinitionPresent {
+		evtTrig.entry.E2SMgNBNRTEventTriggerDefinitionPresent = true
+		return (&e2apEntryNRTEventTrigger{entry: &evtTrig.entry.e2SMgNBNRTEventTriggerDefinition}).set(&id.NBNRTEventTriggerDefinition)
+	}
+	return fmt.Errorf("Set() empty EventTriggerDefinition")
 }
 
 func (evtTrig *e2apEntryEventTrigger) get(id *e2ap.EventTriggerDefinition) error {
-	id.InterfaceDirection = (uint32)(evtTrig.entry.e2SMgNBX2eventTriggerDefinition.interfaceDirection)
-	id.ProcedureCode = (uint32)(evtTrig.entry.e2SMgNBX2eventTriggerDefinition.interfaceMessageType.procedureCode)
-	id.TypeOfMessage = (uint64)(evtTrig.entry.e2SMgNBX2eventTriggerDefinition.interfaceMessageType.typeOfMessage)
-	return (&e2apEntryInterfaceId{entry: &evtTrig.entry.e2SMgNBX2eventTriggerDefinition.interfaceID}).get(&id.InterfaceId)
+	if evtTrig.entry.E2SMgNBX2EventTriggerDefinitionPresent {
+		id.NBX2EventTriggerDefinitionPresent = true
+		return (&e2apEntryX2EventTrigger{entry: &evtTrig.entry.e2SMgNBX2eventTriggerDefinition}).get(&id.X2EventTriggerDefinition)
+
+	} else if evtTrig.entry.E2SMgNBNRTEventTriggerDefinitionPresent {
+		id.NBNRTEventTriggerDefinitionPresent = true
+		return (&e2apEntryNRTEventTrigger{entry: &evtTrig.entry.e2SMgNBNRTEventTriggerDefinition}).get(&id.NBNRTEventTriggerDefinition)
+	}
+	return fmt.Errorf("Get() empty EventTriggerDefinition")
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type e2apEntryX2EventTrigger struct {
+	entry *C.E2SMgNBX2eventTriggerDefinition_t
+}
+
+func (evtTrig *e2apEntryX2EventTrigger) set(id *e2ap.X2EventTriggerDefinition) error {
+	evtTrig.entry.interfaceDirection = (C.uint8_t)(id.InterfaceDirection)
+	evtTrig.entry.interfaceMessageType.procedureCode = (C.uint8_t)(id.ProcedureCode)
+	evtTrig.entry.interfaceMessageType.typeOfMessage = (C.uint8_t)(id.TypeOfMessage)
+	return (&e2apEntryInterfaceId{entry: &evtTrig.entry.interfaceID}).set(&id.InterfaceId)
+}
+
+func (evtTrig *e2apEntryX2EventTrigger) get(id *e2ap.X2EventTriggerDefinition) error {
+	id.InterfaceDirection = (uint32)(evtTrig.entry.interfaceDirection)
+	id.ProcedureCode = (uint32)(evtTrig.entry.interfaceMessageType.procedureCode)
+	id.TypeOfMessage = (uint64)(evtTrig.entry.interfaceMessageType.typeOfMessage)
+	return (&e2apEntryInterfaceId{entry: &evtTrig.entry.interfaceID}).get(&id.InterfaceId)
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type e2apEntryNRTEventTrigger struct {
+	entry *C.E2SMgNBNRTEventTriggerDefinition_t
+}
+
+func (evtTrig *e2apEntryNRTEventTrigger) set(id *e2ap.NBNRTEventTriggerDefinition) error {
+	evtTrig.entry.eventDefinitionFormat1.triggerNature = (C.uint8_t)(id.TriggerNature)
+	return nil
+}
+
+func (evtTrig *e2apEntryNRTEventTrigger) get(id *e2ap.NBNRTEventTriggerDefinition) error {
+	id.TriggerNature = (uint8)(evtTrig.entry.eventDefinitionFormat1.triggerNature)
+	return nil
 }
 
 //-----------------------------------------------------------------------------
@@ -1081,8 +1175,9 @@ func (e2apMsg *e2apMsgPackerSubscriptionRequest) String() string {
 
 		fmt.Fprintln(&b, "      ricActionToBeSetupItem[index].ricActionDefinitionPresent =", e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionPresent)
 		if e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionPresent {
-			fmt.Fprintln(&b, "      ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionFormat1Present =", e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionFormat1Present)
-			fmt.Fprintln(&b, "      ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionFormat2Present =", e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionFormat2Present)
+			fmt.Fprintln(&b, "      ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1Present =", e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1Present)
+			fmt.Fprintln(&b, "      ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2Present =", e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2Present)
+			fmt.Fprintln(&b, "      ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1Present =", e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1Present)
 			// Dynamically allocated C-structs are already freed. Can't print those.
 		}
 
