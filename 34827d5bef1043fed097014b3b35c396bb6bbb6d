@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "fa70cb31_81c17939",
+        "filename": ".vscode/settings.json",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1000011
+      },
+      "writtenOn": "2020-03-17T08:57:17Z",
+      "side": 1,
+      "message": "Remove?",
+      "revId": "34827d5bef1043fed097014b3b35c396bb6bbb6d",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": true
+    }
+  ]
+}
