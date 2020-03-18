@@ -36,23 +36,30 @@ WORKDIR /tmp
 ##RUN cd asn1c && make check
 #RUN cd asn1c && make install
 
+#
+# Swagger
+#
+ARG SWAGGERVERSION=v0.19.0
+ARG SWAGGERURL=https://github.com/go-swagger/go-swagger/releases/download/${SWAGGERVERSION}/swagger_linux_amd64
+RUN wget --quiet ${SWAGGERURL} \
+    && mv swagger_linux_amd64 swagger \
+    && chmod +x swagger \
+    && mv swagger /usr/local/bin/
 
-ARG RMRVERSION=3.2.4
+#
+# GO DELVE
+#
+RUN export GOBIN=/usr/local/bin/ ; \
+    go get -u github.com/go-delve/delve/cmd/dlv \
+    && go install github.com/go-delve/delve/cmd/dlv
+
+
+ARG RMRVERSION=3.5.0
 # Install RMr shared library
 RUN wget --content-disposition https://packagecloud.io/o-ran-sc/staging/packages/debian/stretch/rmr_${RMRVERSION}_amd64.deb/download.deb && dpkg -i rmr_${RMRVERSION}_amd64.deb && rm -rf rmr_${RMRVERSION}_amd64.deb
 # Install RMr development header files
 RUN wget --content-disposition https://packagecloud.io/o-ran-sc/staging/packages/debian/stretch/rmr-dev_${RMRVERSION}_amd64.deb/download.deb && dpkg -i rmr-dev_${RMRVERSION}_amd64.deb && rm -rf rmr-dev_${RMRVERSION}_amd64.deb
 
-# "Installing Swagger"
-RUN wget --quiet https://github.com/go-swagger/go-swagger/releases/download/v0.19.0/swagger_linux_amd64 \
-    && mv swagger_linux_amd64 swagger \
-    && chmod +x swagger \
-    && mkdir -p /root/.go/bin \
-    && mv swagger /root/.go/bin
-
-ENV GOPATH=/root/.go
-ENV PATH=$PATH:/root/.go/bin
-RUN go get -u github.com/go-delve/delve/cmd/dlv
 
 WORKDIR /opt/submgr
 
@@ -140,6 +147,8 @@ RUN go mod tidy
 # unittest
 COPY test/config-file.json test/config-file.json
 ENV CFG_FILE=/opt/submgr/test/config-file.json
+COPY test/uta_rtg.rt test/uta_rtg.rt
+ENV RMR_SEED_RT=/opt/submgr/test/uta_rtg.rt 
 
 RUN go test -test.coverprofile /tmp/submgr_cover.out -count=1 -v ./pkg/control 
 

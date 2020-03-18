@@ -74,7 +74,7 @@ func (tc *RmrStubControl) Init(desc string, rtfile string, port string, stat str
 	tc.RmrControl.Init(desc, rtfile, port)
 	tc.RmrWrapper.Init()
 
-	tc.Rmr = xapp.NewRMRClientWithParams("tcp:"+port, 4096, 1, stat)
+	tc.Rmr = xapp.NewRMRClientWithParams("tcp:"+port, 65534, 1, 0, stat)
 	tc.Rmr.SetReadyCB(tc.ReadyCB, nil)
 	go tc.Rmr.Start(tc)
 
