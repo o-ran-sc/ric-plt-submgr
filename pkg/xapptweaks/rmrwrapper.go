@@ -67,6 +67,7 @@ func (tc *RmrWrapper) RmrSend(params *RMRParams, to time.Duration) (err error) {
 	if status == false {
 		err = fmt.Errorf("Failed with retries(%d) %s", i, params.String())
 		tc.Rmr.Free(params.Mbuf)
+		params.Mbuf = nil
 	} else {
 		tc.CntSentMsg++
 	}

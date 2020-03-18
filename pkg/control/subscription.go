@@ -35,7 +35,7 @@ type Subscription struct {
 	registry  *Registry                     // Registry
 	ReqId     RequestId                     // ReqId (Requestor Id + Seq Nro a.k.a subsid)
 	Meid      *xapp.RMRMeid                 // Meid/ RanName
-	EpList    RmrEndpointList               // Endpoints
+	EpList    xapptweaks.RmrEndpointList    // Endpoints
 	TransLock sync.Mutex                    // Lock transactions, only one executed per time for subs
 	TheTrans  TransactionIf                 // Ongoing transaction
 	SubReqMsg *e2ap.E2APSubscriptionRequest // Subscription information

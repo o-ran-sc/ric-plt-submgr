@@ -21,6 +21,7 @@ package control
 
 import (
 	"fmt"
+	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/xapptweaks"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"sync"
 )
@@ -56,7 +57,7 @@ func (t *Tracker) NewSubsTransaction(subs *Subscription) *TransactionSubs {
 }
 
 func (t *Tracker) NewXappTransaction(
-	endpoint *RmrEndpoint,
+	endpoint *xapptweaks.RmrEndpoint,
 	xid string,
 	subid uint32,
 	meid *xapp.RMRMeid) *TransactionXapp {

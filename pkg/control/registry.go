@@ -22,6 +22,7 @@ package control
 import (
 	"fmt"
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
+	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/xapptweaks"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/models"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"sync"
@@ -244,7 +245,7 @@ func (r *Registry) RemoveFromSubscription(subs *Subscription, trans *Transaction
 			//
 			// Subscription route delete
 			//
-			tmpList := RmrEndpointList{}
+			tmpList := xapptweaks.RmrEndpointList{}
 			tmpList.AddEndpoint(trans.GetEndpoint())
 			subRouteAction := SubRouteInfo{tmpList, uint16(seqId)}
 			r.rtmgrClient.SubscriptionRequestDelete(subRouteAction)

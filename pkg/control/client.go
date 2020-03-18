@@ -24,6 +24,7 @@ import (
 	rtmgrclient "gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/rtmgr_client"
 	rtmgrhandle "gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/rtmgr_client/handle"
 	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/rtmgr_models"
+	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/xapptweaks"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"strconv"
 	"strings"
@@ -34,7 +35,7 @@ import (
 //
 //-----------------------------------------------------------------------------
 type SubRouteInfo struct {
-	EpList RmrEndpointList
+	EpList xapptweaks.RmrEndpointList
 	SubID  uint16
 }
 

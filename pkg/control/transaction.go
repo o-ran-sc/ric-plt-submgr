@@ -126,7 +126,7 @@ func (t *TransactionSubs) Release() {
 //
 //-----------------------------------------------------------------------------
 type TransactionXappKey struct {
-	RmrEndpoint
+	xapptweaks.RmrEndpoint
 	Xid string // xapp xid in req
 }
 
@@ -151,7 +151,7 @@ func (t *TransactionXapp) String() string {
 	return "transxapp(" + t.Transaction.String() + "/" + transkey + "/" + strconv.FormatUint(uint64(t.SubId), 10) + ")"
 }
 
-func (t *TransactionXapp) GetEndpoint() *RmrEndpoint {
+func (t *TransactionXapp) GetEndpoint() *xapptweaks.RmrEndpoint {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 	if t.XappKey != nil {

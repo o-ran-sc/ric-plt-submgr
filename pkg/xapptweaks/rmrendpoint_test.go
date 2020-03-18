@@ -17,7 +17,7 @@
 ==================================================================================
 */
 
-package control
+package xapptweaks
 
 import (
 	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/teststub"
