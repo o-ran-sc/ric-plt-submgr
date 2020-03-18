@@ -22,4 +22,5 @@
 #	Abstract:	Starts the submgr service
 #	Date:		28 May 2019
 #
+
 exec ./submgr -f $CFGFILE
