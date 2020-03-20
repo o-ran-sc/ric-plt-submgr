@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "55aa87c7_a5e99b13",
+        "filename": "e2ap/pkg/e2ap/msg_e2ap.go",
+        "patchSetId": 3
+      },
+      "lineNbr": 515,
+      "author": {
+        "id": 1000011
+      },
+      "writtenOn": "2020-03-20T06:57:15Z",
+      "side": 1,
+      "message": "\"TestMsgContent\" doesn\u0027t sound that this is in correct place? Should this be in e2ap_tests?",
+      "revId": "9b1951b846a0675160a1896974aadc9f2eb471c0",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": true
+    }
+  ]
+}
