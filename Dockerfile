@@ -126,8 +126,6 @@ COPY go.sum go.sum
 RUN go mod download
 RUN go mod tidy
 
-RUN cp go.mod go.sum /manifests/
-
 #
 #
 #
@@ -162,6 +160,10 @@ RUN mkdir -p /opt/bin && \
 
 RUN go mod tidy
 
+RUN cp go.mod go.sum /manifests/
+RUN grep gerrit /manifests/go.sum > /manifests/go_gerrit.sum
+
+
 # unittest
 COPY test/config-file.json test/config-file.json
 ENV CFG_FILE=/opt/submgr/test/config-file.json
@@ -169,10 +171,6 @@ COPY test/uta_rtg.rt test/uta_rtg.rt
 ENV RMR_SEED_RT=/opt/submgr/test/uta_rtg.rt 
 
 RUN go test -test.coverprofile /tmp/submgr_cover.out -count=1 -v ./pkg/control 
-
-#-c -o submgr_test
-#RUN ./submgr_test -test.coverprofile /tmp/submgr_cover.out
-
 RUN go tool cover -html=/tmp/submgr_cover.out -o /tmp/submgr_cover.html
 
 # test formating (not important)
