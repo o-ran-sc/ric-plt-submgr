@@ -103,7 +103,7 @@ func NewControl() *Control {
 		//subscriber: subscriber,
 	}
 	c.XappWrapper.Init("")
-	go xapp.Subscription.Listen(c.SubscriptionHandler, c.QueryHandler)
+	go xapp.Subscription.Listen(c.SubscriptionHandler, c.QueryHandler, c.SubscriptionDeleteHandler)
 	//go c.subscriber.Listen(c.SubscriptionHandler, c.QueryHandler)
 	return c
 }
@@ -122,7 +122,7 @@ func (c *Control) Run() {
 //-------------------------------------------------------------------
 //
 //-------------------------------------------------------------------
-func (c *Control) SubscriptionHandler(stype models.SubscriptionType, params interface{}) (models.SubscriptionResult, error) {
+func (c *Control) SubscriptionHandler(stype models.SubscriptionType, params interface{}) (*models.SubscriptionResponse, error) {
 	/*
 	   switch p := params.(type) {
 	   case *models.ReportParams:
@@ -136,7 +136,11 @@ func (c *Control) SubscriptionHandler(stype models.SubscriptionType, params inte
 	   case *models.PolicyParams:
 	   }
 	*/
-	return models.SubscriptionResult{}, fmt.Errorf("Subscription rest interface not implemented")
+	return &models.SubscriptionResponse{}, fmt.Errorf("Subscription rest interface not implemented")
+}
+
+func (c *Control) SubscriptionDeleteHandler(string) error {
+	return fmt.Errorf("Subscription rest interface not implemented")
 }
 
 func (c *Control) QueryHandler() (models.SubscriptionList, error) {
@@ -231,6 +235,7 @@ func (c *Control) handleXAPPSubscriptionRequest(params *xapptweaks.RMRParams) {
 		return
 	}
 
+	//TODO handle subscription toward e2term inside AssignToSubscription / hide handleSubscriptionCreate in it?
 	subs, err := c.registry.AssignToSubscription(trans, subReqMsg)
 	if err != nil {
 		xapp.Logger.Error("XAPP-SubReq: %s", idstring(err, trans))
@@ -263,7 +268,7 @@ func (c *Control) handleXAPPSubscriptionRequest(params *xapptweaks.RMRParams) {
 		}
 	}
 	xapp.Logger.Info("XAPP-SubReq: failed %s", idstring(err, trans, subs))
-	c.registry.RemoveFromSubscription(subs, trans, 5*time.Second)
+	//c.registry.RemoveFromSubscription(subs, trans, 5*time.Second)
 }
 
 //-------------------------------------------------------------------
@@ -314,7 +319,8 @@ func (c *Control) handleXAPPSubscriptionDeleteRequest(params *xapptweaks.RMRPara
 		c.rmrSendToXapp("", subs, trans)
 	}
 
-	c.registry.RemoveFromSubscription(subs, trans, 5*time.Second)
+	//TODO handle subscription toward e2term insiged RemoveFromSubscription / hide handleSubscriptionDelete in it?
+	//c.registry.RemoveFromSubscription(subs, trans, 5*time.Second)
 }
 
 //-------------------------------------------------------------------
@@ -369,6 +375,10 @@ func (c *Control) handleSubscriptionCreate(subs *Subscription, parentTrans *Tran
 		xapp.Logger.Debug("SUBS-SubReq: Handling (cached response %s) %s", typeofSubsMessage(subRfMsg), idstring(nil, trans, subs, parentTrans))
 	}
 
+	//Now RemoveFromSubscription in here to avoid race conditions (mostly concerns delete)
+	if valid == false {
+		c.registry.RemoveFromSubscription(subs, parentTrans, 5*time.Second)
+	}
 	parentTrans.SendEvent(subRfMsg, 0)
 }
 
@@ -393,7 +403,10 @@ func (c *Control) handleSubscriptionDelete(subs *Subscription, parentTrans *Tran
 	} else {
 		subs.mutex.Unlock()
 	}
-
+	//Now RemoveFromSubscription in here to avoid race conditions (mostly concerns delete)
+	//  If parallel deletes ongoing both might pass earlier sendE2TSubscriptionDeleteRequest(...) if
+	//  RemoveFromSubscription locates in caller side (now in handleXAPPSubscriptionDeleteRequest(...))
+	c.registry.RemoveFromSubscription(subs, parentTrans, 5*time.Second)
 	parentTrans.SendEvent(nil, 0)
 }
 

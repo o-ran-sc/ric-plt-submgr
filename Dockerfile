@@ -54,11 +54,21 @@ RUN export GOBIN=/usr/local/bin/ ; \
     && go install github.com/go-delve/delve/cmd/dlv
 
 
-ARG RMRVERSION=3.5.0
-# Install RMr shared library
-RUN wget --content-disposition https://packagecloud.io/o-ran-sc/staging/packages/debian/stretch/rmr_${RMRVERSION}_amd64.deb/download.deb && dpkg -i rmr_${RMRVERSION}_amd64.deb && rm -rf rmr_${RMRVERSION}_amd64.deb
-# Install RMr development header files
-RUN wget --content-disposition https://packagecloud.io/o-ran-sc/staging/packages/debian/stretch/rmr-dev_${RMRVERSION}_amd64.deb/download.deb && dpkg -i rmr-dev_${RMRVERSION}_amd64.deb && rm -rf rmr-dev_${RMRVERSION}_amd64.deb
+#
+# RMR
+#
+ARG RMRVERSION=3.6.2
+ARG RMRLIBURL=https://packagecloud.io/o-ran-sc/staging/packages/debian/stretch/rmr_${RMRVERSION}_amd64.deb/download.deb
+ARG RMRDEVURL=https://packagecloud.io/o-ran-sc/staging/packages/debian/stretch/rmr-dev_${RMRVERSION}_amd64.deb/download.deb
+RUN wget --content-disposition ${RMRLIBURL} && dpkg -i rmr_${RMRVERSION}_amd64.deb
+RUN wget --content-disposition ${RMRDEVURL} && dpkg -i rmr-dev_${RMRVERSION}_amd64.deb
+RUN rm -f rmr_${RMRVERSION}_amd64.deb rmr-dev_${RMRVERSION}_amd64.deb
+
+
+RUN mkdir /manifests/
+RUN echo "rmrlib ${RMRVERSION} ${RMRLIBURL}" >> /manifests/versions.txt
+RUN echo "rmrdev ${RMRVERSION} ${RMRDEVURL}" >> /manifests/versions.txt
+RUN echo "swagger ${SWAGGERVERSION} ${SWAGGERURL}" >> /manifests/versions.txt
 
 
 WORKDIR /opt/submgr
@@ -79,6 +89,10 @@ RUN cd 3rdparty/libe2ap && \
     cp libe2ap.so /usr/local/lib/ && \
     cp *.h /usr/local/include/ && \
     ldconfig
+
+RUN echo "E2AP         ?" >> /manifests/versions.txt
+RUN echo "E2SM-gNB-NRT ?" >> /manifests/versions.txt
+RUN echo "E2SM-gNB-X2  ?" >> /manifests/versions.txt
 
 COPY e2ap e2ap
 RUN cd e2ap/libe2ap_wrapper && \
@@ -112,6 +126,8 @@ COPY go.sum go.sum
 RUN go mod download
 RUN go mod tidy
 
+RUN cp go.mod go.sum /manifests/
+
 #
 #
 #
@@ -130,6 +146,8 @@ RUN git clone "https://gerrit.o-ran-sc.org/r/ric-plt/rtmgr" \
 RUN mkdir -p /root/go && \
     swagger generate client -f api/routing_manager.yaml -t pkg/ -m rtmgr_models -c rtmgr_client
 
+
+RUN echo "rtmgrapi ${RTMGRVERSION} https://gerrit.o-ran-sc.org/r/ric-plt/rtmgr" >> /manifests/versions.txt
 
 #
 #
@@ -171,6 +189,8 @@ RUN test -z "$(gofmt -l pkg/xapptweaks/*.go)"
 FROM ubuntu:18.04
 
 RUN apt update && apt install -y iputils-ping net-tools curl tcpdump
+
+COPY --from=submgrbuild /manifests /manifests
 
 COPY run_submgr.sh /
 COPY --from=submgrbuild /opt/bin/submgr /
