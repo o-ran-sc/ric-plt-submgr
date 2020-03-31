@@ -103,7 +103,7 @@ func NewControl() *Control {
 		//subscriber: subscriber,
 	}
 	c.XappWrapper.Init("")
-	go xapp.Subscription.Listen(c.SubscriptionHandler, c.QueryHandler)
+	go xapp.Subscription.Listen(c.SubscriptionHandler, c.QueryHandler, c.SubscriptionDeleteHandler)
 	//go c.subscriber.Listen(c.SubscriptionHandler, c.QueryHandler)
 	return c
 }
@@ -122,7 +122,7 @@ func (c *Control) Run() {
 //-------------------------------------------------------------------
 //
 //-------------------------------------------------------------------
-func (c *Control) SubscriptionHandler(stype models.SubscriptionType, params interface{}) (models.SubscriptionResult, error) {
+func (c *Control) SubscriptionHandler(stype models.SubscriptionType, params interface{}) (*models.SubscriptionResponse, error) {
 	/*
 	   switch p := params.(type) {
 	   case *models.ReportParams:
@@ -136,7 +136,11 @@ func (c *Control) SubscriptionHandler(stype models.SubscriptionType, params inte
 	   case *models.PolicyParams:
 	   }
 	*/
-	return models.SubscriptionResult{}, fmt.Errorf("Subscription rest interface not implemented")
+	return &models.SubscriptionResponse{}, fmt.Errorf("Subscription rest interface not implemented")
+}
+
+func (c *Control) SubscriptionDeleteHandler(string) error {
+	return fmt.Errorf("Subscription rest interface not implemented")
 }
 
 func (c *Control) QueryHandler() (models.SubscriptionList, error) {
