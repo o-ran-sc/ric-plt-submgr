@@ -7,7 +7,7 @@
     },
     "rmr": {
        "protPort": "tcp:14560",
-       "maxSize": 4096,
+       "maxSize": 8192,
        "numWorkers": 1,
        "txMessages": ["RIC_SUB_REQ", "RIC_SUB_DEL_REQ"],
        "rxMessages": ["RIC_SUB_RESP", "RIC_SUB_FAILURE", "RIC_SUB_DEL_RESP", "RIC_SUB_DEL_FAILURE", "RIC_INDICATION"]

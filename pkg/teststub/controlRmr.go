@@ -46,7 +46,7 @@ func (tc *RmrControl) Init(desc string, rtfile string, port string) {
 	tc.TestWrapper.Init(desc)
 	os.Setenv("RMR_SEED_RT", rtfile)
 	os.Setenv("RMR_SRC_ID", "localhost:"+port)
-	//os.Setenv("RMR_RTG_SVC", "localhost:"+port)
+	//os.Setenv("RMR_RTG_SVC", "localhost:"+rtport)
 	xapp.Logger.Info("Using rt file %s", os.Getenv("RMR_SEED_RT"))
 	xapp.Logger.Info("Using src id  %s", os.Getenv("RMR_SRC_ID"))
 	//xapp.Logger.Info("Using rtg svc  %s", os.Getenv("RMR_RTG_SVC"))
