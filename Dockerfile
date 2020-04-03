@@ -190,11 +190,13 @@ RUN apt update && apt install -y iputils-ping net-tools curl tcpdump
 
 COPY --from=submgrbuild /manifests /manifests
 
-COPY run_submgr.sh /
 COPY --from=submgrbuild /opt/bin/submgr /
 COPY --from=submgrbuild /usr/local/include /usr/local/include
 COPY --from=submgrbuild /usr/local/lib /usr/local/lib
 RUN ldconfig
 
+COPY run_submgr.sh /
 RUN chmod 755 /run_submgr.sh
-CMD /run_submgr.sh
+
+CMD /submgr
+
