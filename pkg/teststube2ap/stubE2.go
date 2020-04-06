@@ -54,9 +54,9 @@ type E2Stub struct {
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-func CreateNewE2Stub(desc string, rtfile string, port string, stat string, mtypeseed int) *E2Stub {
+func CreateNewE2Stub(desc string, rtfile string, port uint16, rtport uint16, stat string, mtypeseed int) *E2Stub {
 	tc := &E2Stub{}
-	tc.RmrStubControl.Init(desc, rtfile, port, stat, mtypeseed)
+	tc.RmrStubControl.Init(desc, rtfile, port, rtport, stat, mtypeseed)
 	tc.xid_seq = 1
 	tc.SetCheckXid(true)
 	return tc
@@ -65,9 +65,9 @@ func CreateNewE2Stub(desc string, rtfile string, port string, stat string, mtype
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-func CreateNewE2termStub(desc string, rtfile string, port string, stat string, mtypeseed int) *E2Stub {
+func CreateNewE2termStub(desc string, rtfile string, port uint16, rtport uint16, stat string, mtypeseed int) *E2Stub {
 	tc := &E2Stub{}
-	tc.RmrStubControl.Init(desc, rtfile, port, stat, mtypeseed)
+	tc.RmrStubControl.Init(desc, rtfile, port, rtport, stat, mtypeseed)
 	tc.xid_seq = 1
 	tc.SetCheckXid(false)
 	return tc
