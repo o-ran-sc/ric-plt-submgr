@@ -110,7 +110,8 @@ func ut_test_init() {
 	//
 	// NOTE3: Ports per entity:
 	//
-	// Port    Entity
+	// DataPort Entity
+	// RoutePort (svc) will be DataPort+1
 	// -------------------
 	// 14560   submgr
 	// 15560   e2term1 stub
@@ -149,37 +150,37 @@ func ut_test_init() {
 	//
 	//---------------------------------
 	tent.Logger.Info("### submgr ctrl run ###")
-	mainCtrl = createSubmgrControl(rtfilename, "14560")
+	mainCtrl = createSubmgrControl(rtfilename, 14560, 0)
 
 	//---------------------------------
 	//
 	//---------------------------------
 	tent.Logger.Info("### xapp1 stub run ###")
-	xappConn1 = teststube2ap.CreateNewE2Stub("xappstub1", rtfilename, "13560", "RMRXAPP1STUB", 55555)
+	xappConn1 = teststube2ap.CreateNewE2Stub("xappstub1", rtfilename, 13560, 0, "RMRXAPP1STUB", 55555)
 
 	//---------------------------------
 	//
 	//---------------------------------
 	tent.Logger.Info("### xapp2 stub run ###")
-	xappConn2 = teststube2ap.CreateNewE2Stub("xappstub2", rtfilename, "13660", "RMRXAPP2STUB", 55555)
+	xappConn2 = teststube2ap.CreateNewE2Stub("xappstub2", rtfilename, 13660, 0, "RMRXAPP2STUB", 55555)
 
 	//---------------------------------
 	//
 	//---------------------------------
 	tent.Logger.Info("### e2term1 stub run ###")
-	e2termConn1 = teststube2ap.CreateNewE2termStub("e2termstub1", rtfilename, "15560", "RMRE2TERMSTUB1", 55555)
+	e2termConn1 = teststube2ap.CreateNewE2termStub("e2termstub1", rtfilename, 15560, 0, "RMRE2TERMSTUB1", 55555)
 
 	//---------------------------------
 	//
 	//---------------------------------
 	tent.Logger.Info("### e2term2 stub run ###")
-	e2termConn2 = teststube2ap.CreateNewE2termStub("e2termstub2", rtfilename, "15660", "RMRE2TERMSTUB2", 55555)
+	e2termConn2 = teststube2ap.CreateNewE2termStub("e2termstub2", rtfilename, 15660, 0, "RMRE2TERMSTUB2", 55555)
 
 	//---------------------------------
 	// Just to test dummy stub
 	//---------------------------------
 	tent.Logger.Info("### dummy stub run ###")
-	dummystub = teststubdummy.CreateNewRmrDummyStub("dummystub", rtfilename, "16560", "DUMMYSTUB", 55555)
+	dummystub = teststubdummy.CreateNewRmrDummyStub("dummystub", rtfilename, 16560, 0, "DUMMYSTUB", 55555)
 
 	//---------------------------------
 	// Testing message sending

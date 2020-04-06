@@ -170,6 +170,9 @@ ENV CFG_FILE=/opt/submgr/test/config-file.json
 COPY test/uta_rtg.rt test/uta_rtg.rt
 ENV RMR_SEED_RT=/opt/submgr/test/uta_rtg.rt 
 
+#ENV CGO_LDFLAGS="-fsanitize=address"
+#ENV CGO_CFLAGS="-fsanitize=address"
+
 RUN go test -test.coverprofile /tmp/submgr_cover.out -count=1 -v ./pkg/control 
 RUN go tool cover -html=/tmp/submgr_cover.out -o /tmp/submgr_cover.html
 

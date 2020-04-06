@@ -74,12 +74,10 @@ func (rrt *RmrRouteTable) GetTable() string {
 		allrt += val + "\n"
 	}
 	allrt += "newrt|end\n"
-	if len(rrt.meids) > 0 {
-		allrt += "meid_map | start\n"
-		for _, val := range rrt.meids {
-			allrt += val + "\n"
-		}
-		allrt += "meid_map | end | " + strconv.FormatInt(int64(len(rrt.meids)), 10) + "\n"
+	allrt += "meid_map | start\n"
+	for _, val := range rrt.meids {
+		allrt += val + "\n"
 	}
+	allrt += "meid_map | end | " + strconv.FormatInt(int64(len(rrt.meids)), 10) + "\n"
 	return allrt
 }
