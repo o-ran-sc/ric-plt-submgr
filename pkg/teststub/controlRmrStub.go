@@ -21,6 +21,7 @@ package teststub
 import (
 	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/xapptweaks"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -67,14 +68,14 @@ func (tc *RmrStubControl) TestMsgChanEmpty(t *testing.T) {
 	}
 }
 
-func (tc *RmrStubControl) Init(desc string, rtfile string, port string, stat string, initMsg int) {
+func (tc *RmrStubControl) Init(desc string, rtfile string, port uint16, rtport uint16, stat string, initMsg int) {
 	tc.InitMsg = initMsg
 	tc.Active = false
 	tc.RecvChan = make(chan *xapptweaks.RMRParams)
-	tc.RmrControl.Init(desc, rtfile, port)
+	tc.RmrControl.Init(desc, rtfile, port, rtport)
 	tc.RmrWrapper.Init()
 
-	tc.Rmr = xapp.NewRMRClientWithParams("tcp:"+port, 65534, 1, 0, stat)
+	tc.Rmr = xapp.NewRMRClientWithParams("tcp:"+strconv.FormatUint(uint64(port), 10), 65534, 1, 0, stat)
 	tc.Rmr.SetReadyCB(tc.ReadyCB, nil)
 	go tc.Rmr.Start(tc)
 

@@ -42,9 +42,9 @@ type RmrDummyStub struct {
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-func CreateNewRmrDummyStub(desc string, rtfile string, port string, stat string, mtypeseed int) *RmrDummyStub {
+func CreateNewRmrDummyStub(desc string, rtfile string, port uint16, rtport uint16, stat string, mtypeseed int) *RmrDummyStub {
 	dummyStub := &RmrDummyStub{}
-	dummyStub.RmrStubControl.Init(desc, rtfile, port, stat, mtypeseed)
+	dummyStub.RmrStubControl.Init(desc, rtfile, port, rtport, stat, mtypeseed)
 	dummyStub.reqMsg = mtypeseed + 1
 	dummyStub.respMsg = mtypeseed + 2
 	return dummyStub
