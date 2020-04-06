@@ -57,7 +57,7 @@ RUN export GOBIN=/usr/local/bin/ ; \
 #
 # RMR
 #
-ARG RMRVERSION=3.6.2
+ARG RMRVERSION=3.6.5
 ARG RMRLIBURL=https://packagecloud.io/o-ran-sc/staging/packages/debian/stretch/rmr_${RMRVERSION}_amd64.deb/download.deb
 ARG RMRDEVURL=https://packagecloud.io/o-ran-sc/staging/packages/debian/stretch/rmr-dev_${RMRVERSION}_amd64.deb/download.deb
 RUN wget --content-disposition ${RMRLIBURL} && dpkg -i rmr_${RMRVERSION}_amd64.deb
