@@ -20,9 +20,6 @@ package teststub
 
 import (
 	"fmt"
-	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
-	"os"
-	"strconv"
 	"testing"
 )
 
@@ -31,9 +28,9 @@ import (
 //-----------------------------------------------------------------------------
 type RmrControl struct {
 	TestWrapper
-	syncChan  chan struct{}
-	DataPort  uint16
-	RoutePort uint16
+	RmrSrcId
+	RmrRtgSvc
+	syncChan chan struct{}
 }
 
 func (tc *RmrControl) ReadyCB(data interface{}) {
@@ -45,20 +42,15 @@ func (tc *RmrControl) WaitCB() {
 	<-tc.syncChan
 }
 
-func (tc *RmrControl) Init(desc string, rtfile string, port uint16, rtport uint16) {
+func (tc *RmrControl) Init(desc string, srcId RmrSrcId, rtgSvc RmrRtgSvc) {
 	tc.TestWrapper.Init(desc)
-	tc.DataPort = port
-	tc.RoutePort = rtport
-	os.Setenv("RMR_SEED_RT", rtfile)
-	xapp.Logger.Info("Using rt file %s", os.Getenv("RMR_SEED_RT"))
-	if tc.DataPort > 0 {
-		os.Setenv("RMR_SRC_ID", "localhost:"+strconv.FormatUint(uint64(tc.DataPort), 10))
-		xapp.Logger.Info("Using src id  %s", os.Getenv("RMR_SRC_ID"))
-	}
-	if tc.RoutePort > 0 {
-		os.Setenv("RMR_RTG_SVC", "localhost:"+strconv.FormatUint(uint64(tc.RoutePort), 10))
-		xapp.Logger.Info("Using rtg svc  %s", os.Getenv("RMR_RTG_SVC"))
-	}
+
+	tc.RmrSrcId = srcId
+	tc.RmrSrcId.Enable()
+
+	tc.RmrRtgSvc = rtgSvc
+	tc.RmrRtgSvc.Enable()
+
 	tc.syncChan = make(chan struct{})
 }
 

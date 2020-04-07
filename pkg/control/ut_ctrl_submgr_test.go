@@ -34,9 +34,9 @@ type testingSubmgrControl struct {
 	c *Control
 }
 
-func createSubmgrControl(rtfile string, port uint16, rtport uint16) *testingSubmgrControl {
+func createSubmgrControl(srcId teststub.RmrSrcId, rtgSvc teststub.RmrRtgSvc) *testingSubmgrControl {
 	mainCtrl = &testingSubmgrControl{}
-	mainCtrl.RmrControl.Init("SUBMGRCTL", rtfile, port, rtport)
+	mainCtrl.RmrControl.Init("SUBMGRCTL", srcId, rtgSvc)
 	mainCtrl.c = NewControl()
 	xapp.SetReadyCB(mainCtrl.ReadyCB, nil)
 	go xapp.RunWithParams(mainCtrl.c, false)

@@ -42,9 +42,9 @@ type RmrDummyStub struct {
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-func CreateNewRmrDummyStub(desc string, rtfile string, port uint16, rtport uint16, stat string, mtypeseed int) *RmrDummyStub {
+func CreateNewRmrDummyStub(desc string, srcId teststub.RmrSrcId, rtgSvc teststub.RmrRtgSvc, stat string, mtypeseed int) *RmrDummyStub {
 	dummyStub := &RmrDummyStub{}
-	dummyStub.RmrStubControl.Init(desc, rtfile, port, rtport, stat, mtypeseed)
+	dummyStub.RmrStubControl.Init(desc, srcId, rtgSvc, stat, mtypeseed)
 	dummyStub.reqMsg = mtypeseed + 1
 	dummyStub.respMsg = mtypeseed + 2
 	return dummyStub
@@ -54,14 +54,18 @@ func CreateNewRmrDummyStub(desc string, rtfile string, port uint16, rtport uint1
 //
 //-----------------------------------------------------------------------------
 
-func (tc *RmrDummyStub) SendReq(t *testing.T) {
+func (tc *RmrDummyStub) SendReq(t *testing.T, plen int) {
 	tc.Logger.Info("SendReq")
-	var dummyBuf []byte = make([]byte, 100)
+	len := plen
+	if len == 0 {
+		len = 100
+	}
 	params := xapptweaks.NewParams(nil)
 	params.Mtype = tc.reqMsg
 	params.SubId = -1
-	params.Payload = dummyBuf
-	params.PayloadLen = 100
+
+	params.Payload = make([]byte, len)
+	params.PayloadLen = 0
 	params.Meid = &xapp.RMRMeid{RanName: "TEST"}
 	params.Xid = "TEST"
 	params.Mbuf = nil
@@ -71,6 +75,44 @@ func (tc *RmrDummyStub) SendReq(t *testing.T) {
 		tc.TestError(t, "%s", snderr.Error())
 	}
 	return
+}
+
+func (tc *RmrDummyStub) SendResp(t *testing.T, plen int) {
+	tc.Logger.Info("SendReq")
+	len := plen
+	if len == 0 {
+		len = 100
+	}
+	params := xapptweaks.NewParams(nil)
+	params.Mtype = tc.respMsg
+	params.SubId = -1
+	params.Payload = make([]byte, len)
+	params.PayloadLen = 0
+	params.Meid = &xapp.RMRMeid{RanName: "TEST"}
+	params.Xid = "TEST"
+	params.Mbuf = nil
+
+	snderr := tc.RmrSend(params, 5)
+	if snderr != nil {
+		tc.TestError(t, "%s", snderr.Error())
+	}
+	return
+}
+
+func (tc *RmrDummyStub) RecvReq(t *testing.T) bool {
+	tc.Logger.Info("RecvReq")
+
+	msg := tc.WaitMsg(15)
+	if msg != nil {
+		if msg.Mtype != tc.reqMsg {
+			tc.TestError(t, "Received wrong mtype expected %d got %d, error", tc.reqMsg, msg.Mtype)
+			return false
+		}
+		return true
+	} else {
+		tc.TestError(t, "Not Received msg within %d secs", 15)
+	}
+	return false
 }
 
 func (tc *RmrDummyStub) RecvResp(t *testing.T) bool {
@@ -87,28 +129,4 @@ func (tc *RmrDummyStub) RecvResp(t *testing.T) bool {
 		tc.TestError(t, "Not Received msg within %d secs", 15)
 	}
 	return false
-}
-
-//-----------------------------------------------------------------------------
-//
-//-----------------------------------------------------------------------------
-func RmrDummyHandleMessage(msg *xapptweaks.RMRParams, mtypeseed int, rmr xapptweaks.XAppWrapperIf) (bool, error) {
-	if msg.Mtype == mtypeseed+1 {
-		var dummyBuf []byte = make([]byte, 100)
-		params := xapptweaks.NewParams(nil)
-		params.Mtype = mtypeseed + 2
-		params.SubId = msg.SubId
-		params.Payload = dummyBuf
-		params.PayloadLen = 100
-		params.Meid = msg.Meid
-		params.Xid = msg.Xid
-		params.Mbuf = nil
-		rmr.GetLogger().Info("SEND DUMMY RESP: %s", params.String())
-		err := rmr.RmrSend(params, 5)
-		if err != nil {
-			rmr.GetLogger().Error("RmrDummyHandleMessage: err(%s)", err.Error())
-		}
-		return true, err
-	}
-	return false, nil
 }

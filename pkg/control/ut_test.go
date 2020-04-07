@@ -23,6 +23,7 @@ import (
 	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/teststub"
 	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/teststubdummy"
 	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/teststube2ap"
+	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/xapptweaks"
 	"os"
 	"testing"
 )
@@ -110,77 +111,78 @@ func ut_test_init() {
 	//
 	// NOTE3: Ports per entity:
 	//
-	// DataPort Entity
-	// RoutePort (svc) will be DataPort+1
+	// Entity
 	// -------------------
-	// 14560   submgr
-	// 15560   e2term1 stub
-	// 15660   e2term2 stub
-	// 13560   xapp1 stub
-	// 13660   xapp2 stub
-	// 16560   dummy stub
-	//
+
+	mainsrc := teststub.RmrSrcId{xapptweaks.RmrEndpoint{"localhost", 14560}}
+	xapp1src := teststub.RmrSrcId{xapptweaks.RmrEndpoint{"localhost", 13560}}
+	xapp2src := teststub.RmrSrcId{xapptweaks.RmrEndpoint{"localhost", 13660}}
+	e2term1src := teststub.RmrSrcId{xapptweaks.RmrEndpoint{"localhost", 15560}}
+	e2term2src := teststub.RmrSrcId{xapptweaks.RmrEndpoint{"localhost", 15660}}
+	dummysrc := teststub.RmrSrcId{xapptweaks.RmrEndpoint{"localhost", 16560}}
+
 	//---------------------------------
 	rt := &teststub.RmrRouteTable{}
-	rt.AddRoute(12010, "", -1, "localhost:14560")
-	rt.AddRoute(12010, "localhost:14560", -1, "%meid")
-	rt.AddRoute(12011, "localhost:15560", -1, "localhost:14560")
-	rt.AddRoute(12012, "localhost:15560", -1, "localhost:14560")
-	rt.AddRoute(12011, "localhost:15660", -1, "localhost:14560")
-	rt.AddRoute(12012, "localhost:15660", -1, "localhost:14560")
-	rt.AddRoute(12011, "localhost:14560", -1, "localhost:13660;localhost:13560")
-	rt.AddRoute(12012, "localhost:14560", -1, "localhost:13660;localhost:13560")
-	rt.AddRoute(12020, "", -1, "localhost:14560")
-	rt.AddRoute(12020, "localhost:14560", -1, "%meid")
-	rt.AddRoute(12021, "localhost:15560", -1, "localhost:14560")
-	rt.AddRoute(12022, "localhost:15560", -1, "localhost:14560")
-	rt.AddRoute(12021, "localhost:15660", -1, "localhost:14560")
-	rt.AddRoute(12022, "localhost:15660", -1, "localhost:14560")
-	rt.AddRoute(12021, "localhost:14560", -1, "localhost:13660;localhost:13560")
-	rt.AddRoute(12022, "localhost:14560", -1, "localhost:13660;localhost:13560")
-	rt.AddRoute(55555, "", -1, "localhost:13660;localhost:13560;localhost:15560;localhost:15660;localhost:16560")
+	rt.AddRoute(12010, "", -1, mainsrc.String())
+	rt.AddRoute(12010, mainsrc.String(), -1, "%meid")
+	rt.AddRoute(12011, e2term1src.String(), -1, mainsrc.String())
+	rt.AddRoute(12012, e2term1src.String(), -1, mainsrc.String())
+	rt.AddRoute(12011, e2term2src.String(), -1, mainsrc.String())
+	rt.AddRoute(12012, e2term2src.String(), -1, mainsrc.String())
+	rt.AddRoute(12011, mainsrc.String(), -1, xapp2src.String()+";"+xapp1src.String())
+	rt.AddRoute(12012, mainsrc.String(), -1, xapp2src.String()+";"+xapp1src.String())
+	rt.AddRoute(12020, "", -1, mainsrc.String())
+	rt.AddRoute(12020, mainsrc.String(), -1, "%meid")
+	rt.AddRoute(12021, e2term1src.String(), -1, mainsrc.String())
+	rt.AddRoute(12022, e2term1src.String(), -1, mainsrc.String())
+	rt.AddRoute(12021, e2term2src.String(), -1, mainsrc.String())
+	rt.AddRoute(12022, e2term2src.String(), -1, mainsrc.String())
+	rt.AddRoute(12021, mainsrc.String(), -1, xapp2src.String()+";"+xapp1src.String())
+	rt.AddRoute(12022, mainsrc.String(), -1, xapp2src.String()+";"+xapp1src.String())
+	rt.AddRoute(55555, "", -1, xapp2src.String()+";"+xapp1src.String()+";"+e2term1src.String()+";"+e2term2src.String()+";"+dummysrc.String())
 
-	rt.AddMeid("localhost:15560", []string{"RAN_NAME_1", "RAN_NAME_2"})
-	rt.AddMeid("localhost:15660", []string{"RAN_NAME_11", "RAN_NAME_12"})
+	rt.AddMeid(e2term1src.String(), []string{"RAN_NAME_1", "RAN_NAME_2"})
+	rt.AddMeid(e2term2src.String(), []string{"RAN_NAME_11", "RAN_NAME_12"})
 
-	rtfilename, _ := teststub.CreateTmpFile(rt.GetTable())
-	defer os.Remove(rtfilename)
-	tent.Logger.Info("table[%s]", rt.GetTable())
+	rt.Enable()
+	defer rt.Disable()
+	tent.Logger.Info("rttable[%s]", rt.Table())
+
 	//---------------------------------
 	//
 	//---------------------------------
 	tent.Logger.Info("### submgr ctrl run ###")
-	mainCtrl = createSubmgrControl(rtfilename, 14560, 0)
+	mainCtrl = createSubmgrControl(mainsrc, teststub.RmrRtgSvc{})
 
 	//---------------------------------
 	//
 	//---------------------------------
 	tent.Logger.Info("### xapp1 stub run ###")
-	xappConn1 = teststube2ap.CreateNewE2Stub("xappstub1", rtfilename, 13560, 0, "RMRXAPP1STUB", 55555)
+	xappConn1 = teststube2ap.CreateNewE2Stub("xappstub1", xapp1src, teststub.RmrRtgSvc{}, "RMRXAPP1STUB", 55555)
 
 	//---------------------------------
 	//
 	//---------------------------------
 	tent.Logger.Info("### xapp2 stub run ###")
-	xappConn2 = teststube2ap.CreateNewE2Stub("xappstub2", rtfilename, 13660, 0, "RMRXAPP2STUB", 55555)
+	xappConn2 = teststube2ap.CreateNewE2Stub("xappstub2", xapp2src, teststub.RmrRtgSvc{}, "RMRXAPP2STUB", 55555)
 
 	//---------------------------------
 	//
 	//---------------------------------
 	tent.Logger.Info("### e2term1 stub run ###")
-	e2termConn1 = teststube2ap.CreateNewE2termStub("e2termstub1", rtfilename, 15560, 0, "RMRE2TERMSTUB1", 55555)
+	e2termConn1 = teststube2ap.CreateNewE2termStub("e2termstub1", e2term1src, teststub.RmrRtgSvc{}, "RMRE2TERMSTUB1", 55555)
 
 	//---------------------------------
 	//
 	//---------------------------------
 	tent.Logger.Info("### e2term2 stub run ###")
-	e2termConn2 = teststube2ap.CreateNewE2termStub("e2termstub2", rtfilename, 15660, 0, "RMRE2TERMSTUB2", 55555)
+	e2termConn2 = teststube2ap.CreateNewE2termStub("e2termstub2", e2term2src, teststub.RmrRtgSvc{}, "RMRE2TERMSTUB2", 55555)
 
 	//---------------------------------
 	// Just to test dummy stub
 	//---------------------------------
 	tent.Logger.Info("### dummy stub run ###")
-	dummystub = teststubdummy.CreateNewRmrDummyStub("dummystub", rtfilename, 16560, 0, "DUMMYSTUB", 55555)
+	dummystub = teststubdummy.CreateNewRmrDummyStub("dummystub", dummysrc, teststub.RmrRtgSvc{}, "DUMMYSTUB", 55555)
 
 	//---------------------------------
 	// Testing message sending
