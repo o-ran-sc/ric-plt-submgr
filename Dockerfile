@@ -57,7 +57,7 @@ RUN export GOBIN=/usr/local/bin/ ; \
 #
 # RMR
 #
-ARG RMRVERSION=3.6.2
+ARG RMRVERSION=3.6.5
 ARG RMRLIBURL=https://packagecloud.io/o-ran-sc/staging/packages/debian/stretch/rmr_${RMRVERSION}_amd64.deb/download.deb
 ARG RMRDEVURL=https://packagecloud.io/o-ran-sc/staging/packages/debian/stretch/rmr-dev_${RMRVERSION}_amd64.deb/download.deb
 RUN wget --content-disposition ${RMRLIBURL} && dpkg -i rmr_${RMRVERSION}_amd64.deb
@@ -83,16 +83,30 @@ ENV CFLAGS="-DASN_DISABLE_OER_SUPPORT"
 ENV CGO_CFLAGS="-DASN_DISABLE_OER_SUPPORT"
 
 COPY 3rdparty 3rdparty
-RUN cd 3rdparty/libe2ap && \
+RUN cd 3rdparty/E2AP-v01.00.00 && \
     gcc -c ${CFLAGS} -I. -g -fPIC *.c  && \
     gcc *.o -g -shared -o libe2ap.so && \
     cp libe2ap.so /usr/local/lib/ && \
     cp *.h /usr/local/include/ && \
     ldconfig
 
-RUN echo "E2AP         ?" >> /manifests/versions.txt
-RUN echo "E2SM-gNB-NRT ?" >> /manifests/versions.txt
-RUN echo "E2SM-gNB-X2  ?" >> /manifests/versions.txt
+RUN cd 3rdparty/E2SM-gNB-NRT_V4.0.1 && \
+    gcc -c ${CFLAGS} -I. -g -fPIC *.c  && \
+    gcc *.o -g -shared -o libgnbnrt.so && \
+    cp libgnbnrt.so /usr/local/lib/ && \
+    cp *.h /usr/local/include/ && \
+    ldconfig
+
+RUN cd 3rdparty/E2SM-gNB-X2-V4.0.1 && \
+    gcc -c ${CFLAGS} -I. -g -fPIC *.c  && \
+    gcc *.o -g -shared -o libgnbx2.so && \
+    cp libgnbx2.so /usr/local/lib/ && \
+    cp *.h /usr/local/include/ && \
+    ldconfig
+
+RUN echo "E2AP         E2AP-v01.00.00" >> /manifests/versions.txt
+RUN echo "E2SM-gNB-NRT E2SM-gNB-NRT_V4.0.1" >> /manifests/versions.txt
+RUN echo "E2SM-gNB-X2  E2SM-gNB-X2-V4.0.1" >> /manifests/versions.txt
 
 COPY e2ap e2ap
 RUN cd e2ap/libe2ap_wrapper && \

@@ -19,10 +19,11 @@
 
 package e2ap_wrapper
 
-// #cgo LDFLAGS: -le2ap_wrapper -le2ap -lstdc++
+// #cgo LDFLAGS: -le2ap_wrapper -le2ap -lgnbx2 -lgnbnrt -lstdc++
 // #include <stdlib.h>
 // #include <c_types.h>
 // #include <E2AP_if.h>
+// #include <memtrack.h>
 // #include <strings.h>
 //
 // void initSubsRequest(RICSubscriptionRequest_t *data){
@@ -97,7 +98,6 @@ func cMessageInfoToMessageInfo(minfo *C.E2MessageInfo_t) *e2ap.MessageInfo {
 			msgInfo.MsgId = e2ap.E2AP_RICSubscriptionDeleteFailure
 			return msgInfo
 		}
-
 	}
 	return nil
 }
@@ -111,13 +111,13 @@ type e2apEntryRequestID struct {
 
 func (e2Item *e2apEntryRequestID) set(id *e2ap.RequestId) error {
 	e2Item.entry.ricRequestorID = (C.uint32_t)(id.Id)
-	e2Item.entry.ricRequestSequenceNumber = (C.uint32_t)(id.Seq)
+	e2Item.entry.ricInstanceID = (C.uint32_t)(id.InstanceId)
 	return nil
 }
 
 func (e2Item *e2apEntryRequestID) get(id *e2ap.RequestId) error {
 	id.Id = (uint32)(e2Item.entry.ricRequestorID)
-	id.Seq = (uint32)(e2Item.entry.ricRequestSequenceNumber)
+	id.InstanceId = (uint32)(e2Item.entry.ricInstanceID)
 	return nil
 }
 
@@ -128,18 +128,16 @@ type e2apEntryActionToBeSetupItem struct {
 	entry *C.RICActionToBeSetupItem_t
 }
 
-func (e2Item *e2apEntryActionToBeSetupItem) set(id *e2ap.ActionToBeSetupItem) error {
+func (e2Item *e2apEntryActionToBeSetupItem) set(dynMemHead *C.mem_track_hdr_t, id *e2ap.ActionToBeSetupItem) error {
 
 	e2Item.entry.ricActionID = (C.ulong)(id.ActionId)
 	e2Item.entry.ricActionType = (C.uint64_t)(id.ActionType)
-
-	if id.ActionDefinition.Present {
+	if id.RicActionDefinitionPresent {
 		e2Item.entry.ricActionDefinitionPresent = true
-		e2Item.entry.ricActionDefinition.styleID = (C.uint64_t)(id.ActionDefinition.StyleId)
-		e2Item.entry.ricActionDefinition.sequenceOfActionParameters.parameterID = (C.uint32_t)(id.ActionDefinition.ParamId)
-		//e2Item.entry.ricActionDefinition.sequenceOfActionParameters.ParameterValue = id.ActionDefinition.ParamValue
+		if err := (&e2apEntryActionDefinitionChoice{entry: &e2Item.entry.ricActionDefinitionChoice}).set(dynMemHead, &id.ActionDefinitionChoice); err != nil {
+			return err
+		}
 	}
-
 	if id.SubsequentAction.Present {
 		e2Item.entry.ricSubsequentActionPresent = true
 		e2Item.entry.ricSubsequentAction.ricSubsequentActionType = (C.uint64_t)(id.SubsequentAction.Type)
@@ -152,18 +150,484 @@ func (e2Item *e2apEntryActionToBeSetupItem) get(id *e2ap.ActionToBeSetupItem) er
 
 	id.ActionId = (uint64)(e2Item.entry.ricActionID)
 	id.ActionType = (uint64)(e2Item.entry.ricActionType)
-
 	if e2Item.entry.ricActionDefinitionPresent {
-		id.ActionDefinition.Present = true
-		id.ActionDefinition.StyleId = (uint64)(e2Item.entry.ricActionDefinition.styleID)
-		id.ActionDefinition.ParamId = (uint32)(e2Item.entry.ricActionDefinition.sequenceOfActionParameters.parameterID)
-		//id.ActionDefinition.ParamValue=e2Item.entry.ricActionDefinition.sequenceOfActionParameters.ParameterValue
+		id.RicActionDefinitionPresent = true
+		if err := (&e2apEntryActionDefinitionChoice{entry: &e2Item.entry.ricActionDefinitionChoice}).get(&id.ActionDefinitionChoice); err != nil {
+			return err
+		}
 	}
-
 	if e2Item.entry.ricSubsequentActionPresent {
 		id.SubsequentAction.Present = true
 		id.SubsequentAction.Type = (uint64)(e2Item.entry.ricSubsequentAction.ricSubsequentActionType)
 		id.SubsequentAction.TimetoWait = (uint64)(e2Item.entry.ricSubsequentAction.ricTimeToWait)
+	}
+	return nil
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type e2apEntryActionDefinitionChoice struct {
+	entry *C.RICActionDefinitionChoice_t
+}
+
+func (e2Item *e2apEntryActionDefinitionChoice) set(dynMemHead *C.mem_track_hdr_t, id *e2ap.ActionDefinitionChoice) error {
+
+	if id.ActionDefinitionX2Format1Present {
+		e2Item.entry.actionDefinitionX2Format1Present = true
+		errorNro := C.allocActionDefinitionX2Format1(dynMemHead, &e2Item.entry.actionDefinitionX2Format1)
+		if errorNro != C.e2err_OK {
+			return fmt.Errorf("e2err(%s)", C.GoString(C.getE2ErrorString(errorNro)))
+		}
+		if err := (&e2apEntryE2SMgNBX2actionDefinition{entry: e2Item.entry.actionDefinitionX2Format1}).set(dynMemHead, &id.ActionDefinitionX2Format1); err != nil {
+			return err
+		}
+
+	} else if id.ActionDefinitionX2Format2Present {
+		e2Item.entry.actionDefinitionX2Format2Present = true
+		errorNro := C.allocActionDefinitionX2Format2(dynMemHead, &e2Item.entry.actionDefinitionX2Format2)
+		if errorNro != C.e2err_OK {
+			return fmt.Errorf("e2err(%s)", C.GoString(C.getE2ErrorString(errorNro)))
+		}
+		if err := (&e2apEntryActionDefinitionFormat2{entry: e2Item.entry.actionDefinitionX2Format2}).set(dynMemHead, &id.ActionDefinitionX2Format2); err != nil {
+			return err
+		}
+	} else if id.ActionDefinitionNRTFormat1Present {
+		e2Item.entry.actionDefinitionNRTFormat1Present = true
+		errorNro := C.allocActionDefinitionNRTFormat1(dynMemHead, &e2Item.entry.actionDefinitionNRTFormat1)
+		if errorNro != C.e2err_OK {
+			return fmt.Errorf("e2err(%s)", C.GoString(C.getE2ErrorString(errorNro)))
+		}
+		if err := (&e2apEntryE2SMgNBNRTactionDefinitionFormat1{entry: e2Item.entry.actionDefinitionNRTFormat1}).set(dynMemHead, &id.ActionDefinitionNRTFormat1); err != nil {
+			return err
+		}
+	} else {
+		return fmt.Errorf("Set() Missing mandatory ActionDefinition element")
+	}
+	return nil
+}
+
+func (e2Item *e2apEntryActionDefinitionChoice) get(id *e2ap.ActionDefinitionChoice) error {
+	if e2Item.entry.actionDefinitionX2Format1Present {
+		id.ActionDefinitionX2Format1Present = true
+		if err := (&e2apEntryE2SMgNBX2actionDefinition{entry: e2Item.entry.actionDefinitionX2Format1}).get(&id.ActionDefinitionX2Format1); err != nil {
+			return err
+		}
+	} else if e2Item.entry.actionDefinitionX2Format2Present {
+		id.ActionDefinitionX2Format2Present = true
+		if err := (&e2apEntryActionDefinitionFormat2{entry: e2Item.entry.actionDefinitionX2Format2}).get(&id.ActionDefinitionX2Format2); err != nil {
+			return err
+		}
+	} else if e2Item.entry.actionDefinitionNRTFormat1Present {
+		id.ActionDefinitionNRTFormat1Present = true
+		if err := (&e2apEntryE2SMgNBNRTactionDefinitionFormat1{entry: e2Item.entry.actionDefinitionNRTFormat1}).get(&id.ActionDefinitionNRTFormat1); err != nil {
+			return err
+		}
+	} else {
+		return fmt.Errorf("Get() Missing mandatory ActionDefinition element")
+	}
+	return nil
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type e2apEntryE2SMgNBX2actionDefinition struct {
+	entry *C.E2SMgNBX2actionDefinition_t
+}
+
+func (e2Item *e2apEntryE2SMgNBX2actionDefinition) set(dynMemHead *C.mem_track_hdr_t, id *e2ap.E2SMgNBX2actionDefinition) error {
+
+	e2Item.entry.styleID = (C.uint64_t)(id.StyleID)
+	// 1..255
+	e2Item.entry.actionParameterCount = 0
+	for i := 0; i < len(id.ActionParameterItems); i++ {
+		if err := (&e2apEntryActionParameterItem{entry: &e2Item.entry.actionParameterItem[i]}).set(dynMemHead, &id.ActionParameterItems[i]); err != nil {
+			return err
+		}
+		e2Item.entry.actionParameterCount++
+	}
+	return nil
+}
+
+func (e2Item *e2apEntryE2SMgNBX2actionDefinition) get(id *e2ap.E2SMgNBX2actionDefinition) error {
+
+	id.StyleID = (uint64)(e2Item.entry.styleID)
+
+	// 1..255
+	length := (int)(e2Item.entry.actionParameterCount)
+	id.ActionParameterItems = make([]e2ap.ActionParameterItem, length)
+	for i := 0; i < length; i++ {
+		if err := (&e2apEntryActionParameterItem{entry: &e2Item.entry.actionParameterItem[i]}).get(&id.ActionParameterItems[i]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type e2apEntryE2SMgNBNRTactionDefinitionFormat1 struct {
+	entry *C.E2SMgNBNRTActionDefinitionFormat1_t
+}
+
+func (e2Item *e2apEntryE2SMgNBNRTactionDefinitionFormat1) set(dynMemHead *C.mem_track_hdr_t, id *e2ap.E2SMgNBNRTActionDefinitionFormat1) error {
+	// 1..255
+	e2Item.entry.ranParameterCount = 0
+	for i := 0; i < len(id.RanParameterList); i++ {
+		if err := (&e2apEntryRANParameterItem{entry: &e2Item.entry.ranParameterList[i]}).set(dynMemHead, &id.RanParameterList[i]); err != nil {
+			return err
+		}
+		e2Item.entry.ranParameterCount++
+	}
+	return nil
+}
+
+func (e2Item *e2apEntryE2SMgNBNRTactionDefinitionFormat1) get(id *e2ap.E2SMgNBNRTActionDefinitionFormat1) error {
+	// 1..255
+	length := (int)(e2Item.entry.ranParameterCount)
+	id.RanParameterList = make([]e2ap.RANParameterItem, length)
+	for i := 0; i < length; i++ {
+		if err := (&e2apEntryRANParameterItem{entry: &e2Item.entry.ranParameterList[i]}).get(&id.RanParameterList[i]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type e2apEntryActionParameterItem struct {
+	entry *C.ActionParameterItem_t
+}
+
+func (e2Item *e2apEntryActionParameterItem) set(dynMemHead *C.mem_track_hdr_t, id *e2ap.ActionParameterItem) error {
+
+	e2Item.entry.parameterID = (C.uint32_t)(id.ParameterID)
+	if err := (&e2apEntryActionParameterValue{entry: &e2Item.entry.actionParameterValue}).set(dynMemHead, &id.ActionParameterValue); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (e2Item *e2apEntryActionParameterItem) get(id *e2ap.ActionParameterItem) error {
+
+	id.ParameterID = (uint32)(e2Item.entry.parameterID)
+	if err := (&e2apEntryActionParameterValue{entry: &e2Item.entry.actionParameterValue}).get(&id.ActionParameterValue); err != nil {
+		return err
+	}
+	return nil
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type e2apEntryActionParameterValue struct {
+	entry *C.ActionParameterValue_t
+}
+
+func (e2Item *e2apEntryActionParameterValue) set(dynMemHead *C.mem_track_hdr_t, id *e2ap.ActionParameterValue) error {
+
+	if id.ValueIntPresent {
+		e2Item.entry.valueInt = (C.int64_t)(id.ValueInt)
+		e2Item.entry.valueIntPresent = true
+	} else if id.ValueEnumPresent {
+		e2Item.entry.valueEnum = (C.int64_t)(id.ValueEnum)
+		e2Item.entry.valueEnumPresent = true
+	} else if id.ValueBoolPresent {
+		e2Item.entry.valueBool = (C.bool)(id.ValueBool)
+		e2Item.entry.valueBoolPresent = true
+	} else if id.ValueBitSPresent {
+		if C.addBitString(dynMemHead, &e2Item.entry.valueBitS, (C.uint64_t)(id.ValueBitS.Length), unsafe.Pointer(&id.ValueBitS.Data[0]), (C.uint8_t)(id.ValueBitS.UnusedBits)) == false {
+			return fmt.Errorf("Alloc valueBitS fail")
+		}
+		e2Item.entry.valueBitSPresent = true
+	} else if id.ValueOctSPresent {
+		if C.addOctetString(dynMemHead, &e2Item.entry.valueOctS, (C.uint64_t)(id.ValueOctS.Length), unsafe.Pointer(&id.ValueOctS.Data[0])) == false {
+			return fmt.Errorf("Alloc valueOctS fail")
+		}
+		e2Item.entry.valueOctSPresent = true
+	} else if id.ValuePrtSPresent {
+		if C.addOctetString(dynMemHead, &e2Item.entry.valuePrtS, (C.uint64_t)(id.ValuePrtS.Length), unsafe.Pointer(&id.ValuePrtS.Data[0])) == false {
+			return fmt.Errorf("Alloc valuePrtS fail")
+		}
+		e2Item.entry.valuePrtSPresent = true
+	}
+	return nil
+}
+
+func (e2Item *e2apEntryActionParameterValue) get(id *e2ap.ActionParameterValue) error {
+
+	if e2Item.entry.valueIntPresent {
+		id.ValueInt = (int64)(e2Item.entry.valueInt)
+		id.ValueIntPresent = true
+	} else if e2Item.entry.valueEnumPresent {
+		id.ValueEnum = (int64)(e2Item.entry.valueEnum)
+		id.ValueEnumPresent = true
+	} else if e2Item.entry.valueBoolPresent {
+		id.ValueBool = (bool)(e2Item.entry.valueBool)
+		id.ValueBoolPresent = true
+	} else if e2Item.entry.valueBitSPresent {
+		id.ValueBitSPresent = true
+		id.ValueBitS.Length = (uint64)(e2Item.entry.valueBitS.byteLength)
+		id.ValueBitS.UnusedBits = (uint8)(e2Item.entry.valueBitS.unusedBits)
+		id.ValueBitS.Data = make([]uint8, id.ValueBitS.Length)
+		C.memcpy(unsafe.Pointer(&id.ValueBitS.Data[0]), unsafe.Pointer(e2Item.entry.valueBitS.data), C.size_t(e2Item.entry.valueBitS.byteLength))
+	} else if e2Item.entry.valueOctSPresent {
+		id.ValueOctSPresent = true
+		id.ValueOctS.Length = (uint64)(e2Item.entry.valueOctS.length)
+		id.ValueOctS.Data = make([]uint8, id.ValueOctS.Length)
+		C.memcpy(unsafe.Pointer(&id.ValueOctS.Data[0]), unsafe.Pointer(e2Item.entry.valueOctS.data), C.size_t(e2Item.entry.valueOctS.length))
+	} else if e2Item.entry.valuePrtSPresent {
+		id.ValuePrtSPresent = true
+		id.ValuePrtS.Length = (uint64)(e2Item.entry.valuePrtS.length)
+		id.ValuePrtS.Data = make([]uint8, id.ValuePrtS.Length)
+		C.memcpy(unsafe.Pointer(&id.ValuePrtS.Data[0]), unsafe.Pointer(e2Item.entry.valuePrtS.data), C.size_t(e2Item.entry.valuePrtS.length))
+	}
+	return nil
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type e2apEntryActionDefinitionFormat2 struct {
+	entry *C.E2SMgNBX2ActionDefinitionFormat2_t
+}
+
+func (e2Item *e2apEntryActionDefinitionFormat2) set(dynMemHead *C.mem_track_hdr_t, id *e2ap.ActionDefinitionFormat2) error {
+	// 1..15
+	e2Item.entry.ranUeGroupCount = 0
+	for i := 0; i < len(id.RanUEgroupItems); i++ {
+		if err := (&e2apEntryRANueGroupItem{entry: &e2Item.entry.ranUeGroupItem[i]}).set(dynMemHead, &id.RanUEgroupItems[i]); err != nil {
+			return err
+		}
+		e2Item.entry.ranUeGroupCount++
+	}
+	return nil
+}
+
+func (e2Item *e2apEntryActionDefinitionFormat2) get(id *e2ap.ActionDefinitionFormat2) error {
+	// 1..15
+	length := (int)(e2Item.entry.ranUeGroupCount)
+	id.RanUEgroupItems = make([]e2ap.RANueGroupItem, length)
+	for i := 0; i < length; i++ {
+		if err := (&e2apEntryRANueGroupItem{entry: &e2Item.entry.ranUeGroupItem[i]}).get(&id.RanUEgroupItems[i]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type e2apEntryRANueGroupItem struct {
+	entry *C.RANueGroupItem_t
+}
+
+func (e2Item *e2apEntryRANueGroupItem) set(dynMemHead *C.mem_track_hdr_t, id *e2ap.RANueGroupItem) error {
+	e2Item.entry.ranUEgroupID = (C.int64_t)(id.RanUEgroupID)
+	if err := (&e2apEntryRANueGroupDefinition{entry: &e2Item.entry.ranUEgroupDefinition}).set(dynMemHead, &id.RanUEgroupDefinition); err != nil {
+		return err
+	}
+	if err := (&e2apEntryRANimperativePolicy{entry: &e2Item.entry.ranPolicy}).set(dynMemHead, &id.RanPolicy); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (e2Item *e2apEntryRANueGroupItem) get(id *e2ap.RANueGroupItem) error {
+	id.RanUEgroupID = (int64)(e2Item.entry.ranUEgroupID)
+	if err := (&e2apEntryRANueGroupDefinition{entry: &e2Item.entry.ranUEgroupDefinition}).get(&id.RanUEgroupDefinition); err != nil {
+		return err
+	}
+	if err := (&e2apEntryRANimperativePolicy{entry: &e2Item.entry.ranPolicy}).get(&id.RanPolicy); err != nil {
+		return err
+	}
+	return nil
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type e2apEntryRANueGroupDefinition struct {
+	entry *C.RANueGroupDefinition_t
+}
+
+func (e2Item *e2apEntryRANueGroupDefinition) set(dynMemHead *C.mem_track_hdr_t, id *e2ap.RANueGroupDefinition) error {
+	// 1..255
+	e2Item.entry.ranUeGroupDefCount = 0
+	for i := 0; i < len(id.RanUEGroupDefItems); i++ {
+		if err := (&e2apEntryRANueGroupDefItem{entry: &e2Item.entry.ranUeGroupDefItem[i]}).set(dynMemHead, &id.RanUEGroupDefItems[i]); err != nil {
+			return err
+		}
+		e2Item.entry.ranUeGroupDefCount++
+	}
+	return nil
+}
+
+func (e2Item *e2apEntryRANueGroupDefinition) get(id *e2ap.RANueGroupDefinition) error {
+	// 1..255
+	length := (int)(e2Item.entry.ranUeGroupDefCount)
+	id.RanUEGroupDefItems = make([]e2ap.RANueGroupDefItem, length)
+	for i := 0; i < length; i++ {
+		if err := (&e2apEntryRANueGroupDefItem{entry: &e2Item.entry.ranUeGroupDefItem[i]}).get(&id.RanUEGroupDefItems[i]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type e2apEntryRANimperativePolicy struct {
+	entry *C.RANimperativePolicy_t
+}
+
+func (e2Item *e2apEntryRANimperativePolicy) set(dynMemHead *C.mem_track_hdr_t, id *e2ap.RANimperativePolicy) error {
+	// 1..255
+	e2Item.entry.ranParameterCount = 0
+	for i := 0; i < len(id.RanParameterItems); i++ {
+		if err := (&e2apEntryRANParameterItem{entry: &e2Item.entry.ranParameterItem[i]}).set(dynMemHead, &id.RanParameterItems[i]); err != nil {
+			return err
+		}
+		e2Item.entry.ranParameterCount++
+	}
+	return nil
+}
+
+func (e2Item *e2apEntryRANimperativePolicy) get(id *e2ap.RANimperativePolicy) error {
+	// 1..255
+	length := (int)(e2Item.entry.ranParameterCount)
+	id.RanParameterItems = make([]e2ap.RANParameterItem, length)
+	for i := 0; i < length; i++ {
+		if err := (&e2apEntryRANParameterItem{entry: &e2Item.entry.ranParameterItem[i]}).get(&id.RanParameterItems[i]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type e2apEntryRANueGroupDefItem struct {
+	entry *C.RANueGroupDefItem_t
+}
+
+func (e2Item *e2apEntryRANueGroupDefItem) set(dynMemHead *C.mem_track_hdr_t, id *e2ap.RANueGroupDefItem) error {
+
+	e2Item.entry.ranParameterID = (C.uint32_t)(id.RanParameterID)
+	e2Item.entry.ranParameterTest = (C.uint8_t)(id.RanParameterTest)
+	if err := (&e2apEntryRANParameterValue{entry: &e2Item.entry.ranParameterValue}).set(dynMemHead, &id.RanParameterValue); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (e2Item *e2apEntryRANueGroupDefItem) get(id *e2ap.RANueGroupDefItem) error {
+
+	id.RanParameterID = (uint32)(e2Item.entry.ranParameterID)
+	id.RanParameterTest = (uint8)(e2Item.entry.ranParameterTest)
+	if err := (&e2apEntryRANParameterValue{entry: &e2Item.entry.ranParameterValue}).get(&id.RanParameterValue); err != nil {
+		return err
+	}
+	return nil
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type e2apEntryRANParameterItem struct {
+	entry *C.RANParameterItem_t
+}
+
+func (e2Item *e2apEntryRANParameterItem) set(dynMemHead *C.mem_track_hdr_t, id *e2ap.RANParameterItem) error {
+
+	e2Item.entry.ranParameterID = (C.uint32_t)(id.RanParameterID)
+	if err := (&e2apEntryRANParameterValue{entry: &e2Item.entry.ranParameterValue}).set(dynMemHead, &id.RanParameterValue); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (e2Item *e2apEntryRANParameterItem) get(id *e2ap.RANParameterItem) error {
+
+	id.RanParameterID = (uint8)(e2Item.entry.ranParameterID)
+	if err := (&e2apEntryRANParameterValue{entry: &e2Item.entry.ranParameterValue}).get(&id.RanParameterValue); err != nil {
+		return err
+	}
+	return nil
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type e2apEntryRANParameterValue struct {
+	entry *C.RANParameterValue_t
+}
+
+func (e2Item *e2apEntryRANParameterValue) set(dynMemHead *C.mem_track_hdr_t, id *e2ap.RANParameterValue) error {
+
+	if id.ValueIntPresent {
+		e2Item.entry.valueInt = (C.int64_t)(id.ValueInt)
+		e2Item.entry.valueIntPresent = true
+	} else if id.ValueEnumPresent {
+		e2Item.entry.valueEnum = (C.int64_t)(id.ValueEnum)
+		e2Item.entry.valueEnumPresent = true
+	} else if id.ValueBoolPresent {
+		e2Item.entry.valueBool = (C.bool)(id.ValueBool)
+		e2Item.entry.valueBoolPresent = true
+	} else if id.ValueBitSPresent {
+		if C.addBitString(dynMemHead, &e2Item.entry.valueBitS, (C.uint64_t)(id.ValueBitS.Length), unsafe.Pointer(&id.ValueBitS.Data[0]), (C.uint8_t)(id.ValueBitS.UnusedBits)) == false {
+			return fmt.Errorf("Alloc valueBitS fail")
+		}
+		e2Item.entry.valueBitSPresent = true
+	} else if id.ValueOctSPresent {
+		if C.addOctetString(dynMemHead, &e2Item.entry.valueOctS, (C.uint64_t)(id.ValueOctS.Length), unsafe.Pointer(&id.ValueOctS.Data[0])) == false {
+			return fmt.Errorf("Alloc valueOctS fail")
+		}
+		e2Item.entry.valueOctSPresent = true
+	} else if id.ValuePrtSPresent {
+		if C.addOctetString(dynMemHead, &e2Item.entry.valuePrtS, (C.uint64_t)(id.ValuePrtS.Length), unsafe.Pointer(&id.ValuePrtS.Data[0])) == false {
+			return fmt.Errorf("Alloc valuePrtS fail")
+		}
+		e2Item.entry.valuePrtSPresent = true
+	}
+	return nil
+}
+
+func (e2Item *e2apEntryRANParameterValue) get(id *e2ap.RANParameterValue) error {
+
+	fmt.Printf("RANParameterValue e2Item.entry.valuePrtSPresent = %v\n", e2Item.entry.valuePrtSPresent)
+	if e2Item.entry.valueIntPresent {
+		id.ValueInt = (int64)(e2Item.entry.valueInt)
+		id.ValueIntPresent = true
+	} else if e2Item.entry.valueEnumPresent {
+		id.ValueEnum = (int64)(e2Item.entry.valueEnum)
+		id.ValueEnumPresent = true
+	} else if e2Item.entry.valueBoolPresent {
+		id.ValueBool = (bool)(e2Item.entry.valueBool)
+		id.ValueBoolPresent = true
+	} else if e2Item.entry.valueBitSPresent {
+		id.ValueBitSPresent = true
+		id.ValueBitS.Length = (uint64)(e2Item.entry.valueBitS.byteLength)
+		id.ValueBitS.UnusedBits = (uint8)(e2Item.entry.valueBitS.unusedBits)
+		id.ValueBitS.Data = make([]uint8, id.ValueBitS.Length)
+		C.memcpy(unsafe.Pointer(&id.ValueBitS.Data[0]), unsafe.Pointer(e2Item.entry.valueBitS.data), C.size_t(e2Item.entry.valueBitS.byteLength))
+	} else if e2Item.entry.valueOctSPresent {
+		id.ValueOctSPresent = true
+		id.ValueOctS.Length = (uint64)(e2Item.entry.valueOctS.length)
+		id.ValueOctS.Data = make([]uint8, id.ValueOctS.Length)
+		C.memcpy(unsafe.Pointer(&id.ValueOctS.Data[0]), unsafe.Pointer(e2Item.entry.valueOctS.data), C.size_t(e2Item.entry.valueOctS.length))
+	} else if e2Item.entry.valuePrtSPresent {
+		id.ValuePrtSPresent = true
+		id.ValuePrtS.Length = (uint64)(e2Item.entry.valuePrtS.length)
+		id.ValuePrtS.Data = make([]uint8, id.ValuePrtS.Length)
+		C.memcpy(unsafe.Pointer(&id.ValuePrtS.Data[0]), unsafe.Pointer(e2Item.entry.valuePrtS.data), C.size_t(e2Item.entry.valuePrtS.length))
 	}
 	return nil
 }
@@ -318,17 +782,65 @@ type e2apEntryEventTrigger struct {
 }
 
 func (evtTrig *e2apEntryEventTrigger) set(id *e2ap.EventTriggerDefinition) error {
+	if id.NBX2EventTriggerDefinitionPresent {
+		evtTrig.entry.E2SMgNBX2EventTriggerDefinitionPresent = true
+		return (&e2apEntryX2EventTrigger{entry: &evtTrig.entry.e2SMgNBX2eventTriggerDefinition}).set(&id.X2EventTriggerDefinition)
+
+	} else if id.NBNRTEventTriggerDefinitionPresent {
+		evtTrig.entry.E2SMgNBNRTEventTriggerDefinitionPresent = true
+		return (&e2apEntryNRTEventTrigger{entry: &evtTrig.entry.e2SMgNBNRTEventTriggerDefinition}).set(&id.NBNRTEventTriggerDefinition)
+	}
+	return fmt.Errorf("Set() empty EventTriggerDefinition")
+}
+
+func (evtTrig *e2apEntryEventTrigger) get(id *e2ap.EventTriggerDefinition) error {
+	if evtTrig.entry.E2SMgNBX2EventTriggerDefinitionPresent {
+		id.NBX2EventTriggerDefinitionPresent = true
+		return (&e2apEntryX2EventTrigger{entry: &evtTrig.entry.e2SMgNBX2eventTriggerDefinition}).get(&id.X2EventTriggerDefinition)
+
+	} else if evtTrig.entry.E2SMgNBNRTEventTriggerDefinitionPresent {
+		id.NBNRTEventTriggerDefinitionPresent = true
+		return (&e2apEntryNRTEventTrigger{entry: &evtTrig.entry.e2SMgNBNRTEventTriggerDefinition}).get(&id.NBNRTEventTriggerDefinition)
+	}
+	return fmt.Errorf("Get() empty EventTriggerDefinition")
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type e2apEntryX2EventTrigger struct {
+	entry *C.E2SMgNBX2eventTriggerDefinition_t
+}
+
+func (evtTrig *e2apEntryX2EventTrigger) set(id *e2ap.X2EventTriggerDefinition) error {
 	evtTrig.entry.interfaceDirection = (C.uint8_t)(id.InterfaceDirection)
 	evtTrig.entry.interfaceMessageType.procedureCode = (C.uint8_t)(id.ProcedureCode)
 	evtTrig.entry.interfaceMessageType.typeOfMessage = (C.uint8_t)(id.TypeOfMessage)
 	return (&e2apEntryInterfaceId{entry: &evtTrig.entry.interfaceID}).set(&id.InterfaceId)
 }
 
-func (evtTrig *e2apEntryEventTrigger) get(id *e2ap.EventTriggerDefinition) error {
+func (evtTrig *e2apEntryX2EventTrigger) get(id *e2ap.X2EventTriggerDefinition) error {
 	id.InterfaceDirection = (uint32)(evtTrig.entry.interfaceDirection)
 	id.ProcedureCode = (uint32)(evtTrig.entry.interfaceMessageType.procedureCode)
 	id.TypeOfMessage = (uint64)(evtTrig.entry.interfaceMessageType.typeOfMessage)
 	return (&e2apEntryInterfaceId{entry: &evtTrig.entry.interfaceID}).get(&id.InterfaceId)
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type e2apEntryNRTEventTrigger struct {
+	entry *C.E2SMgNBNRTEventTriggerDefinition_t
+}
+
+func (evtTrig *e2apEntryNRTEventTrigger) set(id *e2ap.NBNRTEventTriggerDefinition) error {
+	evtTrig.entry.eventDefinitionFormat1.triggerNature = (C.uint8_t)(id.TriggerNature)
+	return nil
+}
+
+func (evtTrig *e2apEntryNRTEventTrigger) get(id *e2ap.NBNRTEventTriggerDefinition) error {
+	id.TriggerNature = (uint8)(evtTrig.entry.eventDefinitionFormat1.triggerNature)
+	return nil
 }
 
 //-----------------------------------------------------------------------------
@@ -377,8 +889,8 @@ func (item *e2apEntryNotAdmittedList) set(data *e2ap.ActionNotAdmittedList) erro
 	item.entry.contentLength = 0
 	for i := 0; i < len(data.Items); i++ {
 		item.entry.RICActionNotAdmittedItem[item.entry.contentLength].ricActionID = (C.ulong)(data.Items[i].ActionId)
-		item.entry.RICActionNotAdmittedItem[item.entry.contentLength].ricCause.content = (C.uchar)(data.Items[i].Cause.Content)
-		item.entry.RICActionNotAdmittedItem[item.entry.contentLength].ricCause.cause = (C.uchar)(data.Items[i].Cause.Value)
+		item.entry.RICActionNotAdmittedItem[item.entry.contentLength].cause.content = (C.uchar)(data.Items[i].Cause.Content)
+		item.entry.RICActionNotAdmittedItem[item.entry.contentLength].cause.causeVal = (C.uchar)(data.Items[i].Cause.Value)
 		item.entry.contentLength++
 	}
 
@@ -390,8 +902,8 @@ func (item *e2apEntryNotAdmittedList) get(data *e2ap.ActionNotAdmittedList) erro
 	data.Items = make([]e2ap.ActionNotAdmittedItem, conlen)
 	for i := 0; i < conlen; i++ {
 		data.Items[i].ActionId = (uint64)(item.entry.RICActionNotAdmittedItem[i].ricActionID)
-		data.Items[i].Cause.Content = (uint8)(item.entry.RICActionNotAdmittedItem[i].ricCause.content)
-		data.Items[i].Cause.Value = (uint8)(item.entry.RICActionNotAdmittedItem[i].ricCause.cause)
+		data.Items[i].Cause.Content = (uint8)(item.entry.RICActionNotAdmittedItem[i].cause.content)
+		data.Items[i].Cause.Value = (uint8)(item.entry.RICActionNotAdmittedItem[i].cause.causeVal)
 	}
 	return nil
 }
@@ -563,28 +1075,32 @@ func (e2apMsg *e2apMsgPackerSubscriptionRequest) init() {
 func (e2apMsg *e2apMsgPackerSubscriptionRequest) Pack(data *e2ap.E2APSubscriptionRequest) (error, *e2ap.PackedData) {
 
 	e2apMsg.init()
+
 	defer e2apMsg.fini()
 	e2apMsg.msgG = data
+
+	var dynMemHead C.mem_track_hdr_t
+	C.mem_track_init(&dynMemHead)
+	defer C.mem_track_free(&dynMemHead)
 
 	e2apMsg.msgC.ranFunctionID = (C.uint16_t)(e2apMsg.msgG.FunctionId)
 	if err := (&e2apEntryRequestID{entry: &e2apMsg.msgC.ricRequestID}).set(&e2apMsg.msgG.RequestId); err != nil {
 		return err, nil
 	}
-	if err := (&e2apEntryEventTrigger{entry: &e2apMsg.msgC.ricSubscription.ricEventTriggerDefinition}).set(&e2apMsg.msgG.EventTriggerDefinition); err != nil {
+	if err := (&e2apEntryEventTrigger{entry: &e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition}).set(&e2apMsg.msgG.EventTriggerDefinition); err != nil {
 		return err, nil
 	}
 	if len(e2apMsg.msgG.ActionSetups) > 16 {
 		return fmt.Errorf("IndicationMessage.InterfaceMessage: too long %d while allowed %d", len(e2apMsg.msgG.ActionSetups), 16), nil
 	}
-	e2apMsg.msgC.ricSubscription.ricActionToBeSetupItemIEs.contentLength = 0
+	e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.contentLength = 0
 	for i := 0; i < len(e2apMsg.msgG.ActionSetups); i++ {
-		item := &e2apEntryActionToBeSetupItem{entry: &e2apMsg.msgC.ricSubscription.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[e2apMsg.msgC.ricSubscription.ricActionToBeSetupItemIEs.contentLength]}
-		e2apMsg.msgC.ricSubscription.ricActionToBeSetupItemIEs.contentLength += 1
-		if err := item.set(&e2apMsg.msgG.ActionSetups[i]); err != nil {
+		item := &e2apEntryActionToBeSetupItem{entry: &e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.contentLength]}
+		e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.contentLength += 1
+		if err := item.set(&dynMemHead, &e2apMsg.msgG.ActionSetups[i]); err != nil {
 			return err, nil
 		}
 	}
-
 	errorNro := C.packRICSubscriptionRequest(&e2apMsg.plen, (*C.uchar)(e2apMsg.p), (*C.char)(unsafe.Pointer(&e2apMsg.lb[0])), e2apMsg.msgC)
 	if err := e2apMsg.checkerr(errorNro); err != nil {
 		return err, nil
@@ -600,7 +1116,12 @@ func (e2apMsg *e2apMsgPackerSubscriptionRequest) UnPack(msg *e2ap.PackedData) (e
 	if err := e2apMsg.e2apMessagePacker.unpacktopdu(msg); err != nil {
 		return err, e2apMsg.msgG
 	}
-	errorNro := C.getRICSubscriptionRequestData(e2apMsg.e2apMessagePacker.pdu, e2apMsg.msgC)
+
+	var dynMemHead C.mem_track_hdr_t
+	C.mem_track_init(&dynMemHead)
+	defer C.mem_track_free(&dynMemHead)
+
+	errorNro := C.getRICSubscriptionRequestData(&dynMemHead, e2apMsg.e2apMessagePacker.pdu, e2apMsg.msgC)
 	if err := e2apMsg.checkerr(errorNro); err != nil {
 		return err, e2apMsg.msgG
 	}
@@ -609,13 +1130,13 @@ func (e2apMsg *e2apMsgPackerSubscriptionRequest) UnPack(msg *e2ap.PackedData) (e
 	if err := (&e2apEntryRequestID{entry: &e2apMsg.msgC.ricRequestID}).get(&e2apMsg.msgG.RequestId); err != nil {
 		return err, e2apMsg.msgG
 	}
-	if err := (&e2apEntryEventTrigger{entry: &e2apMsg.msgC.ricSubscription.ricEventTriggerDefinition}).get(&e2apMsg.msgG.EventTriggerDefinition); err != nil {
+	if err := (&e2apEntryEventTrigger{entry: &e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition}).get(&e2apMsg.msgG.EventTriggerDefinition); err != nil {
 		return err, e2apMsg.msgG
 	}
-	conlen := (int)(e2apMsg.msgC.ricSubscription.ricActionToBeSetupItemIEs.contentLength)
+	conlen := (int)(e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.contentLength)
 	e2apMsg.msgG.ActionSetups = make([]e2ap.ActionToBeSetupItem, conlen)
 	for i := 0; i < conlen; i++ {
-		item := &e2apEntryActionToBeSetupItem{entry: &e2apMsg.msgC.ricSubscription.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[i]}
+		item := &e2apEntryActionToBeSetupItem{entry: &e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[i]}
 		if err := item.get(&e2apMsg.msgG.ActionSetups[i]); err != nil {
 			return err, e2apMsg.msgG
 		}
@@ -629,50 +1150,52 @@ func (e2apMsg *e2apMsgPackerSubscriptionRequest) String() string {
 	fmt.Fprintln(&b, "ricSubscriptionRequest.")
 	fmt.Fprintln(&b, "  ricRequestID.")
 	fmt.Fprintln(&b, "     ricRequestorID =", e2apMsg.msgC.ricRequestID.ricRequestorID)
-	fmt.Fprintln(&b, "     ricRequestSequenceNumber =", e2apMsg.msgC.ricRequestID.ricRequestSequenceNumber)
+	fmt.Fprintln(&b, "     ricInstanceID =", e2apMsg.msgC.ricRequestID.ricInstanceID)
 	fmt.Fprintln(&b, "  ranFunctionID =", e2apMsg.msgC.ranFunctionID)
-	fmt.Fprintln(&b, "  ricSubscription.")
-	fmt.Fprintln(&b, "    ricEventTriggerDefinition.")
-	fmt.Fprintln(&b, "      contentLength =", e2apMsg.msgC.ricSubscription.ricEventTriggerDefinition.octetString.contentLength)
-	fmt.Fprintln(&b, "      interfaceID.globalENBIDPresent =", e2apMsg.msgC.ricSubscription.ricEventTriggerDefinition.interfaceID.globalENBIDPresent)
-	if e2apMsg.msgC.ricSubscription.ricEventTriggerDefinition.interfaceID.globalENBIDPresent {
-		fmt.Fprintln(&b, "      interfaceID.globalENBID.pLMNIdentity.contentLength =", e2apMsg.msgC.ricSubscription.ricEventTriggerDefinition.interfaceID.globalENBID.pLMNIdentity.contentLength)
-		fmt.Fprintln(&b, "      interfaceID.globalENBID.pLMNIdentity.pLMNIdentityVal[0] =", e2apMsg.msgC.ricSubscription.ricEventTriggerDefinition.interfaceID.globalENBID.pLMNIdentity.pLMNIdentityVal[0])
-		fmt.Fprintln(&b, "      interfaceID.globalENBID.pLMNIdentity.pLMNIdentityVal[1] =", e2apMsg.msgC.ricSubscription.ricEventTriggerDefinition.interfaceID.globalENBID.pLMNIdentity.pLMNIdentityVal[1])
-		fmt.Fprintln(&b, "      interfaceID.globalENBID.pLMNIdentity.pLMNIdentityVal[2] =", e2apMsg.msgC.ricSubscription.ricEventTriggerDefinition.interfaceID.globalENBID.pLMNIdentity.pLMNIdentityVal[2])
-		fmt.Fprintln(&b, "      interfaceID.globalENBID.nodeID.bits =", e2apMsg.msgC.ricSubscription.ricEventTriggerDefinition.interfaceID.globalENBID.nodeID.bits)
-		fmt.Fprintln(&b, "      interfaceID.globalENBID.nodeID.nodeID =", e2apMsg.msgC.ricSubscription.ricEventTriggerDefinition.interfaceID.globalENBID.nodeID.nodeID)
+	fmt.Fprintln(&b, "  ricSubscriptionDetails.")
+	fmt.Fprintln(&b, "    ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.")
+	fmt.Fprintln(&b, "      contentLength =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.octetString.contentLength)
+	fmt.Fprintln(&b, "      interfaceID.globalENBIDPresent =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalENBIDPresent)
+	if e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalENBIDPresent {
+		fmt.Fprintln(&b, "      interfaceID.globalENBID.pLMNIdentity.contentLength =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalENBID.pLMNIdentity.contentLength)
+		fmt.Fprintln(&b, "      interfaceID.globalENBID.pLMNIdentity.pLMNIdentityVal[0] =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalENBID.pLMNIdentity.pLMNIdentityVal[0])
+		fmt.Fprintln(&b, "      interfaceID.globalENBID.pLMNIdentity.pLMNIdentityVal[1] =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalENBID.pLMNIdentity.pLMNIdentityVal[1])
+		fmt.Fprintln(&b, "      interfaceID.globalENBID.pLMNIdentity.pLMNIdentityVal[2] =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalENBID.pLMNIdentity.pLMNIdentityVal[2])
+		fmt.Fprintln(&b, "      interfaceID.globalENBID.nodeID.bits =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalENBID.nodeID.bits)
+		fmt.Fprintln(&b, "      interfaceID.globalENBID.nodeID.nodeID =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalENBID.nodeID.nodeID)
 	}
-	fmt.Fprintln(&b, "      interfaceID.globalGNBIDPresent =", e2apMsg.msgC.ricSubscription.ricEventTriggerDefinition.interfaceID.globalGNBIDPresent)
-	if e2apMsg.msgC.ricSubscription.ricEventTriggerDefinition.interfaceID.globalGNBIDPresent {
-		fmt.Fprintln(&b, "      interfaceID.globalGNBID.pLMNIdentity.contentLength =", e2apMsg.msgC.ricSubscription.ricEventTriggerDefinition.interfaceID.globalGNBID.pLMNIdentity.contentLength)
-		fmt.Fprintln(&b, "      interfaceID.globalGNBID.pLMNIdentity.pLMNIdentityVal[0] =", e2apMsg.msgC.ricSubscription.ricEventTriggerDefinition.interfaceID.globalGNBID.pLMNIdentity.pLMNIdentityVal[0])
-		fmt.Fprintln(&b, "      interfaceID.globalGNBID.pLMNIdentity.pLMNIdentityVal[1] =", e2apMsg.msgC.ricSubscription.ricEventTriggerDefinition.interfaceID.globalGNBID.pLMNIdentity.pLMNIdentityVal[1])
-		fmt.Fprintln(&b, "      interfaceID.globalGNBID.pLMNIdentity.pLMNIdentityVal[2] =", e2apMsg.msgC.ricSubscription.ricEventTriggerDefinition.interfaceID.globalGNBID.pLMNIdentity.pLMNIdentityVal[2])
-		fmt.Fprintln(&b, "      interfaceID.globalGNBID.nodeID.bits =", e2apMsg.msgC.ricSubscription.ricEventTriggerDefinition.interfaceID.globalGNBID.nodeID.bits)
-		fmt.Fprintln(&b, "      interfaceID.globalGNBID.nodeID.nodeID =", e2apMsg.msgC.ricSubscription.ricEventTriggerDefinition.interfaceID.globalGNBID.nodeID.nodeID)
+	fmt.Fprintln(&b, "      interfaceID.globalGNBIDPresent =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalGNBIDPresent)
+	if e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalGNBIDPresent {
+		fmt.Fprintln(&b, "      interfaceID.globalGNBID.pLMNIdentity.contentLength =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalGNBID.pLMNIdentity.contentLength)
+		fmt.Fprintln(&b, "      interfaceID.globalGNBID.pLMNIdentity.pLMNIdentityVal[0] =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalGNBID.pLMNIdentity.pLMNIdentityVal[0])
+		fmt.Fprintln(&b, "      interfaceID.globalGNBID.pLMNIdentity.pLMNIdentityVal[1] =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalGNBID.pLMNIdentity.pLMNIdentityVal[1])
+		fmt.Fprintln(&b, "      interfaceID.globalGNBID.pLMNIdentity.pLMNIdentityVal[2] =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalGNBID.pLMNIdentity.pLMNIdentityVal[2])
+		fmt.Fprintln(&b, "      interfaceID.globalGNBID.nodeID.bits =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalGNBID.nodeID.bits)
+		fmt.Fprintln(&b, "      interfaceID.globalGNBID.nodeID.nodeID =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalGNBID.nodeID.nodeID)
 	}
-	fmt.Fprintln(&b, "      interfaceDirection= ", e2apMsg.msgC.ricSubscription.ricEventTriggerDefinition.interfaceDirection)
-	fmt.Fprintln(&b, "      interfaceMessageType.procedureCode =", e2apMsg.msgC.ricSubscription.ricEventTriggerDefinition.interfaceMessageType.procedureCode)
-	fmt.Fprintln(&b, "      interfaceMessageType.typeOfMessage =", e2apMsg.msgC.ricSubscription.ricEventTriggerDefinition.interfaceMessageType.typeOfMessage)
+	fmt.Fprintln(&b, "      interfaceDirection = ", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceDirection)
+	fmt.Fprintln(&b, "      interfaceMessageType.procedureCode =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceMessageType.procedureCode)
+	fmt.Fprintln(&b, "      interfaceMessageType.typeOfMessage =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceMessageType.typeOfMessage)
 	fmt.Fprintln(&b, "    ricActionToBeSetupItemIEs.")
-	fmt.Fprintln(&b, "      contentLength =", e2apMsg.msgC.ricSubscription.ricActionToBeSetupItemIEs.contentLength)
+	fmt.Fprintln(&b, "      contentLength =", e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.contentLength)
 	var index uint8
 	index = 0
-	for (C.uchar)(index) < e2apMsg.msgC.ricSubscription.ricActionToBeSetupItemIEs.contentLength {
-		fmt.Fprintln(&b, "      ricActionToBeSetupItem[index].ricActionID =", e2apMsg.msgC.ricSubscription.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionID)
-		fmt.Fprintln(&b, "      ricActionToBeSetupItem[index].ricActionType =", e2apMsg.msgC.ricSubscription.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionType)
+	for (C.uchar)(index) < e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.contentLength {
+		fmt.Fprintln(&b, "      ricActionToBeSetupItem[index].ricActionID =", e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionID)
+		fmt.Fprintln(&b, "      ricActionToBeSetupItem[index].ricActionType =", e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionType)
 
-		fmt.Fprintln(&b, "      ricActionToBeSetupItem[index].ricActionDefinitionPresent =", e2apMsg.msgC.ricSubscription.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionPresent)
-		if e2apMsg.msgC.ricSubscription.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionPresent {
-			fmt.Fprintln(&b, "      ricActionToBeSetupItem[index].ricActionDefinition.styleID =", e2apMsg.msgC.ricSubscription.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinition.styleID)
-			fmt.Fprintln(&b, "      ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinition.sequenceOfActionParameters.parameterID =", e2apMsg.msgC.ricSubscription.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinition.sequenceOfActionParameters.parameterID)
+		fmt.Fprintln(&b, "      ricActionToBeSetupItem[index].ricActionDefinitionPresent =", e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionPresent)
+		if e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionPresent {
+			fmt.Fprintln(&b, "      ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1Present =", e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1Present)
+			fmt.Fprintln(&b, "      ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2Present =", e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2Present)
+			fmt.Fprintln(&b, "      ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1Present =", e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1Present)
+			// Dynamically allocated C-structs are already freed. Can't print those.
 		}
 
-		fmt.Fprintln(&b, "      ricActionToBeSetupItem[index].ricSubsequentActionPresent =", e2apMsg.msgC.ricSubscription.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricSubsequentActionPresent)
-		if e2apMsg.msgC.ricSubscription.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricSubsequentActionPresent {
-			fmt.Fprintln(&b, "      ricActionToBeSetupItem[index].ricSubsequentAction.ricSubsequentActionType =", e2apMsg.msgC.ricSubscription.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricSubsequentAction.ricSubsequentActionType)
-			fmt.Fprintln(&b, "      ricActionToBeSetupItem[index].ricSubsequentAction.ricTimeToWait =", e2apMsg.msgC.ricSubscription.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricSubsequentAction.ricTimeToWait)
+		fmt.Fprintln(&b, "      ricActionToBeSetupItem[index].ricSubsequentActionPresent =", e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricSubsequentActionPresent)
+		if e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricSubsequentActionPresent {
+			fmt.Fprintln(&b, "      ricActionToBeSetupItem[index].ricSubsequentAction.ricSubsequentActionType =", e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricSubsequentAction.ricSubsequentActionType)
+			fmt.Fprintln(&b, "      ricActionToBeSetupItem[index].ricSubsequentAction.ricTimeToWait =", e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricSubsequentAction.ricTimeToWait)
 		}
 		index++
 	}
@@ -755,7 +1278,7 @@ func (e2apMsg *e2apMsgPackerSubscriptionResponse) String() string {
 	fmt.Fprintln(&b, "ricSubscriptionResponse.")
 	fmt.Fprintln(&b, "  ricRequestID.")
 	fmt.Fprintln(&b, "    ricRequestorID =", e2apMsg.msgC.ricRequestID.ricRequestorID)
-	fmt.Fprintln(&b, "    ricRequestSequenceNumber =", e2apMsg.msgC.ricRequestID.ricRequestSequenceNumber)
+	fmt.Fprintln(&b, "    ricInstanceID =", e2apMsg.msgC.ricRequestID.ricInstanceID)
 	fmt.Fprintln(&b, "  ranFunctionID =", e2apMsg.msgC.ranFunctionID)
 	fmt.Fprintln(&b, "  ricActionAdmittedList.")
 	fmt.Fprintln(&b, "    contentLength =", e2apMsg.msgC.ricActionAdmittedList.contentLength)
@@ -772,8 +1295,8 @@ func (e2apMsg *e2apMsgPackerSubscriptionResponse) String() string {
 		index = 0
 		for (C.uchar)(index) < e2apMsg.msgC.ricActionNotAdmittedList.contentLength {
 			fmt.Fprintln(&b, "      RICActionNotAdmittedItem[index].ricActionID =", e2apMsg.msgC.ricActionNotAdmittedList.RICActionNotAdmittedItem[index].ricActionID)
-			fmt.Fprintln(&b, "      RICActionNotAdmittedItem[index].ricCause.content =", e2apMsg.msgC.ricActionNotAdmittedList.RICActionNotAdmittedItem[index].ricCause.content)
-			fmt.Fprintln(&b, "      RICActionNotAdmittedItem[index].ricCause.cause =", e2apMsg.msgC.ricActionNotAdmittedList.RICActionNotAdmittedItem[index].ricCause.cause)
+			fmt.Fprintln(&b, "      RICActionNotAdmittedItem[index].cause.content =", e2apMsg.msgC.ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.content)
+			fmt.Fprintln(&b, "      RICActionNotAdmittedItem[index].cause.causeVal =", e2apMsg.msgC.ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.causeVal)
 			index++
 		}
 	}
@@ -856,7 +1379,7 @@ func (e2apMsg *e2apMsgPackerSubscriptionFailure) String() string {
 	fmt.Fprintln(&b, "ricSubscriptionFailure.")
 	fmt.Fprintln(&b, "  ricRequestID.")
 	fmt.Fprintln(&b, "    ricRequestorID =", e2apMsg.msgC.ricRequestID.ricRequestorID)
-	fmt.Fprintln(&b, "    ricRequestSequenceNumber =", e2apMsg.msgC.ricRequestID.ricRequestSequenceNumber)
+	fmt.Fprintln(&b, "    ricInstanceID =", e2apMsg.msgC.ricRequestID.ricInstanceID)
 	fmt.Fprintln(&b, "  ranFunctionID =", e2apMsg.msgC.ranFunctionID)
 	fmt.Fprintln(&b, "  ricActionNotAdmittedList.")
 	fmt.Fprintln(&b, "    contentLength =", e2apMsg.msgC.ricActionNotAdmittedList.contentLength)
@@ -864,8 +1387,8 @@ func (e2apMsg *e2apMsgPackerSubscriptionFailure) String() string {
 	index = 0
 	for (C.uchar)(index) < e2apMsg.msgC.ricActionNotAdmittedList.contentLength {
 		fmt.Fprintln(&b, "    RICActionNotAdmittedItem[index].ricActionID =", e2apMsg.msgC.ricActionNotAdmittedList.RICActionNotAdmittedItem[index].ricActionID)
-		fmt.Fprintln(&b, "    RICActionNotAdmittedItem[index].ricCause.content =", e2apMsg.msgC.ricActionNotAdmittedList.RICActionNotAdmittedItem[index].ricCause.content)
-		fmt.Fprintln(&b, "    RICActionNotAdmittedItem[index].ricCause.cause =", e2apMsg.msgC.ricActionNotAdmittedList.RICActionNotAdmittedItem[index].ricCause.cause)
+		fmt.Fprintln(&b, "    RICActionNotAdmittedItem[index].cause.content =", e2apMsg.msgC.ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.content)
+		fmt.Fprintln(&b, "    RICActionNotAdmittedItem[index].cause.causeVal =", e2apMsg.msgC.ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.causeVal)
 		index++
 	}
 	/* NOT SUPPORTED
@@ -951,7 +1474,7 @@ func (e2apMsg *e2apMsgPackerSubscriptionDeleteRequest) String() string {
 	fmt.Fprintln(&b, "ricSubscriptionDeleteRequest.")
 	fmt.Fprintln(&b, "  ricRequestID.")
 	fmt.Fprintln(&b, "     ricRequestorID =", e2apMsg.msgC.ricRequestID.ricRequestorID)
-	fmt.Fprintln(&b, "     ricRequestSequenceNumber =", e2apMsg.msgC.ricRequestID.ricRequestSequenceNumber)
+	fmt.Fprintln(&b, "     ricInstanceID =", e2apMsg.msgC.ricRequestID.ricInstanceID)
 	fmt.Fprintln(&b, "  ranFunctionID =", e2apMsg.msgC.ranFunctionID)
 	return b.String()
 }
@@ -1013,7 +1536,7 @@ func (e2apMsg *e2apMsgPackerSubscriptionDeleteResponse) String() string {
 	fmt.Fprintln(&b, "ricSubscriptionDeleteResponse.")
 	fmt.Fprintln(&b, "  ricRequestID.")
 	fmt.Fprintln(&b, "    ricRequestorID =", e2apMsg.msgC.ricRequestID.ricRequestorID)
-	fmt.Fprintln(&b, "    ricRequestSequenceNumber =", e2apMsg.msgC.ricRequestID.ricRequestSequenceNumber)
+	fmt.Fprintln(&b, "    ricInstanceID =", e2apMsg.msgC.ricRequestID.ricInstanceID)
 	fmt.Fprintln(&b, "  ranFunctionID =", e2apMsg.msgC.ranFunctionID)
 	return b.String()
 }
@@ -1043,8 +1566,8 @@ func (e2apMsg *e2apMsgPackerSubscriptionDeleteFailure) Pack(data *e2ap.E2APSubsc
 	if err := (&e2apEntryRequestID{entry: &e2apMsg.msgC.ricRequestID}).set(&e2apMsg.msgG.RequestId); err != nil {
 		return err, nil
 	}
-	e2apMsg.msgC.ricCause.content = (C.uchar)(e2apMsg.msgG.Cause.Content)
-	e2apMsg.msgC.ricCause.cause = (C.uchar)(e2apMsg.msgG.Cause.Value)
+	e2apMsg.msgC.cause.content = (C.uchar)(e2apMsg.msgG.Cause.Content)
+	e2apMsg.msgC.cause.causeVal = (C.uchar)(e2apMsg.msgG.Cause.Value)
 	e2apMsg.msgC.criticalityDiagnosticsPresent = false
 	if e2apMsg.msgG.CriticalityDiagnostics.Present {
 		e2apMsg.msgC.criticalityDiagnosticsPresent = true
@@ -1076,8 +1599,8 @@ func (e2apMsg *e2apMsgPackerSubscriptionDeleteFailure) UnPack(msg *e2ap.PackedDa
 	if err := (&e2apEntryRequestID{entry: &e2apMsg.msgC.ricRequestID}).get(&e2apMsg.msgG.RequestId); err != nil {
 		return err, e2apMsg.msgG
 	}
-	e2apMsg.msgG.Cause.Content = (uint8)(e2apMsg.msgC.ricCause.content)
-	e2apMsg.msgG.Cause.Value = (uint8)(e2apMsg.msgC.ricCause.cause)
+	e2apMsg.msgG.Cause.Content = (uint8)(e2apMsg.msgC.cause.content)
+	e2apMsg.msgG.Cause.Value = (uint8)(e2apMsg.msgC.cause.causeVal)
 	if e2apMsg.msgC.criticalityDiagnosticsPresent == true {
 		e2apMsg.msgG.CriticalityDiagnostics.Present = true
 		if err := (&e2apEntryCriticalityDiagnostic{entry: &e2apMsg.msgC.criticalityDiagnostics}).get(&e2apMsg.msgG.CriticalityDiagnostics); err != nil {
@@ -1092,7 +1615,7 @@ func (e2apMsg *e2apMsgPackerSubscriptionDeleteFailure) String() string {
 	fmt.Fprintln(&b, "ricSubscriptionDeleteFailure.")
 	fmt.Fprintln(&b, "  ricRequestID.")
 	fmt.Fprintln(&b, "    ricRequestorID =", e2apMsg.msgC.ricRequestID.ricRequestorID)
-	fmt.Fprintln(&b, "    ricRequestSequenceNumber =", e2apMsg.msgC.ricRequestID.ricRequestSequenceNumber)
+	fmt.Fprintln(&b, "    ricInstanceID =", e2apMsg.msgC.ricRequestID.ricInstanceID)
 	fmt.Fprintln(&b, "  ranFunctionID =", e2apMsg.msgC.ranFunctionID)
 	/*	NOT SUPPORTED
 		if e2apMsg.msgC.criticalityDiagnosticsPresent {

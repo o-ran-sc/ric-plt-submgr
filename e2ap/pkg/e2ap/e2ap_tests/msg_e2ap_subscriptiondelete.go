@@ -39,7 +39,7 @@ func (testCtxt *E2ApTests) E2ApTestMsgSubscriptionDeleteRequest(t *testing.T) {
 
 	areqenc := e2ap.E2APSubscriptionDeleteRequest{}
 	areqenc.RequestId.Id = 1
-	areqenc.RequestId.Seq = 22
+	areqenc.RequestId.InstanceId = 22
 	areqenc.FunctionId = 33
 
 	testCtxt.testPrint("pack")
@@ -70,7 +70,7 @@ func (testCtxt *E2ApTests) E2ApTestMsgSubscriptionDeleteResponse(t *testing.T) {
 
 	arespenc := e2ap.E2APSubscriptionDeleteResponse{}
 	arespenc.RequestId.Id = 1
-	arespenc.RequestId.Seq = 22
+	arespenc.RequestId.InstanceId = 22
 	arespenc.FunctionId = 33
 
 	testCtxt.testPrint("pack")
@@ -101,7 +101,7 @@ func (testCtxt *E2ApTests) E2ApTestMsgSubscriptionDeleteFailure(t *testing.T) {
 
 	afailenc := e2ap.E2APSubscriptionDeleteFailure{}
 	afailenc.RequestId.Id = 1
-	afailenc.RequestId.Seq = 22
+	afailenc.RequestId.InstanceId = 22
 	afailenc.FunctionId = 33
 	afailenc.Cause.Content = 1
 	afailenc.Cause.Value = 1

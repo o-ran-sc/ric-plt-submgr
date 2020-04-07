@@ -22,7 +22,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
 #include "E2AP_if.h"
 
 const size_t cDataBufferSize = 2048;
@@ -32,26 +31,36 @@ typedef union {
     uint8_t   octets[4];
 } IdOctects_t;
 
+
+
 //////////////////////////////////////////////////////////////////////
 bool TestRICSubscriptionRequest() {
+
     RICSubscriptionRequest_t ricSubscriptionRequest;
+    mem_track_hdr_t dynMemHead;
+    mem_track_init(&dynMemHead);
+
+    printf(" sizeof RICSubscriptionRequest_t = %li\n", sizeof (RICSubscriptionRequest_t));
+
     ricSubscriptionRequest.ricRequestID.ricRequestorID = 1;
-    ricSubscriptionRequest.ricRequestID.ricRequestSequenceNumber = 22;
+    ricSubscriptionRequest.ricRequestID.ricInstanceID = 22;
     ricSubscriptionRequest.ranFunctionID = 33;
 
-    ricSubscriptionRequest.ricSubscription.ricEventTriggerDefinition.octetString.contentLength = 0;
+    ricSubscriptionRequest.ricSubscriptionDetails.ricEventTriggerDefinition.octetString.contentLength = 0;
+    ricSubscriptionRequest.ricSubscriptionDetails.ricEventTriggerDefinition.E2SMgNBX2EventTriggerDefinitionPresent = false;
+    ricSubscriptionRequest.ricSubscriptionDetails.ricEventTriggerDefinition.E2SMgNBNRTEventTriggerDefinitionPresent = true;
 
-    ricSubscriptionRequest.ricSubscription.ricEventTriggerDefinition.interfaceID.globalENBIDPresent = true;
-    ricSubscriptionRequest.ricSubscription.ricEventTriggerDefinition.interfaceID.globalGNBIDPresent = false;
-    ricSubscriptionRequest.ricSubscription.ricEventTriggerDefinition.interfaceID.globalENBID.pLMNIdentity.contentLength = 3;
-    ricSubscriptionRequest.ricSubscription.ricEventTriggerDefinition.interfaceID.globalENBID.pLMNIdentity.pLMNIdentityVal[0] = 1;
-    ricSubscriptionRequest.ricSubscription.ricEventTriggerDefinition.interfaceID.globalENBID.pLMNIdentity.pLMNIdentityVal[1] = 2;
-    ricSubscriptionRequest.ricSubscription.ricEventTriggerDefinition.interfaceID.globalENBID.pLMNIdentity.pLMNIdentityVal[2] = 3;
+    ricSubscriptionRequest.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalENBIDPresent = true;
+    ricSubscriptionRequest.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalGNBIDPresent = false;
+    ricSubscriptionRequest.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalENBID.pLMNIdentity.contentLength = 3;
+    ricSubscriptionRequest.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalENBID.pLMNIdentity.pLMNIdentityVal[0] = 1;
+    ricSubscriptionRequest.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalENBID.pLMNIdentity.pLMNIdentityVal[1] = 2;
+    ricSubscriptionRequest.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalENBID.pLMNIdentity.pLMNIdentityVal[2] = 3;
 
-//    ricSubscriptionRequest.ricSubscription.ricEventTriggerDefinition.interfaceID.globalENBID.eNBID.bits = cMacroENBIDP_20Bits;
-//    ricSubscriptionRequest.ricSubscription.ricEventTriggerDefinition.interfaceID.globalENBID.eNBID.bits = cHomeENBID_28Bits;
-//    ricSubscriptionRequest.ricSubscription.ricEventTriggerDefinition.interfaceID.globalENBID.eNBID.bits = cShortMacroENBID_18Bits;
-    ricSubscriptionRequest.ricSubscription.ricEventTriggerDefinition.interfaceID.globalENBID.nodeID.bits = clongMacroENBIDP_21Bits;
+//    ricSubscriptionRequest.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalENBID.eNBID.bits = cMacroENBIDP_20Bits;
+//    ricSubscriptionRequest.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalENBID.eNBID.bits = cHomeENBID_28Bits;
+//    ricSubscriptionRequest.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalENBID.eNBID.bits = cShortMacroENBID_18Bits;
+    ricSubscriptionRequest.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalENBID.nodeID.bits = clongMacroENBIDP_21Bits;
 
     IdOctects_t eNBOctects;
     memset(eNBOctects.octets, 0, sizeof(eNBOctects));
@@ -59,30 +68,109 @@ bool TestRICSubscriptionRequest() {
     eNBOctects.octets[1] = 22;
     eNBOctects.octets[2] = 31;
     eNBOctects.octets[3] = 1;
-    ricSubscriptionRequest.ricSubscription.ricEventTriggerDefinition.interfaceID.globalENBID.nodeID.nodeID = eNBOctects.nodeID;
+    ricSubscriptionRequest.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalENBID.nodeID.nodeID = eNBOctects.nodeID;
     printf("eNBOctects.nodeID = %u\n\n",eNBOctects.nodeID);
 
-    ricSubscriptionRequest.ricSubscription.ricEventTriggerDefinition.interfaceDirection = InterfaceDirection__incoming;
-    ricSubscriptionRequest.ricSubscription.ricEventTriggerDefinition.interfaceMessageType.procedureCode = 35;  // id-rRCTransfer
-    ricSubscriptionRequest.ricSubscription.ricEventTriggerDefinition.interfaceMessageType.typeOfMessage = cE2InitiatingMessage;
+    ricSubscriptionRequest.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceDirection = InterfaceDirection__incoming;
+    ricSubscriptionRequest.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceMessageType.procedureCode = 35;  // id-rRCTransfer
+    ricSubscriptionRequest.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceMessageType.typeOfMessage = cE2InitiatingMessage;
 
-    ricSubscriptionRequest.ricSubscription.ricActionToBeSetupItemIEs.contentLength = 1;
+    ricSubscriptionRequest.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceProtocolIEListPresent = false;
+
+    ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.contentLength = 1;
     uint64_t index = 0;
-    while (index < ricSubscriptionRequest.ricSubscription.ricActionToBeSetupItemIEs.contentLength) {
-        ricSubscriptionRequest.ricSubscription.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionID = 255; //index;
-        ricSubscriptionRequest.ricSubscription.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionType = RICActionType_insert;
+    while (index < ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.contentLength) {
+        ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionID = 255; //index;
+        ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionType = RICActionType_insert;
 
-        // ricActionDefinition, OPTIONAL. Not used in RIC
-        ricSubscriptionRequest.ricSubscription.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionPresent = false; //true;
-        ricSubscriptionRequest.ricSubscription.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinition.styleID = 255;
-        ricSubscriptionRequest.ricSubscription.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinition.sequenceOfActionParameters.parameterID = 222;
+        // ricActionDefinition, OPTIONAL.
+        ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionPresent = true;
 
+        char data[3] = {'A','B','C'};
+
+        ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1Present = false;  // Choice
+        ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2Present = false;
+        ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1Present = true;
+
+        if (ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1Present) {
+            // X2 Format 1
+            if (allocActionDefinitionX2Format1(&dynMemHead,&ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1) != e2err_OK)
+                return false;
+            ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterCount = 1;
+
+            uint64_t index2 = 0;
+            while (index2 < ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterCount) {
+
+                ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->styleID = 255;
+                ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterItem->parameterID = 1;  // index
+                ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterItem[index2].actionParameterValue.valueIntPresent = false;
+                ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterItem[index2].actionParameterValue.valueInt = 111;
+
+                ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterItem[index2].actionParameterValue.valueOctSPresent = true;
+                if (addOctetString(&dynMemHead,&ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterItem[index2].actionParameterValue.valueOctS,sizeof(data),data) == NULL) {
+                    printf("addOctetString failure\n");
+                    return false;
+                }
+                index2++;
+            }
+        }
+        else if (ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2Present) {
+            // X2 Format 2
+            if (allocActionDefinitionX2Format2(&dynMemHead,&ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2))
+                return false;
+
+            ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupCount = 1;
+
+            uint64_t index3 = 0;
+            while (index3 < ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupCount) {
+                ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index3].ranUEgroupID = 0;
+                ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index3].ranUEgroupDefinition.ranUeGroupDefCount = 1;
+                uint64_t index4 = 0;
+                while (index4 < ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index3].ranUEgroupDefinition.ranUeGroupDefCount) {
+                    ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index3].ranUEgroupDefinition.ranUeGroupDefItem[index4].ranParameterID = 0;
+                    ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index3].ranUEgroupDefinition.ranUeGroupDefItem[index4].ranParameterTest = RANParameterTest_equal;
+                    ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index3].ranUEgroupDefinition.ranUeGroupDefItem[index4].ranParameterValue.valueIntPresent = false;
+                    ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index3].ranUEgroupDefinition.ranUeGroupDefItem[index4].ranParameterValue.valueInt = 1;
+
+                    ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index3].ranUEgroupDefinition.ranUeGroupDefItem[index4].ranParameterValue.valueOctSPresent = true;
+                    addOctetString(&dynMemHead,&ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index4].ranUEgroupDefinition.ranUeGroupDefItem[0].ranParameterValue.valueOctS,sizeof(data),data);
+                    index4++;
+                }
+
+                ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index3].ranPolicy.ranParameterCount = 1;
+                uint64_t index5 = 0;
+                while (index5 < ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index3].ranPolicy.ranParameterCount) {
+                    ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index3].ranPolicy.ranParameterItem[index5].ranParameterID = 0;
+                    ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index3].ranPolicy.ranParameterItem[index5].ranParameterValue.valueIntPresent = true;
+                    ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index3].ranPolicy.ranParameterItem[index5].ranParameterValue.valueInt = 2;
+                    index5++;
+                }
+                index3++;
+            }
+        }
+        else if (ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1Present) {
+            // NRT Format 1
+            if (allocActionDefinitionNRTFormat1(&dynMemHead,&ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1) != e2err_OK)
+                return false;
+
+            ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterCount = 1;
+
+            uint64_t index2 = 0;
+            while (index2 < ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterCount) {
+                ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterList[index2].ranParameterID = 0;
+                ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterList[index2].ranParameterValue.valueIntPresent = true;
+                ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterList[index2].ranParameterValue.valueInt = 2;
+                index2++;
+            }
+        }
         // ricSubsequentActionPresent, OPTIONAL
-        ricSubscriptionRequest.ricSubscription.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricSubsequentActionPresent = true;
-        ricSubscriptionRequest.ricSubscription.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricSubsequentAction.ricSubsequentActionType = RICSubsequentActionType_Continue;
-        ricSubscriptionRequest.ricSubscription.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricSubsequentAction.ricTimeToWait = RICTimeToWait_w100ms;
+        ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricSubsequentActionPresent = true;
+        ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricSubsequentAction.ricSubsequentActionType = RICSubsequentActionType_Continue;
+        ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricSubsequentAction.ricTimeToWait = RICTimeToWait_w100ms;
         index++;
     }
+
+    printf(" sizeof RICSubscriptionRequest_t = %li\n", sizeof (RICSubscriptionRequest_t));
 
     printRICSubscriptionRequest(&ricSubscriptionRequest);
 
@@ -92,15 +180,16 @@ bool TestRICSubscriptionRequest() {
     byte dataBuffer[dataBufferSize];
     if (packRICSubscriptionRequest(&dataBufferSize, dataBuffer, logBuffer, &ricSubscriptionRequest) == e2err_OK)
     {
-        memset(&ricSubscriptionRequest,0, sizeof ricSubscriptionRequest);
+        memset(&ricSubscriptionRequest,0, sizeof (RICSubscriptionRequest_t));
         uint64_t returnCode;
         E2MessageInfo_t messageInfo;
         e2ap_pdu_ptr_t* pE2AP_PDU = unpackE2AP_pdu(dataBufferSize, dataBuffer, logBuffer, &messageInfo);
         if (pE2AP_PDU != 0) {
             if (messageInfo.messageType == cE2InitiatingMessage) {
                 if (messageInfo.messageId == cRICSubscriptionRequest) {
-                    if ((returnCode = getRICSubscriptionRequestData(pE2AP_PDU, &ricSubscriptionRequest)) == e2err_OK) {
+                    if ((returnCode = getRICSubscriptionRequestData(&dynMemHead, pE2AP_PDU, &ricSubscriptionRequest)) == e2err_OK) {
                         printRICSubscriptionRequest(&ricSubscriptionRequest);
+                        mem_track_free(&dynMemHead);
                         return true;
                     }
                     else
@@ -117,6 +206,8 @@ bool TestRICSubscriptionRequest() {
     }
     else
         printf("%s",logBuffer);
+
+    mem_track_free(&dynMemHead);
     return false;
 }
 
@@ -125,7 +216,7 @@ bool TestRICSubscriptionResponse() {
     // Test RICSubscribeResponse
     RICSubscriptionResponse_t ricSubscriptionResponse;
     ricSubscriptionResponse.ricRequestID.ricRequestorID = 1;
-    ricSubscriptionResponse.ricRequestID.ricRequestSequenceNumber = 22;
+    ricSubscriptionResponse.ricRequestID.ricInstanceID = 22;
     ricSubscriptionResponse.ranFunctionID = 33;
     ricSubscriptionResponse.ricActionAdmittedList.contentLength = 16;
     uint64_t index = 0;
@@ -137,9 +228,9 @@ bool TestRICSubscriptionResponse() {
     ricSubscriptionResponse.ricActionNotAdmittedList.contentLength = 16;
     index = 0;
     while (index < ricSubscriptionResponse.ricActionNotAdmittedList.contentLength) {
-        ricSubscriptionResponse.ricActionNotAdmittedList.RICActionNotAdmittedItem[index].ricActionID = index;
-        ricSubscriptionResponse.ricActionNotAdmittedList.RICActionNotAdmittedItem[index].ricCause.content = cRICCauseRadioNetwork;
-        ricSubscriptionResponse.ricActionNotAdmittedList.RICActionNotAdmittedItem[index].ricCause.cause = index;
+        ricSubscriptionResponse.ricActionNotAdmittedList.RICActionNotAdmittedItem[index].ricActionID = index;  //0..255
+        ricSubscriptionResponse.ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.content = cCauseRICService;
+        ricSubscriptionResponse.ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.causeVal = 2;
         index++;
     }
 
@@ -184,14 +275,14 @@ bool TestRICSubscriptionFailure() {
     // Test RICSubscribeFailure
     RICSubscriptionFailure_t ricSubscriptionFailure;
     ricSubscriptionFailure.ricRequestID.ricRequestorID = 1;
-    ricSubscriptionFailure.ricRequestID.ricRequestSequenceNumber = 22;
+    ricSubscriptionFailure.ricRequestID.ricInstanceID = 22;
     ricSubscriptionFailure.ranFunctionID = 33;
     ricSubscriptionFailure.ricActionNotAdmittedList.contentLength = 16;
     uint64_t index = 0;
     while (index < ricSubscriptionFailure.ricActionNotAdmittedList.contentLength) {
         ricSubscriptionFailure.ricActionNotAdmittedList.RICActionNotAdmittedItem[index].ricActionID = index;
-        ricSubscriptionFailure.ricActionNotAdmittedList.RICActionNotAdmittedItem[index].ricCause.content = cRICCauseRadioNetwork;
-        ricSubscriptionFailure.ricActionNotAdmittedList.RICActionNotAdmittedItem[index].ricCause.cause = index;
+        ricSubscriptionFailure.ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.content = cCauseRICService;
+        ricSubscriptionFailure.ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.causeVal = 2;
         index++;
     }
     // CriticalityDiagnostics, OPTIONAL. Not used in RIC
@@ -254,7 +345,7 @@ bool TestRICSubscriptionDeleteRequest() {
 
     RICSubscriptionDeleteRequest_t ricSubscriptionDeleteRequest;
     ricSubscriptionDeleteRequest.ricRequestID.ricRequestorID = 1;
-    ricSubscriptionDeleteRequest.ricRequestID.ricRequestSequenceNumber = 22;
+    ricSubscriptionDeleteRequest.ricRequestID.ricInstanceID = 22;
     ricSubscriptionDeleteRequest.ranFunctionID = 33;
 
     printRICSubscriptionDeleteRequest(&ricSubscriptionDeleteRequest);
@@ -298,7 +389,7 @@ bool TestRICSubscriptionDeleteResponse() {
 
     RICSubscriptionDeleteResponse_t ricSubscriptionDeleteResponse;
     ricSubscriptionDeleteResponse.ricRequestID.ricRequestorID = 1;
-    ricSubscriptionDeleteResponse.ricRequestID.ricRequestSequenceNumber = 22;
+    ricSubscriptionDeleteResponse.ricRequestID.ricInstanceID = 22;
     ricSubscriptionDeleteResponse.ranFunctionID = 33;
 
     printRICSubscriptionDeleteResponse(&ricSubscriptionDeleteResponse);
@@ -342,10 +433,10 @@ bool TestRICSubscriptionDeleteFailure() {
 
     RICSubscriptionDeleteFailure_t ricSubscriptionDeleteFailure;
     ricSubscriptionDeleteFailure.ricRequestID.ricRequestorID = 1;
-    ricSubscriptionDeleteFailure.ricRequestID.ricRequestSequenceNumber = 22;
+    ricSubscriptionDeleteFailure.ricRequestID.ricInstanceID = 22;
     ricSubscriptionDeleteFailure.ranFunctionID = 33;
-    ricSubscriptionDeleteFailure.ricCause.content = cRICCauseRadioNetwork;
-    ricSubscriptionDeleteFailure.ricCause.cause = 3;
+    ricSubscriptionDeleteFailure.cause.content = cCauseRICService;
+    ricSubscriptionDeleteFailure.cause.causeVal = 2;
 
     printRICSubscriptionDeleteFailure(&ricSubscriptionDeleteFailure);
 
@@ -388,7 +479,7 @@ void printDataBuffer(const size_t byteCount, const uint8_t* pData) {
 
     uint64_t index = 0;
     while (index < byteCount) {
-        if (index % 50 == 0) {
+        if (index > 0 && index % 50 == 0) {
             printf("\n");
         }
         printf("%u ",pData[index]);
@@ -399,45 +490,316 @@ void printDataBuffer(const size_t byteCount, const uint8_t* pData) {
 //////////////////////////////////////////////////////////////////////
 void printRICSubscriptionRequest(const RICSubscriptionRequest_t* pRICSubscriptionRequest) {
     printf("pRICSubscriptionRequest->ricRequestID.ricRequestorID = %u\n", pRICSubscriptionRequest->ricRequestID.ricRequestorID);
-    printf("pRICSubscriptionRequest->ricRequestID.ricRequestSequenceNumber = %u\n", pRICSubscriptionRequest->ricRequestID.ricRequestSequenceNumber);
+    printf("pRICSubscriptionRequest->ricRequestID.ricInstanceID = %u\n", pRICSubscriptionRequest->ricRequestID.ricInstanceID);
     printf("pRICSubscriptionRequest->ranFunctionID = %u\n",pRICSubscriptionRequest->ranFunctionID);
+    printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricEventTriggerDefinition.E2SMgNBX2EventTriggerDefinitionPresent = %i\n",
+        pRICSubscriptionRequest->ricSubscriptionDetails.ricEventTriggerDefinition.E2SMgNBX2EventTriggerDefinitionPresent);
+    printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricEventTriggerDefinition.E2SMgNBNRTEventTriggerDefinitionPresent = %i\n",
+        pRICSubscriptionRequest->ricSubscriptionDetails.ricEventTriggerDefinition.E2SMgNBNRTEventTriggerDefinitionPresent);
+    if (pRICSubscriptionRequest->ricSubscriptionDetails.ricEventTriggerDefinition.E2SMgNBX2EventTriggerDefinitionPresent) {
+        printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalENBID.nodeIDbits = %u\n",
+             (unsigned)pRICSubscriptionRequest->ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalENBID.nodeID.bits);
+        printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalENBID.nodeID.nodeID = %u\n",
+            (unsigned)pRICSubscriptionRequest->ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalENBID.nodeID.nodeID);
+        printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceDirection = %u\n",
+             (unsigned)pRICSubscriptionRequest->ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceDirection);
+        printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceMessageType.procedureCode = %u\n",
+             (unsigned)pRICSubscriptionRequest->ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceMessageType.procedureCode);
+        printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceMessageType.typeOfMessage = %u\n",
+             (unsigned)pRICSubscriptionRequest->ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceMessageType.typeOfMessage);
+    }
+    else if (pRICSubscriptionRequest->ricSubscriptionDetails.ricEventTriggerDefinition.E2SMgNBNRTEventTriggerDefinitionPresent) {
+        printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBNRTEventTriggerDefinition.eventDefinitionFormat1.triggerNature = %i\n",
+            pRICSubscriptionRequest->ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBNRTEventTriggerDefinition.eventDefinitionFormat1.triggerNature);
+    }
+    else
+        printf("Error. Empty pRICSubscriptionRequest->ricSubscriptionDetails.ricEventTriggerDefinition");
 
-    printf("pRICSubscriptionRequest->ricSubscription.ricEventTriggerDefinition.interfaceID.globalENBID.nodeIDbits = %u\n",
-         (unsigned)pRICSubscriptionRequest->ricSubscription.ricEventTriggerDefinition.interfaceID.globalENBID.nodeID.bits);
-    printf("pRICSubscriptionRequest->ricSubscription.ricEventTriggerDefinition.interfaceID.globalENBID.nodeID.nodeID = %u\n",
-        (unsigned)pRICSubscriptionRequest->ricSubscription.ricEventTriggerDefinition.interfaceID.globalENBID.nodeID.nodeID);
-    printf("pRICSubscriptionRequest->ricSubscription.ricEventTriggerDefinition.interfaceDirection = %u\n",
-         (unsigned)pRICSubscriptionRequest->ricSubscription.ricEventTriggerDefinition.interfaceDirection);
-    printf("pRICSubscriptionRequest->ricSubscription.ricEventTriggerDefinition.interfaceMessageType.procedureCode = %u\n",
-         (unsigned)pRICSubscriptionRequest->ricSubscription.ricEventTriggerDefinition.interfaceMessageType.procedureCode);
-    printf("pRICSubscriptionRequest->ricSubscription.ricEventTriggerDefinition.interfaceMessageType.typeOfMessage = %u\n",
-         (unsigned)pRICSubscriptionRequest->ricSubscription.ricEventTriggerDefinition.interfaceMessageType.typeOfMessage);
-    printf("pRICSubscriptionRequest->ricSubscription.ricActionToBeSetupItemIEs.contentLength = %u\n",
-         (unsigned)pRICSubscriptionRequest->ricSubscription.ricActionToBeSetupItemIEs.contentLength);
+    printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.contentLength = %u\n",
+         (unsigned)pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.contentLength);
 
     uint64_t index = 0;
-    while (index < pRICSubscriptionRequest->ricSubscription.ricActionToBeSetupItemIEs.contentLength) {
-        printf("pRICSubscriptionRequest->ricSubscription.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionID = %li\n",
-             pRICSubscriptionRequest->ricSubscription.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionID);
-        printf("pRICSubscriptionRequest->ricSubscription.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionType = %li\n",
-             pRICSubscriptionRequest->ricSubscription.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionType);
-        printf("pRICSubscriptionRequest->ricSubscription.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionPresent = %i\n",
-             pRICSubscriptionRequest->ricSubscription.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionPresent);
-        if(pRICSubscriptionRequest->ricSubscription.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionPresent)
+    while (index < pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.contentLength) {
+        printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionID = %li\n",
+             pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionID);
+        printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionType = %li\n",
+             pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionType);
+        printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionPresent = %i\n",
+             pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionPresent);
+        if(pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionPresent)
         {
-            printf("pRICSubscriptionRequest->ricSubscription.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinition.styleID = %li\n",
-                 pRICSubscriptionRequest->ricSubscription.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinition.styleID);
-            printf("pRICSubscriptionRequest->ricSubscription.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinition.sequenceOfActionParameters.parameterID = %i\n",
-                 pRICSubscriptionRequest->ricSubscription.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinition.sequenceOfActionParameters.parameterID);
+            if (pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1Present) {
+
+                // Format 1
+                printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1Present = %i\n",
+                    pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1Present);
+                printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->styleID = %li\n",
+                    pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->styleID);
+                printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterCount = %i\n",
+                    pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterCount);
+                printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index]ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterItem->parameterID = %i\n",
+                     pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterItem->parameterID);
+
+                uint64_t index2 = 0;
+                while (index2 < pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterCount) {
+                    printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterItem[index2].actionParameterValue.valueIntPresent = %i\n",
+                      pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterItem[index2].actionParameterValue.valueIntPresent);
+                    if (pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterItem[index2].actionParameterValue.valueIntPresent) {
+                        printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterItem[index2].actionParameterValue.valueInt = %li\n",
+                          pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterItem[index2].actionParameterValue.valueInt);
+                    }
+                    printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterItem[index2].actionParameterValue.valueEnumPresent = %i\n",
+                      pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterItem[index2].actionParameterValue.valueEnumPresent);
+                    if (pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterItem[index2].actionParameterValue.valueEnumPresent) {
+                        printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterItem[index2].actionParameterValue.valueEnum = %li\n",
+                          pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterItem[index2].actionParameterValue.valueEnum);
+                    }
+                    printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterItem[index2].actionParameterValue.valueBoolPresent = %i\n",
+                      pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterItem[index2].actionParameterValue.valueBoolPresent);
+                    if (pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterItem[index2].actionParameterValue.valueBoolPresent) {
+                        printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterItem[index2].actionParameterValue.valueBool = %i\n",
+                          pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterItem[index2].actionParameterValue.valueBool);
+                    }
+                    printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterItem[index2].actionParameterValue.valueBitSPresent = %i\n",
+                      pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterItem[index2].actionParameterValue.valueBitSPresent);
+                    if (pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterItem[index2].actionParameterValue.valueBitSPresent) {
+                        printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterItem[index2].actionParameterValue.valueBitS.byteLength = %li\n",
+                          pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterItem[index2].actionParameterValue.valueBitS.byteLength);
+                        printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterItem[index2].actionParameterValue.valueBitS.data = ");
+                        printDataBuffer(pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterItem[index2].actionParameterValue.valueBitS.byteLength,
+                                        pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterItem[index2].actionParameterValue.valueBitS.data);
+                        printf("\n");
+                    }
+                    printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterItem[index2].actionParameterValue.valueOctSPresent = %i\n",
+                      pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterItem[index2].actionParameterValue.valueOctSPresent);
+                    if (pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterItem[index2].actionParameterValue.valueOctSPresent) {
+                        printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterItem[index2].actionParameterValue.valueOctS.length = %li\n",
+                          pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterItem[index2].actionParameterValue.valueOctS.length);
+                        printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterItem[index2].actionParameterValue.valueOctS.data = ");
+                          printDataBuffer(pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterItem[index2].actionParameterValue.valueOctS.length,
+                                          pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterItem[index2].actionParameterValue.valueOctS.data);
+                        printf("\n");
+                    }
+                    printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterItem[index2].actionParameterValue.valuePrtSPresent = %i\n",
+                      pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterItem[index2].actionParameterValue.valuePrtSPresent);
+                    if (pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterItem[index2].actionParameterValue.valuePrtSPresent) {
+                        printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterItem[index2].actionParameterValue.valueOctS.length = %li\n",
+                          pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterItem[index2].actionParameterValue.valueOctS.length);
+                        printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterItem[index2].actionParameterValue.valuePrtS.data = ");
+                        printDataBuffer(pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterItem[index2].actionParameterValue.valuePrtS.length,
+                                        pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1->actionParameterItem[index2].actionParameterValue.valuePrtS.data);
+                        printf("\n");
+                    }
+                    index2++;
+                }
+            }
+            else if (pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2Present) {
+                printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2Present = %i\n",
+                  pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2Present);
+
+                // Format 2
+                printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupCount = %i\n",
+                    pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupCount);
+
+                uint64_t index2 = 0;
+                while (index2 < pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupCount) {
+                    printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupID = %li\n",
+                        pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupID);
+                    printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefCount = %i\n",
+                        pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefCount);
+
+                    uint64_t index3 = 0;
+                    while (index3 < pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefCount) {
+
+                        printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterID = %i\n",
+                            pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterID);
+                        printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterTest = %i\n",
+                            pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterTest);
+                        printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueIntPresent = %i\n",
+                            pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueIntPresent);
+                        if (pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueIntPresent) {
+                            printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueInt = %li\n",
+                                pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueInt);
+                        }
+                        printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueEnumPresent = %i\n",
+                               pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueEnumPresent);
+                        if (pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueEnumPresent) {
+                            printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueEnum = %li\n",
+                                pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueEnum);
+                        }
+                        printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueBoolPresent = %i\n",
+                               pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueBoolPresent);
+                        if (pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueBoolPresent) {
+                            printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueBool = %i\n",
+                                pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueBool);
+                        }
+                        printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueBitSPresent = %i\n",
+                            pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueBitSPresent);
+                        if ( pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueBitSPresent) {
+                            printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue,valueBitS.byteLength = %li\n",
+                                   pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueBitS.byteLength);
+                            printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueBitS.data = ");
+                            printDataBuffer(pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueBitS.byteLength,
+                                            pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueBitS.data);
+                            printf("\n");
+                        }
+                        printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueOctSPresent = %i\n",
+                            pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueOctSPresent);
+                        if(pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueOctSPresent) {
+                            printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue,valueOctS.length = %li\n",
+                                   pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueOctS.length);
+                            printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueOctS.data = ");
+                            printDataBuffer(pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueOctS.length,
+                                            pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueOctS.data);
+                            printf("\n");
+                        }
+                        printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valuePrtSPresent = %i\n",
+                            pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valuePrtSPresent);
+                        if(pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valuePrtSPresent) {
+                            printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue,valuePrtS.length = %li\n",
+                                   pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valuePrtS.length);
+                            printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valuePrtS.data = ");
+                            printDataBuffer(pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valuePrtS.length,
+                                            pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valuePrtS.data);
+                            printf("\n");
+                        }
+                        index3++;
+                    }
+
+                    printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranPolicy.ranParameterCount %i\n",
+                      pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranPolicy.ranParameterCount);
+
+                    index3 = 0;
+                    while (index3 < pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranPolicy.ranParameterCount) {
+                        printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterID = %i\n",
+                            pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterID);
+                        printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueIntPresent = %i\n",
+                               pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueIntPresent);
+                        if (pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueIntPresent) {
+                            printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueInt = %li\n",
+                                   pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueInt);
+                        }
+                        printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueEnumPresent = %i\n",
+                               pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueEnumPresent);
+                        if (pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueEnumPresent) {
+                            printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueEnum = %li\n",
+                                   pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueEnum);
+                        }
+                        printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueBoolPresent = %i\n",
+                               pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueBoolPresent);
+                        if (pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueBoolPresent) {
+                            printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueBool = %i\n",
+                                   pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueBool);
+                        }
+                        printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueBitSPresent = %i\n",
+                               pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueBitSPresent);
+                        if (pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueBitSPresent) {
+                            printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueBitS.byteLength, = %li\n",
+                                   pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueBitS.byteLength);
+                            printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueBitS.data = ");
+                            printDataBuffer(pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueBitS.byteLength,
+                                            pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueBitS.data);
+                            printf("\n");
+                        }
+                        printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueOctSPresent = %i\n",
+                               pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueOctSPresent);
+                        if (pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueOctSPresent) {
+                            printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueOctS.length = %li\n",
+                                   pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueOctS.length);
+                            printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueOctS.data = ");
+                            printDataBuffer(pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueOctS.length,
+                                            pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueOctS.data);
+                            printf("\n");
+                        }
+                        printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valuePrtSPresent = %i\n",
+                               pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valuePrtSPresent);
+                        if (pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valuePrtSPresent) {
+                            printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valuePrtS.length = %li\n",
+                                   pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valuePrtS.length);
+                            printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valuePrtS.data = ");
+                            printDataBuffer(pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valuePrtS.length,
+                                            pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2->ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valuePrtS.data);
+                            printf("\n");
+                        }
+                        index3++;
+                    }
+                    index2++;
+                }
+            }
+            else if (pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1Present) {
+
+                // Format 1
+                printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1Present = %i\n",
+                  pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1Present);
+
+                uint64_t index2 = 0;
+                while (index2 < pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterCount) {
+                    printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterList[index2].ranParameterID = %i\n",
+                        pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterList[index2].ranParameterID);
+
+                    printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterList[index2].ranParameterValue.valueIntPresent = %i\n",
+                           pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterList[index2].ranParameterValue.valueIntPresent);
+                    if (pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterList[index2].ranParameterValue.valueIntPresent) {
+                        printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterList[index2].ranParameterValue.valueInt = %li\n",
+                               pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterList[index2].ranParameterValue.valueInt);
+                    }
+                    printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterList[index2].ranParameterValue.valueEnumPresent = %i\n",
+                           pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterList[index2].ranParameterValue.valueEnumPresent);
+                    if (pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterList[index2].ranParameterValue.valueEnumPresent) {
+                        printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterList[index2].ranParameterValue.valueEnum = %li\n",
+                               pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterList[index2].ranParameterValue.valueEnum);
+                    }
+                    printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterList[index2].ranParameterValue.valueBoolPresent = %i\n",
+                           pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterList[index2].ranParameterValue.valueBoolPresent);
+                    if (pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterList[index2].ranParameterValue.valueBoolPresent) {
+                        printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterList[index2].ranParameterValue.valueBool = %i\n",
+                               pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterList[index2].ranParameterValue.valueBool);
+                    }
+                    printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterList[index2]ranParameterValue.valueBitSPresent = %i\n",
+                           pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterList[index2].ranParameterValue.valueBitSPresent);
+                    if (pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterList[index2].ranParameterValue.valueBitSPresent) {
+                        printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterList[index2].ranParameterValue.valueBitS.byteLength, = %li\n",
+                               pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterList[index2].ranParameterValue.valueBitS.byteLength);
+                        printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterList[index2].ranParameterValue.valueBitS.data = ");
+                        printDataBuffer(pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterList[index2].ranParameterValue.valueBitS.byteLength,
+                                        pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterList[index2].ranParameterValue.valueBitS.data);
+                        printf("\n");
+                    }
+                    printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterList[index2].ranParameterValue.valueOctSPresent = %i\n",
+                           pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterList[index2].ranParameterValue.valueOctSPresent);
+                    if (pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterList[index2].ranParameterValue.valueOctSPresent) {
+                        printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterList[index2].ranParameterValue.valueOctS.length = %li\n",
+                               pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterList[index2].ranParameterValue.valueOctS.length);
+                        printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterList[index2].ranParameterValue.valueOctS.data = ");
+                        printDataBuffer(pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterList[index2].ranParameterValue.valueOctS.length,
+                                        pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterList[index2].ranParameterValue.valueOctS.data);
+                        printf("\n");
+                    }
+                    printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterList[index2]ranParameterValue.valuePrtSPresent = %i\n",
+                           pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterList[index2].ranParameterValue.valuePrtSPresent);
+                    if (pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterList[index2].ranParameterValue.valuePrtSPresent) {
+                        printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterList[index2].ranParameterValue.valuePrtS.length = %li\n",
+                               pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterList[index2].ranParameterValue.valuePrtS.length);
+                        printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterList[index2].ranParameterValue.valuePrtS.data = ");
+                        printDataBuffer(pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterList[index2].ranParameterValue.valuePrtS.length,
+                                        pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1->ranParameterList[index2].ranParameterValue.valuePrtS.data);
+                        printf("\n");
+                    }
+                    index2++;
+                }
+            }
+            else
+                printf("Error. Missing pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice");
         }
-        printf("pRICSubscriptionRequest->ricSubscription.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricSubsequentActionPresent = %i\n",
-          pRICSubscriptionRequest->ricSubscription.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricSubsequentActionPresent);
-        if(pRICSubscriptionRequest->ricSubscription.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricSubsequentActionPresent)
+
+        printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricSubsequentActionPresent = %i\n",
+          pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricSubsequentActionPresent);
+        if(pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricSubsequentActionPresent)
         {
-            printf("pRICSubscriptionRequest->ricSubscription.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricSubsequentAction.ricSubsequentActionType = %li\n",
-                 pRICSubscriptionRequest->ricSubscription.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricSubsequentAction.ricSubsequentActionType);
-            printf("pRICSubscriptionRequest->ricSubscription.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricSubsequentAction.ricTimeToWait = %li\n",
-                 pRICSubscriptionRequest->ricSubscription.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricSubsequentAction.ricTimeToWait);
+            printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricSubsequentAction.ricSubsequentActionType = %li\n",
+                 pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricSubsequentAction.ricSubsequentActionType);
+            printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricSubsequentAction.ricTimeToWait = %li\n",
+                 pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricSubsequentAction.ricTimeToWait);
         }
         printf("\n\n");
         index++;
@@ -449,7 +811,7 @@ void printRICSubscriptionRequest(const RICSubscriptionRequest_t* pRICSubscriptio
 void printRICSubscriptionResponse(const RICSubscriptionResponse_t* pRICSubscriptionResponse) {
 
     printf("pRICSubscriptionResponse->ricRequestID.ricRequestorID = %u\n",pRICSubscriptionResponse->ricRequestID.ricRequestorID);
-    printf("pRICSubscriptionResponse->ricRequestID.ricRequestSequenceNumber = %u\n", pRICSubscriptionResponse->ricRequestID.ricRequestSequenceNumber);
+    printf("pRICSubscriptionResponse->ricRequestID.ricInstanceID = %u\n", pRICSubscriptionResponse->ricRequestID.ricInstanceID);
     printf("pRICSubscriptionResponse->ranFunctionID = %u\n",pRICSubscriptionResponse->ranFunctionID);
     printf("pRICSubscriptionResponse->ricActionAdmittedList.contentLength = %u\n",(unsigned)pRICSubscriptionResponse->ricActionAdmittedList.contentLength);
     uint64_t index = 0;
@@ -463,10 +825,10 @@ void printRICSubscriptionResponse(const RICSubscriptionResponse_t* pRICSubscript
     while (index < pRICSubscriptionResponse->ricActionNotAdmittedList.contentLength) {
         printf("pRICSubscriptionResponse->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].ricActionID = %lu\n",
              pRICSubscriptionResponse->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].ricActionID);
-        printf("pRICSubscriptionResponse->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].ricCause.content = %u\n",
-             (unsigned)pRICSubscriptionResponse->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].ricCause.content);
-        printf("pRICSubscriptionResponse->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].ricCause.cause = %u\n",
-             (unsigned)pRICSubscriptionResponse->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].ricCause.cause);
+        printf("pRICSubscriptionResponse->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.content = %u\n",
+             (unsigned)pRICSubscriptionResponse->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.content);
+        printf("pRICSubscriptionResponse->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.cause = %u\n",
+             (unsigned)pRICSubscriptionResponse->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.causeVal);
         index++;
     }
     printf("\n");
@@ -476,17 +838,17 @@ void printRICSubscriptionResponse(const RICSubscriptionResponse_t* pRICSubscript
 void printRICSubscriptionFailure(const RICSubscriptionFailure_t* pRICSubscriptionFailure) {
 
     printf("pRICSubscriptionFailure->ricRequestID.ricRequestorID = %u\n",pRICSubscriptionFailure->ricRequestID.ricRequestorID);
-    printf("pRICSubscriptionFailure->ricRequestID.ricRequestSequenceNumber = %u\n",pRICSubscriptionFailure->ricRequestID.ricRequestSequenceNumber);
+    printf("pRICSubscriptionFailure->ricRequestID.ricInstanceID = %u\n",pRICSubscriptionFailure->ricRequestID.ricInstanceID);
     printf("pRICSubscriptionFailure->ranFunctionID = %i\n",pRICSubscriptionFailure->ranFunctionID);
     printf("pRICSubscriptionFailure->ricActionNotAdmittedList.contentLength = %u\n",(unsigned)pRICSubscriptionFailure->ricActionNotAdmittedList.contentLength);
     uint64_t index = 0;
     while (index < pRICSubscriptionFailure->ricActionNotAdmittedList.contentLength) {
         printf("pRICSubscriptionFailure->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].ricActionID = %lu\n",
              pRICSubscriptionFailure->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].ricActionID);
-        printf("pRICSubscriptionFailure->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].ricCause.content = %u\n",
-            (unsigned)pRICSubscriptionFailure->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].ricCause.content);
-        printf("pRICSubscriptionFailure->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].ricCause.cause = %u\n",
-             (unsigned)pRICSubscriptionFailure->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].ricCause.cause);
+        printf("pRICSubscriptionFailure->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.content = %u\n",
+            (unsigned)pRICSubscriptionFailure->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.content);
+        printf("pRICSubscriptionFailure->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.cause = %u\n",
+             (unsigned)pRICSubscriptionFailure->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.causeVal);
         index++;
     }
     if (pRICSubscriptionFailure->criticalityDiagnosticsPresent) {
@@ -516,7 +878,7 @@ void printRICSubscriptionFailure(const RICSubscriptionFailure_t* pRICSubscriptio
 void printRICSubscriptionDeleteRequest(const RICSubscriptionDeleteRequest_t* pRICSubscriptionDeleteRequest) {
 
     printf("\npRICSubscriptionDeleteRequest->ricRequestID.ricRequestorID = %u\n",pRICSubscriptionDeleteRequest->ricRequestID.ricRequestorID);
-    printf("pRICSubscriptionDeleteRequest->ricRequestID.ricRequestSequenceNumber = %u\n",pRICSubscriptionDeleteRequest->ricRequestID.ricRequestSequenceNumber);
+    printf("pRICSubscriptionDeleteRequest->ricRequestID.ricInstanceID = %u\n",pRICSubscriptionDeleteRequest->ricRequestID.ricInstanceID);
     printf("pRICSubscriptionDeleteRequest->ranFunctionID = %i\n",pRICSubscriptionDeleteRequest->ranFunctionID);
     printf("\n");
 }
@@ -524,7 +886,7 @@ void printRICSubscriptionDeleteRequest(const RICSubscriptionDeleteRequest_t* pRI
 void printRICSubscriptionDeleteResponse(const RICSubscriptionDeleteResponse_t* pRICSubscriptionDeleteResponse) {
 
     printf("\npRICSubscriptionDeleteResponse->ricRequestID.ricRequestorID = %u\n",pRICSubscriptionDeleteResponse->ricRequestID.ricRequestorID);
-    printf("pRICSubscriptionDeleteResponse->ricRequestID.ricRequestSequenceNumber = %u\n",pRICSubscriptionDeleteResponse->ricRequestID.ricRequestSequenceNumber);
+    printf("pRICSubscriptionDeleteResponse->ricRequestID.ricInstanceID = %u\n",pRICSubscriptionDeleteResponse->ricRequestID.ricInstanceID);
     printf("pRICSubscriptionDeleteResponse->ranFunctionID = %i\n",pRICSubscriptionDeleteResponse->ranFunctionID);
     printf("\n");
 }
@@ -532,10 +894,10 @@ void printRICSubscriptionDeleteResponse(const RICSubscriptionDeleteResponse_t* p
 void printRICSubscriptionDeleteFailure(const RICSubscriptionDeleteFailure_t* pRICSubscriptionDeleteFailure) {
 
     printf("\npRICSubscriptionDeleteFailure->ricRequestID.ricRequestorID = %u\n",pRICSubscriptionDeleteFailure->ricRequestID.ricRequestorID);
-    printf("pRICSubscriptionDeleteFailure->ricRequestID.ricRequestSequenceNumber = %u\n",pRICSubscriptionDeleteFailure->ricRequestID.ricRequestSequenceNumber);
+    printf("pRICSubscriptionDeleteFailure->ricRequestID.ricInstanceID = %u\n",pRICSubscriptionDeleteFailure->ricRequestID.ricInstanceID);
     printf("pRICSubscriptionDeleteFailure->ranFunctionID = %i\n",pRICSubscriptionDeleteFailure->ranFunctionID);
-    printf("pRICSubscriptionDeleteFailure->ricCause.content = %i\n",pRICSubscriptionDeleteFailure->ricCause.content);
-    printf("pRICSubscriptionDeleteFailure->ricCause.cause = %i\n",pRICSubscriptionDeleteFailure->ricCause.cause);
+    printf("pRICSubscriptionDeleteFailure->ricCause.content = %i\n",pRICSubscriptionDeleteFailure->cause.content);
+    printf("pRICSubscriptionDeleteFailure->ricCause.cause = %i\n",pRICSubscriptionDeleteFailure->cause.causeVal);
     printf("\n");
 }
 

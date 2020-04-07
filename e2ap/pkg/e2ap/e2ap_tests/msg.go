@@ -100,22 +100,54 @@ func NewE2ApTests(name string, packerif e2ap.E2APPackerIf) *E2ApTests {
 //-----------------------------------------------------------------------------
 
 func RunTests(t *testing.T, e2aptestctxt *E2ApTests) {
-	t.Run(e2aptestctxt.Name(), func(t *testing.T) { e2aptestctxt.E2ApTestMsgSubscriptionRequest(t) })
+
+	subMsgContent := &SubscriptionTestMsgContent{}
+	subMsgContent.NBNRTEventTriggerDefinitionPresent = true
+	subMsgContent.ActionDefinitionNRTFormat1Present = true
+	subMsgContent.RANParameterValueEnumPresent = true
+	t.Run(e2aptestctxt.Name(), func(t *testing.T) { e2aptestctxt.E2ApTestMsgSubscriptionRequest(t, subMsgContent) })
+
+	subMsgContent2 := &SubscriptionTestMsgContent{}
+	subMsgContent2.NBX2EventTriggerDefinitionPresent = true
+	subMsgContent2.ActionDefinitionX2Format1Present = true
+	subMsgContent2.ActionParameterValueBoolPresent = true
+	subMsgContent2.RANParameterValueBoolPresent = true
+	t.Run(e2aptestctxt.Name(), func(t *testing.T) { e2aptestctxt.E2ApTestMsgSubscriptionRequest(t, subMsgContent2) })
+
+	subMsgContent3 := &SubscriptionTestMsgContent{}
+	subMsgContent3.NBX2EventTriggerDefinitionPresent = true
+	subMsgContent3.ActionDefinitionX2Format2Present = true
+	subMsgContent3.ActionParameterValueBitSPresent = true
+	subMsgContent3.RANParameterValueBitSPresent = true
+	t.Run(e2aptestctxt.Name(), func(t *testing.T) { e2aptestctxt.E2ApTestMsgSubscriptionRequest(t, subMsgContent3) })
+
+	subMsgContent4 := &SubscriptionTestMsgContent{}
+	subMsgContent4.NBX2EventTriggerDefinitionPresent = true
+	subMsgContent4.ActionDefinitionX2Format2Present = true
+	subMsgContent4.ActionParameterValueOctSPresent = true
+	subMsgContent4.RANParameterValueOctSPresent = true
+	t.Run(e2aptestctxt.Name(), func(t *testing.T) { e2aptestctxt.E2ApTestMsgSubscriptionRequest(t, subMsgContent4) })
+
+	subMsgContent5 := &SubscriptionTestMsgContent{}
+	subMsgContent5.NBX2EventTriggerDefinitionPresent = true
+	subMsgContent5.ActionDefinitionX2Format2Present = true
+	subMsgContent5.ActionParameterValuePrtSPresent = true
+	subMsgContent5.RANParameterValuePrtSPresent = true
+	t.Run(e2aptestctxt.Name(), func(t *testing.T) { e2aptestctxt.E2ApTestMsgSubscriptionRequest(t, subMsgContent5) })
+
 	t.Run(e2aptestctxt.Name(), func(t *testing.T) { e2aptestctxt.E2ApTestMsgSubscriptionResponse(t) })
 	t.Run(e2aptestctxt.Name(), func(t *testing.T) { e2aptestctxt.E2ApTestMsgSubscriptionFailure(t) })
-	t.Run(e2aptestctxt.Name(), func(t *testing.T) {
-		e2aptestctxt.E2ApTestMsgSubscriptionDeleteRequest(t)
-	})
-	t.Run(e2aptestctxt.Name(), func(t *testing.T) {
-		e2aptestctxt.E2ApTestMsgSubscriptionDeleteResponse(t)
-	})
-	t.Run(e2aptestctxt.Name(), func(t *testing.T) {
-		e2aptestctxt.E2ApTestMsgSubscriptionDeleteFailure(t)
-	})
-	t.Run(e2aptestctxt.Name(), func(t *testing.T) { e2aptestctxt.E2ApTestMsgSubscriptionRequestBuffers(t) })
-	t.Run(e2aptestctxt.Name(), func(t *testing.T) { e2aptestctxt.E2ApTestMsgSubscriptionResponseBuffers(t) })
-	t.Run(e2aptestctxt.Name(), func(t *testing.T) { e2aptestctxt.E2ApTestMsgSubscriptionFailureBuffers(t) })
-	t.Run(e2aptestctxt.Name(), func(t *testing.T) { e2aptestctxt.E2ApTestMsgSubscriptionDeleteRequestBuffers(t) })
-	t.Run(e2aptestctxt.Name(), func(t *testing.T) { e2aptestctxt.E2ApTestMsgSubscriptionDeleteResponseBuffers(t) })
-	t.Run(e2aptestctxt.Name(), func(t *testing.T) { e2aptestctxt.E2ApTestMsgSubscriptionDeleteFailureBuffers(t) })
+	t.Run(e2aptestctxt.Name(), func(t *testing.T) { e2aptestctxt.E2ApTestMsgSubscriptionDeleteRequest(t) })
+	t.Run(e2aptestctxt.Name(), func(t *testing.T) { e2aptestctxt.E2ApTestMsgSubscriptionDeleteResponse(t) })
+	t.Run(e2aptestctxt.Name(), func(t *testing.T) { e2aptestctxt.E2ApTestMsgSubscriptionDeleteFailure(t) })
+
+	/*
+		t.Run(e2aptestctxt.Name(), func(t *testing.T) { e2aptestctxt.E2ApTestMsgSubscriptionRequestBuffers(t) })
+		t.Run(e2aptestctxt.Name(), func(t *testing.T) { e2aptestctxt.E2ApTestMsgSubscriptionResponseBuffers(t) })
+		t.Run(e2aptestctxt.Name(), func(t *testing.T) { e2aptestctxt.E2ApTestMsgSubscriptionFailureBuffers(t) })
+		t.Run(e2aptestctxt.Name(), func(t *testing.T) { e2aptestctxt.E2ApTestMsgSubscriptionDeleteRequestBuffers(t) })
+		t.Run(e2aptestctxt.Name(), func(t *testing.T) { e2aptestctxt.E2ApTestMsgSubscriptionDeleteResponseBuffers(t) })
+		t.Run(e2aptestctxt.Name(), func(t *testing.T) { e2aptestctxt.E2ApTestMsgSubscriptionDeleteFailureBuffers(t) })
+	*/
+
 }

@@ -154,7 +154,7 @@ func (c *Control) QueryHandler() (models.SubscriptionList, error) {
 func (c *Control) rmrSendToE2T(desc string, subs *Subscription, trans *TransactionSubs) (err error) {
 	params := xapptweaks.NewParams(nil)
 	params.Mtype = trans.GetMtype()
-	params.SubId = int(subs.GetReqId().Seq)
+	params.SubId = int(subs.GetReqId().InstanceId)
 	params.Xid = ""
 	params.Meid = subs.GetMeid()
 	params.Src = ""
@@ -169,7 +169,7 @@ func (c *Control) rmrSendToXapp(desc string, subs *Subscription, trans *Transact
 
 	params := xapptweaks.NewParams(nil)
 	params.Mtype = trans.GetMtype()
-	params.SubId = int(subs.GetReqId().Seq)
+	params.SubId = int(subs.GetReqId().InstanceId)
 	params.Xid = trans.GetXid()
 	params.Meid = trans.GetMeid()
 	params.Src = ""
@@ -222,7 +222,7 @@ func (c *Control) handleXAPPSubscriptionRequest(params *xapptweaks.RMRParams) {
 		return
 	}
 
-	trans := c.tracker.NewXappTransaction(xapptweaks.NewRmrEndpoint(params.Src), params.Xid, subReqMsg.RequestId.Seq, params.Meid)
+	trans := c.tracker.NewXappTransaction(xapptweaks.NewRmrEndpoint(params.Src), params.Xid, subReqMsg.RequestId.InstanceId, params.Meid)
 	if trans == nil {
 		xapp.Logger.Error("XAPP-SubReq: %s", idstring(fmt.Errorf("transaction not created"), params))
 		return
@@ -283,7 +283,7 @@ func (c *Control) handleXAPPSubscriptionDeleteRequest(params *xapptweaks.RMRPara
 		return
 	}
 
-	trans := c.tracker.NewXappTransaction(xapptweaks.NewRmrEndpoint(params.Src), params.Xid, subDelReqMsg.RequestId.Seq, params.Meid)
+	trans := c.tracker.NewXappTransaction(xapptweaks.NewRmrEndpoint(params.Src), params.Xid, subDelReqMsg.RequestId.InstanceId, params.Meid)
 	if trans == nil {
 		xapp.Logger.Error("XAPP-SubDelReq: %s", idstring(fmt.Errorf("transaction not created"), params))
 		return
@@ -480,7 +480,7 @@ func (c *Control) handleE2TSubscriptionResponse(params *xapptweaks.RMRParams) {
 		xapp.Logger.Error("MSG-SubResp %s", idstring(err, params))
 		return
 	}
-	subs, err := c.registry.GetSubscriptionFirstMatch([]uint32{subRespMsg.RequestId.Seq})
+	subs, err := c.registry.GetSubscriptionFirstMatch([]uint32{subRespMsg.RequestId.InstanceId})
 	if err != nil {
 		xapp.Logger.Error("MSG-SubResp: %s", idstring(err, params))
 		return
@@ -509,7 +509,7 @@ func (c *Control) handleE2TSubscriptionFailure(params *xapptweaks.RMRParams) {
 		xapp.Logger.Error("MSG-SubFail %s", idstring(err, params))
 		return
 	}
-	subs, err := c.registry.GetSubscriptionFirstMatch([]uint32{subFailMsg.RequestId.Seq})
+	subs, err := c.registry.GetSubscriptionFirstMatch([]uint32{subFailMsg.RequestId.InstanceId})
 	if err != nil {
 		xapp.Logger.Error("MSG-SubFail: %s", idstring(err, params))
 		return
@@ -538,7 +538,7 @@ func (c *Control) handleE2TSubscriptionDeleteResponse(params *xapptweaks.RMRPara
 		xapp.Logger.Error("MSG-SubDelResp: %s", idstring(err, params))
 		return
 	}
-	subs, err := c.registry.GetSubscriptionFirstMatch([]uint32{subDelRespMsg.RequestId.Seq})
+	subs, err := c.registry.GetSubscriptionFirstMatch([]uint32{subDelRespMsg.RequestId.InstanceId})
 	if err != nil {
 		xapp.Logger.Error("MSG-SubDelResp: %s", idstring(err, params))
 		return
@@ -567,7 +567,7 @@ func (c *Control) handleE2TSubscriptionDeleteFailure(params *xapptweaks.RMRParam
 		xapp.Logger.Error("MSG-SubDelFail: %s", idstring(err, params))
 		return
 	}
-	subs, err := c.registry.GetSubscriptionFirstMatch([]uint32{subDelFailMsg.RequestId.Seq})
+	subs, err := c.registry.GetSubscriptionFirstMatch([]uint32{subDelFailMsg.RequestId.InstanceId})
 	if err != nil {
 		xapp.Logger.Error("MSG-SubDelFail: %s", idstring(err, params))
 		return

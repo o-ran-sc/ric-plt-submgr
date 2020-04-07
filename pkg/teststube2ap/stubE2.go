@@ -100,29 +100,83 @@ func (p *E2StubSubsReqParams) Init() {
 	p.Req = &e2ap.E2APSubscriptionRequest{}
 
 	p.Req.RequestId.Id = 1
-	p.Req.RequestId.Seq = 0
+	p.Req.RequestId.InstanceId = 0
 	p.Req.FunctionId = 1
-
-	p.Req.EventTriggerDefinition.InterfaceId.GlobalEnbId.Present = true
-	p.Req.EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.Mcc = "310"
-	p.Req.EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.Mnc = "150"
-	p.Req.EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Id = 123
-	p.Req.EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Bits = e2ap.E2AP_ENBIDHomeBits28
 
 	// gnb -> enb outgoing
 	// enb -> gnb incoming
 	// X2 36423-f40.doc
-	p.Req.EventTriggerDefinition.InterfaceDirection = e2ap.E2AP_InterfaceDirectionIncoming
-	p.Req.EventTriggerDefinition.ProcedureCode = 5 //28 35
-	p.Req.EventTriggerDefinition.TypeOfMessage = e2ap.E2AP_InitiatingMessage
+	p.Req.EventTriggerDefinition.NBX2EventTriggerDefinitionPresent = true
+	p.Req.EventTriggerDefinition.NBNRTEventTriggerDefinitionPresent = false
+	if p.Req.EventTriggerDefinition.NBX2EventTriggerDefinitionPresent == true {
+		p.Req.EventTriggerDefinition.InterfaceId.GlobalEnbId.Present = true
+		p.Req.EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.Set("310150")
+		p.Req.EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Id = 123
+		p.Req.EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Bits = e2ap.E2AP_ENBIDHomeBits28
+
+		p.Req.EventTriggerDefinition.InterfaceDirection = e2ap.E2AP_InterfaceDirectionIncoming
+		p.Req.EventTriggerDefinition.ProcedureCode = 5 //28 35
+		p.Req.EventTriggerDefinition.TypeOfMessage = e2ap.E2AP_InitiatingMessage
+	} else if p.Req.EventTriggerDefinition.NBNRTEventTriggerDefinitionPresent == true {
+		p.Req.EventTriggerDefinition.NBNRTEventTriggerDefinition.TriggerNature = e2ap.NRTTriggerNature_now
+	}
 
 	p.Req.ActionSetups = make([]e2ap.ActionToBeSetupItem, 1)
 
 	p.Req.ActionSetups[0].ActionId = 0
 	p.Req.ActionSetups[0].ActionType = e2ap.E2AP_ActionTypeReport
-	p.Req.ActionSetups[0].ActionDefinition.Present = false // Not supported
-	//p.Req.ActionSetups[index].ActionDefinition.StyleId = 255
-	//p.Req.ActionSetups[index].ActionDefinition.ParamId = 222
+	p.Req.ActionSetups[0].RicActionDefinitionPresent = true
+	p.Req.ActionSetups[0].ActionDefinitionChoice.ActionDefinitionX2Format1Present = false
+	p.Req.ActionSetups[0].ActionDefinitionChoice.ActionDefinitionX2Format2Present = true
+	p.Req.ActionSetups[0].ActionDefinitionChoice.ActionDefinitionNRTFormat1Present = false
+
+	if p.Req.ActionSetups[0].ActionDefinitionChoice.ActionDefinitionX2Format1Present {
+		p.Req.ActionSetups[0].ActionDefinitionChoice.ActionDefinitionX2Format1.StyleID = 99
+		// 1..255
+		for index := 0; index < 1; index++ {
+			actionParameterItem := e2ap.ActionParameterItem{}
+			actionParameterItem.ParameterID = 11
+			actionParameterItem.ActionParameterValue.ValueIntPresent = true
+			actionParameterItem.ActionParameterValue.ValueInt = 100
+			p.Req.ActionSetups[0].ActionDefinitionChoice.ActionDefinitionX2Format1.ActionParameterItems =
+				append(p.Req.ActionSetups[0].ActionDefinitionChoice.ActionDefinitionX2Format1.ActionParameterItems, actionParameterItem)
+		}
+	} else if p.Req.ActionSetups[0].ActionDefinitionChoice.ActionDefinitionX2Format2Present {
+		// 1..15
+		for index := 0; index < 1; index++ {
+			ranUEgroupItem := e2ap.RANueGroupItem{}
+			// 1..255
+			for index2 := 0; index2 < 1; index2++ {
+				ranUEGroupDefItem := e2ap.RANueGroupDefItem{}
+				ranUEGroupDefItem.RanParameterID = 22
+				ranUEGroupDefItem.RanParameterTest = e2ap.RANParameterTest_equal
+				ranUEGroupDefItem.RanParameterValue.ValueIntPresent = true
+				ranUEGroupDefItem.RanParameterValue.ValueInt = 100
+				ranUEgroupItem.RanUEgroupDefinition.RanUEGroupDefItems = append(ranUEgroupItem.RanUEgroupDefinition.RanUEGroupDefItems, ranUEGroupDefItem)
+			}
+			// 1..255
+			for index3 := 0; index3 < 1; index3++ {
+				ranParameterItem := e2ap.RANParameterItem{}
+				ranParameterItem.RanParameterID = 33
+				ranParameterItem.RanParameterValue.ValueIntPresent = true
+				ranParameterItem.RanParameterValue.ValueInt = 100
+				ranUEgroupItem.RanPolicy.RanParameterItems = append(ranUEgroupItem.RanPolicy.RanParameterItems, ranParameterItem)
+			}
+			ranUEgroupItem.RanUEgroupID = 2
+			p.Req.ActionSetups[0].ActionDefinitionChoice.ActionDefinitionX2Format2.RanUEgroupItems =
+				append(p.Req.ActionSetups[0].ActionDefinitionChoice.ActionDefinitionX2Format2.RanUEgroupItems, ranUEgroupItem)
+		}
+	} else if p.Req.ActionSetups[0].ActionDefinitionChoice.ActionDefinitionNRTFormat1Present {
+		// 1..255
+		for index := 0; index < 1; index++ {
+			ranParameterItem := e2ap.RANParameterItem{}
+			ranParameterItem.RanParameterID = 33
+			ranParameterItem.RanParameterValue.ValueIntPresent = true
+			ranParameterItem.RanParameterValue.ValueInt = 100
+			p.Req.ActionSetups[0].ActionDefinitionChoice.ActionDefinitionNRTFormat1.RanParameterList =
+				append(p.Req.ActionSetups[0].ActionDefinitionChoice.ActionDefinitionNRTFormat1.RanParameterList, ranParameterItem)
+		}
+	}
 	p.Req.ActionSetups[0].SubsequentAction.Present = true
 	p.Req.ActionSetups[0].SubsequentAction.Type = e2ap.E2AP_SubSeqActionTypeContinue
 	p.Req.ActionSetups[0].SubsequentAction.TimetoWait = e2ap.E2AP_TimeToWaitZero
@@ -142,7 +196,7 @@ func (p *E2StubSubsFailParams) Set(req *e2ap.E2APSubscriptionRequest) {
 
 	p.Fail = &e2ap.E2APSubscriptionFailure{}
 	p.Fail.RequestId.Id = p.Req.RequestId.Id
-	p.Fail.RequestId.Seq = p.Req.RequestId.Seq
+	p.Fail.RequestId.InstanceId = p.Req.RequestId.InstanceId
 	p.Fail.FunctionId = p.Req.FunctionId
 	p.Fail.ActionNotAdmittedList.Items = make([]e2ap.ActionNotAdmittedItem, len(p.Req.ActionSetups))
 	for index := int(0); index < len(p.Fail.ActionNotAdmittedList.Items); index++ {
@@ -257,7 +311,7 @@ func (tc *E2Stub) SendSubsResp(t *testing.T, req *e2ap.E2APSubscriptionRequest, 
 	resp := &e2ap.E2APSubscriptionResponse{}
 
 	resp.RequestId.Id = req.RequestId.Id
-	resp.RequestId.Seq = req.RequestId.Seq
+	resp.RequestId.InstanceId = req.RequestId.InstanceId
 	resp.FunctionId = req.FunctionId
 
 	resp.ActionAdmittedList.Items = make([]e2ap.ActionAdmittedItem, len(req.ActionSetups))
@@ -327,7 +381,7 @@ func (tc *E2Stub) RecvSubsResp(t *testing.T, trans *RmrTransactionId) uint32 {
 			if unpackerr != nil {
 				tc.TestError(t, "RIC_SUB_RESP unpack failed err: %s", unpackerr.Error())
 			}
-			tc.Logger.Info("Recv Subs Resp rmr: xid=%s subid=%d, asn: seqnro=%d", msg.Xid, msg.SubId, resp.RequestId.Seq)
+			tc.Logger.Info("Recv Subs Resp rmr: xid=%s subid=%d, asn: instanceid=%d", msg.Xid, msg.SubId, resp.RequestId.InstanceId)
 			return e2SubsId
 		}
 	} else {
@@ -400,7 +454,7 @@ func (tc *E2Stub) RecvSubsFail(t *testing.T, trans *RmrTransactionId) uint32 {
 			if unpackerr != nil {
 				tc.TestError(t, "RIC_SUB_FAILURE unpack failed err: %s", unpackerr.Error())
 			}
-			tc.Logger.Info("Recv Subs Fail rmr: xid=%s subid=%d, asn: seqnro=%d", msg.Xid, msg.SubId, resp.RequestId.Seq)
+			tc.Logger.Info("Recv Subs Fail rmr: xid=%s subid=%d, asn: instanceid=%d", msg.Xid, msg.SubId, resp.RequestId.InstanceId)
 			return e2SubsId
 		}
 	} else {
@@ -426,7 +480,7 @@ func (tc *E2Stub) SendSubsDelReq(t *testing.T, oldTrans *RmrTransactionId, e2Sub
 	//---------------------------------
 	req := &e2ap.E2APSubscriptionDeleteRequest{}
 	req.RequestId.Id = 1
-	req.RequestId.Seq = e2SubsId
+	req.RequestId.InstanceId = e2SubsId
 	req.FunctionId = 1
 
 	err, packedMsg := e2SubsDelReq.Pack(req)
@@ -497,7 +551,7 @@ func (tc *E2Stub) SendSubsDelResp(t *testing.T, req *e2ap.E2APSubscriptionDelete
 	//---------------------------------
 	resp := &e2ap.E2APSubscriptionDeleteResponse{}
 	resp.RequestId.Id = req.RequestId.Id
-	resp.RequestId.Seq = req.RequestId.Seq
+	resp.RequestId.InstanceId = req.RequestId.InstanceId
 	resp.FunctionId = req.FunctionId
 
 	packerr, packedMsg := e2SubsDelResp.Pack(resp)
@@ -547,7 +601,7 @@ func (tc *E2Stub) RecvSubsDelResp(t *testing.T, trans *RmrTransactionId) {
 			if unpackerr != nil {
 				tc.TestError(t, "RIC_SUB_DEL_RESP unpack failed err: %s", unpackerr.Error())
 			}
-			tc.Logger.Info("Recv Subs Del Resp rmr: xid=%s subid=%d, asn: seqnro=%d", msg.Xid, msg.SubId, resp.RequestId.Seq)
+			tc.Logger.Info("Recv Subs Del Resp rmr: xid=%s subid=%d, asn: instanceid=%d", msg.Xid, msg.SubId, resp.RequestId.InstanceId)
 			return
 		}
 	} else {
@@ -567,10 +621,10 @@ func (tc *E2Stub) SendSubsDelFail(t *testing.T, req *e2ap.E2APSubscriptionDelete
 	//---------------------------------
 	resp := &e2ap.E2APSubscriptionDeleteFailure{}
 	resp.RequestId.Id = req.RequestId.Id
-	resp.RequestId.Seq = req.RequestId.Seq
+	resp.RequestId.InstanceId = req.RequestId.InstanceId
 	resp.FunctionId = req.FunctionId
-	resp.Cause.Content = 3 // CauseMisc
-	resp.Cause.Value = 4   // unspecified
+	resp.Cause.Content = 4 // CauseMisc
+	resp.Cause.Value = 3   // unspecified
 
 	packerr, packedMsg := e2SubsDelFail.Pack(resp)
 	if packerr != nil {

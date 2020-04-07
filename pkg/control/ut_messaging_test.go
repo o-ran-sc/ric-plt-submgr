@@ -590,7 +590,7 @@ func TestSubReqRetryNoRespSubDelRespInSubmgr(t *testing.T) {
 	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
 
 	// Wait that subs is cleaned
-	mainCtrl.wait_subs_clean(t, delreq.RequestId.Seq, 10)
+	mainCtrl.wait_subs_clean(t, delreq.RequestId.InstanceId, 10)
 
 	xappConn1.TestMsgChanEmpty(t)
 	xappConn2.TestMsgChanEmpty(t)
@@ -647,7 +647,7 @@ func TestSubReqTwoRetriesNoRespAtAllInSubmgr(t *testing.T) {
 	delreq, _ := e2termConn1.RecvSubsDelReq(t)
 
 	// Wait that subs is cleaned
-	mainCtrl.wait_subs_clean(t, delreq.RequestId.Seq, 15)
+	mainCtrl.wait_subs_clean(t, delreq.RequestId.InstanceId, 15)
 
 	xappConn1.TestMsgChanEmpty(t)
 	xappConn2.TestMsgChanEmpty(t)
@@ -1346,7 +1346,7 @@ func TestSubReqAndSubDelNoAnswerSameActionParallel(t *testing.T) {
 	e2termConn1.SendSubsDelResp(t, delreq1, delmsg1)
 
 	//Wait that subs is cleaned
-	mainCtrl.wait_subs_clean(t, delreq1.RequestId.Seq, 10)
+	mainCtrl.wait_subs_clean(t, delreq1.RequestId.InstanceId, 10)
 
 	xappConn1.TestMsgChanEmpty(t)
 	xappConn2.TestMsgChanEmpty(t)
@@ -1474,7 +1474,7 @@ func TestSubReqPolicyChangeAndSubDelOk(t *testing.T) {
 	e2SubsId := xappConn1.RecvSubsResp(t, cretrans)
 
 	//Policy change
-	rparams1.Req.RequestId.Seq = e2SubsId
+	rparams1.Req.RequestId.InstanceId = e2SubsId
 	rparams1.Req.ActionSetups[0].SubsequentAction.TimetoWait = e2ap.E2AP_TimeToWaitW200ms
 	xappConn1.SendSubsReq(t, rparams1, cretrans)
 
