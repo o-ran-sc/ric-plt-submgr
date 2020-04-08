@@ -142,6 +142,8 @@ func (r *Registry) AssignToSubscription(trans *TransactionXapp, subReqMsg *e2ap.
 	if actionType == e2ap.E2AP_ActionTypePolicy {
 		if subs, ok := r.register[trans.GetSubId()]; ok {
 			xapp.Logger.Debug("CREATE %s. Existing subscription for Policy found", subs.String())
+			// Update message data to subscription
+			subs.SubReqMsg = subReqMsg
 			subs.SetCachedResponse(nil, true)
 			return subs, nil
 		}
