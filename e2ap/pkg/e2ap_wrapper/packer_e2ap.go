@@ -1100,10 +1100,16 @@ func (e2apMsg *e2apMsgPackerSubscriptionRequest) Pack(data *e2ap.E2APSubscriptio
 			return err, nil
 		}
 	}
+	// Uncomment this when debugging problems in REST interface.
+	//fmt.Printf("Printing Subscription Request %s\n", e2apMsg.String())
+
 	errorNro := C.packRICSubscriptionRequest(&e2apMsg.plen, (*C.uchar)(e2apMsg.p), (*C.char)(unsafe.Pointer(&e2apMsg.lb[0])), e2apMsg.msgC)
+	fmt.Printf("errorNro %v\n", errorNro) // There is c-code problem. Returned errorNro is always 1 regardles what value is returned. That is probably due to pointers added in the c-structs in NewE2 implementation. Investigation ongoing.
+
 	if err := e2apMsg.checkerr(errorNro); err != nil {
 		return err, nil
 	}
+
 	return nil, e2apMsg.packeddata()
 }
 
@@ -1141,10 +1147,10 @@ func (e2apMsg *e2apMsgPackerSubscriptionRequest) UnPack(msg *e2ap.PackedData) (e
 		}
 	}
 	return nil, e2apMsg.msgG
-
 }
 
 func (e2apMsg *e2apMsgPackerSubscriptionRequest) String() string {
+
 	var b bytes.Buffer
 	fmt.Fprintln(&b, "ricSubscriptionRequest.")
 	fmt.Fprintln(&b, "  ricRequestID.")
@@ -1153,7 +1159,7 @@ func (e2apMsg *e2apMsgPackerSubscriptionRequest) String() string {
 	fmt.Fprintln(&b, "  ranFunctionID =", e2apMsg.msgC.ranFunctionID)
 	fmt.Fprintln(&b, "  ricSubscriptionDetails.")
 	fmt.Fprintln(&b, "    ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.")
-	fmt.Fprintln(&b, "      contentLength =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.octetString.contentLength)
+	fmt.Fprintln(&b, "      octetString.contentLength =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.octetString.contentLength)
 	fmt.Fprintln(&b, "      interfaceID.globalENBIDPresent =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalENBIDPresent)
 	if e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalENBIDPresent {
 		fmt.Fprintln(&b, "      interfaceID.globalENBID.pLMNIdentity.contentLength =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalENBID.pLMNIdentity.contentLength)
@@ -1188,7 +1194,8 @@ func (e2apMsg *e2apMsgPackerSubscriptionRequest) String() string {
 			fmt.Fprintln(&b, "      ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1Present =", e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1Present)
 			fmt.Fprintln(&b, "      ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2Present =", e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2Present)
 			fmt.Fprintln(&b, "      ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1Present =", e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1Present)
-			// Dynamically allocated C-structs are already freed. Can't print those.
+
+			fmt.Fprintln(&b, "      Dynamically allocated C-structs are already freed. Can't print those")
 		}
 
 		fmt.Fprintln(&b, "      ricActionToBeSetupItem[index].ricSubsequentActionPresent =", e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricSubsequentActionPresent)
