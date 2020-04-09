@@ -414,6 +414,7 @@ type ActionToBeSetupItem struct {
 	ActionType                 uint64
 	RicActionDefinitionPresent bool
 	ActionDefinitionChoice
+	SubsequentActionPresent bool // This has no implementation in packer_e2ap.go yet!
 	SubsequentAction
 }
 

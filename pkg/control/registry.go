@@ -32,20 +32,62 @@ import (
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
+type RESTSubscription struct {
+	EndPoint    string
+	Meid        string
+	InstanceIds []uint32
+}
+
+func (r *RESTSubscription) AddInstanceId(instanceId uint32) {
+	r.InstanceIds = append(r.InstanceIds, instanceId)
+}
+
+func (r *RESTSubscription) DeleteInstanceId(instanceId uint32) {
+	r.InstanceIds = r.InstanceIds[1:]
+}
 
 type Registry struct {
-	mutex       sync.Mutex
-	register    map[uint32]*Subscription
-	subIds      []uint32
-	rtmgrClient *RtmgrClient
+	mutex             sync.Mutex
+	register          map[uint32]*Subscription
+	subIds            []uint32
+	rtmgrClient       *RtmgrClient
+	restSubscriptions map[string]*RESTSubscription
 }
 
 func (r *Registry) Initialize() {
 	r.register = make(map[uint32]*Subscription)
+	r.restSubscriptions = make(map[string]*RESTSubscription)
 	var i uint32
 	for i = 0; i < 65535; i++ {
 		r.subIds = append(r.subIds, i+1)
 	}
+}
+
+func (r *Registry) CreateRESTSubscription(restSubId *string, endPoint *string, maid *string) (*RESTSubscription, error) {
+	if ongoingRestSubscription, found := r.restSubscriptions[*restSubId]; found {
+		err := fmt.Errorf("Registry: REST subscrition %s is ongoing. ongoingRestSubscription %v", *restSubId, ongoingRestSubscription)
+		return nil, err
+	}
+	newRestSubscription := RESTSubscription{}
+	newRestSubscription.EndPoint = *endPoint
+	newRestSubscription.Meid = *maid
+	r.restSubscriptions[*restSubId] = &newRestSubscription
+	xapp.Logger.Info("Registry: Created REST subscription successfully. restSubId = %v, subscriptionCount %v", *restSubId, len(r.restSubscriptions))
+	return &newRestSubscription, nil
+}
+
+func (r *Registry) DeleteRESTSubscription(restSubId *string) {
+	delete(r.restSubscriptions, *restSubId)
+	xapp.Logger.Info("Registry: Deleted REST subscription successfully. restSubId = %v, subscriptionCount %v", *restSubId, len(r.restSubscriptions))
+}
+
+func (r *Registry) GetRESTSubscription(restSubId string) (*RESTSubscription, error) {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	if _, ok := r.restSubscriptions[restSubId]; ok {
+		return r.restSubscriptions[restSubId], nil
+	}
+	return nil, fmt.Errorf("No valid subscription found with restSubId %v", restSubId)
 }
 
 func (r *Registry) QueryHandler() (models.SubscriptionList, error) {
@@ -121,19 +163,23 @@ func (r *Registry) findExistingSubs(trans *TransactionXapp, subReqMsg *e2ap.E2AP
 	return nil
 }
 
-func (r *Registry) AssignToSubscription(trans *TransactionXapp, subReqMsg *e2ap.E2APSubscriptionRequest) (*Subscription, error) {
+func (r *Registry) AssignToSubscription(trans *TransactionXapp, subReqMsg *e2ap.E2APSubscriptionRequest, restActionType uint64) (*Subscription, error) {
 	var err error
 	var newAlloc bool
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
+	actionType := restActionType
 
 	//
-	// Check validity of subscription action types
+	// Check validity of subscription action types. This check is not needed anymore when xapp asn.1 interface is removed.
+	// There are own subscription types for report and policy in REST interface
 	//
-	actionType, err := r.CheckActionTypes(subReqMsg)
-	if err != nil {
-		xapp.Logger.Debug("CREATE %s", err)
-		return nil, err
+	if restActionType == e2ap.E2AP_ActionTypeInvalid {
+		actionType, err = r.CheckActionTypes(subReqMsg)
+		if err != nil {
+			xapp.Logger.Debug("CREATE %s", err)
+			return nil, err
+		}
 	}
 
 	//
