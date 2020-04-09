@@ -28,7 +28,10 @@ import (
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
+	"github.com/segmentio/ksuid"
 	"github.com/spf13/viper"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -67,7 +70,6 @@ type Control struct {
 	e2ap     *E2ap
 	registry *Registry
 	tracker  *Tracker
-	//subscriber *xapp.Subscriber
 }
 
 type RMRMeid struct {
@@ -95,16 +97,12 @@ func NewControl() *Control {
 	tracker := new(Tracker)
 	tracker.Init()
 
-	//subscriber := xapp.NewSubscriber(viper.GetString("subscription.host"), viper.GetInt("subscription.timeout"))
-
 	c := &Control{e2ap: new(E2ap),
 		registry: registry,
 		tracker:  tracker,
-		//subscriber: subscriber,
 	}
 	c.XappWrapper.Init("")
-	go xapp.Subscription.Listen(c.SubscriptionHandler, c.QueryHandler, c.SubscriptionDeleteHandler)
-	//go c.subscriber.Listen(c.SubscriptionHandler, c.QueryHandler)
+	go xapp.Subscription.Listen(c.RESTSubscriptionRequestHandler, c.QueryHandler, c.RESTSubscriptionDeleteHandler)
 	return c
 }
 
@@ -122,27 +120,372 @@ func (c *Control) Run() {
 //-------------------------------------------------------------------
 //
 //-------------------------------------------------------------------
-func (c *Control) SubscriptionHandler(stype models.SubscriptionType, params interface{}) (*models.SubscriptionResponse, error) {
-	/*
-	   switch p := params.(type) {
-	   case *models.ReportParams:
-	       trans := c.tracker.NewXappTransaction(NewRmrEndpoint(p.ClientEndpoint),"" , 0, &xapp.RMRMeid{RanName: p.Meid})
-	       if trans == nil {
-	             xapp.Logger.Error("XAPP-SubReq: %s", idstring(fmt.Errorf("transaction not created"), params))
-	             return
-	       }
-	       defer trans.Release()
-	   case *models.ControlParams:
-	   case *models.PolicyParams:
-	   }
-	*/
-	return &models.SubscriptionResponse{}, fmt.Errorf("Subscription rest interface not implemented")
+func (c *Control) FillReportSubReqMsgs(stype models.SubscriptionType, params interface{}, subreqList *e2ap.SubscriptionRequestList, restSubscription *RESTSubscription) error {
+	xapp.Logger.Info("FillReportSubReqMsgs")
+
+	p := params.(*models.ReportParams)
+
+	lengthEventTriggers := len(p.EventTriggers)
+	var lengthActionParameters int = 0
+	if p.ReportActionDefinitions != nil && p.ReportActionDefinitions.ActionDefinitionFormat1 != nil && p.ReportActionDefinitions.ActionDefinitionFormat1.ActionParameters != nil {
+		lengthActionParameters = len(p.ReportActionDefinitions.ActionDefinitionFormat1.ActionParameters)
+	}
+	if lengthEventTriggers == 0 {
+		err := fmt.Errorf("Error in content element count: lengthEventTriggers: = %v", lengthEventTriggers)
+		return err
+	}
+
+	xapp.Logger.Info("lengthEventTriggers = %v", lengthEventTriggers)
+	xapp.Logger.Info("lengthActionParameters = %v", lengthActionParameters)
+
+	// 1..
+	for index := 0; index < lengthEventTriggers; index++ {
+		subReqMsg := e2ap.E2APSubscriptionRequest{}
+		subReqMsg.FunctionId = (e2ap.FunctionId)(*p.RANFunctionID)
+		subReqMsg.EventTriggerDefinition.NBX2EventTriggerDefinitionPresent = true
+
+		if len(p.EventTriggers[index].ENBID) > 0 {
+			subReqMsg.EventTriggerDefinition.X2EventTriggerDefinition.InterfaceId.GlobalEnbId.Present = true
+			subReqMsg.EventTriggerDefinition.X2EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Bits = e2ap.E2AP_ENBIDHomeBits28
+			plmId64, _ := strconv.Atoi(p.EventTriggers[index].PlmnID)
+			subReqMsg.EventTriggerDefinition.X2EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Id = (uint32)(plmId64)
+			subReqMsg.EventTriggerDefinition.X2EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.Set(p.EventTriggers[index].ENBID) // GNBID is not present in REST definition currently
+		}
+		subReqMsg.EventTriggerDefinition.X2EventTriggerDefinition.InterfaceDirection = (uint32)(p.EventTriggers[index].InterfaceDirection)
+		subReqMsg.EventTriggerDefinition.X2EventTriggerDefinition.ProcedureCode = (uint32)(p.EventTriggers[index].ProcedureCode)
+		subReqMsg.EventTriggerDefinition.X2EventTriggerDefinition.TypeOfMessage = (uint64)(p.EventTriggers[index].TypeOfMessage)
+
+		actionToBeSetupItem := e2ap.ActionToBeSetupItem{}
+		actionToBeSetupItem.ActionId = 0 // REST definition does not yet have this
+		actionToBeSetupItem.ActionType = e2ap.E2AP_ActionTypeReport
+		actionToBeSetupItem.RicActionDefinitionPresent = true
+		actionToBeSetupItem.ActionDefinitionChoice.ActionDefinitionX2Format1Present = true // Only one choice present in REST definition currently
+		actionToBeSetupItem.ActionDefinitionChoice.ActionDefinitionX2Format1.StyleID = 0   //(uint64)(*p.ReportActionDefinitions.ActionDefinitionFormat1.StyleID)
+
+		// 0.. OPTIONAL
+		for index2 := 0; index2 < lengthActionParameters; index2++ {
+			actionParameterItem := e2ap.ActionParameterItem{}
+			actionParameterItem.ParameterID = (uint32)(*p.ReportActionDefinitions.ActionDefinitionFormat1.ActionParameters[index2].ActionParameterID)
+			actionParameterItem.ActionParameterValue.ValueBoolPresent = true
+			actionParameterItem.ActionParameterValue.ValueBool = (bool)(*p.ReportActionDefinitions.ActionDefinitionFormat1.ActionParameters[index2].ActionParameterValue)
+			actionToBeSetupItem.ActionDefinitionChoice.ActionDefinitionX2Format1.ActionParameterItems =
+				append(actionToBeSetupItem.ActionDefinitionChoice.ActionDefinitionX2Format1.ActionParameterItems, actionParameterItem)
+
+			// OPTIONAL
+			actionToBeSetupItem.SubsequentActionPresent = false // SubseguentAction not pressent in REST definition
+		}
+		subReqMsg.ActionSetups = append(subReqMsg.ActionSetups, actionToBeSetupItem)
+		subreqList.E2APSubscriptionRequests = append(subreqList.E2APSubscriptionRequests, subReqMsg)
+	}
+	return nil
 }
 
-func (c *Control) SubscriptionDeleteHandler(string) error {
-	return fmt.Errorf("Subscription rest interface not implemented")
+//-------------------------------------------------------------------
+//
+//-------------------------------------------------------------------
+func (c *Control) FillPolicySubReqMsgs(stype models.SubscriptionType, params interface{}, subreqList *e2ap.SubscriptionRequestList, restSubscription *RESTSubscription) error {
+	xapp.Logger.Info("FillPolicySubReqMsgs")
+
+	p := params.(*models.PolicyParams)
+	lengthEventTriggers := len(p.EventTriggers)
+	var lengthRANUeGroupParameters int = 0
+	if p.PolicyActionDefinitions != nil && p.PolicyActionDefinitions.ActionDefinitionFormat2 != nil && p.PolicyActionDefinitions.ActionDefinitionFormat2.RANUeGroupParameters != nil {
+		lengthRANUeGroupParameters = len(p.PolicyActionDefinitions.ActionDefinitionFormat2.RANUeGroupParameters)
+	}
+	if lengthEventTriggers == 0 {
+		err := fmt.Errorf("Error in content element count: lengthEventTriggers = %v", lengthEventTriggers)
+		return err
+	}
+
+	xapp.Logger.Info("lengthEventTriggers = %v", lengthEventTriggers)
+	xapp.Logger.Info("lengthRANUeGroupParameters = %v", lengthRANUeGroupParameters)
+
+	// 1..
+	for index := 0; index < lengthEventTriggers; index++ {
+		subReqMsg := e2ap.E2APSubscriptionRequest{}
+		subReqMsg.FunctionId = (e2ap.FunctionId)(*p.RANFunctionID)
+		subReqMsg.EventTriggerDefinition.NBX2EventTriggerDefinitionPresent = true
+
+		if len(p.EventTriggers[index].ENBID) > 0 {
+			subReqMsg.EventTriggerDefinition.X2EventTriggerDefinition.InterfaceId.GlobalEnbId.Present = true
+			subReqMsg.EventTriggerDefinition.X2EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Bits = e2ap.E2AP_ENBIDHomeBits28
+			plmId64, _ := strconv.Atoi(p.EventTriggers[index].PlmnID)
+			subReqMsg.EventTriggerDefinition.X2EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Id = (uint32)(plmId64)
+			subReqMsg.EventTriggerDefinition.X2EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.Set(p.EventTriggers[index].ENBID) // GNBID is not present in REST definition currently
+		}
+		subReqMsg.EventTriggerDefinition.X2EventTriggerDefinition.InterfaceDirection = (uint32)(p.EventTriggers[index].InterfaceDirection)
+		subReqMsg.EventTriggerDefinition.X2EventTriggerDefinition.ProcedureCode = (uint32)(p.EventTriggers[index].ProcedureCode)
+		subReqMsg.EventTriggerDefinition.X2EventTriggerDefinition.TypeOfMessage = (uint64)(p.EventTriggers[index].TypeOfMessage)
+
+		actionToBeSetupItem := e2ap.ActionToBeSetupItem{}
+		actionToBeSetupItem.ActionId = 0 // REST definition does not yet have this
+		actionToBeSetupItem.ActionType = e2ap.E2AP_ActionTypePolicy
+		actionToBeSetupItem.RicActionDefinitionPresent = true
+
+		actionToBeSetupItem.ActionDefinitionChoice.ActionDefinitionX2Format2Present = true
+
+		// 0.. OPTIONAL
+		for index2 := 0; index2 < lengthRANUeGroupParameters; index2++ {
+			// 1..15
+			for index3 := 0; index3 < 1; index3++ {
+				ranUEgroupItem := e2ap.RANueGroupItem{}
+				ranUEgroupItem.RanUEgroupID = *p.PolicyActionDefinitions.ActionDefinitionFormat2.RANUeGroupParameters[index3].RANUeGroupID
+
+				// 1..255
+				for index4 := 0; index4 < 1; index4++ { // Only one RanUEGroupDefItems supported in REST definition currently
+					ranUEGroupDefItem := e2ap.RANueGroupDefItem{}
+					ranUEGroupDefItem.RanParameterID = (uint32)(*p.PolicyActionDefinitions.ActionDefinitionFormat2.RANUeGroupParameters[index4].RANUeGroupDefinition.RANParameterID)
+					if p.PolicyActionDefinitions.ActionDefinitionFormat2.RANUeGroupParameters[index4].RANUeGroupDefinition.RANParameterTestCondition == "equal" {
+						ranUEGroupDefItem.RanParameterTest = e2ap.RANParameterTest_equal
+					} else if p.PolicyActionDefinitions.ActionDefinitionFormat2.RANUeGroupParameters[index4].RANUeGroupDefinition.RANParameterTestCondition == "greaterthan" {
+						ranUEGroupDefItem.RanParameterTest = e2ap.RANParameterTest_greaterthan
+					} else if p.PolicyActionDefinitions.ActionDefinitionFormat2.RANUeGroupParameters[index4].RANUeGroupDefinition.RANParameterTestCondition == "lessthan" {
+						ranUEGroupDefItem.RanParameterTest = e2ap.RANParameterTest_lessthan
+					} else {
+						return fmt.Errorf("Incorrect RANParameterTestCondition %s", p.PolicyActionDefinitions.ActionDefinitionFormat2.RANUeGroupParameters[index4].RANUeGroupDefinition.RANParameterTestCondition)
+					}
+					ranUEGroupDefItem.RanParameterValue.ValueIntPresent = true
+					ranUEGroupDefItem.RanParameterValue.ValueInt = *p.PolicyActionDefinitions.ActionDefinitionFormat2.RANUeGroupParameters[index2].RANUeGroupDefinition.RANParameterValue
+					ranUEgroupItem.RanUEgroupDefinition.RanUEGroupDefItems = append(ranUEgroupItem.RanUEgroupDefinition.RanUEGroupDefItems, ranUEGroupDefItem)
+				}
+				// 1..255
+				for index5 := 0; index5 < 1; index5++ { // Only one RanParameterItem supported in REST definition currently
+					ranParameterItem := e2ap.RANParameterItem{}
+					ranParameterItem.RanParameterID = (uint8)(*p.PolicyActionDefinitions.ActionDefinitionFormat2.RANUeGroupParameters[index2].RANImperativePolicy.PolicyParameterID)
+					ranParameterItem.RanParameterValue.ValueIntPresent = true
+					ranParameterItem.RanParameterValue.ValueInt = *p.PolicyActionDefinitions.ActionDefinitionFormat2.RANUeGroupParameters[index2].RANImperativePolicy.PolicyParameterValue
+					ranUEgroupItem.RanPolicy.RanParameterItems = append(ranUEgroupItem.RanPolicy.RanParameterItems, ranParameterItem)
+				}
+				actionToBeSetupItem.ActionDefinitionChoice.ActionDefinitionX2Format2.RanUEgroupItems =
+					append(actionToBeSetupItem.ActionDefinitionChoice.ActionDefinitionX2Format2.RanUEgroupItems, ranUEgroupItem)
+			}
+			// OPTIONAL
+			actionToBeSetupItem.SubsequentActionPresent = false // SubseguentAction not pressent in REST definition
+		}
+		subReqMsg.ActionSetups = append(subReqMsg.ActionSetups, actionToBeSetupItem)
+		subreqList.E2APSubscriptionRequests = append(subreqList.E2APSubscriptionRequests, subReqMsg)
+	}
+	return nil
 }
 
+func (c *Control) processSubscriptionRequests(trans *TransactionXapp, restSubscription *RESTSubscription, subReqList *e2ap.SubscriptionRequestList, clientEndpoint *string, meid *string, restSubId *string, actionType uint64) {
+
+	xapp.Logger.Info("len(subReqList.E2APSubscriptionRequests) = %v", len(subReqList.E2APSubscriptionRequests))
+	defer trans.Release()
+	for _, subReqMsg := range subReqList.E2APSubscriptionRequests {
+		xapp.Logger.Info("handleSubscriptionRequest")
+
+		subRespMsg, err := c.handleSubscriptionRequest(trans, &subReqMsg, clientEndpoint, meid, restSubId, actionType)
+		if err != nil {
+			c.registry.DeleteRESTSubscription(restSubId)
+			xapp.Logger.Error("handleSubscriptionRequest failed")
+		}
+		restSubscription.AddInstanceId(subRespMsg.RequestId.InstanceId)
+
+		var requestorID int64
+		var instanceId int64
+		requestorID = (int64)(subRespMsg.RequestId.Id)
+		instanceId = (int64)(subRespMsg.RequestId.InstanceId)
+		resp := &models.SubscriptionResponse{
+			SubscriptionID: restSubId,
+			SubscriptionInstances: []*models.SubscriptionInstance{
+				&models.SubscriptionInstance{RequestorID: &requestorID, InstanceID: &instanceId},
+			},
+		}
+
+		// ClientEndpoint in REST request contains xApp address and RMR port. Notification takes only the address part
+		ipAddress := *clientEndpoint
+		i := strings.Index(*clientEndpoint, ":")
+		if i != -1 {
+			ipAddress = ipAddress[0:i]
+		}
+
+		// Send notification to xApp that request has been processed. Currently it is not possible to indicate error.
+		// Such possibility should be added.
+		xapp.Subscription.Notify(resp, ipAddress)
+	}
+}
+
+//-------------------------------------------------------------------
+//
+//-------------------------------------------------------------------
+func (c *Control) RESTSubscriptionRequestHandler(stype models.SubscriptionType, params interface{}) (*models.SubscriptionResponse, error) {
+
+	xapp.Logger.Info("SubscriptionRequest from XAPP")
+	restSubId := ksuid.New().String()
+	subResp := models.SubscriptionResponse{}
+	subResp.SubscriptionID = &restSubId
+
+	switch stype {
+	case models.SubscriptionTypeReport:
+		p := params.(*models.ReportParams)
+		actionType := e2ap.E2AP_ActionTypeReport
+		restSubscription, err := c.registry.CreateRESTSubscription(&restSubId, p.ClientEndpoint, &p.Meid)
+		if err != nil {
+			return nil, err
+		}
+
+		subReqList := e2ap.SubscriptionRequestList{}
+		err = c.FillReportSubReqMsgs(stype, params, &subReqList, restSubscription)
+		if err != nil {
+			c.registry.DeleteRESTSubscription(&restSubId)
+			return nil, err
+		}
+
+		trans := c.tracker.NewXappTransaction(xapptweaks.NewRmrEndpoint(*p.ClientEndpoint), restSubId, 0, &xapp.RMRMeid{RanName: p.Meid})
+		if trans == nil {
+			err := fmt.Errorf("XAPP-SubReq %s:", idstring(fmt.Errorf("transaction not created")))
+			xapp.Logger.Error("%s", err.Error())
+			return nil, err
+		}
+		go c.processSubscriptionRequests(trans, restSubscription, &subReqList, p.ClientEndpoint, &p.Meid, &restSubId, actionType)
+		// Respond to xapp
+		return &subResp, nil
+	case models.SubscriptionTypePolicy:
+		p := params.(*models.PolicyParams)
+		actionType := e2ap.E2AP_ActionTypePolicy
+		restSubscription, err := c.registry.CreateRESTSubscription(&restSubId, p.ClientEndpoint, p.Meid)
+		if err != nil {
+			return nil, err
+		}
+		subReqList := e2ap.SubscriptionRequestList{}
+		err = c.FillPolicySubReqMsgs(stype, params, &subReqList, restSubscription)
+		if err != nil {
+			c.registry.DeleteRESTSubscription(&restSubId)
+			return nil, err
+		}
+
+		trans := c.tracker.NewXappTransaction(xapptweaks.NewRmrEndpoint(*p.ClientEndpoint), restSubId, 0, &xapp.RMRMeid{RanName: *p.Meid})
+		if trans == nil {
+			err := fmt.Errorf("XAPP-SubReq %s:", idstring(fmt.Errorf("transaction not created")))
+			xapp.Logger.Error("%s", err.Error())
+			return nil, err
+		}
+		go c.processSubscriptionRequests(trans, restSubscription, &subReqList, p.ClientEndpoint, p.Meid, &restSubId, actionType)
+		// Respond to xapp
+		return &subResp, nil
+	}
+	// Respond to xapp
+	return &subResp, fmt.Errorf("Subscription rest interface not implemented")
+}
+
+//-------------------------------------------------------------------
+//
+//------------------------------------------------------------------
+func (c *Control) handleSubscriptionRequest(trans *TransactionXapp, subReqMsg *e2ap.E2APSubscriptionRequest, clientEndpoint *string, meid *string, restSubId *string, actionType uint64) (*e2ap.E2APSubscriptionResponse, error) {
+
+	err := c.tracker.Track(trans)
+	if err != nil {
+		err = fmt.Errorf("XAPP-SubReq: %s", idstring(err, trans))
+		xapp.Logger.Error("%s", err.Error())
+		return nil, err
+	}
+
+	subs, err := c.registry.AssignToSubscription(trans, subReqMsg, actionType)
+	if err != nil {
+		err = fmt.Errorf("XAPP-SubReq: %s", idstring(err, trans))
+		xapp.Logger.Error("%s", err.Error())
+		return nil, err
+	}
+
+	//
+	// Wake subs request
+	//
+	go c.handleSubscriptionCreate(subs, trans)
+	event, _ := trans.WaitEvent(0) //blocked wait as timeout is handled in subs side
+
+	err = nil
+	if event != nil {
+		switch themsg := event.(type) {
+		case *e2ap.E2APSubscriptionResponse:
+			trans.Release()
+			return themsg, nil
+		case *e2ap.E2APSubscriptionFailure:
+			err = fmt.Errorf("SubscriptionFailure received")
+			return nil, err
+		default:
+			break
+		}
+	}
+	err = fmt.Errorf("XAPP-SubReq: failed %s", idstring(err, trans, subs))
+	xapp.Logger.Error("%s", err.Error())
+	c.registry.RemoveFromSubscription(subs, trans, 5*time.Second)
+	return nil, err
+}
+
+//-------------------------------------------------------------------
+//
+//-------------------------------------------------------------------
+func (c *Control) RESTSubscriptionDeleteHandler(restSubId string) error {
+	xapp.Logger.Info("SubscriptionDeleteRequest from XAPP")
+
+	restSubscription, err := c.registry.GetRESTSubscription(restSubId)
+	if err != nil {
+		xapp.Logger.Error("%s", err.Error())
+		return err
+	}
+
+	clientEndpoint := restSubscription.EndPoint
+	go func() {
+		for _, instanceId := range restSubscription.InstanceIds {
+			err := c.SubscriptionDeleteHandler(&restSubId, &clientEndpoint, &restSubscription.Meid, instanceId)
+			if err != nil {
+				xapp.Logger.Error("%s", err.Error())
+				//return err
+			}
+			xapp.Logger.Info("Deleteting instanceId = %v", instanceId)
+			restSubscription.DeleteInstanceId(instanceId)
+		}
+	}()
+	return nil
+}
+
+//-------------------------------------------------------------------
+//
+//-------------------------------------------------------------------
+func (c *Control) SubscriptionDeleteHandler(restSubId *string, endPoint *string, meid *string, instanceId uint32) error {
+
+	trans := c.tracker.NewXappTransaction(xapptweaks.NewRmrEndpoint(*endPoint), *restSubId, 0, &xapp.RMRMeid{RanName: *meid})
+	if trans == nil {
+		err := fmt.Errorf("XAPP-SubDelReq %s:", idstring(fmt.Errorf("transaction not created")))
+		xapp.Logger.Error("%s", err.Error())
+	}
+	defer trans.Release()
+
+	err := c.tracker.Track(trans)
+	if err != nil {
+		err := fmt.Errorf("XAPP-SubDelReq %s:", idstring(err, trans))
+		xapp.Logger.Error("%s", err.Error())
+		return &time.ParseError{}
+	}
+
+	subs, err := c.registry.GetSubscriptionFirstMatch([]uint32{instanceId})
+	if err != nil {
+		err := fmt.Errorf("XAPP-SubDelReq %s:", idstring(err, trans))
+		xapp.Logger.Error("%s", err.Error())
+		return err
+	}
+	//
+	// Wake subs delete
+	//
+	go c.handleSubscriptionDelete(subs, trans)
+	trans.WaitEvent(0) //blocked wait as timeout is handled in subs side
+
+	xapp.Logger.Debug("XAPP-SubDelReq: Handling event %s ", idstring(nil, trans, subs))
+
+	// Whatever is received send ok delete response
+	if err == nil {
+		return nil
+	}
+
+	c.registry.RemoveFromSubscription(subs, trans, 5*time.Second)
+
+	return nil
+}
+
+//-------------------------------------------------------------------
+//
+//-------------------------------------------------------------------
 func (c *Control) QueryHandler() (models.SubscriptionList, error) {
 	return c.registry.QueryHandler()
 }
@@ -150,7 +493,6 @@ func (c *Control) QueryHandler() (models.SubscriptionList, error) {
 //-------------------------------------------------------------------
 //
 //-------------------------------------------------------------------
-
 func (c *Control) rmrSendToE2T(desc string, subs *Subscription, trans *TransactionSubs) (err error) {
 	params := xapptweaks.NewParams(nil)
 	params.Mtype = trans.GetMtype()
@@ -166,7 +508,6 @@ func (c *Control) rmrSendToE2T(desc string, subs *Subscription, trans *Transacti
 }
 
 func (c *Control) rmrSendToXapp(desc string, subs *Subscription, trans *TransactionXapp) (err error) {
-
 	params := xapptweaks.NewParams(nil)
 	params.Mtype = trans.GetMtype()
 	params.SubId = int(subs.GetReqId().InstanceId)
@@ -236,7 +577,7 @@ func (c *Control) handleXAPPSubscriptionRequest(params *xapptweaks.RMRParams) {
 	}
 
 	//TODO handle subscription toward e2term inside AssignToSubscription / hide handleSubscriptionCreate in it?
-	subs, err := c.registry.AssignToSubscription(trans, subReqMsg)
+	subs, err := c.registry.AssignToSubscription(trans, subReqMsg, e2ap.E2AP_ActionTypeInvalid)
 	if err != nil {
 		xapp.Logger.Error("XAPP-SubReq: %s", idstring(err, trans))
 		return
