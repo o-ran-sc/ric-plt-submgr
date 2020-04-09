@@ -209,6 +209,7 @@ uint64_t packRICSubscriptionRequest(size_t* pdataBufferSize, byte* pDataBuffer, 
                         if ((returnCode = packRICActionDefinition(pLogBuffer, &pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice) != e2err_OK)) {
                             return returnCode;
                         }
+
                         pRICaction_ToBeSetup_ItemIEs->value.choice.RICaction_ToBeSetup_Item.ricActionDefinition = calloc(1, sizeof (RICactionDefinition_t));
                         if (pRICaction_ToBeSetup_ItemIEs->value.choice.RICaction_ToBeSetup_Item.ricActionDefinition) {
                             pRICaction_ToBeSetup_ItemIEs->value.choice.RICaction_ToBeSetup_Item.ricActionDefinition->buf =
@@ -243,7 +244,6 @@ uint64_t packRICSubscriptionRequest(size_t* pdataBufferSize, byte* pDataBuffer, 
                 }
                 else
                     return e2err_RICSubscriptionRequestAllocRICaction_ToBeSetup_ItemIEsFail;
-
                 ASN_SEQUENCE_ADD(&pRICsubscriptionRequest_IEs->value.choice.RICsubscriptionDetails.ricAction_ToBeSetup_List.list, pRICaction_ToBeSetup_ItemIEs);
                 index++;
             }
@@ -375,7 +375,6 @@ uint64_t packRICEventTriggerDefinitionX2Format(char* pLogBuffer, RICEventTrigger
         }
         else
             return e2err_RICIndicationAllocRICEventTriggerDefinitionglobal_gNB_IDpLMN_IdentityBufFail;
-
         // GNB-ID, BIT STRING, SIZE 22..32
         pE2SM_gNB_X2_eventTriggerDefinition->interface_ID.choice.global_gNB_ID.gNB_ID.choice.gNB_ID.size = 4;  //32bits
         pE2SM_gNB_X2_eventTriggerDefinition->interface_ID.choice.global_gNB_ID.gNB_ID.choice.gNB_ID.buf = calloc(1, 4);
