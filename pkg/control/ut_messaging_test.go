@@ -1575,3 +1575,123 @@ func TestSubReqAndSubDelOkTwoE2termParallel(t *testing.T) {
 	e2termConn2.TestMsgChanEmpty(t)
 	mainCtrl.wait_registry_empty(t, 10)
 }
+
+//-----------------------------------------------------------------------------
+// TestRESTReportSubReqAndSubDelOk and
+// TestRESTPolicySubReqAndSubDelOk
+//
+//   stub                          stub
+// +-------+     +---------+    +---------+
+// | xapp  |     | submgr  |    | e2term  |
+// +-------+     +---------+    +---------+
+//     |              |              |
+//     | SubReq       |              |
+//     |------------->|              |
+//     |              |              |
+//     |              | SubReq       |
+//     |              |------------->|
+//     |              |              |
+//     |              |      SubResp |
+//     |              |<-------------|
+//     |              |              |
+//     |      SubResp |              |
+//     |<-------------|              |
+//     |              |              |
+//     |              |              |
+//     | SubDelReq    |              |
+//     |------------->|              |
+//     |              |              |
+//     |              | SubDelReq    |
+//     |              |------------->|
+//     |              |              |
+//     |              |   SubDelResp |
+//     |              |<-------------|
+//     |              |              |
+//     |   SubDelResp |              |
+//     |<-------------|              |
+//
+//-----------------------------------------------------------------------------
+
+func TestRESTReportSubReqAndSubDelOk(t *testing.T) {
+	CaseBegin("TestRESTReportSubReqAndSubDelOk")
+
+	restSubId, subReqCount, err := xappConn1.SendRESTReportSubsReq(t)
+	if err != nil {
+		xapp.Logger.Error("SendRESTReportSubsReq failed. %s", err.Error())
+	}
+	xapp.Logger.Info("SubscriptionID = %v, restSubId = %v", restSubId, restSubId)
+
+	for i := 0; i < subReqCount; i++ {
+		crereq, cremsg := e2termConn1.RecvSubsReq(t)
+		e2termConn1.SendSubsResp(t, crereq, cremsg)
+
+		resp, _ := xapp.Subscription.QuerySubscriptions()
+		e2SubsId := (uint32)(resp[0].SubscriptionID)
+		xapp.Logger.Info("e2SubsId = %v", e2SubsId)
+
+		err := xappConn1.WaitRESTNotifications(t)
+		if err != nil {
+			xapp.Logger.Error("%v", err.Error())
+		}
+	}
+
+	xapp.Logger.Info("Sending delete request. SubscriptionID = %v", restSubId)
+	err = xappConn1.SendRESTSubsDelReq(t, &restSubId)
+	if err != nil {
+		xapp.Logger.Error("SendRESTSubsDelReq failed. %v", err.Error())
+	}
+
+	for i := 0; i < subReqCount; i++ {
+		delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+		e2termConn1.SendSubsDelResp(t, delreq, delmsg)
+	}
+
+	//Wait that subs is cleaned
+	//mainCtrl.wait_subs_clean(t, e2SubsId, 10)
+	xappConn1.TestMsgChanEmpty(t)
+	//xappConn2.TestMsgChanEmpty(t)
+	e2termConn1.TestMsgChanEmpty(t)
+	//mainCtrl.wait_registry_empty(t, 10)
+}
+
+func TestRESTPolicySubReqAndSubDelOk(t *testing.T) {
+	CaseBegin("TestRESTPolicySubReqAndSubDelOk")
+
+	restSubId, subReqCount, err := xappConn1.SendRESTPolicySubsReq(t)
+	if err != nil {
+		xapp.Logger.Error("SendRESTPolicySubsReq failed. %v", err.Error())
+	}
+	xapp.Logger.Info("SubscriptionID = %v, restSubId = %v", restSubId, restSubId)
+
+	for i := 0; i < subReqCount; i++ {
+		crereq, cremsg := e2termConn1.RecvSubsReq(t)
+		e2termConn1.SendSubsResp(t, crereq, cremsg)
+
+		resp, _ := xapp.Subscription.QuerySubscriptions()
+		e2SubsId := (uint32)(resp[0].SubscriptionID)
+		xapp.Logger.Info("e2SubsId = %v", e2SubsId)
+
+		err := xappConn1.WaitRESTNotifications(t)
+		if err != nil {
+			xapp.Logger.Error("%v", err.Error())
+		}
+	}
+
+	xapp.Logger.Info("Sending delete request. SubscriptionID = %v", restSubId)
+	err = xappConn1.SendRESTSubsDelReq(t, &restSubId)
+	if err != nil {
+		xapp.Logger.Error("SendRESTSubsDelReq failed. %v", err.Error())
+	}
+
+	for i := 0; i < subReqCount; i++ {
+		delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+		e2termConn1.SendSubsDelResp(t, delreq, delmsg)
+	}
+
+	//Wait that subs is cleaned
+	//mainCtrl.wait_subs_clean(t, e2SubsId, 10)
+	xappConn1.TestMsgChanEmpty(t)
+	//xappConn2.TestMsgChanEmpty(t)
+	e2termConn1.TestMsgChanEmpty(t)
+	//mainCtrl.wait_registry_empty(t, 10)
+}
