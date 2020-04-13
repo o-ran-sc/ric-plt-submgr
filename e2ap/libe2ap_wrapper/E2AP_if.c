@@ -107,7 +107,7 @@ bool E2encode(E2AP_PDU_t* pE2AP_PDU, size_t* dataBufferSize, byte* dataBuffer, c
     asn_enc_rval_t rval;
     rval = asn_encode_to_buffer(0, ATS_ALIGNED_BASIC_PER, &asn_DEF_E2AP_PDU, pE2AP_PDU, dataBuffer, *dataBufferSize);
     if (rval.encoded == -1) {
-        sprintf(pLogBuffer,"Serialization of %s failed.", asn_DEF_E2AP_PDU.name);
+        sprintf(pLogBuffer,"Serialization of %s failed", asn_DEF_E2AP_PDU.name);
         ASN_STRUCT_FREE(asn_DEF_E2AP_PDU, pE2AP_PDU);
         return false;
     }
@@ -204,12 +204,11 @@ uint64_t packRICSubscriptionRequest(size_t* pdataBufferSize, byte* pDataBuffer, 
                       pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionType;
 
                     // RICactionDefinition, OPTIONAL
-                    uint64_t returnCode;
-                    if ((returnCode = packRICActionDefinition(pLogBuffer, &pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem->ricActionDefinitionChoice) != e2err_OK)) {
-                        return returnCode;
-                    }
-
                     if (pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionPresent) {
+                        uint64_t returnCode;
+                        if ((returnCode = packRICActionDefinition(pLogBuffer, &pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice) != e2err_OK)) {
+                            return returnCode;
+                        }
                         pRICaction_ToBeSetup_ItemIEs->value.choice.RICaction_ToBeSetup_Item.ricActionDefinition = calloc(1, sizeof (RICactionDefinition_t));
                         if (pRICaction_ToBeSetup_ItemIEs->value.choice.RICaction_ToBeSetup_Item.ricActionDefinition) {
                             pRICaction_ToBeSetup_ItemIEs->value.choice.RICaction_ToBeSetup_Item.ricActionDefinition->buf =
@@ -421,7 +420,7 @@ uint64_t packRICEventTriggerDefinitionX2Format(char* pLogBuffer, RICEventTrigger
                                 pRICEventTriggerDefinition->octetString.data, bufferSize);
 
     if(rval.encoded == -1) {
-        sprintf(pLogBuffer,"Serialization of %s failed.", asn_DEF_E2_E2SM_gNB_X2_eventTriggerDefinition.name);
+        sprintf(pLogBuffer,"Serialization of %s failed", asn_DEF_E2_E2SM_gNB_X2_eventTriggerDefinition.name);
         return e2err_RICEventTriggerDefinitionPackFail_1;
     }
     else if(rval.encoded > bufferSize) {
@@ -460,7 +459,7 @@ uint64_t packRICEventTriggerDefinitionNRTFormat(char* pLogBuffer, RICEventTrigge
                                 pRICEventTriggerDefinition->octetString.data, bufferSize);
 
     if(rval.encoded == -1) {
-        sprintf(pLogBuffer,"Serialization of %s failed.", asn_DEF_E2_E2SM_gNB_NRT_EventTriggerDefinition.name);
+        sprintf(pLogBuffer,"Serialization of %s failed", asn_DEF_E2_E2SM_gNB_NRT_EventTriggerDefinition.name);
         return e2err_RICENRTventTriggerDefinitionPackFail_1;
     }
     else if(rval.encoded > bufferSize) {
@@ -517,62 +516,62 @@ uint64_t packActionDefinitionX2Format(char* pLogBuffer, RICActionDefinitionChoic
             while (index < pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterCount && index < E2_maxofRANParameters) {
                 E2_ActionParameter_Item_t* pE2_ActionParameter_Item = calloc(1, sizeof(E2_ActionParameter_Item_t));
                 if (pE2_ActionParameter_Item) {
-                    pE2_ActionParameter_Item->actionParameter_ID = pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem->parameterID;
-                    if (pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem->actionParameterValue.valueIntPresent) {
+                    pE2_ActionParameter_Item->actionParameter_ID = pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem[index].parameterID;
+                    if (pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem[index].actionParameterValue.valueIntPresent) {
                         pE2_ActionParameter_Item->actionParameter_Value.present = E2_ActionParameter_Value_PR_valueInt;
                         pE2_ActionParameter_Item->actionParameter_Value.choice.valueInt =
-                        pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem->actionParameterValue.valueInt;
+                        pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem[index].actionParameterValue.valueInt;
                     }
-                    else if (pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem->actionParameterValue.valueEnumPresent) {
+                    else if (pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem[index].actionParameterValue.valueEnumPresent) {
                         pE2_ActionParameter_Item->actionParameter_Value.present = E2_ActionParameter_Value_PR_valueEnum;
                         pE2_ActionParameter_Item->actionParameter_Value.choice.valueEnum =
-                        pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem->actionParameterValue.valueIntPresent;
+                        pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem[index].actionParameterValue.valueIntPresent;
                     }
-                    else if (pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem->actionParameterValue.valueBoolPresent) {
+                    else if (pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem[index].actionParameterValue.valueBoolPresent) {
                         pE2_ActionParameter_Item->actionParameter_Value.present = E2_ActionParameter_Value_PR_valueBool;
                         pE2_ActionParameter_Item->actionParameter_Value.choice.valueBool =
-                        pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem->actionParameterValue.valueBool;
+                        pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem[index].actionParameterValue.valueBool;
                     }
-                    else if (pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem->actionParameterValue.valueBitSPresent) {
+                    else if (pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem[index].actionParameterValue.valueBitSPresent) {
                         pE2_ActionParameter_Item->actionParameter_Value.present = E2_ActionParameter_Value_PR_valueBitS;
                         pE2_ActionParameter_Item->actionParameter_Value.choice.valueBitS.size =
-                        pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem->actionParameterValue.valueBitS.byteLength;
+                        pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem[index].actionParameterValue.valueBitS.byteLength;
                         pE2_ActionParameter_Item->actionParameter_Value.choice.valueBitS.bits_unused =
-                        pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem->actionParameterValue.valueBitS.unusedBits;
+                        pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem[index].actionParameterValue.valueBitS.unusedBits;
                         pE2_ActionParameter_Item->actionParameter_Value.choice.valueBitS.buf =
-                        calloc(pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem->actionParameterValue.valueBitS.byteLength, 1);
+                        calloc(pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem[index].actionParameterValue.valueBitS.byteLength, 1);
                         if (pE2_ActionParameter_Item->actionParameter_Value.choice.valueBitS.buf) {
                             memcpy(pE2_ActionParameter_Item->actionParameter_Value.choice.valueBitS.buf,
-                                pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem->actionParameterValue.valueBitS.data,
-                                pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem->actionParameterValue.valueBitS.byteLength);
+                                pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem[index].actionParameterValue.valueBitS.data,
+                                pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem[index].actionParameterValue.valueBitS.byteLength);
                         }
                         else
                             return e2err_RICSubscriptionRequestAllocactionParameterValueValueBitSFail;
                     }
-                    else if (pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem->actionParameterValue.valueOctSPresent) {
+                    else if (pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem[index].actionParameterValue.valueOctSPresent) {
                         pE2_ActionParameter_Item->actionParameter_Value.present = E2_ActionParameter_Value_PR_valueOctS;
                         pE2_ActionParameter_Item->actionParameter_Value.choice.valueOctS.size =
-                        pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem->actionParameterValue.valueOctS.length;
+                        pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem[index].actionParameterValue.valueOctS.length;
                         pE2_ActionParameter_Item->actionParameter_Value.choice.valueOctS.buf =
-                        calloc(pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem->actionParameterValue.valueOctS.length, 1);
+                        calloc(pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem[index].actionParameterValue.valueOctS.length, 1);
                         if (pE2_ActionParameter_Item->actionParameter_Value.choice.valueOctS.buf) {
                             memcpy(pE2_ActionParameter_Item->actionParameter_Value.choice.valueOctS.buf,
-                                pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem->actionParameterValue.valueOctS.data,
-                                pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem->actionParameterValue.valueOctS.length);
+                                pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem[index].actionParameterValue.valueOctS.data,
+                                pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem[index].actionParameterValue.valueOctS.length);
                         }
                         else
                             return e2err_RICSubscriptionRequestAllocactionParameterValueValueOctSFail;
                     }
-                    else if (pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem->actionParameterValue.valuePrtSPresent) {
+                    else if (pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem[index].actionParameterValue.valuePrtSPresent) {
                         pE2_ActionParameter_Item->actionParameter_Value.present = E2_ActionParameter_Value_PR_valuePrtS;
                         pE2_ActionParameter_Item->actionParameter_Value.choice.valuePrtS.size =
-                        pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem->actionParameterValue.valuePrtS.length;
+                        pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem[index].actionParameterValue.valuePrtS.length;
                         pE2_ActionParameter_Item->actionParameter_Value.choice.valuePrtS.buf =
-                        calloc(pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem->actionParameterValue.valuePrtS.length ,1);
+                        calloc(pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem[index].actionParameterValue.valuePrtS.length ,1);
                         if (pE2_ActionParameter_Item->actionParameter_Value.choice.valuePrtS.buf) {
                             memcpy(pE2_ActionParameter_Item->actionParameter_Value.choice.valuePrtS.buf,
-                                pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem->actionParameterValue.valuePrtS.data,
-                                pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem->actionParameterValue.valuePrtS.length);
+                                pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem[index].actionParameterValue.valuePrtS.data,
+                                pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem[index].actionParameterValue.valuePrtS.length);
                         }
                         else
                             return e2err_RICSubscriptionRequestAllocactionParameterValueValuePrtsSFail;
@@ -768,7 +767,7 @@ uint64_t packActionDefinitionX2Format(char* pLogBuffer, RICActionDefinitionChoic
 
                     const int result = asn_set_add(pE2_E2SM_gNB_X2_ActionDefinition_Format2__ranUEgroup_List, pE2_RANueGroup_Item);
                     if (result != 0)
-                    printf("asn_set_add() failed\n");
+                        sprintf(pLogBuffer,"asn_set_add() failed");
                 }
                 else
                     return e2err_RICSubscriptionRequestAllocRANParameter_ItemFail;
@@ -791,7 +790,7 @@ uint64_t packActionDefinitionX2Format(char* pLogBuffer, RICActionDefinitionChoic
     rval = asn_encode_to_buffer(0, ATS_ALIGNED_BASIC_PER, &asn_DEF_E2_E2SM_gNB_X2_ActionDefinitionChoice, pE2_E2SM_gNB_X2_ActionDefinitionChoice,
                                 pRICActionDefinitionChoice->octetString.data, bufferSize);
     if(rval.encoded == -1) {
-        sprintf(pLogBuffer,"Serialization of %s failed.", asn_DEF_E2_E2SM_gNB_X2_ActionDefinitionChoice.name);
+        sprintf(pLogBuffer,"Serialization of %s failed", asn_DEF_E2_E2SM_gNB_X2_ActionDefinitionChoice.name);
         return e2err_RICActionDefinitionChoicePackFail_1;
     }
     else if(rval.encoded > bufferSize) {
@@ -914,7 +913,7 @@ uint64_t packActionDefinitionNRTFormat(char* pLogBuffer, RICActionDefinitionChoi
     rval = asn_encode_to_buffer(0, ATS_ALIGNED_BASIC_PER, &asn_DEF_E2_E2SM_gNB_NRT_ActionDefinition, pE2_E2SM_gNB_NRT_ActionDefinition,
                                 pRICActionDefinitionChoice->octetString.data, bufferSize);
     if(rval.encoded == -1) {
-        sprintf(pLogBuffer,"Serialization of %s failed.", asn_DEF_E2_E2SM_gNB_NRT_ActionDefinition.name);
+        sprintf(pLogBuffer,"Serialization of %s failed", asn_DEF_E2_E2SM_gNB_NRT_ActionDefinition.name);
         return e2err_RICActionDefinitionChoicePackFail_1;
     }
     else if(rval.encoded > bufferSize) {
@@ -1597,7 +1596,7 @@ uint64_t getRICEventTriggerDefinitionDataX2Format(RICEventTriggerDefinition_t* p
     case RC_OK:
         // Debug print
         if (debug) {
-            printf("Successfully decoded E2SM_gNB_X2_eventTriggerDefinition");
+            printf("Successfully decoded E2SM_gNB_X2_eventTriggerDefinition\n");
             asn_fprint(stdout, &asn_DEF_E2_E2SM_gNB_X2_eventTriggerDefinition, pE2SM_gNB_X2_eventTriggerDefinition);
         }
 
@@ -1706,13 +1705,13 @@ uint64_t getRICEventTriggerDefinitionDataX2Format(RICEventTriggerDefinition_t* p
         return e2err_OK;
     case RC_WMORE:
         if (debug)
-            printf("Decode failed. More data needed. Buffer size %zu, %s, consumed %zu",pRICEventTriggerDefinition->octetString.contentLength,
+            printf("Decode failed. More data needed. Buffer size %zu, %s, consumed %zu\n",pRICEventTriggerDefinition->octetString.contentLength,
                    asn_DEF_E2_E2SM_gNB_X2_eventTriggerDefinition.name, rval.consumed);
 
         return e2err_RICEventTriggerDefinitionDecodeWMOREFail;
     case RC_FAIL:
         if (debug)
-            printf("Decode failed. Buffer size %zu, %s, consumed %zu",pRICEventTriggerDefinition->octetString.contentLength,
+            printf("Decode failed. Buffer size %zu, %s, consumed %zu\n",pRICEventTriggerDefinition->octetString.contentLength,
                    asn_DEF_E2_E2SM_gNB_X2_eventTriggerDefinition.name, rval.consumed);
         return e2err_RICEventTriggerDefinitionDecodeFAIL;
     default:
@@ -1731,7 +1730,7 @@ uint64_t getRICEventTriggerDefinitionDataNRTFormat(RICEventTriggerDefinition_t* 
     case RC_OK:
         // Debug print
         if (debug) {
-            printf("Successfully decoded E2SM_gNB_X2_eventTriggerDefinition");
+            printf("Successfully decoded E2SM_gNB_X2_eventTriggerDefinition\n");
             asn_fprint(stdout, &asn_DEF_E2_E2SM_gNB_NRT_EventTriggerDefinition, pE2_E2SM_gNB_NRT_EventTriggerDefinition);
         }
 
@@ -1745,13 +1744,13 @@ uint64_t getRICEventTriggerDefinitionDataNRTFormat(RICEventTriggerDefinition_t* 
         return e2err_OK;
     case RC_WMORE:
         if (debug)
-            printf("Decode failed. More data needed. Buffer size %zu, %s, consumed %zu",pRICEventTriggerDefinition->octetString.contentLength,
+            printf("Decode failed. More data needed. Buffer size %zu, %s, consumed %zu\n",pRICEventTriggerDefinition->octetString.contentLength,
                    asn_DEF_E2_E2SM_gNB_NRT_EventTriggerDefinition.name, rval.consumed);
 
         return e2err_RICNRTEventTriggerDefinitionDecodeWMOREFail;
     case RC_FAIL:
         if (debug)
-            printf("Decode failed. Buffer size %zu, %s, consumed %zu",pRICEventTriggerDefinition->octetString.contentLength,
+            printf("Decode failed. Buffer size %zu, %s, consumed %zu\n",pRICEventTriggerDefinition->octetString.contentLength,
                    asn_DEF_E2_E2SM_gNB_NRT_EventTriggerDefinition.name, rval.consumed);
         return e2err_RICNRTEventTriggerDefinitionDecodeFAIL;
     default:
@@ -1803,38 +1802,38 @@ uint64_t getRICActionDefinitionDataX2Format(mem_track_hdr_t* pDynMemHead, RICAct
                 while (index < pE2_E2SM_gNB_X2_ActionDefinitionChoice->choice.actionDefinition_Format1.actionParameter_List->list.count) {
                     E2_ActionParameter_Item_t* pE2_ActionParameter_Item = pE2_E2SM_gNB_X2_ActionDefinitionChoice->choice.actionDefinition_Format1.actionParameter_List->list.array[index];
                     if (pE2_ActionParameter_Item) {
-                        pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem->parameterID = pE2_ActionParameter_Item->actionParameter_ID;
+                        pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem[index].parameterID = pE2_ActionParameter_Item->actionParameter_ID;
                         if (pE2_ActionParameter_Item->actionParameter_Value.present == E2_ActionParameter_Value_PR_valueInt) {
-                            pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem->actionParameterValue.valueIntPresent = true;
-                            pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem->actionParameterValue.valueInt =
+                            pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem[index].actionParameterValue.valueIntPresent = true;
+                            pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem[index].actionParameterValue.valueInt =
                             pE2_ActionParameter_Item->actionParameter_Value.choice.valueInt;
                         }
                         else if (pE2_ActionParameter_Item->actionParameter_Value.present == E2_ActionParameter_Value_PR_valueEnum) {
-                            pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem->actionParameterValue.valueEnumPresent = true;
-                            pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem->actionParameterValue.valueIntPresent =
+                            pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem[index].actionParameterValue.valueEnumPresent = true;
+                            pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem[index].actionParameterValue.valueIntPresent =
                             pE2_ActionParameter_Item->actionParameter_Value.choice.valueEnum;
                         }
                         else if (pE2_ActionParameter_Item->actionParameter_Value.present == E2_ActionParameter_Value_PR_valueBool) {
-                            pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem->actionParameterValue.valueBoolPresent = true;
-                            pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem->actionParameterValue.valueBool =
+                            pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem[index].actionParameterValue.valueBoolPresent = true;
+                            pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem[index].actionParameterValue.valueBool =
                             pE2_ActionParameter_Item->actionParameter_Value.choice.valueBool;
                         }
                         else if (pE2_ActionParameter_Item->actionParameter_Value.present == E2_ActionParameter_Value_PR_valueBitS) {
-                            pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem->actionParameterValue.valueBitSPresent = true;
-                            addBitString(pDynMemHead, &pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem->actionParameterValue.valueBitS,
+                            pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem[index].actionParameterValue.valueBitSPresent = true;
+                            addBitString(pDynMemHead, &pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem[index].actionParameterValue.valueBitS,
                                         pE2_ActionParameter_Item->actionParameter_Value.choice.valueBitS.size,
                                         pE2_ActionParameter_Item->actionParameter_Value.choice.valueBitS.buf,
                                         pE2_ActionParameter_Item->actionParameter_Value.choice.valueBitS.bits_unused);
                         }
                         else if (pE2_ActionParameter_Item->actionParameter_Value.present == E2_ActionParameter_Value_PR_valueOctS) {
-                            pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem->actionParameterValue.valueOctSPresent = true;
-                            addOctetString(pDynMemHead, &pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem->actionParameterValue.valueOctS,
+                            pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem[index].actionParameterValue.valueOctSPresent = true;
+                            addOctetString(pDynMemHead, &pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem[index].actionParameterValue.valueOctS,
                                         pE2_ActionParameter_Item->actionParameter_Value.choice.valueOctS.size,
                                         pE2_ActionParameter_Item->actionParameter_Value.choice.valueOctS.buf);
                         }
                         else if (pE2_ActionParameter_Item->actionParameter_Value.present == E2_ActionParameter_Value_PR_valuePrtS) {
-                            pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem->actionParameterValue.valuePrtSPresent = true;
-                            addOctetString(pDynMemHead, &pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem->actionParameterValue.valuePrtS,
+                            pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem[index].actionParameterValue.valuePrtSPresent = true;
+                            addOctetString(pDynMemHead, &pRICActionDefinitionChoice->actionDefinitionX2Format1->actionParameterItem[index].actionParameterValue.valuePrtS,
                                         pE2_ActionParameter_Item->actionParameter_Value.choice.valuePrtS.size,
                                         pE2_ActionParameter_Item->actionParameter_Value.choice.valuePrtS.buf);
                         }
@@ -1989,13 +1988,13 @@ uint64_t getRICActionDefinitionDataX2Format(mem_track_hdr_t* pDynMemHead, RICAct
         return e2err_OK;
     case RC_WMORE:
         if (debug)
-            printf("Decode failed. More data needed. Buffer size %zu, %s, consumed %zu",pRICActionDefinitionChoice->octetString.contentLength,
+            printf("Decode failed. More data needed. Buffer size %zu, %s, consumed %zu\n",pRICActionDefinitionChoice->octetString.contentLength,
                    asn_DEF_E2_E2SM_gNB_X2_ActionDefinitionChoice.name, rval.consumed);
 
         return e2err_RICActionDefinitionChoiceWMOREFail;
     case RC_FAIL:
         if (debug)
-            printf("Decode failed. Buffer size %zu, %s, consumed %zu",pRICActionDefinitionChoice->octetString.contentLength,
+            printf("Decode failed. Buffer size %zu, %s, consumed %zu\n",pRICActionDefinitionChoice->octetString.contentLength,
                    asn_DEF_E2_E2SM_gNB_X2_ActionDefinitionChoice.name, rval.consumed);
 
         return e2err_RICActionDefinitionChoiceDecodeFAIL;
@@ -2015,7 +2014,7 @@ uint64_t getRICActionDefinitionDataNRTFormat(mem_track_hdr_t* pDynMemHead, RICAc
     case RC_OK:
         // Debug print
         if (debug) {
-            printf("Successfully decoded E2SM_gNB_NRT_ActionDefinition");
+            printf("Successfully decoded E2SM_gNB_NRT_ActionDefinition\n");
             asn_fprint(stdout, &asn_DEF_E2_E2SM_gNB_NRT_ActionDefinition, pE2_E2SM_gNB_NRT_ActionDefinition);
         }
 
@@ -2088,13 +2087,13 @@ uint64_t getRICActionDefinitionDataNRTFormat(mem_track_hdr_t* pDynMemHead, RICAc
         return e2err_OK;
     case RC_WMORE:
         if (debug)
-            printf("Decode failed. More data needed. Buffer size %zu, %s, consumed %zu",pRICActionDefinitionChoice->octetString.contentLength,
+            printf("Decode failed. More data needed. Buffer size %zu, %s, consumed %zu\n",pRICActionDefinitionChoice->octetString.contentLength,
                    asn_DEF_E2_E2SM_gNB_NRT_ActionDefinition.name, rval.consumed);
 
         return e2err_RICNRTActionDefinitionChoiceWMOREFail;
     case RC_FAIL:
         if (debug)
-            printf("Decode failed. Buffer size %zu, %s, consumed %zu",pRICActionDefinitionChoice->octetString.contentLength,
+            printf("Decode failed. Buffer size %zu, %s, consumed %zu\n",pRICActionDefinitionChoice->octetString.contentLength,
                    asn_DEF_E2_E2SM_gNB_NRT_ActionDefinition.name, rval.consumed);
 
         return e2err_RICNRTActionDefinitionChoiceDecodeFAIL;
