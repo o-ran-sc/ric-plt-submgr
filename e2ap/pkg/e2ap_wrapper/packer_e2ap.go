@@ -602,7 +602,6 @@ func (e2Item *e2apEntryRANParameterValue) set(dynMemHead *C.mem_track_hdr_t, id 
 
 func (e2Item *e2apEntryRANParameterValue) get(id *e2ap.RANParameterValue) error {
 
-	fmt.Printf("RANParameterValue e2Item.entry.valuePrtSPresent = %v\n", e2Item.entry.valuePrtSPresent)
 	if e2Item.entry.valueIntPresent {
 		id.ValueInt = (int64)(e2Item.entry.valueInt)
 		id.ValueIntPresent = true

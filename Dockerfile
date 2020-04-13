@@ -23,7 +23,7 @@
 ###########################################################
 #
 ###########################################################
-FROM nexus3.o-ran-sc.org:10004/bldr-ubuntu18-c-go:4-u18.04-nng as submgrcore
+FROM nexus3.o-ran-sc.org:10004/bldr-ubuntu18-c-go:5-u18.04-nng as submgrcore
 
 RUN apt update && apt install -y iputils-ping net-tools curl tcpdump gdb valgrind
 
