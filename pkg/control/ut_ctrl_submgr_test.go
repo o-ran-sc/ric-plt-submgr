@@ -59,6 +59,27 @@ func (mc *testingSubmgrControl) wait_registry_empty(t *testing.T, secs int) bool
 	return false
 }
 
+func (mc *testingSubmgrControl) get_registry_next_subid(t *testing.T) uint32 {
+	mc.c.registry.mutex.Lock()
+	defer mc.c.registry.mutex.Unlock()
+	return mc.c.registry.subIds[0]
+}
+
+func (mc *testingSubmgrControl) wait_registry_next_subid_change(t *testing.T, origSubId uint32, secs int) (uint32, bool) {
+	i := 1
+	for ; i <= secs*2; i++ {
+		mc.c.registry.mutex.Lock()
+		currSubId := mc.c.registry.subIds[0]
+		mc.c.registry.mutex.Unlock()
+		if currSubId != origSubId {
+			return currSubId, true
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+	mc.TestError(t, "(submgr) no subId change within %d secs", secs)
+	return 0, false
+}
+
 func (mc *testingSubmgrControl) wait_subs_clean(t *testing.T, e2SubsId uint32, secs int) bool {
 	var subs *Subscription
 	i := 1
@@ -99,27 +120,38 @@ func (mc *testingSubmgrControl) wait_subs_trans_clean(t *testing.T, e2SubsId uin
 	return false
 }
 
-func (mc *testingSubmgrControl) get_subid(t *testing.T) uint32 {
-	mc.c.registry.mutex.Lock()
-	defer mc.c.registry.mutex.Unlock()
-	return mc.c.registry.subIds[0]
+func (mc *testingSubmgrControl) get_subs_entrypoint_cnt(t *testing.T, origSubId uint32) int {
+	subs := mc.c.registry.GetSubscription(origSubId)
+	if subs == nil {
+		mc.TestError(t, "(submgr) no subs %d exists during entrypoint cnt get", origSubId)
+		return -1
+	}
+	return subs.EpList.Size()
 }
 
-func (mc *testingSubmgrControl) wait_subid_change(t *testing.T, origSubId uint32, secs int) (uint32, bool) {
+func (mc *testingSubmgrControl) wait_subs_entrypoint_cnt_change(t *testing.T, origSubId uint32, orig int, secs int) (int, bool) {
+
+	subs := mc.c.registry.GetSubscription(origSubId)
+	if subs == nil {
+		mc.TestError(t, "(submgr) no subs %d exists during entrypoint cnt wait", origSubId)
+		return -1, true
+	}
+
 	i := 1
 	for ; i <= secs*2; i++ {
-		mc.c.registry.mutex.Lock()
-		currSubId := mc.c.registry.subIds[0]
-		mc.c.registry.mutex.Unlock()
-		if currSubId != origSubId {
-			return currSubId, true
+		curr := subs.EpList.Size()
+		if curr != orig {
+			return curr, true
 		}
 		time.Sleep(500 * time.Millisecond)
 	}
-	mc.TestError(t, "(submgr) no subId change within %d secs", secs)
+	mc.TestError(t, "(submgr) no subs %d entrypoint cnt change within %d secs", origSubId, secs)
 	return 0, false
 }
 
+//
+// Counter check for received message. Note might not be yet handled
+//
 func (mc *testingSubmgrControl) get_msgcounter(t *testing.T) uint64 {
 	return mc.c.CntRecvMsg
 }

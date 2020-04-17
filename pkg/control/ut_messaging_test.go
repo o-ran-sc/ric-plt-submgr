@@ -25,6 +25,7 @@ import (
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"github.com/stretchr/testify/assert"
 	"testing"
+	"time"
 )
 
 //-----------------------------------------------------------------------------
@@ -54,7 +55,7 @@ func TestSubReqAndRouteNok(t *testing.T) {
 	CaseBegin("TestSubReqAndRouteNok")
 
 	waiter := rtmgrHttp.AllocNextEvent(false)
-	newSubsId := mainCtrl.get_subid(t)
+	newSubsId := mainCtrl.get_registry_next_subid(t)
 	xappConn1.SendSubsReq(t, nil, nil)
 	waiter.WaitResult(t)
 
@@ -169,6 +170,10 @@ func TestSubReqRetransmission(t *testing.T) {
 	xappConn1.SendSubsReq(t, nil, cretrans) //Retransmitted SubReq
 	mainCtrl.wait_msgcounter_change(t, seqBef, 10)
 
+	// hack as there is no real way to see has message be handled.
+	// Previuos counter check just tells that is has been received by submgr
+	// --> artificial delay
+	<-time.After(1 * time.Second)
 	e2termConn1.SendSubsResp(t, crereq, cremsg)
 	e2SubsId := xappConn1.RecvSubsResp(t, cretrans)
 
@@ -233,6 +238,11 @@ func TestSubDelReqRetransmission(t *testing.T) {
 	xappConn1.SendSubsDelReq(t, deltrans, e2SubsId) //Retransmitted SubDelReq
 	mainCtrl.wait_msgcounter_change(t, seqBef, 10)
 
+	// hack as there is no real way to see has message be handled.
+	// Previuos counter check just tells that is has been received by submgr
+	// --> artificial delay
+	<-time.After(1 * time.Second)
+
 	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
 	xappConn1.RecvSubsDelResp(t, deltrans)
 
@@ -296,6 +306,11 @@ func TestSubDelReqCollision(t *testing.T) {
 	deltranscol2 := xappConn1.NewRmrTransactionId("", "RAN_NAME_1")
 	xappConn1.SendSubsDelReq(t, deltranscol2, e2SubsId) //Colliding SubDelReq
 	mainCtrl.wait_msgcounter_change(t, seqBef, 10)
+
+	// hack as there is no real way to see has message be handled.
+	// Previuos counter check just tells that is has been received by submgr
+	// --> artificial delay
+	<-time.After(1 * time.Second)
 
 	// Del resp for first and second
 	e2termConn1.SendSubsDelResp(t, delreq1, delmsg1)
@@ -1266,9 +1281,9 @@ func TestSubReqAndSubDelNokSameActionParallel(t *testing.T) {
 	//Req2
 	rparams2 := &teststube2ap.E2StubSubsReqParams{}
 	rparams2.Init()
-	seqBef2 := mainCtrl.get_msgcounter(t)
+	subepcnt2 := mainCtrl.get_subs_entrypoint_cnt(t, crereq1.RequestId.InstanceId)
 	cretrans2 := xappConn2.SendSubsReq(t, rparams2, nil)
-	mainCtrl.wait_msgcounter_change(t, seqBef2, 10)
+	mainCtrl.wait_subs_entrypoint_cnt_change(t, crereq1.RequestId.InstanceId, subepcnt2, 10)
 
 	// E2t: send SubsFail (first)
 	fparams1 := &teststube2ap.E2StubSubsFailParams{}
@@ -1330,14 +1345,14 @@ func TestSubReqAndSubDelNoAnswerSameActionParallel(t *testing.T) {
 	rparams1.Init()
 	xappConn1.SendSubsReq(t, rparams1, nil)
 
-	e2termConn1.RecvSubsReq(t)
+	crereq1, _ := e2termConn1.RecvSubsReq(t)
 
 	//Req2
 	rparams2 := &teststube2ap.E2StubSubsReqParams{}
 	rparams2.Init()
-	seqBef2 := mainCtrl.get_msgcounter(t)
+	subepcnt2 := mainCtrl.get_subs_entrypoint_cnt(t, crereq1.RequestId.InstanceId)
 	xappConn2.SendSubsReq(t, rparams2, nil)
-	mainCtrl.wait_msgcounter_change(t, seqBef2, 10)
+	mainCtrl.wait_subs_entrypoint_cnt_change(t, crereq1.RequestId.InstanceId, subepcnt2, 10)
 
 	//Req1 (retransmitted)
 	e2termConn1.RecvSubsReq(t)
