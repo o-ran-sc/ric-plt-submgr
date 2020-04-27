@@ -192,7 +192,7 @@ uint64_t packRICSubscriptionRequest(size_t* pdataBufferSize, byte* pDataBuffer, 
                 RICaction_ToBeSetup_ItemIEs_t* pRICaction_ToBeSetup_ItemIEs = calloc(1, sizeof(RICaction_ToBeSetup_ItemIEs_t));
                 if (pRICaction_ToBeSetup_ItemIEs) {
                     pRICaction_ToBeSetup_ItemIEs->id = ProtocolIE_ID_id_RICaction_ToBeSetup_Item;
-                    pRICaction_ToBeSetup_ItemIEs->criticality = Criticality_reject;
+                    pRICaction_ToBeSetup_ItemIEs->criticality = Criticality_ignore;
                     pRICaction_ToBeSetup_ItemIEs->value.present = RICaction_ToBeSetup_ItemIEs__value_PR_RICaction_ToBeSetup_Item;
 
                     // RICActionID
