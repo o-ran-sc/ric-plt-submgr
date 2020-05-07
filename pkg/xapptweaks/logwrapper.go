@@ -27,6 +27,17 @@ import (
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
+
+type LoggerIf interface {
+	Error(formatMsg string, a ...interface{})
+	Warning(formatMsg string, a ...interface{})
+	Info(formatMsg string, a ...interface{})
+	Debug(formatMsg string, a ...interface{})
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
 type LogWrapper struct {
 	desc   string
 	Logger *xapp.Log

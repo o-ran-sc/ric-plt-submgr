@@ -154,6 +154,12 @@ func ut_test_init() {
 	tent.Logger.Info("### submgr ctrl run ###")
 	mainCtrl = createSubmgrControl(mainsrc, teststub.RmrRtgSvc{})
 
+	//xapp-frame inits alarms when readycb is coming from xapps rmr
+	//alarm will make new rmr instance and overrides RMR_SEED_RT and RMR_RTG_SVC
+	//env variables. Re-create rt info.
+	rt.Disable()
+	rt.Enable()
+
 	//---------------------------------
 	//
 	//---------------------------------
