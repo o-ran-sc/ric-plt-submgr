@@ -23,7 +23,7 @@
 ###########################################################
 #
 ###########################################################
-FROM nexus3.o-ran-sc.org:10004/bldr-ubuntu18-c-go:6-u18.04-nng as submgrcore
+FROM nexus3.o-ran-sc.org:10004/o-ran-sc/bldr-ubuntu18-c-go:8-u18.04 as submgrcore
 
 RUN apt update && apt install -y iputils-ping net-tools curl tcpdump gdb valgrind
 
@@ -39,7 +39,7 @@ WORKDIR /tmp
 #
 # Swagger
 #
-ARG SWAGGERVERSION=v0.19.0
+ARG SWAGGERVERSION=v0.23.0
 ARG SWAGGERURL=https://github.com/go-swagger/go-swagger/releases/download/${SWAGGERVERSION}/swagger_linux_amd64
 RUN wget --quiet ${SWAGGERURL} \
     && mv swagger_linux_amd64 swagger \
@@ -57,9 +57,9 @@ RUN export GOBIN=/usr/local/bin/ ; \
 #
 # RMR
 #
-ARG RMRVERSION=3.6.5
-ARG RMRLIBURL=https://packagecloud.io/o-ran-sc/staging/packages/debian/stretch/rmr_${RMRVERSION}_amd64.deb/download.deb
-ARG RMRDEVURL=https://packagecloud.io/o-ran-sc/staging/packages/debian/stretch/rmr-dev_${RMRVERSION}_amd64.deb/download.deb
+ARG RMRVERSION=4.0.2
+ARG RMRLIBURL=https://packagecloud.io/o-ran-sc/release/packages/debian/stretch/rmr_${RMRVERSION}_amd64.deb/download.deb
+ARG RMRDEVURL=https://packagecloud.io/o-ran-sc/release/packages/debian/stretch/rmr-dev_${RMRVERSION}_amd64.deb/download.deb
 RUN wget --content-disposition ${RMRLIBURL} && dpkg -i rmr_${RMRVERSION}_amd64.deb
 RUN wget --content-disposition ${RMRDEVURL} && dpkg -i rmr-dev_${RMRVERSION}_amd64.deb
 RUN rm -f rmr_${RMRVERSION}_amd64.deb rmr-dev_${RMRVERSION}_amd64.deb
