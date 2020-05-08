@@ -26,6 +26,7 @@ import (
 	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/xapptweaks"
 	"os"
 	"testing"
+	"time"
 )
 
 //-----------------------------------------------------------------------------
@@ -154,11 +155,29 @@ func ut_test_init() {
 	tent.Logger.Info("### submgr ctrl run ###")
 	mainCtrl = createSubmgrControl(mainsrc, teststub.RmrRtgSvc{})
 
+	//
+	// Tweak to get around with fact that alarm package alternates RMR_SEED_RT environment variable
+	//
 	//xapp-frame inits alarms when readycb is coming from xapps rmr
 	//alarm will make new rmr instance and overrides RMR_SEED_RT and RMR_RTG_SVC
 	//env variables. Re-create rt info.
-	rt.Disable()
-	rt.Enable()
+	for i := 0; i < int(10)*2; i++ {
+		if os.Getenv("RMR_SEED_RT") == rt.FileName() {
+			tent.Logger.Info("Waiting that alarm alternates RMR_SEED_RT=%s", os.Getenv("RMR_SEED_RT"))
+			time.Sleep(500 * time.Millisecond)
+		} else {
+			tent.Logger.Info("Alarm has alternated RMR_SEED_RT=%s, so waiting 0.5 secs before restoring it", os.Getenv("RMR_SEED_RT"))
+			time.Sleep(500 * time.Millisecond)
+			rt.Disable()
+			rt.Enable()
+			break
+		}
+	}
+
+	if os.Getenv("RMR_SEED_RT") != rt.FileName() {
+		tent.Logger.Error("Unittest timing issue with alarm RMR_SEED_RT=%s", os.Getenv("RMR_SEED_RT"))
+		os.Exit(1)
+	}
 
 	//---------------------------------
 	//
@@ -196,6 +215,12 @@ func ut_test_init() {
 	if teststub.RmrStubControlWaitAlive(10, 55555, mainCtrl.c) == false {
 		os.Exit(1)
 	}
+
+	if os.Getenv("RMR_SEED_RT") != rt.FileName() {
+		tent.Logger.Error("Unittest timing issue with alarm RMR_SEED_RT=%s", os.Getenv("RMR_SEED_RT"))
+		os.Exit(1)
+	}
+
 }
 
 //-----------------------------------------------------------------------------
