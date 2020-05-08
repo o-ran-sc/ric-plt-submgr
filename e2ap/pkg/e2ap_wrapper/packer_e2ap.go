@@ -1104,7 +1104,7 @@ func (e2apMsg *e2apMsgPackerSubscriptionRequest) Pack(data *e2ap.E2APSubscriptio
 	//fmt.Printf("Printing Subscription Request %s\n", e2apMsg.String())
 
 	errorNro := C.packRICSubscriptionRequest(&e2apMsg.plen, (*C.uchar)(e2apMsg.p), (*C.char)(unsafe.Pointer(&e2apMsg.lb[0])), e2apMsg.msgC)
-	fmt.Printf("errorNro %v\n", errorNro) // There is c-code problem. Returned errorNro is always 1 regardles what value is returned. That is probably due to pointers added in the c-structs in NewE2 implementation. Investigation ongoing.
+	fmt.Printf("errorNro %v\n", errorNro) // There is c-code problem. Returned errorNro is always 1 regardless what error value is returned. That is probably due to pointers added in the c-structs in NewE2 implementation. Investigation ongoing.
 
 	if err := e2apMsg.checkerr(errorNro); err != nil {
 		return err, nil
