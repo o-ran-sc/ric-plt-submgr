@@ -176,10 +176,6 @@ typedef struct {
 } E2SMgNBNRTActionDefinitionFormat1_t;
 
 typedef struct {
-    uint32_t dummy;
-    uint32_t dummy2;
-    uint32_t dummy3;
-    uint32_t dummy4;
     OctetString_t octetString;   // This element is E2AP spec format
     // CHOICE. Only one value can be present
     bool actionDefinitionX2Format1Present;
@@ -336,9 +332,6 @@ typedef struct {
 } E2SMgNBNRTEventTriggerDefinition_t;
 
 typedef struct {
-    uint32_t dummy;
-    uint32_t dummy2;
-    uint32_t dummy3;
     OctetString_t octetString;   // This element is E2AP spec format
     // CHOICE. Only one value can be present.
     bool E2SMgNBX2EventTriggerDefinitionPresent;

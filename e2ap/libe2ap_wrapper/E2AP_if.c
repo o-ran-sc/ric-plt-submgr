@@ -171,8 +171,9 @@ uint64_t packRICSubscriptionRequest(size_t* pdataBufferSize, byte* pDataBuffer, 
 
             // RICeventTriggerDefinition
             uint64_t returnCode;
-            if ((returnCode = packRICEventTriggerDefinition(pLogBuffer, &pRICSubscriptionRequest->ricSubscriptionDetails.ricEventTriggerDefinition) != e2err_OK))
+            if ((returnCode = packRICEventTriggerDefinition(pLogBuffer, &pRICSubscriptionRequest->ricSubscriptionDetails.ricEventTriggerDefinition)) != e2err_OK) {
                 return returnCode;
+            }
 
             pRICsubscriptionRequest_IEs->value.choice.RICsubscriptionDetails.ricEventTriggerDefinition.buf =
               calloc(1, pRICSubscriptionRequest->ricSubscriptionDetails.ricEventTriggerDefinition.octetString.contentLength);
@@ -206,7 +207,7 @@ uint64_t packRICSubscriptionRequest(size_t* pdataBufferSize, byte* pDataBuffer, 
                     // RICactionDefinition, OPTIONAL
                     if (pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionPresent) {
                         uint64_t returnCode;
-                        if ((returnCode = packRICActionDefinition(pLogBuffer, &pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice) != e2err_OK)) {
+                        if ((returnCode = packRICActionDefinition(pLogBuffer, &pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice)) != e2err_OK) {
                             return returnCode;
                         }
 
@@ -1490,7 +1491,7 @@ uint64_t getRICSubscriptionRequestData(mem_track_hdr_t * pDynMemHead, e2ap_pdu_p
         pRICSubscriptionRequest->ricSubscriptionDetails.ricEventTriggerDefinition.octetString.contentLength = pRICeventTriggerDefinition->size;
         memcpy(pRICSubscriptionRequest->ricSubscriptionDetails.ricEventTriggerDefinition.octetString.data, pRICeventTriggerDefinition->buf, pRICeventTriggerDefinition->size);
 
-        // Workaroud to spec problem. E2AP spec does not specify what speck (gNB-X2 or gNB-NRT) should be used when decoded EventTriggerDefinition and ActionDefinition
+        // Workaround to spec problem. E2AP spec does not specify what speck (gNB-X2 or gNB-NRT) should be used when decoded EventTriggerDefinition and ActionDefinition
         // received received. Here we know that length of gNB-NRT EventTriggerDefinition octet string is always 1 at the moment.
         if (pRICeventTriggerDefinition->size == 1) {
             pRICSubscriptionRequest->ricSubscriptionDetails.ricEventTriggerDefinition.E2SMgNBNRTEventTriggerDefinitionPresent = true;
@@ -1531,7 +1532,7 @@ uint64_t getRICSubscriptionRequestData(mem_track_hdr_t * pDynMemHead, e2ap_pdu_p
                        pRICaction_ToBeSetup_ItemIEs->value.choice.RICaction_ToBeSetup_Item.ricActionDefinition->buf,
                        pRICaction_ToBeSetup_ItemIEs->value.choice.RICaction_ToBeSetup_Item.ricActionDefinition->size);
 
-                // Workaroud to spec problem. E2AP spec does not specify what speck (gNB-X2 or gNB-NRT) should be used when decoded EventTriggerDefinition and ActionDefinition
+                // Workaround to spec problem. E2AP spec does not specify what speck (gNB-X2 or gNB-NRT) should be used when decoded EventTriggerDefinition and ActionDefinition
                 // received received. Here we know that length of gNB-NRT EventTriggerDefinition octet string is always 1 at the moment.
                 if (pRICeventTriggerDefinition->size == 1)
                     pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1Present = true;

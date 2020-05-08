@@ -158,13 +158,13 @@ func ut_test_init() {
 	//
 	//---------------------------------
 	tent.Logger.Info("### xapp1 stub run ###")
-	xappConn1 = teststube2ap.CreateNewE2Stub("xappstub1", xapp1src, teststub.RmrRtgSvc{}, "RMRXAPP1STUB", 55555)
+	xappConn1 = teststube2ap.CreateNewE2Stub("xappstub1", xapp1src, teststub.RmrRtgSvc{}, "RMRXAPP1STUB", 55555, "RAN_NAME_1", "localhost:13560")
 
 	//---------------------------------
 	//
 	//---------------------------------
 	tent.Logger.Info("### xapp2 stub run ###")
-	xappConn2 = teststube2ap.CreateNewE2Stub("xappstub2", xapp2src, teststub.RmrRtgSvc{}, "RMRXAPP2STUB", 55555)
+	xappConn2 = teststube2ap.CreateNewE2Stub("xappstub2", xapp2src, teststub.RmrRtgSvc{}, "RMRXAPP2STUB", 55555, "RAN_NAME_2", "localhost:13660")
 
 	//---------------------------------
 	//
