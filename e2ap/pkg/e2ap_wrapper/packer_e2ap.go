@@ -1071,7 +1071,7 @@ func (e2apMsg *e2apMsgPackerSubscriptionRequest) init() {
 	C.initSubsRequest(e2apMsg.msgC)
 }
 
-func (e2apMsg *e2apMsgPackerSubscriptionRequest) Pack(data *e2ap.E2APSubscriptionRequest) (error, *e2ap.PackedData) {
+func (e2apMsg *e2apMsgPackerSubscriptionRequest) Pack(data *e2ap.E2APSubscriptionRequest, debugPrint bool) (error, *e2ap.PackedData, string) {
 
 	e2apMsg.init()
 
@@ -1084,42 +1084,42 @@ func (e2apMsg *e2apMsgPackerSubscriptionRequest) Pack(data *e2ap.E2APSubscriptio
 
 	e2apMsg.msgC.ranFunctionID = (C.uint16_t)(e2apMsg.msgG.FunctionId)
 	if err := (&e2apEntryRequestID{entry: &e2apMsg.msgC.ricRequestID}).set(&e2apMsg.msgG.RequestId); err != nil {
-		return err, nil
+		return err, nil, ""
 	}
 	if err := (&e2apEntryEventTrigger{entry: &e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition}).set(&e2apMsg.msgG.EventTriggerDefinition); err != nil {
-		return err, nil
+		return err, nil, ""
 	}
 	if len(e2apMsg.msgG.ActionSetups) > 16 {
-		return fmt.Errorf("IndicationMessage.InterfaceMessage: too long %d while allowed %d", len(e2apMsg.msgG.ActionSetups), 16), nil
+		return fmt.Errorf("IndicationMessage.InterfaceMessage: too long %d while allowed %d", len(e2apMsg.msgG.ActionSetups), 16), nil, ""
 	}
 	e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.contentLength = 0
 	for i := 0; i < len(e2apMsg.msgG.ActionSetups); i++ {
 		item := &e2apEntryActionToBeSetupItem{entry: &e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.contentLength]}
 		e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.contentLength += 1
 		if err := item.set(&dynMemHead, &e2apMsg.msgG.ActionSetups[i]); err != nil {
-			return err, nil
+			return err, nil, ""
 		}
 	}
-	// Uncomment this when debugging problems in REST interface.
-	//fmt.Printf("Printing Subscription Request %s\n", e2apMsg.String())
 
-	errorNro := C.packRICSubscriptionRequest(&e2apMsg.plen, (*C.uchar)(e2apMsg.p), (*C.char)(unsafe.Pointer(&e2apMsg.lb[0])), e2apMsg.msgC)
-	fmt.Printf("errorNro %v\n", errorNro) // There is c-code problem. Returned errorNro is always 1 regardles what value is returned. That is probably due to pointers added in the c-structs in NewE2 implementation. Investigation ongoing.
-
-	if err := e2apMsg.checkerr(errorNro); err != nil {
-		return err, nil
+	var msgString string
+	if debugPrint == true {
+		msgString = e2apMsg.String()
 	}
 
-	return nil, e2apMsg.packeddata()
+	errorNro := C.packRICSubscriptionRequest(&e2apMsg.plen, (*C.uchar)(e2apMsg.p), (*C.char)(unsafe.Pointer(&e2apMsg.lb[0])), e2apMsg.msgC)
+	if err := e2apMsg.checkerr(errorNro); err != nil {
+		return err, nil, msgString
+	}
+	return nil, e2apMsg.packeddata(), msgString
 }
 
-func (e2apMsg *e2apMsgPackerSubscriptionRequest) UnPack(msg *e2ap.PackedData) (error, *e2ap.E2APSubscriptionRequest) {
+func (e2apMsg *e2apMsgPackerSubscriptionRequest) UnPack(msg *e2ap.PackedData, debugPrint bool) (error, *e2ap.E2APSubscriptionRequest, string) {
 
 	e2apMsg.init()
 	defer e2apMsg.fini()
 
 	if err := e2apMsg.e2apMessagePacker.unpacktopdu(msg); err != nil {
-		return err, e2apMsg.msgG
+		return err, e2apMsg.msgG, ""
 	}
 
 	var dynMemHead C.mem_track_hdr_t
@@ -1128,27 +1128,30 @@ func (e2apMsg *e2apMsgPackerSubscriptionRequest) UnPack(msg *e2ap.PackedData) (e
 
 	errorNro := C.getRICSubscriptionRequestData(&dynMemHead, e2apMsg.e2apMessagePacker.pdu, e2apMsg.msgC)
 	if err := e2apMsg.checkerr(errorNro); err != nil {
-		return err, e2apMsg.msgG
+		return err, e2apMsg.msgG, ""
 	}
 
 	e2apMsg.msgG.FunctionId = (e2ap.FunctionId)(e2apMsg.msgC.ranFunctionID)
 	if err := (&e2apEntryRequestID{entry: &e2apMsg.msgC.ricRequestID}).get(&e2apMsg.msgG.RequestId); err != nil {
-		return err, e2apMsg.msgG
+		return err, e2apMsg.msgG, ""
 	}
 	if err := (&e2apEntryEventTrigger{entry: &e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition}).get(&e2apMsg.msgG.EventTriggerDefinition); err != nil {
-		return err, e2apMsg.msgG
+		return err, e2apMsg.msgG, ""
 	}
 	conlen := (int)(e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.contentLength)
 	e2apMsg.msgG.ActionSetups = make([]e2ap.ActionToBeSetupItem, conlen)
 	for i := 0; i < conlen; i++ {
 		item := &e2apEntryActionToBeSetupItem{entry: &e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[i]}
 		if err := item.get(&e2apMsg.msgG.ActionSetups[i]); err != nil {
-			return err, e2apMsg.msgG
+			return err, e2apMsg.msgG, ""
 		}
 	}
-	return nil, e2apMsg.msgG
+	var msgString string
+	if debugPrint == true {
+		msgString = e2apMsg.String()
+	}
+	return nil, e2apMsg.msgG, msgString
 }
-
 func (e2apMsg *e2apMsgPackerSubscriptionRequest) String() string {
 
 	var b bytes.Buffer
@@ -1157,45 +1160,307 @@ func (e2apMsg *e2apMsgPackerSubscriptionRequest) String() string {
 	fmt.Fprintln(&b, "     ricRequestorID =", e2apMsg.msgC.ricRequestID.ricRequestorID)
 	fmt.Fprintln(&b, "     ricInstanceID =", e2apMsg.msgC.ricRequestID.ricInstanceID)
 	fmt.Fprintln(&b, "  ranFunctionID =", e2apMsg.msgC.ranFunctionID)
+
 	fmt.Fprintln(&b, "  ricSubscriptionDetails.")
-	fmt.Fprintln(&b, "    ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.")
-	fmt.Fprintln(&b, "      octetString.contentLength =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.octetString.contentLength)
-	fmt.Fprintln(&b, "      interfaceID.globalENBIDPresent =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalENBIDPresent)
-	if e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalENBIDPresent {
-		fmt.Fprintln(&b, "      interfaceID.globalENBID.pLMNIdentity.contentLength =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalENBID.pLMNIdentity.contentLength)
-		fmt.Fprintln(&b, "      interfaceID.globalENBID.pLMNIdentity.pLMNIdentityVal[0] =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalENBID.pLMNIdentity.pLMNIdentityVal[0])
-		fmt.Fprintln(&b, "      interfaceID.globalENBID.pLMNIdentity.pLMNIdentityVal[1] =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalENBID.pLMNIdentity.pLMNIdentityVal[1])
-		fmt.Fprintln(&b, "      interfaceID.globalENBID.pLMNIdentity.pLMNIdentityVal[2] =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalENBID.pLMNIdentity.pLMNIdentityVal[2])
-		fmt.Fprintln(&b, "      interfaceID.globalENBID.nodeID.bits =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalENBID.nodeID.bits)
-		fmt.Fprintln(&b, "      interfaceID.globalENBID.nodeID.nodeID =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalENBID.nodeID.nodeID)
+	fmt.Fprintln(&b, "    ricEventTriggerDefinition.E2SMgNBX2EventTriggerDefinitionPresent =",
+		e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.E2SMgNBX2EventTriggerDefinitionPresent)
+	fmt.Fprintln(&b, "    ricEventTriggerDefinition.E2SMgNBNRTEventTriggerDefinitionPresent =",
+		e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.E2SMgNBNRTEventTriggerDefinitionPresent)
+	if e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.E2SMgNBX2EventTriggerDefinitionPresent == true {
+		fmt.Fprintln(&b, "    ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.")
+		fmt.Fprintln(&b, "      octetString.contentLength =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.octetString.contentLength)
+		fmt.Fprintln(&b, "      interfaceID.globalENBIDPresent =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalENBIDPresent)
+		if e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalENBIDPresent {
+			fmt.Fprintln(&b, "      interfaceID.globalENBID.pLMNIdentity.contentLength =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalENBID.pLMNIdentity.contentLength)
+			fmt.Fprintln(&b, "      interfaceID.globalENBID.pLMNIdentity.pLMNIdentityVal[0] =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalENBID.pLMNIdentity.pLMNIdentityVal[0])
+			fmt.Fprintln(&b, "      interfaceID.globalENBID.pLMNIdentity.pLMNIdentityVal[1] =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalENBID.pLMNIdentity.pLMNIdentityVal[1])
+			fmt.Fprintln(&b, "      interfaceID.globalENBID.pLMNIdentity.pLMNIdentityVal[2] =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalENBID.pLMNIdentity.pLMNIdentityVal[2])
+			fmt.Fprintln(&b, "      interfaceID.globalENBID.nodeID.bits =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalENBID.nodeID.bits)
+			fmt.Fprintln(&b, "      interfaceID.globalENBID.nodeID.nodeID =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalENBID.nodeID.nodeID)
+		}
+		fmt.Fprintln(&b, "      interfaceID.globalGNBIDPresent =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalGNBIDPresent)
+		if e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalGNBIDPresent {
+			fmt.Fprintln(&b, "      interfaceID.globalGNBID.pLMNIdentity.contentLength =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalGNBID.pLMNIdentity.contentLength)
+			fmt.Fprintln(&b, "      interfaceID.globalGNBID.pLMNIdentity.pLMNIdentityVal[0] =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalGNBID.pLMNIdentity.pLMNIdentityVal[0])
+			fmt.Fprintln(&b, "      interfaceID.globalGNBID.pLMNIdentity.pLMNIdentityVal[1] =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalGNBID.pLMNIdentity.pLMNIdentityVal[1])
+			fmt.Fprintln(&b, "      interfaceID.globalGNBID.pLMNIdentity.pLMNIdentityVal[2] =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalGNBID.pLMNIdentity.pLMNIdentityVal[2])
+			fmt.Fprintln(&b, "      interfaceID.globalGNBID.nodeID.bits =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalGNBID.nodeID.bits)
+			fmt.Fprintln(&b, "      interfaceID.globalGNBID.nodeID.nodeID =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalGNBID.nodeID.nodeID)
+		}
+		fmt.Fprintln(&b, "      interfaceDirection = ", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceDirection)
+		fmt.Fprintln(&b, "      interfaceMessageType.procedureCode =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceMessageType.procedureCode)
+		fmt.Fprintln(&b, "      interfaceMessageType.typeOfMessage =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceMessageType.typeOfMessage)
+	} else if e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.E2SMgNBNRTEventTriggerDefinitionPresent == true {
+		fmt.Fprintln(&b, "    ricEventTriggerDefinition.e2SMgNBNRTEventTriggerDefinition.eventDefinitionFormat1.")
+		fmt.Fprintln(&b, "      eventDefinitionFormat1.triggerNature =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBNRTEventTriggerDefinition.eventDefinitionFormat1.triggerNature)
 	}
-	fmt.Fprintln(&b, "      interfaceID.globalGNBIDPresent =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalGNBIDPresent)
-	if e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalGNBIDPresent {
-		fmt.Fprintln(&b, "      interfaceID.globalGNBID.pLMNIdentity.contentLength =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalGNBID.pLMNIdentity.contentLength)
-		fmt.Fprintln(&b, "      interfaceID.globalGNBID.pLMNIdentity.pLMNIdentityVal[0] =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalGNBID.pLMNIdentity.pLMNIdentityVal[0])
-		fmt.Fprintln(&b, "      interfaceID.globalGNBID.pLMNIdentity.pLMNIdentityVal[1] =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalGNBID.pLMNIdentity.pLMNIdentityVal[1])
-		fmt.Fprintln(&b, "      interfaceID.globalGNBID.pLMNIdentity.pLMNIdentityVal[2] =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalGNBID.pLMNIdentity.pLMNIdentityVal[2])
-		fmt.Fprintln(&b, "      interfaceID.globalGNBID.nodeID.bits =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalGNBID.nodeID.bits)
-		fmt.Fprintln(&b, "      interfaceID.globalGNBID.nodeID.nodeID =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceID.globalGNBID.nodeID.nodeID)
-	}
-	fmt.Fprintln(&b, "      interfaceDirection = ", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceDirection)
-	fmt.Fprintln(&b, "      interfaceMessageType.procedureCode =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceMessageType.procedureCode)
-	fmt.Fprintln(&b, "      interfaceMessageType.typeOfMessage =", e2apMsg.msgC.ricSubscriptionDetails.ricEventTriggerDefinition.e2SMgNBX2eventTriggerDefinition.interfaceMessageType.typeOfMessage)
+
 	fmt.Fprintln(&b, "    ricActionToBeSetupItemIEs.")
 	fmt.Fprintln(&b, "      contentLength =", e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.contentLength)
-	var index uint8
+	var index C.uchar
 	index = 0
-	for (C.uchar)(index) < e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.contentLength {
+	for index < e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.contentLength {
+		fmt.Fprintln(&b, "      index =", index)
 		fmt.Fprintln(&b, "      ricActionToBeSetupItem[index].ricActionID =", e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionID)
 		fmt.Fprintln(&b, "      ricActionToBeSetupItem[index].ricActionType =", e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionType)
-
 		fmt.Fprintln(&b, "      ricActionToBeSetupItem[index].ricActionDefinitionPresent =", e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionPresent)
 		if e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionPresent {
-			fmt.Fprintln(&b, "      ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1Present =", e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1Present)
-			fmt.Fprintln(&b, "      ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2Present =", e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2Present)
-			fmt.Fprintln(&b, "      ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1Present =", e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1Present)
+			fmt.Fprintln(&b, "      ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1Present =",
+				e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1Present)
+			fmt.Fprintln(&b, "      ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2Present =",
+				e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2Present)
+			fmt.Fprintln(&b, "      ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1Present =",
+				e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1Present)
 
-			fmt.Fprintln(&b, "      Dynamically allocated C-structs are already freed. Can't print those")
+			if e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1Present {
+
+				// X2 Format1
+				fmt.Fprintln(&b, "      ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1.styleID =",
+					e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1.styleID)
+				fmt.Fprintln(&b, "      ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1.actionParameterCount =",
+					e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1.actionParameterCount)
+
+				var index2 C.uchar
+				index2 = 0
+				for index2 < e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1.actionParameterCount {
+					fmt.Fprintln(&b, "      index2 =", index2)
+					fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1.actionParameterItem[index2].parameterID =",
+						e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1.actionParameterItem[index2].parameterID)
+					fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1.actionParameterItem[index2].actionParameterValue.valueIntPresent =",
+						e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1.actionParameterItem[index2].actionParameterValue.valueIntPresent)
+					if e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1.actionParameterItem[index2].actionParameterValue.valueIntPresent {
+						fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1.actionParameterItem[index2].actionParameterValue.valueInt =",
+							e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1.actionParameterItem[index2].actionParameterValue.valueInt)
+					}
+					fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1.actionParameterItem[index2].actionParameterValue.valueEnumPresent =",
+						e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1.actionParameterItem[index2].actionParameterValue.valueEnumPresent)
+					if e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1.actionParameterItem[index2].actionParameterValue.valueEnumPresent {
+						fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1.actionParameterItem[index2].actionParameterValue.valueEnum =",
+							e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1.actionParameterItem[index2].actionParameterValue.valueEnum)
+					}
+					fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1.actionParameterItem[index2].actionParameterValue.valueBoolPresent =",
+						e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1.actionParameterItem[index2].actionParameterValue.valueBoolPresent)
+					if e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1.actionParameterItem[index2].actionParameterValue.valueBoolPresent {
+						fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1.actionParameterItem[index2].actionParameterValue.valueBool =",
+							e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1.actionParameterItem[index2].actionParameterValue.valueBool)
+					}
+					fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1.actionParameterItem[index2].actionParameterValue.valueBitSPresent =",
+						e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1.actionParameterItem[index2].actionParameterValue.valueBitSPresent)
+					if e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1.actionParameterItem[index2].actionParameterValue.valueBitSPresent {
+						fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1.actionParameterItem[index2].actionParameterValue.valueBitS.byteLength =",
+							e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1.actionParameterItem[index2].actionParameterValue.valueBitS.byteLength)
+						bytes := C.GoBytes((unsafe.Pointer)(e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1.actionParameterItem[index2].actionParameterValue.valueBitS.data),
+							(C.int)(e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1.actionParameterItem[index2].actionParameterValue.valueBitS.byteLength))
+						fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1.actionParameterItem[index2].actionParameterValue.valueBitS.data =", bytes[:])
+					}
+					fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1.actionParameterItem[index2].actionParameterValue.valueOctSPresent =",
+						e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1.actionParameterItem[index2].actionParameterValue.valueOctSPresent)
+					if e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1.actionParameterItem[index2].actionParameterValue.valueOctSPresent {
+						fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1.actionParameterItem[index2].actionParameterValue.valueOctS.length =",
+							e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1.actionParameterItem[index2].actionParameterValue.valueOctS.length)
+						bytes := C.GoBytes((unsafe.Pointer)(e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1.actionParameterItem[index2].actionParameterValue.valueOctS.data),
+							(C.int)(e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1.actionParameterItem[index2].actionParameterValue.valueOctS.length))
+						fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1.actionParameterItem[index2].actionParameterValue.valueOctS.data =", bytes[:])
+					}
+					fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1.actionParameterItem[index2].actionParameterValue.valuePrtSPresent =",
+						e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1.actionParameterItem[index2].actionParameterValue.valuePrtSPresent)
+					if e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1.actionParameterItem[index2].actionParameterValue.valuePrtSPresent {
+						fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1.actionParameterItem[index2].actionParameterValue.valueOctS.length =",
+							e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1.actionParameterItem[index2].actionParameterValue.valueOctS.length)
+						bytes := C.GoBytes((unsafe.Pointer)(e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1.actionParameterItem[index2].actionParameterValue.valuePrtS.data),
+							(C.int)(e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1.actionParameterItem[index2].actionParameterValue.valuePrtS.length))
+						fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format1.actionParameterItem[index2].actionParameterValue.valuePrtS.data =", bytes[:])
+					}
+					index2++
+				}
+			} else if e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2Present {
+
+				// X2 Format2
+				fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupCount =",
+					e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupCount)
+
+				var index2 C.uchar
+				index2 = 0
+				for index2 < e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupCount {
+					fmt.Fprintln(&b, "      index2 =", index2)
+					fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupID =",
+						e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupID)
+					fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefCount =",
+						e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefCount)
+
+					var index3 C.uchar
+					index3 = 0
+					for index3 < e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefCount {
+						fmt.Fprintln(&b, "      index3 =", index3)
+						fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterID =",
+							e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterID)
+						fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterTest =",
+							e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterTest)
+						fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueIntPresent =",
+							e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueIntPresent)
+						if e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueIntPresent {
+							fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueInt =",
+								e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueInt)
+						}
+						fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueEnumPresent =",
+							e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueEnumPresent)
+						if e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueEnumPresent {
+							fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueEnum =",
+								e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueEnum)
+						}
+						fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueBoolPresent =",
+							e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueBoolPresent)
+						if e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueBoolPresent {
+							fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueBool =",
+								e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueBool)
+						}
+						fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueBitSPresent =",
+							e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueBitSPresent)
+						if e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueBitSPresent {
+							fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue,valueBitS.byteLength =",
+								e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueBitS.byteLength)
+							bytes := C.GoBytes((unsafe.Pointer)(e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueBitS.data),
+								(C.int)(e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueBitS.byteLength))
+							fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueBitS.data =", bytes[:])
+						}
+						fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueOctSPresent =",
+							e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueOctSPresent)
+						if e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueOctSPresent {
+							fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue,valueOctS.length =",
+								e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueOctS.length)
+							bytes := C.GoBytes((unsafe.Pointer)(e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueOctS.data),
+								(C.int)(e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueOctS.length))
+							fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valueOctS.data =", bytes[:])
+						}
+						fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valuePrtSPresent =",
+							e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valuePrtSPresent)
+						if e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valuePrtSPresent {
+							fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue,valuePrtS.length =",
+								e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valuePrtS.length)
+							bytes := C.GoBytes((unsafe.Pointer)(e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valuePrtS.data),
+								(C.int)(e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valuePrtS.length))
+							fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranUEgroupDefinition.ranUeGroupDefItem[index3].ranParameterValue.valuePrtS.data =", bytes[:])
+						}
+						index3++
+					}
+
+					fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranPolicy.ranParameterCount =",
+						e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranPolicy.ranParameterCount)
+
+					index3 = 0
+					for index3 < e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranPolicy.ranParameterCount {
+						fmt.Fprintln(&b, "      index3 =", index3)
+						fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterID =",
+							e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterID)
+						fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueIntPresent =",
+							e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueIntPresent)
+						if e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueIntPresent {
+							fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueInt =",
+								e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueInt)
+						}
+						fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueEnumPresent =",
+							e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueEnumPresent)
+						if e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueEnumPresent {
+							fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueEnum =",
+								e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueEnum)
+						}
+						fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueBoolPresent =",
+							e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueBoolPresent)
+						if e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueBoolPresent {
+							fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueBool =",
+								e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueBool)
+						}
+						fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueBitSPresent =",
+							e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueBitSPresent)
+						if e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueBitSPresent {
+							fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueBitS.byteLength =",
+								e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueBitS.byteLength)
+							bytes := C.GoBytes((unsafe.Pointer)(e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueBitS.data),
+								(C.int)(e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueBitS.byteLength))
+							fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueBitS.data =", bytes[:])
+						}
+						fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueOctSPresent =",
+							e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueOctSPresent)
+						if e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueOctSPresent {
+							fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueOctS.length =",
+								e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueOctS.length)
+							bytes := C.GoBytes((unsafe.Pointer)(e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueOctS.data),
+								(C.int)(e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueOctS.length))
+							fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valueOctS.data =", bytes[:])
+						}
+						fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valuePrtSPresent =",
+							e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valuePrtSPresent)
+						if e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valuePrtSPresent {
+							fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valuePrtS.length =",
+								e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valuePrtS.length)
+							bytes := C.GoBytes((unsafe.Pointer)(e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valuePrtS.data),
+								(C.int)(e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valuePrtS.length))
+							fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionX2Format2.ranUeGroupItem[index2].ranPolicy.ranParameterItem[index3].ranParameterValue.valuePrtS.data =", bytes[:])
+						}
+						index3++
+					}
+					index2++
+				}
+			} else if e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1Present {
+
+				// NRT Format1
+				var index2 C.uchar
+				index2 = 0
+				for index2 < e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1.ranParameterCount {
+					fmt.Fprintln(&b, "      index2 =", index2)
+					fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1.ranParameterList[index2].ranParameterID =",
+						e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1.ranParameterList[index2].ranParameterID)
+
+					fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1.ranParameterList[index2].ranParameterValue.valueIntPresent =",
+						e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1.ranParameterList[index2].ranParameterValue.valueIntPresent)
+					if e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1.ranParameterList[index2].ranParameterValue.valueIntPresent {
+						fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1.ranParameterList[index2].ranParameterValue.valueInt =",
+							e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1.ranParameterList[index2].ranParameterValue.valueInt)
+					}
+					fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1.ranParameterList[index2].ranParameterValue.valueEnumPresent =",
+						e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1.ranParameterList[index2].ranParameterValue.valueEnumPresent)
+					if e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1.ranParameterList[index2].ranParameterValue.valueEnumPresent {
+						fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1.ranParameterList[index2].ranParameterValue.valueEnum =",
+							e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1.ranParameterList[index2].ranParameterValue.valueEnum)
+					}
+					fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1.ranParameterList[index2].ranParameterValue.valueBoolPresent =",
+						e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1.ranParameterList[index2].ranParameterValue.valueBoolPresent)
+					if e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1.ranParameterList[index2].ranParameterValue.valueBoolPresent {
+						fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1.ranParameterList[index2].ranParameterValue.valueBool =",
+							e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1.ranParameterList[index2].ranParameterValue.valueBool)
+					}
+					fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1.ranParameterList[index2].ranParameterValue.valueBitSPresent =",
+						e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1.ranParameterList[index2].ranParameterValue.valueBitSPresent)
+					if e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1.ranParameterList[index2].ranParameterValue.valueBitSPresent {
+						fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1.ranParameterList[index2].ranParameterValue.valueBitS.byteLength =",
+							e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1.ranParameterList[index2].ranParameterValue.valueBitS.byteLength)
+						bytes := C.GoBytes((unsafe.Pointer)(e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1.ranParameterList[index2].ranParameterValue.valueBitS.data),
+							(C.int)(e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1.ranParameterList[index2].ranParameterValue.valueBitS.byteLength))
+						fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1.ranParameterList[index2].ranParameterValue.valueBitS.data =", bytes[:])
+					}
+					fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1.ranParameterList[index2].ranParameterValue.valueOctSPresent =",
+						e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1.ranParameterList[index2].ranParameterValue.valueOctSPresent)
+					if e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1.ranParameterList[index2].ranParameterValue.valueOctSPresent {
+						fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1.ranParameterList[index2].ranParameterValue.valueOctS.length =",
+							e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1.ranParameterList[index2].ranParameterValue.valueOctS.length)
+						bytes := C.GoBytes((unsafe.Pointer)(e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1.ranParameterList[index2].ranParameterValue.valueOctS.data),
+							(C.int)(e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1.ranParameterList[index2].ranParameterValue.valueOctS.length))
+						fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1.ranParameterList[index2].ranParameterValue.valueOctS.data =", bytes[:])
+					}
+					fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1.ranParameterList[index2].ranParameterValue.valuePrtSPresent =",
+						e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1.ranParameterList[index2].ranParameterValue.valuePrtSPresent)
+					if e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1.ranParameterList[index2].ranParameterValue.valuePrtSPresent {
+						fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1.ranParameterList[index2].ranParameterValue.valuePrtS.length =",
+							e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1.ranParameterList[index2].ranParameterValue.valuePrtS.length)
+						bytes := C.GoBytes((unsafe.Pointer)(e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1.ranParameterList[index2].ranParameterValue.valuePrtS.data),
+							(C.int)(e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1.ranParameterList[index2].ranParameterValue.valuePrtS.length))
+						fmt.Fprintln(&b, "      .ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1.ranParameterList[index2].ranParameterValue.valuePrtS.data =", bytes[:])
+					}
+					index2++
+				}
+			} else {
+				fmt.Fprintln(&b, "Error. Missing e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice")
+			}
 		}
 
 		fmt.Fprintln(&b, "      ricActionToBeSetupItem[index].ricSubsequentActionPresent =", e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricSubsequentActionPresent)

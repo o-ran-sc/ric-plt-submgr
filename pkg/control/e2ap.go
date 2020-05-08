@@ -40,18 +40,27 @@ type E2ap struct {
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-func (c *E2ap) UnpackSubscriptionRequest(payload []byte) (*e2ap.E2APSubscriptionRequest, error) {
+func (c *E2ap) UnpackSubscriptionRequest(payload []byte, debugPrint bool) (*e2ap.E2APSubscriptionRequest, error) {
 	e2SubReq := packerif.NewPackerSubscriptionRequest()
-	err, subReq := e2SubReq.UnPack(&e2ap.PackedData{payload})
+	err, subReq, msgString := e2SubReq.UnPack(&e2ap.PackedData{payload}, debugPrint)
 	if err != nil {
 		return nil, fmt.Errorf("%s buf[%s]", err.Error(), hex.EncodeToString(payload))
+	}
+
+	if msgString != "" {
+		xapp.Logger.Debug("%s", msgString)
 	}
 	return subReq, nil
 }
 
-func (c *E2ap) PackSubscriptionRequest(req *e2ap.E2APSubscriptionRequest) (int, *e2ap.PackedData, error) {
+func (c *E2ap) PackSubscriptionRequest(req *e2ap.E2APSubscriptionRequest, debugPrint bool) (int, *e2ap.PackedData, error) {
 	e2SubReq := packerif.NewPackerSubscriptionRequest()
-	err, packedData := e2SubReq.Pack(req)
+	err, packedData, msgString := e2SubReq.Pack(req, debugPrint)
+
+	if msgString != "" {
+		xapp.Logger.Debug("%s", msgString)
+	}
+
 	if err != nil {
 		return 0, nil, err
 	}

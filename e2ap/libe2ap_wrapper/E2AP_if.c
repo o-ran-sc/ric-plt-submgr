@@ -171,8 +171,9 @@ uint64_t packRICSubscriptionRequest(size_t* pdataBufferSize, byte* pDataBuffer, 
 
             // RICeventTriggerDefinition
             uint64_t returnCode;
-            if ((returnCode = packRICEventTriggerDefinition(pLogBuffer, &pRICSubscriptionRequest->ricSubscriptionDetails.ricEventTriggerDefinition) != e2err_OK))
+            if ((returnCode = packRICEventTriggerDefinition(pLogBuffer, &pRICSubscriptionRequest->ricSubscriptionDetails.ricEventTriggerDefinition)) != e2err_OK) {
                 return returnCode;
+            }
 
             pRICsubscriptionRequest_IEs->value.choice.RICsubscriptionDetails.ricEventTriggerDefinition.buf =
               calloc(1, pRICSubscriptionRequest->ricSubscriptionDetails.ricEventTriggerDefinition.octetString.contentLength);
@@ -206,7 +207,7 @@ uint64_t packRICSubscriptionRequest(size_t* pdataBufferSize, byte* pDataBuffer, 
                     // RICactionDefinition, OPTIONAL
                     if (pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionPresent) {
                         uint64_t returnCode;
-                        if ((returnCode = packRICActionDefinition(pLogBuffer, &pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice) != e2err_OK)) {
+                        if ((returnCode = packRICActionDefinition(pLogBuffer, &pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice)) != e2err_OK) {
                             return returnCode;
                         }
 
@@ -1490,7 +1491,7 @@ uint64_t getRICSubscriptionRequestData(mem_track_hdr_t * pDynMemHead, e2ap_pdu_p
         pRICSubscriptionRequest->ricSubscriptionDetails.ricEventTriggerDefinition.octetString.contentLength = pRICeventTriggerDefinition->size;
         memcpy(pRICSubscriptionRequest->ricSubscriptionDetails.ricEventTriggerDefinition.octetString.data, pRICeventTriggerDefinition->buf, pRICeventTriggerDefinition->size);
 
-        // Workaroud to spec problem. E2AP spec does not specify what speck (gNB-X2 or gNB-NRT) should be used when decoded EventTriggerDefinition and ActionDefinition
+        // Workaround to spec problem. E2AP spec does not specify what speck (gNB-X2 or gNB-NRT) should be used when decoded EventTriggerDefinition and ActionDefinition
         // received received. Here we know that length of gNB-NRT EventTriggerDefinition octet string is always 1 at the moment.
         if (pRICeventTriggerDefinition->size == 1) {
             pRICSubscriptionRequest->ricSubscriptionDetails.ricEventTriggerDefinition.E2SMgNBNRTEventTriggerDefinitionPresent = true;
@@ -1531,7 +1532,7 @@ uint64_t getRICSubscriptionRequestData(mem_track_hdr_t * pDynMemHead, e2ap_pdu_p
                        pRICaction_ToBeSetup_ItemIEs->value.choice.RICaction_ToBeSetup_Item.ricActionDefinition->buf,
                        pRICaction_ToBeSetup_ItemIEs->value.choice.RICaction_ToBeSetup_Item.ricActionDefinition->size);
 
-                // Workaroud to spec problem. E2AP spec does not specify what speck (gNB-X2 or gNB-NRT) should be used when decoded EventTriggerDefinition and ActionDefinition
+                // Workaround to spec problem. E2AP spec does not specify what speck (gNB-X2 or gNB-NRT) should be used when decoded EventTriggerDefinition and ActionDefinition
                 // received received. Here we know that length of gNB-NRT EventTriggerDefinition octet string is always 1 at the moment.
                 if (pRICeventTriggerDefinition->size == 1)
                     pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.actionDefinitionNRTFormat1Present = true;
@@ -2016,71 +2017,70 @@ uint64_t getRICActionDefinitionDataNRTFormat(mem_track_hdr_t* pDynMemHead, RICAc
             printf("Successfully decoded E2SM_gNB_NRT_ActionDefinition\n");
             asn_fprint(stdout, &asn_DEF_E2_E2SM_gNB_NRT_ActionDefinition, pE2_E2SM_gNB_NRT_ActionDefinition);
         }
-
         // ActionDefinitionChoice
         if (pE2_E2SM_gNB_NRT_ActionDefinition->present == E2_E2SM_gNB_NRT_ActionDefinition_PR_actionDefinition_Format1) {
-
             // E2SM-gNB-NRT-actionDefinition
             uint64_t status;
             if ((status = allocActionDefinitionNRTFormat1(pDynMemHead, &pRICActionDefinitionChoice->actionDefinitionNRTFormat1)) != e2err_OK)
                 return status;
-
             pRICActionDefinitionChoice->actionDefinitionNRTFormat1Present = true;
             pRICActionDefinitionChoice->actionDefinitionX2Format1Present = false;
             pRICActionDefinitionChoice->actionDefinitionX2Format2Present = false;
             pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterCount = 0;
-            uint64_t index = 0;
-            while (index < pE2_E2SM_gNB_NRT_ActionDefinition->choice.actionDefinition_Format1.ranParameter_List->list.count) {
-                E2_RANparameter_Item_t* pE2_RANparameter_Item = pE2_E2SM_gNB_NRT_ActionDefinition->choice.actionDefinition_Format1.ranParameter_List->list.array[index];
-                if (pE2_RANparameter_Item) {
-                    pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterID = pE2_RANparameter_Item->ranParameter_ID;
+            if (pE2_E2SM_gNB_NRT_ActionDefinition->choice.actionDefinition_Format1.ranParameter_List) {
+                uint64_t index = 0;
+                while (index < pE2_E2SM_gNB_NRT_ActionDefinition->choice.actionDefinition_Format1.ranParameter_List->list.count) {
+                    E2_RANparameter_Item_t* pE2_RANparameter_Item = pE2_E2SM_gNB_NRT_ActionDefinition->choice.actionDefinition_Format1.ranParameter_List->list.array[index];
+                    if (pE2_RANparameter_Item) {
+                        pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterID = pE2_RANparameter_Item->ranParameter_ID;
 
-                    if (pE2_RANparameter_Item->ranParameter_Value.present == E2_RANparameter_Value_PR_valueInt) {
-                        pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valueIntPresent = true;
-                        pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valueInt =
-                          pE2_RANparameter_Item->ranParameter_Value.choice.valueInt;
-                    }
-                    else if (pE2_RANparameter_Item->ranParameter_Value.present == E2_RANparameter_Value_PR_valueEnum) {
-                        pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valueEnumPresent = true;
-                        pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valueEnum =
-                          pE2_RANparameter_Item->ranParameter_Value.choice.valueEnum;
-                    }
-                    else if (pE2_RANparameter_Item->ranParameter_Value.present == E2_RANparameter_Value_PR_valueBool) {
-                        pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valueBoolPresent = true;
-                        pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valueBool =
-                          pE2_RANparameter_Item->ranParameter_Value.choice.valueBool;
-                    }
-                    else if (pE2_RANparameter_Item->ranParameter_Value.present == E2_RANparameter_Value_PR_valueBitS) {
-                        pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valueBitSPresent = true;
-                        addBitString(pDynMemHead, &pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valueBitS,
-                                     pE2_RANparameter_Item->ranParameter_Value.choice.valueBitS.size,
-                                     pE2_RANparameter_Item->ranParameter_Value.choice.valueBitS.buf,
-                                     pE2_RANparameter_Item->ranParameter_Value.choice.valueBitS.bits_unused);
-                    }
-                    else if (pE2_RANparameter_Item->ranParameter_Value.present == E2_RANparameter_Value_PR_valueOctS) {
-                        pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valueOctSPresent = true;
-                        addOctetString(pDynMemHead, &pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valueOctS,
-                                     pE2_RANparameter_Item->ranParameter_Value.choice.valueOctS.size,
-                                     pE2_RANparameter_Item->ranParameter_Value.choice.valueOctS.buf);
-                    }
-                    else if (pE2_RANparameter_Item->ranParameter_Value.present == E2_RANparameter_Value_PR_valuePrtS) {
-                        pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valuePrtSPresent = true;
-                        addOctetString(pDynMemHead, &pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valuePrtS,
-                                     pE2_RANparameter_Item->ranParameter_Value.choice.valuePrtS.size,
-                                     pE2_RANparameter_Item->ranParameter_Value.choice.valuePrtS.buf);
+                        if (pE2_RANparameter_Item->ranParameter_Value.present == E2_RANparameter_Value_PR_valueInt) {
+                            pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valueIntPresent = true;
+                            pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valueInt =
+                            pE2_RANparameter_Item->ranParameter_Value.choice.valueInt;
+                        }
+                        else if (pE2_RANparameter_Item->ranParameter_Value.present == E2_RANparameter_Value_PR_valueEnum) {
+                            pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valueEnumPresent = true;
+                            pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valueEnum =
+                            pE2_RANparameter_Item->ranParameter_Value.choice.valueEnum;
+                        }
+                        else if (pE2_RANparameter_Item->ranParameter_Value.present == E2_RANparameter_Value_PR_valueBool) {
+                            pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valueBoolPresent = true;
+                            pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valueBool =
+                            pE2_RANparameter_Item->ranParameter_Value.choice.valueBool;
+                        }
+                        else if (pE2_RANparameter_Item->ranParameter_Value.present == E2_RANparameter_Value_PR_valueBitS) {
+                            pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valueBitSPresent = true;
+                            addBitString(pDynMemHead, &pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valueBitS,
+                                        pE2_RANparameter_Item->ranParameter_Value.choice.valueBitS.size,
+                                        pE2_RANparameter_Item->ranParameter_Value.choice.valueBitS.buf,
+                                        pE2_RANparameter_Item->ranParameter_Value.choice.valueBitS.bits_unused);
+                        }
+                        else if (pE2_RANparameter_Item->ranParameter_Value.present == E2_RANparameter_Value_PR_valueOctS) {
+                            pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valueOctSPresent = true;
+                            addOctetString(pDynMemHead, &pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valueOctS,
+                                        pE2_RANparameter_Item->ranParameter_Value.choice.valueOctS.size,
+                                        pE2_RANparameter_Item->ranParameter_Value.choice.valueOctS.buf);
+                        }
+                        else if (pE2_RANparameter_Item->ranParameter_Value.present == E2_RANparameter_Value_PR_valuePrtS) {
+                            pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valuePrtSPresent = true;
+                            addOctetString(pDynMemHead, &pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valuePrtS,
+                                        pE2_RANparameter_Item->ranParameter_Value.choice.valuePrtS.size,
+                                        pE2_RANparameter_Item->ranParameter_Value.choice.valuePrtS.buf);
+                        }
+                        else {
+                            ASN_STRUCT_FREE(asn_DEF_E2_E2SM_gNB_NRT_ActionDefinition, pE2_E2SM_gNB_NRT_ActionDefinition);
+                            return e2err_RICSubscriptionRequestNRTRanParameterItemRanParameterValueEmptyFail;
+                        }
                     }
                     else {
                         ASN_STRUCT_FREE(asn_DEF_E2_E2SM_gNB_NRT_ActionDefinition, pE2_E2SM_gNB_NRT_ActionDefinition);
-                        return e2err_RICSubscriptionRequestNRTRanParameterItemRanParameterValueEmptyFail;
+                        return e2err_RICSubscriptionRequestNRTAllocActionDefinitionFail;
                     }
+                    index++;
                 }
-                else {
-                    ASN_STRUCT_FREE(asn_DEF_E2_E2SM_gNB_NRT_ActionDefinition, pE2_E2SM_gNB_NRT_ActionDefinition);
-                    return e2err_RICSubscriptionRequestNRTAllocActionDefinitionFail;
-                }
-                index++;
+                pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterCount = index;
             }
-            pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterCount = index;
         }
         ASN_STRUCT_FREE(asn_DEF_E2_E2SM_gNB_NRT_ActionDefinition, pE2_E2SM_gNB_NRT_ActionDefinition);
         return e2err_OK;
@@ -2100,6 +2100,7 @@ uint64_t getRICActionDefinitionDataNRTFormat(mem_track_hdr_t* pDynMemHead, RICAc
         return e2err_RICNRTActionDefinitionChoiceDecodeDefaultFail;
     }
 }
+
 //////////////////////////////////////////////////////////////////////
 uint64_t getRICSubscriptionResponseData(e2ap_pdu_ptr_t* pE2AP_PDU_pointer, RICSubscriptionResponse_t* pRICSubscriptionResponse) {
 
