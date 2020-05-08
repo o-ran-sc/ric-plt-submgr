@@ -23,9 +23,8 @@ package e2ap
 //
 //-----------------------------------------------------------------------------
 type E2APMsgPackerSubscriptionRequestIf interface {
-	Pack(*E2APSubscriptionRequest) (error, *PackedData)
-	UnPack(msg *PackedData) (error, *E2APSubscriptionRequest)
-	String() string
+	Pack(*E2APSubscriptionRequest, bool) (error, *PackedData, string)
+	UnPack(*PackedData, bool) (error, *E2APSubscriptionRequest, string)
 }
 
 //-----------------------------------------------------------------------------

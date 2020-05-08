@@ -36,20 +36,22 @@ func (testCtxt *E2ApTests) E2ApTestMsgSubscriptionRequestWithData(t *testing.T, 
 	testCtxt.testPrint("init")
 	testCtxt.testPrint("pack")
 
-	err, packedMsg := e2SubsReq.Pack(areqenc)
+	var debugPrint bool = true
+	err, packedMsg, msgString := e2SubsReq.Pack(areqenc, debugPrint)
 	if err != nil {
 		testCtxt.testError(t, "Pack failed: %s", err.Error())
 		return
 	}
-	testCtxt.testPrint("print:\n%s", e2SubsReq.String())
+	testCtxt.testPrint("print:\n%s", msgString)
+	//	testCtxt.testPrint("print:\n%s", e2SubsReq.String())
 	testCtxt.testPrint("unpack")
 
-	err, areqdec := e2SubsReq.UnPack(packedMsg)
+	err, areqdec, msgString := e2SubsReq.UnPack(packedMsg, debugPrint)
 	if err != nil {
 		testCtxt.testError(t, "UnPack failed: %s", err.Error())
 		return
 	}
-	testCtxt.testPrint("print:\n%s", e2SubsReq.String())
+	testCtxt.testPrint("print:\n%s", msgString)
 	testCtxt.testValueEquality(t, "msg", areqenc, areqdec)
 	testCtxt.testValueEquality(t, "EventTriggerDefinition", &areqenc.EventTriggerDefinition, &areqdec.EventTriggerDefinition)
 }
@@ -365,8 +367,9 @@ func (testCtxt *E2ApTests) E2ApTestMsgSubscriptionRequestBuffers(t *testing.T) {
 		if packedData == nil {
 			return
 		}
+		var debugPrint bool = false
 		e2SubResp := testCtxt.packerif.NewPackerSubscriptionRequest()
-		err, _ := e2SubResp.UnPack(packedData)
+		err, _, _ := e2SubResp.UnPack(packedData, debugPrint)
 		if err != nil {
 			testCtxt.testError(t, "UnPack() Failed: %s [%s]", err.Error(), buffer)
 			return
