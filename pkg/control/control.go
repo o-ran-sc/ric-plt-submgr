@@ -128,7 +128,7 @@ func (c *Control) FillReportSubReqMsgs(stype models.SubscriptionType, params int
 
 	lengthEventTriggers := len(p.EventTriggers)
 	if lengthEventTriggers == 0 {
-		err := fmt.Errorf("Error in content element count. Count of EventTriggers: = %v", lengthEventTriggers)
+		err := fmt.Errorf("Error in content element count. Count of EventTriggers=%v", lengthEventTriggers)
 		return err
 	}
 
@@ -137,7 +137,7 @@ func (c *Control) FillReportSubReqMsgs(stype models.SubscriptionType, params int
 		lengthActionParameters = len(p.ReportActionDefinitions.ActionDefinitionFormat1.ActionParameters)
 	}
 
-	xapp.Logger.Info("EventTrigger count = %v, ActionParameter count = %v", lengthEventTriggers, lengthActionParameters)
+	xapp.Logger.Info("EventTrigger count=%v, ActionParameter count=%v", lengthEventTriggers, lengthActionParameters)
 
 	// 1..
 	for index, restEventTriggerItem := range p.EventTriggers {
@@ -155,8 +155,12 @@ func (c *Control) FillReportSubReqMsgs(stype models.SubscriptionType, params int
 			subReqMsg.EventTriggerDefinition.X2EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Id = (uint32)(plmId64)
 			subReqMsg.EventTriggerDefinition.X2EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.Set(restEventTriggerItem.ENBID)
 		} else {
-			err := fmt.Errorf("Missing manadatory element. ReportParams.EventTriggers[%v].ENBID = %v", index, restEventTriggerItem.ENBID)
-			return err
+			xapp.Logger.Info("Missing manadatory element. ReportParams.EventTriggers[%v].ENBID=%v", index, restEventTriggerItem.ENBID)
+			// Using some value as not mandatory value for xapp now
+			subReqMsg.EventTriggerDefinition.X2EventTriggerDefinition.InterfaceId.GlobalEnbId.Present = true
+			subReqMsg.EventTriggerDefinition.X2EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Bits = e2ap.E2AP_ENBIDHomeBits28 // Bit length should be set based calculation. Only 28bit length works in ASN1C currently
+			subReqMsg.EventTriggerDefinition.X2EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Id = 123456
+			subReqMsg.EventTriggerDefinition.X2EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.Set("12345")
 		}
 
 		subReqMsg.EventTriggerDefinition.X2EventTriggerDefinition.InterfaceDirection = (uint32)(restEventTriggerItem.InterfaceDirection)
@@ -173,22 +177,23 @@ func (c *Control) FillReportSubReqMsgs(stype models.SubscriptionType, params int
 		}
 
 		// 0.. OPTIONAL
-		for _, restActionParameterItem := range p.ReportActionDefinitions.ActionDefinitionFormat1.ActionParameters {
-			actionParameterItem := e2ap.ActionParameterItem{}
-			if restActionParameterItem.ActionParameterID != nil {
-				actionParameterItem.ParameterID = (uint32)(*restActionParameterItem.ActionParameterID)
-			}
-			actionParameterItem.ActionParameterValue.ValueBoolPresent = true
-			if restActionParameterItem.ActionParameterValue != nil {
-				actionParameterItem.ActionParameterValue.ValueBool = (bool)(*restActionParameterItem.ActionParameterValue)
-			}
-			actionToBeSetupItem.ActionDefinitionChoice.ActionDefinitionX2Format1.ActionParameterItems =
-				append(actionToBeSetupItem.ActionDefinitionChoice.ActionDefinitionX2Format1.ActionParameterItems, actionParameterItem)
+		if lengthActionParameters > 0 {
+			for _, restActionParameterItem := range p.ReportActionDefinitions.ActionDefinitionFormat1.ActionParameters {
+				actionParameterItem := e2ap.ActionParameterItem{}
+				if restActionParameterItem.ActionParameterID != nil {
+					actionParameterItem.ParameterID = (uint32)(*restActionParameterItem.ActionParameterID)
+				}
+				actionParameterItem.ActionParameterValue.ValueBoolPresent = true
+				if restActionParameterItem.ActionParameterValue != nil {
+					actionParameterItem.ActionParameterValue.ValueBool = (bool)(*restActionParameterItem.ActionParameterValue)
+				}
+				actionToBeSetupItem.ActionDefinitionChoice.ActionDefinitionX2Format1.ActionParameterItems =
+					append(actionToBeSetupItem.ActionDefinitionChoice.ActionDefinitionX2Format1.ActionParameterItems, actionParameterItem)
 
-			// OPTIONAL
-			actionToBeSetupItem.SubsequentActionPresent = false // SubseguentAction not pressent in REST definition
+				// OPTIONAL
+				actionToBeSetupItem.SubsequentActionPresent = false // SubseguentAction not pressent in REST definition
+			}
 		}
-
 		subReqMsg.ActionSetups = append(subReqMsg.ActionSetups, actionToBeSetupItem)
 		subreqList.E2APSubscriptionRequests = append(subreqList.E2APSubscriptionRequests, subReqMsg)
 	}
@@ -209,11 +214,11 @@ func (c *Control) FillPolicySubReqMsgs(stype models.SubscriptionType, params int
 		lengthRANUeGroupParameters = len(p.PolicyActionDefinitions.ActionDefinitionFormat2.RANUeGroupParameters)
 	}
 	if lengthEventTriggers == 0 {
-		err := fmt.Errorf("Error in content element count. Count of EventTriggers = %v", lengthEventTriggers)
+		err := fmt.Errorf("Error in content element count. Count of EventTriggers=%v", lengthEventTriggers)
 		return err
 	}
 
-	xapp.Logger.Info("EventTrigger count = %v, RANUeGroupParameter count = %v", lengthEventTriggers, lengthRANUeGroupParameters)
+	xapp.Logger.Info("EventTrigger count=%v, RANUeGroupParameter count=%v", lengthEventTriggers, lengthRANUeGroupParameters)
 
 	// 1..
 	for index, restEventTriggerItem := range p.EventTriggers {
@@ -231,8 +236,12 @@ func (c *Control) FillPolicySubReqMsgs(stype models.SubscriptionType, params int
 			subReqMsg.EventTriggerDefinition.X2EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Id = (uint32)(plmId64)
 			subReqMsg.EventTriggerDefinition.X2EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.Set(restEventTriggerItem.ENBID)
 		} else {
-			err := fmt.Errorf("Missing manadatory element. PolicyParams.EventTriggers[%v].ENBID = %v", index, restEventTriggerItem.ENBID)
-			return err
+			xapp.Logger.Info("Missing manadatory element. PolicyParams.EventTriggers[%v].ENBID=%v", index, restEventTriggerItem.ENBID)
+			// Using some value as not mandatory value for xapp now
+			subReqMsg.EventTriggerDefinition.X2EventTriggerDefinition.InterfaceId.GlobalEnbId.Present = true
+			subReqMsg.EventTriggerDefinition.X2EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Bits = e2ap.E2AP_ENBIDHomeBits28 // Bit length should be set based calculation. Only 28bit length works in ASN1C currently
+			subReqMsg.EventTriggerDefinition.X2EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId.Id = 123456
+			subReqMsg.EventTriggerDefinition.X2EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.Set("12345")
 		}
 		subReqMsg.EventTriggerDefinition.X2EventTriggerDefinition.InterfaceDirection = (uint32)(restEventTriggerItem.InterfaceDirection)
 		subReqMsg.EventTriggerDefinition.X2EventTriggerDefinition.ProcedureCode = (uint32)(restEventTriggerItem.ProcedureCode)
@@ -246,45 +255,47 @@ func (c *Control) FillPolicySubReqMsgs(stype models.SubscriptionType, params int
 		actionToBeSetupItem.ActionDefinitionChoice.ActionDefinitionX2Format2Present = true
 
 		// 0.. OPTIONAL
-		for _, restRANUeGroupParametersItem := range p.PolicyActionDefinitions.ActionDefinitionFormat2.RANUeGroupParameters {
-			ranUEgroupItem := e2ap.RANueGroupItem{}
-			ranUEgroupItem.RanUEgroupID = *restRANUeGroupParametersItem.RANUeGroupID
+		if lengthRANUeGroupParameters > 0 {
+			for _, restRANUeGroupParametersItem := range p.PolicyActionDefinitions.ActionDefinitionFormat2.RANUeGroupParameters {
+				ranUEgroupItem := e2ap.RANueGroupItem{}
+				ranUEgroupItem.RanUEgroupID = *restRANUeGroupParametersItem.RANUeGroupID
 
-			// This is 1..255 in asn.1 spec but only one element in REST definition
-			ranUEGroupDefItem := e2ap.RANueGroupDefItem{}
-			if restRANUeGroupParametersItem.RANUeGroupDefinition.RANParameterID != nil {
-				ranUEGroupDefItem.RanParameterID = (uint32)(*restRANUeGroupParametersItem.RANUeGroupDefinition.RANParameterID)
-			}
-			if restRANUeGroupParametersItem.RANUeGroupDefinition.RANParameterTestCondition == "equal" {
-				ranUEGroupDefItem.RanParameterTest = e2ap.RANParameterTest_equal
-			} else if restRANUeGroupParametersItem.RANUeGroupDefinition.RANParameterTestCondition == "greaterthan" {
-				ranUEGroupDefItem.RanParameterTest = e2ap.RANParameterTest_greaterthan
-			} else if restRANUeGroupParametersItem.RANUeGroupDefinition.RANParameterTestCondition == "lessthan" {
-				ranUEGroupDefItem.RanParameterTest = e2ap.RANParameterTest_lessthan
-			} else {
-				return fmt.Errorf("Incorrect RANParameterTestCondition %s", restRANUeGroupParametersItem.RANUeGroupDefinition.RANParameterTestCondition)
-			}
-			ranUEGroupDefItem.RanParameterValue.ValueIntPresent = true
-			if restRANUeGroupParametersItem.RANUeGroupDefinition.RANParameterValue != nil {
-				ranUEGroupDefItem.RanParameterValue.ValueInt = *restRANUeGroupParametersItem.RANUeGroupDefinition.RANParameterValue
-			}
-			ranUEgroupItem.RanUEgroupDefinition.RanUEGroupDefItems = append(ranUEgroupItem.RanUEgroupDefinition.RanUEGroupDefItems, ranUEGroupDefItem)
+				// This is 1..255 in asn.1 spec but only one element in REST definition
+				ranUEGroupDefItem := e2ap.RANueGroupDefItem{}
+				if restRANUeGroupParametersItem.RANUeGroupDefinition.RANParameterID != nil {
+					ranUEGroupDefItem.RanParameterID = (uint32)(*restRANUeGroupParametersItem.RANUeGroupDefinition.RANParameterID)
+				}
+				if restRANUeGroupParametersItem.RANUeGroupDefinition.RANParameterTestCondition == "equal" {
+					ranUEGroupDefItem.RanParameterTest = e2ap.RANParameterTest_equal
+				} else if restRANUeGroupParametersItem.RANUeGroupDefinition.RANParameterTestCondition == "greaterthan" {
+					ranUEGroupDefItem.RanParameterTest = e2ap.RANParameterTest_greaterthan
+				} else if restRANUeGroupParametersItem.RANUeGroupDefinition.RANParameterTestCondition == "lessthan" {
+					ranUEGroupDefItem.RanParameterTest = e2ap.RANParameterTest_lessthan
+				} else {
+					return fmt.Errorf("Incorrect RANParameterTestCondition %s", restRANUeGroupParametersItem.RANUeGroupDefinition.RANParameterTestCondition)
+				}
+				ranUEGroupDefItem.RanParameterValue.ValueIntPresent = true
+				if restRANUeGroupParametersItem.RANUeGroupDefinition.RANParameterValue != nil {
+					ranUEGroupDefItem.RanParameterValue.ValueInt = *restRANUeGroupParametersItem.RANUeGroupDefinition.RANParameterValue
+				}
+				ranUEgroupItem.RanUEgroupDefinition.RanUEGroupDefItems = append(ranUEgroupItem.RanUEgroupDefinition.RanUEGroupDefItems, ranUEGroupDefItem)
 
-			// This is 1..255 in asn.1 spec but only one element in REST definition
-			ranParameterItem := e2ap.RANParameterItem{}
-			if restRANUeGroupParametersItem.RANImperativePolicy.PolicyParameterID != nil {
-				ranParameterItem.RanParameterID = (uint8)(*restRANUeGroupParametersItem.RANImperativePolicy.PolicyParameterID)
-			}
-			ranParameterItem.RanParameterValue.ValueIntPresent = true
-			if restRANUeGroupParametersItem.RANImperativePolicy.PolicyParameterValue != nil {
-				ranParameterItem.RanParameterValue.ValueInt = *restRANUeGroupParametersItem.RANImperativePolicy.PolicyParameterValue
-			}
-			ranUEgroupItem.RanPolicy.RanParameterItems = append(ranUEgroupItem.RanPolicy.RanParameterItems, ranParameterItem)
-			actionToBeSetupItem.ActionDefinitionChoice.ActionDefinitionX2Format2.RanUEgroupItems =
-				append(actionToBeSetupItem.ActionDefinitionChoice.ActionDefinitionX2Format2.RanUEgroupItems, ranUEgroupItem)
+				// This is 1..255 in asn.1 spec but only one element in REST definition
+				ranParameterItem := e2ap.RANParameterItem{}
+				if restRANUeGroupParametersItem.RANImperativePolicy.PolicyParameterID != nil {
+					ranParameterItem.RanParameterID = (uint8)(*restRANUeGroupParametersItem.RANImperativePolicy.PolicyParameterID)
+				}
+				ranParameterItem.RanParameterValue.ValueIntPresent = true
+				if restRANUeGroupParametersItem.RANImperativePolicy.PolicyParameterValue != nil {
+					ranParameterItem.RanParameterValue.ValueInt = *restRANUeGroupParametersItem.RANImperativePolicy.PolicyParameterValue
+				}
+				ranUEgroupItem.RanPolicy.RanParameterItems = append(ranUEgroupItem.RanPolicy.RanParameterItems, ranParameterItem)
+				actionToBeSetupItem.ActionDefinitionChoice.ActionDefinitionX2Format2.RanUEgroupItems =
+					append(actionToBeSetupItem.ActionDefinitionChoice.ActionDefinitionX2Format2.RanUEgroupItems, ranUEgroupItem)
 
-				// OPTIONAL
-			actionToBeSetupItem.SubsequentActionPresent = false // SubseguentAction not pressent in REST definition
+					// OPTIONAL
+				actionToBeSetupItem.SubsequentActionPresent = false // SubseguentAction not pressent in REST definition
+			}
 		}
 		subReqMsg.ActionSetups = append(subReqMsg.ActionSetups, actionToBeSetupItem)
 		subreqList.E2APSubscriptionRequests = append(subreqList.E2APSubscriptionRequests, subReqMsg)
@@ -302,7 +313,7 @@ func (c *Control) ConstructEndpointAddresses(clientEndpoint string) (string, str
 	// Received clientEndpoint addres could be either: service-ricxapp-xappname-http.ricxapp:8080 or
 	// service-ricxapp-xappname-rmr.ricxapp:4560
 	if i := strings.Index(clientEndpoint, ":"); i == -1 {
-		err := fmt.Errorf("Incorrect ClientEndpoint address format = %s. It should be address:port", clientEndpoint)
+		err := fmt.Errorf("Incorrect ClientEndpoint address format=%s. It should be address:port", clientEndpoint)
 		return "", "", err
 	}
 
@@ -331,7 +342,7 @@ func (c *Control) ConstructEndpointAddresses(clientEndpoint string) (string, str
 		xAppRrmEndPoint = strings.Replace(xAppRrmEndPoint, "8080", "4560", -1)
 	}
 
-	xapp.Logger.Info("xAppHttpEndPoint = %v, xAppRrmEndPoint = %v", xAppHttpEndPoint, xAppRrmEndPoint)
+	xapp.Logger.Info("xAppHttpEndPoint=%v, xAppRrmEndPoint=%v", xAppHttpEndPoint, xAppRrmEndPoint)
 
 	return xAppHttpEndPoint, xAppRrmEndPoint, nil
 }
@@ -358,11 +369,12 @@ func (c *Control) RESTSubscriptionRequestHandler(stype models.SubscriptionType, 
 		xAppHttpEndPoint, xAppRmrEndpoint, err := c.ConstructEndpointAddresses(*p.ClientEndpoint)
 		if err != nil {
 			xapp.Logger.Error("%s", err.Error())
-			return nil, fmt.Errorf("")
+			return nil, err
 		}
 
 		restSubscription, err := c.registry.CreateRESTSubscription(&restSubId, &xAppRmrEndpoint, &p.Meid)
 		if err != nil {
+			xapp.Logger.Error("%s", err.Error())
 			return nil, err
 		}
 
@@ -377,7 +389,7 @@ func (c *Control) RESTSubscriptionRequestHandler(stype models.SubscriptionType, 
 		trans := c.tracker.NewXappTransaction(xapptweaks.NewRmrEndpoint(xAppRmrEndpoint), restSubId, 0, &xapp.RMRMeid{RanName: p.Meid})
 		if trans == nil {
 			c.registry.DeleteRESTSubscription(&restSubId)
-			xapp.Logger.Error("XAPP-SubReq transaction not created. RESTSubId %s, EndPoint %s, Meid %s", restSubId, xAppRmrEndpoint, p.Meid)
+			xapp.Logger.Error("XAPP-SubReq transaction not created. RESTSubId=%s, EndPoint=%s, Meid=%s", restSubId, xAppRmrEndpoint, p.Meid)
 			return nil, fmt.Errorf("")
 		}
 
@@ -414,7 +426,7 @@ func (c *Control) RESTSubscriptionRequestHandler(stype models.SubscriptionType, 
 		trans := c.tracker.NewXappTransaction(xapptweaks.NewRmrEndpoint(xAppRmrEndpoint), restSubId, 0, &xapp.RMRMeid{RanName: *p.Meid})
 		if trans == nil {
 			c.registry.DeleteRESTSubscription(&restSubId)
-			xapp.Logger.Error("XAPP-SubReq transaction not created. RESTSubId %s, EndPoint %s, Meid %s", restSubId, xAppRmrEndpoint, *p.Meid)
+			xapp.Logger.Error("XAPP-SubReq transaction not created. RESTSubId=%s, EndPoint=%s, Meid=%s", restSubId, xAppRmrEndpoint, *p.Meid)
 			return nil, fmt.Errorf("")
 		}
 
@@ -424,7 +436,7 @@ func (c *Control) RESTSubscriptionRequestHandler(stype models.SubscriptionType, 
 		return &subResp, nil
 	}
 	// Respond to xapp
-	return &subResp, fmt.Errorf("Not supported subscription type = %v", stype)
+	return &subResp, fmt.Errorf("Not supported subscription type=%v", stype)
 }
 
 //-------------------------------------------------------------------
@@ -434,24 +446,35 @@ func (c *Control) RESTSubscriptionRequestHandler(stype models.SubscriptionType, 
 func (c *Control) processSubscriptionRequests(trans *TransactionXapp, restSubscription *RESTSubscription, subReqList *e2ap.SubscriptionRequestList,
 	xAppHttpEndPoint *string, xAppRmrpEndPoint *string, meid *string, restSubId *string, actionType uint64) {
 
-	xapp.Logger.Info("Subscription Request count = %v", len(subReqList.E2APSubscriptionRequests))
+	xapp.Logger.Info("Subscription Request count=%v, %s", len(subReqList.E2APSubscriptionRequests), idstring(nil, trans))
 	defer trans.Release()
+
+	var requestorID int64
+	var instanceId int64
 	for index, subReqMsg := range subReqList.E2APSubscriptionRequests {
-		xapp.Logger.Info("Handle SubscriptionRequest index = %v", index)
+		xapp.Logger.Info("Handle SubscriptionRequest index=%v, %s", index, idstring(nil, trans))
 
 		subRespMsg, err := c.handleSubscriptionRequest(trans, &subReqMsg, xAppRmrpEndPoint, meid, restSubId, actionType)
 		if err != nil {
-			c.registry.DeleteRESTSubscription(restSubId)
+			// Send notification to xApp that prosessing of a Subscription Request has failed. Currently it is not possible
+			// to indicate error. Such possibility should be added. As a workaround requestorID and instanceId are set to zero value
+			requestorID = (int64)(0)
+			instanceId = (int64)(0)
+			resp := &models.SubscriptionResponse{
+				SubscriptionID: restSubId,
+				SubscriptionInstances: []*models.SubscriptionInstance{
+					&models.SubscriptionInstance{RequestorID: &requestorID, InstanceID: &instanceId},
+				},
+			}
+			xapp.Logger.Info("Sending unsuccessful REST notification to endpoint=%v, InstanceId=%v, %s", *xAppHttpEndPoint, instanceId, idstring(nil, trans))
+			xapp.Subscription.Notify(resp, *xAppHttpEndPoint)
 		} else {
-			xapp.Logger.Info("SubscriptionRequest index = %v processed successfully. InstanceId = %v", index, subRespMsg.RequestId.InstanceId)
+			xapp.Logger.Info("SubscriptionRequest index=%v processed successfully. endpoint=%v, InstanceId=%v, %s", index, *xAppHttpEndPoint, instanceId, idstring(nil, trans))
 
 			// Store successfully processed InstanceId for deletion
 			restSubscription.AddInstanceId(subRespMsg.RequestId.InstanceId)
 
-			// Send notification to xApp that a Subscription Request has been processed. Currently it is not possible to indicate error.
-			// Such possibility should be added.
-			var requestorID int64
-			var instanceId int64
+			// Send notification to xApp that a Subscription Request has been processed.
 			requestorID = (int64)(subRespMsg.RequestId.Id)
 			instanceId = (int64)(subRespMsg.RequestId.InstanceId)
 			resp := &models.SubscriptionResponse{
@@ -460,9 +483,12 @@ func (c *Control) processSubscriptionRequests(trans *TransactionXapp, restSubscr
 					&models.SubscriptionInstance{RequestorID: &requestorID, InstanceID: &instanceId},
 				},
 			}
+			xapp.Logger.Info("Sending successful REST notification to endpoint=%v, InstanceId=%v, %s", *xAppHttpEndPoint, instanceId, idstring(nil, trans))
 			xapp.Subscription.Notify(resp, *xAppHttpEndPoint)
 		}
 	}
+	// Mark REST subscription request processesd. Only one request from same the endpoint can be handled at a time
+	//restSubscription.SetProcessed()
 }
 
 //-------------------------------------------------------------------
@@ -519,7 +545,13 @@ func (c *Control) RESTSubscriptionDeleteHandler(restSubId string) error {
 	restSubscription, err := c.registry.GetRESTSubscription(restSubId)
 	if err != nil {
 		xapp.Logger.Error("%s", err.Error())
-		return err
+		if restSubscription == nil {
+			// Subscription was not found
+			return nil
+		} else {
+			// Previous request for same restSubId still ongoing
+			return nil
+		}
 	}
 
 	xAppRmrEndPoint := restSubscription.xAppRmrEndPoint
@@ -533,6 +565,7 @@ func (c *Control) RESTSubscriptionDeleteHandler(restSubId string) error {
 			xapp.Logger.Info("Deleteting instanceId = %v", instanceId)
 			restSubscription.DeleteInstanceId(instanceId)
 		}
+		c.registry.DeleteRESTSubscription(&restSubId)
 	}()
 	return nil
 }

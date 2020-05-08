@@ -55,18 +55,22 @@ type E2Stub struct {
 	xid_seq           uint64
 	subscriptionId    string
 	requestCount      int
-	RESTNotifications chan bool
+	RESTNotifications chan int64
+	clientEndpoint    string
+	meid              string
 }
 
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-func CreateNewE2Stub(desc string, srcId teststub.RmrSrcId, rtgSvc teststub.RmrRtgSvc, stat string, mtypeseed int) *E2Stub {
+func CreateNewE2Stub(desc string, srcId teststub.RmrSrcId, rtgSvc teststub.RmrRtgSvc, stat string, mtypeseed int, ranName string, clientEndPoint string) *E2Stub {
 	tc := &E2Stub{}
 	tc.RmrStubControl.Init(desc, srcId, rtgSvc, stat, mtypeseed)
 	tc.xid_seq = 1
 	tc.SetCheckXid(true)
-	tc.RESTNotifications = make(chan bool)
+	tc.RESTNotifications = make(chan int64)
+	tc.clientEndpoint = clientEndPoint // Real endpoint example: service-ricxapp-ueec-http.ricxapp:8080
+	tc.meid = ranName
 	return tc
 }
 
@@ -278,172 +282,6 @@ func (tc *E2Stub) SendSubsReq(t *testing.T, rparams *E2StubSubsReqParams, oldTra
 }
 
 //-----------------------------------------------------------------------------
-// Callback handler for subscription response notifications
-//-----------------------------------------------------------------------------
-func (tc *E2Stub) SubscriptionRespHandler(resp *clientmodel.SubscriptionResponse) {
-	if tc.subscriptionId == *resp.SubscriptionID {
-		tc.Logger.Info("REST notification received SubscriptionID = %s, InstanceID = %v, RequestorID = %v",
-			*resp.SubscriptionID, *resp.SubscriptionInstances[0].InstanceID, *resp.SubscriptionInstances[0].RequestorID)
-		time.Sleep(time.Microsecond * 2000) // This ensures that Waiting is started before notifications arrive
-		tc.RESTNotifications <- true
-	}
-}
-
-//-----------------------------------------------------------------------------
-//
-//-----------------------------------------------------------------------------
-func (tc *E2Stub) WaitRESTNotifications(t *testing.T) error {
-	tc.Logger.Info("Started waiting REST notifications")
-	select {
-	case <-tc.RESTNotifications:
-		tc.requestCount--
-	case <-time.After(15 * time.Second):
-		err := fmt.Errorf("Timeout 15s expired while waiting REST notifications")
-		tc.TestError(t, "%s", err.Error())
-		return err
-	}
-	return nil
-}
-
-//-----------------------------------------------------------------------------
-//
-//-----------------------------------------------------------------------------
-func (tc *E2Stub) SendRESTReportSubsReq(t *testing.T) (string, int, error) {
-	tc.Logger.Info("Posting REST Report subscriptions to Submgr")
-
-	xapp.Subscription.SetResponseCB(tc.SubscriptionRespHandler)
-
-	var subReqCount int = 2
-	var actionDefinitionPresent = true
-	var actionParamCount int = 1
-	var clientEndpoint = "localhost:13560" // Real endpoint example: service-ricxapp-ueec-http.ricxapp:8080
-	var meid = "RAN_NAME_1"
-	var rANFunctionID int64 = 33
-
-	reportParams := clientmodel.ReportParams{}
-	reportParams.ClientEndpoint = &clientEndpoint
-	reportParams.Meid = meid
-	reportParams.RANFunctionID = &rANFunctionID
-
-	for tc.requestCount = 0; tc.requestCount < subReqCount; tc.requestCount++ {
-		var procedureCode int64
-		procedureCode = int64(tc.requestCount)
-		eventTrigger := clientmodel.EventTrigger{}
-		eventTrigger.ENBID = "202251"
-		eventTrigger.PlmnID = "31050"
-		eventTrigger.InterfaceDirection = (int64)(e2ap.E2AP_InterfaceDirectionIncoming)
-		eventTrigger.ProcedureCode = procedureCode
-		eventTrigger.TypeOfMessage = (int64)(e2ap.E2AP_InitiatingMessage)
-		reportParams.EventTriggers = append(reportParams.EventTriggers, &eventTrigger)
-	}
-
-	reportActionDefinitions := clientmodel.ReportActionDefinition{}
-	reportParams.ReportActionDefinitions = &reportActionDefinitions
-	if actionDefinitionPresent == true {
-		format1ActionDefinition := clientmodel.Format1ActionDefinition{}
-		reportParams.ReportActionDefinitions.ActionDefinitionFormat1 = &format1ActionDefinition
-		var styleID int64 = 1
-		reportParams.ReportActionDefinitions.ActionDefinitionFormat1.StyleID = &styleID
-
-		for i := 0; i < actionParamCount; i++ {
-			var actionParameterID int64
-			actionParameterID = (int64)(actionParamCount)
-			var actionParameterValue bool = true
-			actionParameterItem := clientmodel.ActionParameters{}
-			actionParameterItem.ActionParameterID = &actionParameterID
-			actionParameterItem.ActionParameterValue = &actionParameterValue
-			reportParams.ReportActionDefinitions.ActionDefinitionFormat1.ActionParameters =
-				append(reportParams.ReportActionDefinitions.ActionDefinitionFormat1.ActionParameters, &actionParameterItem)
-		}
-	}
-
-	resp, err := xapp.Subscription.SubscribeReport(&reportParams)
-	if err != nil {
-		err := fmt.Errorf("REST report subscriptions failed %s", err.Error())
-		return "", 0, err
-	}
-	tc.subscriptionId = *resp.SubscriptionID
-	tc.Logger.Info("REST report subscriptions pushed successfully. SubscriptionID = %s, RequestCount = v", *resp.SubscriptionID, tc.requestCount)
-	return *resp.SubscriptionID, tc.requestCount, nil
-}
-
-//-----------------------------------------------------------------------------
-//
-//-----------------------------------------------------------------------------
-func (tc *E2Stub) SendRESTPolicySubsReq(t *testing.T) (string, int, error) {
-	tc.Logger.Info("Posting REST policy subscriptions to Submgr")
-
-	xapp.Subscription.SetResponseCB(tc.SubscriptionRespHandler)
-
-	var subReqCount int = 2
-	var actionDefinitionPresent = true
-	var policyParamCount int = 1
-	var clientEndpoint = "localhost:13560" // Real endpoint example: service-ricxapp-ueec-http.ricxapp:8080
-	var meid = "RAN_NAME_1"
-	var rANFunctionID int64 = 33
-
-	policyParams := clientmodel.PolicyParams{}
-	policyParams.ClientEndpoint = &clientEndpoint
-	policyParams.Meid = &meid
-	policyParams.RANFunctionID = &rANFunctionID
-
-	for tc.requestCount = 0; tc.requestCount < subReqCount; tc.requestCount++ {
-		var procedureCode int64
-		procedureCode = int64(tc.requestCount)
-		eventTrigger := clientmodel.EventTrigger{}
-		eventTrigger.ENBID = "202251"
-		eventTrigger.PlmnID = "31050"
-		eventTrigger.InterfaceDirection = (int64)(e2ap.E2AP_InterfaceDirectionIncoming)
-		eventTrigger.ProcedureCode = procedureCode
-		eventTrigger.TypeOfMessage = (int64)(e2ap.E2AP_InitiatingMessage)
-		policyParams.EventTriggers = append(policyParams.EventTriggers, &eventTrigger)
-	}
-
-	policyActionDefinitions := clientmodel.PolicyActionDefinition{}
-	policyParams.PolicyActionDefinitions = &policyActionDefinitions
-	if actionDefinitionPresent == true {
-		format2ActionDefinition := clientmodel.Format2ActionDefinition{}
-		policyParams.PolicyActionDefinitions.ActionDefinitionFormat2 = &format2ActionDefinition
-
-		for i := 0; i < policyParamCount; i++ {
-			var policyParameterID int64
-			policyParameterID = (int64)(policyParamCount)
-			var policyParameterValue int64 = 2
-			rANImperativePolicy := clientmodel.ImperativePolicyDefinition{}
-			rANImperativePolicy.PolicyParameterID = &policyParameterID
-			rANImperativePolicy.PolicyParameterValue = &policyParameterValue
-
-			var rANParameterID int64
-			rANParameterID = (int64)(policyParamCount)
-			var rANParameterTestCondition = "equal" // equal or greaterthan or lessthan or contains or present
-			var rANParameterValue int64 = 3
-			rANUeGroupDefinition := clientmodel.RANUeGroupParams{}
-			rANUeGroupDefinition.RANParameterID = &rANParameterID
-			rANUeGroupDefinition.RANParameterTestCondition = rANParameterTestCondition
-			rANUeGroupDefinition.RANParameterValue = &rANParameterValue
-
-			var rANUeGroupID int64
-			rANUeGroupID = (int64)(policyParamCount)
-			rANUeGroupParametersItem := clientmodel.RANUeGroupList{}
-			rANUeGroupParametersItem.RANImperativePolicy = &rANImperativePolicy
-			rANUeGroupParametersItem.RANUeGroupDefinition = &rANUeGroupDefinition
-			rANUeGroupParametersItem.RANUeGroupID = &rANUeGroupID
-			policyParams.PolicyActionDefinitions.ActionDefinitionFormat2.RANUeGroupParameters =
-				append(policyParams.PolicyActionDefinitions.ActionDefinitionFormat2.RANUeGroupParameters, &rANUeGroupParametersItem)
-		}
-	}
-
-	resp, err := xapp.Subscription.SubscribePolicy(&policyParams)
-	if err != nil {
-		err := fmt.Errorf("REST policy subscriptions failed %s", err.Error())
-		return "", 0, err
-	}
-	tc.subscriptionId = *resp.SubscriptionID
-	tc.Logger.Info("REST policy subscriptions pushed successfully. SubscriptionID = %s, RequestCount = v", *resp.SubscriptionID, tc.requestCount)
-	return *resp.SubscriptionID, tc.requestCount, nil
-}
-
-//-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
 func (tc *E2Stub) RecvSubsReq(t *testing.T) (*e2ap.E2APSubscriptionRequest, *xapptweaks.RMRParams) {
@@ -484,8 +322,12 @@ func (tc *E2Stub) SendSubsResp(t *testing.T, req *e2ap.E2APSubscriptionRequest, 
 	//---------------------------------
 	// e2term activity: Send Subs Resp
 	//---------------------------------
-	resp := &e2ap.E2APSubscriptionResponse{}
+	if req == nil {
+		tc.TestError(t, "SendSubsResp: Req == nil")
+		return
+	}
 
+	resp := &e2ap.E2APSubscriptionResponse{}
 	resp.RequestId.Id = req.RequestId.Id
 	resp.RequestId.InstanceId = req.RequestId.InstanceId
 	resp.FunctionId = req.FunctionId
@@ -687,26 +529,6 @@ func (tc *E2Stub) SendSubsDelReq(t *testing.T, oldTrans *RmrTransactionId, e2Sub
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-func (tc *E2Stub) SendRESTSubsDelReq(t *testing.T, subscriptionID *string) error {
-
-	if *subscriptionID == "" {
-		err := fmt.Errorf("REST error in deleting subscriptions. Empty SubscriptionID = %s", *subscriptionID)
-		return err
-	}
-	tc.Logger.Info("REST deleting E2 subscriptions. SubscriptionID = %s", *subscriptionID)
-
-	err := xapp.Subscription.UnSubscribe(*subscriptionID)
-	if err != nil {
-		err := fmt.Errorf("REST Delete subscription failed %s", err.Error())
-		return err
-	}
-	tc.Logger.Info("REST deleted subscriptions pushed to submgr successfully. SubscriptionID = %s", *subscriptionID)
-	return nil
-}
-
-//-----------------------------------------------------------------------------
-//
-//-----------------------------------------------------------------------------
 func (tc *E2Stub) RecvSubsDelReq(t *testing.T) (*e2ap.E2APSubscriptionDeleteRequest, *xapptweaks.RMRParams) {
 	tc.Logger.Info("RecvSubsDelReq")
 	e2SubsDelReq := e2asnpacker.NewPackerSubscriptionDeleteRequest()
@@ -842,4 +664,246 @@ func (tc *E2Stub) SendSubsDelFail(t *testing.T, req *e2ap.E2APSubscriptionDelete
 	if snderr != nil {
 		tc.TestError(t, "RMR SEND FAILED: %s", snderr.Error())
 	}
+}
+
+/*****************************************************************************/
+// REST interface specific functions are below
+
+//-----------------------------------------------------------------------------
+// Callback handler for subscription response notifications
+//-----------------------------------------------------------------------------
+func (tc *E2Stub) SubscriptionRespHandler(resp *clientmodel.SubscriptionResponse) {
+	if tc.subscriptionId == *resp.SubscriptionID {
+		tc.Logger.Info("REST notification received SubscriptionID=%s, InstanceID=%v, RequestorID=%v",
+			*resp.SubscriptionID, *resp.SubscriptionInstances[0].InstanceID, *resp.SubscriptionInstances[0].RequestorID)
+		tc.RESTNotifications <- *resp.SubscriptionInstances[0].InstanceID
+	}
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+func (tc *E2Stub) WaitRESTNotification(t *testing.T) uint32 {
+	tc.Logger.Info("Started waiting REST notification")
+	select {
+	case instanceId := <-tc.RESTNotifications:
+		tc.requestCount--
+		if tc.requestCount == 0 {
+			tc.Logger.Info("All expected REST notifications received for endpoint=%s", tc.clientEndpoint)
+		}
+		time.Sleep(time.Millisecond * 200)
+		return (uint32)(instanceId) // This delay solves random problems in test cases but not all of them
+	case <-time.After(15 * time.Second):
+		err := fmt.Errorf("Timeout 15s expired while waiting REST notification")
+		tc.TestError(t, "%s", err.Error())
+		return 0
+	}
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+func (tc *E2Stub) SendRESTReportSubsReq(t *testing.T, params *RESTSubsReqReportParams) string {
+	tc.Logger.Info("Posting REST Report subscriptions to Submgr")
+
+	xapp.Subscription.SetResponseCB(tc.SubscriptionRespHandler)
+
+	if params == nil {
+		tc.Logger.Info("SendRESTReportSubsReq: params == nil")
+		return ""
+	}
+
+	resp, err := xapp.Subscription.SubscribeReport(&params.ReportParams)
+	if err != nil {
+		// Swagger generated code makes checks for the values that are inserted the subscription function
+		// If error cause is unknown and POST is not done, the problem is in the inserted values
+		tc.Logger.Error("REST report subscriptions failed %s", err.Error())
+	}
+	tc.subscriptionId = *resp.SubscriptionID
+	tc.Logger.Info("REST report subscriptions pushed successfully. SubscriptionID = %s, RequestCount = %v", *resp.SubscriptionID, tc.requestCount)
+	return *resp.SubscriptionID
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+func (tc *E2Stub) GetRESTSubsReqReportParams1(subReqCount int, actionDefinitionPresent bool, actionParamCount int) *RESTSubsReqReportParams {
+
+	reportParams := RESTSubsReqReportParams{}
+	reportParams.GetRESTSubsReqReportParams1(subReqCount, actionDefinitionPresent, actionParamCount, &tc.clientEndpoint, &tc.meid)
+	tc.requestCount = subReqCount
+	return &reportParams
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type RESTSubsReqReportParams struct {
+	ReportParams clientmodel.ReportParams
+}
+
+func (p *RESTSubsReqReportParams) GetRESTSubsReqReportParams1(subReqCount int, actionDefinitionPresent bool, actionParamCount int, clientEndpoint *string, meid *string) {
+
+	p.ReportParams.ClientEndpoint = clientEndpoint
+	p.ReportParams.Meid = *meid
+	var rANFunctionID int64 = 33
+	p.ReportParams.RANFunctionID = &rANFunctionID
+
+	for requestCount := 0; requestCount < subReqCount; requestCount++ {
+		var procedureCode int64
+		procedureCode = int64(requestCount)
+		eventTrigger := clientmodel.EventTrigger{}
+		eventTrigger.ENBID = "202251"
+		eventTrigger.PlmnID = "31050"
+		eventTrigger.InterfaceDirection = (int64)(e2ap.E2AP_InterfaceDirectionIncoming)
+		eventTrigger.ProcedureCode = procedureCode
+		eventTrigger.TypeOfMessage = (int64)(e2ap.E2AP_InitiatingMessage)
+		p.ReportParams.EventTriggers = append(p.ReportParams.EventTriggers, &eventTrigger)
+	}
+
+	reportActionDefinitions := clientmodel.ReportActionDefinition{}
+	p.ReportParams.ReportActionDefinitions = &reportActionDefinitions
+	if actionDefinitionPresent == true {
+		format1ActionDefinition := clientmodel.Format1ActionDefinition{}
+		p.ReportParams.ReportActionDefinitions.ActionDefinitionFormat1 = &format1ActionDefinition
+		var styleID int64 = 1
+		p.ReportParams.ReportActionDefinitions.ActionDefinitionFormat1.StyleID = &styleID
+
+		for i := 0; i < actionParamCount; i++ {
+			var actionParameterID int64
+			actionParameterID = (int64)(actionParamCount)
+			var actionParameterValue bool = true
+			actionParameterItem := clientmodel.ActionParameters{}
+			actionParameterItem.ActionParameterID = &actionParameterID
+			actionParameterItem.ActionParameterValue = &actionParameterValue
+			p.ReportParams.ReportActionDefinitions.ActionDefinitionFormat1.ActionParameters =
+				append(p.ReportParams.ReportActionDefinitions.ActionDefinitionFormat1.ActionParameters, &actionParameterItem)
+		}
+	}
+}
+
+func (p *RESTSubsReqReportParams) SetEventTriggerDefinitionProcedureCode(procedureCode int64) {
+	for i := 0; i < len(p.ReportParams.EventTriggers); i++ {
+		p.ReportParams.EventTriggers[i].ProcedureCode = procedureCode
+	}
+}
+
+func (p *RESTSubsReqReportParams) SetRANName(ranName string) {
+	p.ReportParams.Meid = ranName
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+func (tc *E2Stub) SendRESTPolicySubsReq(t *testing.T, params *RESTSubsReqPolicyParams) string {
+	tc.Logger.Info("Posting REST policy subscriptions to Submgr")
+
+	xapp.Subscription.SetResponseCB(tc.SubscriptionRespHandler)
+
+	resp, err := xapp.Subscription.SubscribePolicy(&params.PolicyParams)
+	if err != nil {
+		// Swagger generated code makes checks for the values that are inserted the subscription function
+		// If error cause is unknown and POST is not done, the problem is in the inserted values
+		tc.Logger.Error("REST policy subscriptions failed %s", err.Error())
+	}
+	tc.subscriptionId = *resp.SubscriptionID
+	tc.Logger.Info("REST policy subscriptions pushed successfully. SubscriptionID = %s, RequestCount = v", *resp.SubscriptionID, tc.requestCount)
+	return *resp.SubscriptionID
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+func (tc *E2Stub) GetRESTSubsReqPolicyParams1(subReqCount int, actionDefinitionPresent bool, policyParamCount int) *RESTSubsReqPolicyParams {
+
+	policyParams := RESTSubsReqPolicyParams{}
+	policyParams.GetRESTSubsReqPolicyParams1(subReqCount, actionDefinitionPresent, policyParamCount, &tc.clientEndpoint, &tc.meid)
+	tc.requestCount = subReqCount
+	return &policyParams
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type RESTSubsReqPolicyParams struct {
+	PolicyParams clientmodel.PolicyParams
+}
+
+func (p *RESTSubsReqPolicyParams) GetRESTSubsReqPolicyParams1(subReqCount int, actionDefinitionPresent bool, policyParamCount int, clientEndpoint *string, meid *string) {
+
+	p.PolicyParams.ClientEndpoint = clientEndpoint
+	p.PolicyParams.Meid = meid
+	var rANFunctionID int64 = 33
+	p.PolicyParams.RANFunctionID = &rANFunctionID
+
+	for requestCount := 0; requestCount < subReqCount; requestCount++ {
+		var procedureCode int64
+		procedureCode = int64(requestCount)
+		eventTrigger := clientmodel.EventTrigger{}
+		eventTrigger.ENBID = "202251"
+		eventTrigger.PlmnID = "31050"
+		eventTrigger.InterfaceDirection = (int64)(e2ap.E2AP_InterfaceDirectionIncoming)
+		eventTrigger.ProcedureCode = procedureCode
+		eventTrigger.TypeOfMessage = (int64)(e2ap.E2AP_InitiatingMessage)
+		p.PolicyParams.EventTriggers = append(p.PolicyParams.EventTriggers, &eventTrigger)
+	}
+
+	policyActionDefinitions := clientmodel.PolicyActionDefinition{}
+	p.PolicyParams.PolicyActionDefinitions = &policyActionDefinitions
+	if actionDefinitionPresent == true {
+		format2ActionDefinition := clientmodel.Format2ActionDefinition{}
+		p.PolicyParams.PolicyActionDefinitions.ActionDefinitionFormat2 = &format2ActionDefinition
+
+		for i := 0; i < policyParamCount; i++ {
+			var policyParameterID int64
+			policyParameterID = (int64)(policyParamCount)
+			var policyParameterValue int64 = 2
+			rANImperativePolicy := clientmodel.ImperativePolicyDefinition{}
+			rANImperativePolicy.PolicyParameterID = &policyParameterID
+			rANImperativePolicy.PolicyParameterValue = &policyParameterValue
+
+			var rANParameterID int64
+			rANParameterID = (int64)(policyParamCount)
+			var rANParameterTestCondition = "equal" // equal or greaterthan or lessthan or contains or present
+			var rANParameterValue int64 = 3
+			rANUeGroupDefinition := clientmodel.RANUeGroupParams{}
+			rANUeGroupDefinition.RANParameterID = &rANParameterID
+			rANUeGroupDefinition.RANParameterTestCondition = rANParameterTestCondition
+			rANUeGroupDefinition.RANParameterValue = &rANParameterValue
+
+			var rANUeGroupID int64
+			rANUeGroupID = (int64)(policyParamCount)
+			rANUeGroupParametersItem := clientmodel.RANUeGroupList{}
+			rANUeGroupParametersItem.RANImperativePolicy = &rANImperativePolicy
+			rANUeGroupParametersItem.RANUeGroupDefinition = &rANUeGroupDefinition
+			rANUeGroupParametersItem.RANUeGroupID = &rANUeGroupID
+			p.PolicyParams.PolicyActionDefinitions.ActionDefinitionFormat2.RANUeGroupParameters =
+				append(p.PolicyParams.PolicyActionDefinitions.ActionDefinitionFormat2.RANUeGroupParameters, &rANUeGroupParametersItem)
+		}
+	}
+
+}
+
+func (p *RESTSubsReqPolicyParams) SetRANParameterTestCondition(testCondition string) {
+
+	for i := 0; i < len(p.PolicyParams.PolicyActionDefinitions.ActionDefinitionFormat2.RANUeGroupParameters); i++ {
+		p.PolicyParams.PolicyActionDefinitions.ActionDefinitionFormat2.RANUeGroupParameters[i].RANUeGroupDefinition.RANParameterTestCondition = testCondition
+	}
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+func (tc *E2Stub) SendRESTSubsDelReq(t *testing.T, subscriptionID *string) {
+
+	if *subscriptionID == "" {
+		tc.Logger.Error("REST error in deleting subscriptions. Empty SubscriptionID = %s", *subscriptionID)
+	}
+	tc.Logger.Info("REST deleting E2 subscriptions. SubscriptionID = %s", *subscriptionID)
+
+	err := xapp.Subscription.UnSubscribe(*subscriptionID)
+	if err != nil {
+		tc.Logger.Error("REST Delete subscription failed %s", err.Error())
+	}
+	tc.Logger.Info("REST delete subscription pushed to submgr successfully. SubscriptionID = %s", *subscriptionID)
 }
