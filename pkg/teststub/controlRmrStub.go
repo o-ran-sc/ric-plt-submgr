@@ -88,6 +88,10 @@ func (tc *RmrStubControl) Consume(params *xapp.RMRParams) (err error) {
 	msg := xapptweaks.NewParams(params)
 	tc.CntRecvMsg++
 
+	cPay := append(msg.Payload[:0:0], msg.Payload...)
+	msg.Payload = cPay
+	msg.PayloadLen = len(cPay)
+
 	if msg.Mtype == tc.InitMsg {
 		tc.Logger.Info("Testing message ignore %s", msg.String())
 		tc.SetActive()

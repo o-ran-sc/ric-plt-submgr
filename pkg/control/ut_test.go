@@ -41,6 +41,11 @@ func CaseBegin(desc string) *teststub.TestWrapper {
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
+const teststubPortSeed int = 55555
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
 
 var xappConn1 *teststube2ap.E2Stub
 var xappConn2 *teststube2ap.E2Stub
@@ -51,7 +56,7 @@ var mainCtrl *testingSubmgrControl
 
 var dummystub *teststubdummy.RmrDummyStub
 
-func ut_test_init() {
+func ut_test_init() func() {
 	tent := CaseBegin("ut_test_init")
 
 	//---------------------------------
@@ -108,7 +113,7 @@ func ut_test_init() {
 	//       If XID is not matching xapp stub will just
 	//       drop message. (Messages 12011, 12012, 12021, 12022)
 	//
-	// NOTE2: 55555 message type is for stub rmr connectivity probing
+	// NOTE2: teststubPortSeed message type is for stub rmr connectivity probing
 	//
 	// NOTE3: Ports per entity:
 	//
@@ -140,13 +145,12 @@ func ut_test_init() {
 	rt.AddRoute(12022, e2term2src.String(), -1, mainsrc.String())
 	rt.AddRoute(12021, mainsrc.String(), -1, xapp2src.String()+";"+xapp1src.String())
 	rt.AddRoute(12022, mainsrc.String(), -1, xapp2src.String()+";"+xapp1src.String())
-	rt.AddRoute(55555, "", -1, xapp2src.String()+";"+xapp1src.String()+";"+e2term1src.String()+";"+e2term2src.String()+";"+dummysrc.String())
+	rt.AddRoute(teststubPortSeed, "", -1, xapp2src.String()+";"+xapp1src.String()+";"+e2term1src.String()+";"+e2term2src.String()+";"+dummysrc.String())
 
 	rt.AddMeid(e2term1src.String(), []string{"RAN_NAME_1", "RAN_NAME_2"})
 	rt.AddMeid(e2term2src.String(), []string{"RAN_NAME_11", "RAN_NAME_12"})
 
 	rt.Enable()
-	defer rt.Disable()
 	tent.Logger.Info("rttable[%s]", rt.Table())
 
 	//---------------------------------
@@ -168,8 +172,8 @@ func ut_test_init() {
 		} else {
 			tent.Logger.Info("Alarm has alternated RMR_SEED_RT=%s, so waiting 0.5 secs before restoring it", os.Getenv("RMR_SEED_RT"))
 			time.Sleep(500 * time.Millisecond)
-			rt.Disable()
 			rt.Enable()
+			tent.Logger.Info("rttable[%s]", rt.Table())
 			break
 		}
 	}
@@ -183,36 +187,36 @@ func ut_test_init() {
 	//
 	//---------------------------------
 	tent.Logger.Info("### xapp1 stub run ###")
-	xappConn1 = teststube2ap.CreateNewE2Stub("xappstub1", xapp1src, teststub.RmrRtgSvc{}, "RMRXAPP1STUB", 55555)
+	xappConn1 = teststube2ap.CreateNewE2Stub("xappstub1", xapp1src, teststub.RmrRtgSvc{}, "RMRXAPP1STUB", teststubPortSeed)
 
 	//---------------------------------
 	//
 	//---------------------------------
 	tent.Logger.Info("### xapp2 stub run ###")
-	xappConn2 = teststube2ap.CreateNewE2Stub("xappstub2", xapp2src, teststub.RmrRtgSvc{}, "RMRXAPP2STUB", 55555)
+	xappConn2 = teststube2ap.CreateNewE2Stub("xappstub2", xapp2src, teststub.RmrRtgSvc{}, "RMRXAPP2STUB", teststubPortSeed)
 
 	//---------------------------------
 	//
 	//---------------------------------
 	tent.Logger.Info("### e2term1 stub run ###")
-	e2termConn1 = teststube2ap.CreateNewE2termStub("e2termstub1", e2term1src, teststub.RmrRtgSvc{}, "RMRE2TERMSTUB1", 55555)
+	e2termConn1 = teststube2ap.CreateNewE2termStub("e2termstub1", e2term1src, teststub.RmrRtgSvc{}, "RMRE2TERMSTUB1", teststubPortSeed)
 
 	//---------------------------------
 	//
 	//---------------------------------
 	tent.Logger.Info("### e2term2 stub run ###")
-	e2termConn2 = teststube2ap.CreateNewE2termStub("e2termstub2", e2term2src, teststub.RmrRtgSvc{}, "RMRE2TERMSTUB2", 55555)
+	e2termConn2 = teststube2ap.CreateNewE2termStub("e2termstub2", e2term2src, teststub.RmrRtgSvc{}, "RMRE2TERMSTUB2", teststubPortSeed)
 
 	//---------------------------------
 	// Just to test dummy stub
 	//---------------------------------
 	tent.Logger.Info("### dummy stub run ###")
-	dummystub = teststubdummy.CreateNewRmrDummyStub("dummystub", dummysrc, teststub.RmrRtgSvc{}, "DUMMYSTUB", 55555)
+	dummystub = teststubdummy.CreateNewRmrDummyStub("dummystub", dummysrc, teststub.RmrRtgSvc{}, "DUMMYSTUB", teststubPortSeed)
 
 	//---------------------------------
 	// Testing message sending
 	//---------------------------------
-	if teststub.RmrStubControlWaitAlive(10, 55555, mainCtrl.c) == false {
+	if teststub.RmrStubControlWaitAlive(10, teststubPortSeed, mainCtrl.c) == false {
 		os.Exit(1)
 	}
 
@@ -221,6 +225,7 @@ func ut_test_init() {
 		os.Exit(1)
 	}
 
+	return func() { rt.Disable() }
 }
 
 //-----------------------------------------------------------------------------
@@ -228,7 +233,8 @@ func ut_test_init() {
 //-----------------------------------------------------------------------------
 func TestMain(m *testing.M) {
 	CaseBegin("TestMain start")
-	ut_test_init()
+	cleanfn := ut_test_init()
 	code := m.Run()
+	cleanfn()
 	os.Exit(code)
 }

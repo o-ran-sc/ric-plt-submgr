@@ -53,9 +53,9 @@ func (rrt *RmrRouteTable) AddRoute(mtype int, src string, subid int, trg string)
 func (rrt *RmrRouteTable) AddMeid(trg string, meids []string) {
 
 	line := "mme_ar"
-	line += "|"
+	line += " | "
 	line += trg
-	line += "|"
+	line += " | "
 	for _, str := range meids {
 		line += " " + str
 	}
@@ -65,7 +65,7 @@ func (rrt *RmrRouteTable) AddMeid(trg string, meids []string) {
 func (rrt *RmrRouteTable) DelMeid(meids []string) {
 
 	line := "mme_del"
-	line += "|"
+	line += " | "
 	for _, str := range meids {
 		line += " " + str
 	}
@@ -82,6 +82,7 @@ func (rrt *RmrRouteTable) Table() string {
 		allrt += val + "\n"
 	}
 	allrt += "newrt|end\n"
+	allrt += "\n"
 	allrt += "meid_map | start\n"
 	for _, val := range rrt.meids {
 		allrt += val + "\n"
@@ -91,11 +92,11 @@ func (rrt *RmrRouteTable) Table() string {
 }
 
 func (rrt *RmrRouteTable) Enable() {
-	if len(rrt.tmpfile) > 0 {
-		os.Remove(rrt.tmpfile)
+	if len(rrt.tmpfile) == 0 {
+		rrt.tmpfile, _ = CreateTmpFile(rrt.Table())
 	}
-	rrt.tmpfile, _ = CreateTmpFile(rrt.Table())
 	os.Setenv("RMR_SEED_RT", rrt.tmpfile)
+	os.Setenv("RMR_RTG_SVC", "-1")
 	xapp.Logger.Info("Using rt file %s", os.Getenv("RMR_SEED_RT"))
 }
 
@@ -103,6 +104,7 @@ func (rrt *RmrRouteTable) Disable() {
 	if len(rrt.tmpfile) > 0 {
 		os.Remove(rrt.tmpfile)
 		os.Unsetenv("RMR_SEED_RT")
+		os.Unsetenv("RMR_RTG_SVC")
 		rrt.tmpfile = ""
 		xapp.Logger.Info("Not using rt file ")
 	}

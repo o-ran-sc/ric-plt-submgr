@@ -191,6 +191,16 @@ func (c *Control) Consume(params *xapp.RMRParams) (err error) {
 
 	defer c.Rmr.Free(msg.Mbuf)
 
+	// xapp-frame might use direct access to c buffer and
+	// when msg.Mbuf is freed, someone might take it into use
+	// and payload data might be invalid inside message handle function
+	//
+	// subscriptions won't load system a lot so there is no
+	// real performance hit by cloning buffer into new go byte slice
+	cPay := append(msg.Payload[:0:0], msg.Payload...)
+	msg.Payload = cPay
+	msg.PayloadLen = len(cPay)
+
 	switch msg.Mtype {
 	case xapp.RIC_SUB_REQ:
 		go c.handleXAPPSubscriptionRequest(msg)
