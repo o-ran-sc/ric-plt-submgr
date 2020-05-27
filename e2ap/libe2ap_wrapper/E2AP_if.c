@@ -2030,58 +2030,60 @@ uint64_t getRICActionDefinitionDataNRTFormat(mem_track_hdr_t* pDynMemHead, RICAc
             pRICActionDefinitionChoice->actionDefinitionX2Format1Present = false;
             pRICActionDefinitionChoice->actionDefinitionX2Format2Present = false;
             pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterCount = 0;
-            uint64_t index = 0;
-            while (index < pE2_E2SM_gNB_NRT_ActionDefinition->choice.actionDefinition_Format1.ranParameter_List->list.count) {
-                E2_RANparameter_Item_t* pE2_RANparameter_Item = pE2_E2SM_gNB_NRT_ActionDefinition->choice.actionDefinition_Format1.ranParameter_List->list.array[index];
-                if (pE2_RANparameter_Item) {
-                    pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterID = pE2_RANparameter_Item->ranParameter_ID;
+            if (pE2_E2SM_gNB_NRT_ActionDefinition->choice.actionDefinition_Format1.ranParameter_List) {            
+                uint64_t index = 0;
+                while (index < pE2_E2SM_gNB_NRT_ActionDefinition->choice.actionDefinition_Format1.ranParameter_List->list.count) {
+                    E2_RANparameter_Item_t* pE2_RANparameter_Item = pE2_E2SM_gNB_NRT_ActionDefinition->choice.actionDefinition_Format1.ranParameter_List->list.array[index];
+                    if (pE2_RANparameter_Item) {
+                        pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterID = pE2_RANparameter_Item->ranParameter_ID;
 
-                    if (pE2_RANparameter_Item->ranParameter_Value.present == E2_RANparameter_Value_PR_valueInt) {
-                        pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valueIntPresent = true;
-                        pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valueInt =
-                          pE2_RANparameter_Item->ranParameter_Value.choice.valueInt;
-                    }
-                    else if (pE2_RANparameter_Item->ranParameter_Value.present == E2_RANparameter_Value_PR_valueEnum) {
-                        pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valueEnumPresent = true;
-                        pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valueEnum =
-                          pE2_RANparameter_Item->ranParameter_Value.choice.valueEnum;
-                    }
-                    else if (pE2_RANparameter_Item->ranParameter_Value.present == E2_RANparameter_Value_PR_valueBool) {
-                        pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valueBoolPresent = true;
-                        pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valueBool =
-                          pE2_RANparameter_Item->ranParameter_Value.choice.valueBool;
-                    }
-                    else if (pE2_RANparameter_Item->ranParameter_Value.present == E2_RANparameter_Value_PR_valueBitS) {
-                        pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valueBitSPresent = true;
-                        addBitString(pDynMemHead, &pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valueBitS,
-                                     pE2_RANparameter_Item->ranParameter_Value.choice.valueBitS.size,
-                                     pE2_RANparameter_Item->ranParameter_Value.choice.valueBitS.buf,
-                                     pE2_RANparameter_Item->ranParameter_Value.choice.valueBitS.bits_unused);
-                    }
-                    else if (pE2_RANparameter_Item->ranParameter_Value.present == E2_RANparameter_Value_PR_valueOctS) {
-                        pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valueOctSPresent = true;
-                        addOctetString(pDynMemHead, &pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valueOctS,
-                                     pE2_RANparameter_Item->ranParameter_Value.choice.valueOctS.size,
-                                     pE2_RANparameter_Item->ranParameter_Value.choice.valueOctS.buf);
-                    }
-                    else if (pE2_RANparameter_Item->ranParameter_Value.present == E2_RANparameter_Value_PR_valuePrtS) {
-                        pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valuePrtSPresent = true;
-                        addOctetString(pDynMemHead, &pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valuePrtS,
-                                     pE2_RANparameter_Item->ranParameter_Value.choice.valuePrtS.size,
-                                     pE2_RANparameter_Item->ranParameter_Value.choice.valuePrtS.buf);
+                        if (pE2_RANparameter_Item->ranParameter_Value.present == E2_RANparameter_Value_PR_valueInt) {
+                            pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valueIntPresent = true;
+                            pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valueInt =
+                            pE2_RANparameter_Item->ranParameter_Value.choice.valueInt;
+                        }
+                        else if (pE2_RANparameter_Item->ranParameter_Value.present == E2_RANparameter_Value_PR_valueEnum) {
+                            pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valueEnumPresent = true;
+                            pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valueEnum =
+                            pE2_RANparameter_Item->ranParameter_Value.choice.valueEnum;
+                        }
+                        else if (pE2_RANparameter_Item->ranParameter_Value.present == E2_RANparameter_Value_PR_valueBool) {
+                            pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valueBoolPresent = true;
+                            pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valueBool =
+                            pE2_RANparameter_Item->ranParameter_Value.choice.valueBool;
+                        }
+                        else if (pE2_RANparameter_Item->ranParameter_Value.present == E2_RANparameter_Value_PR_valueBitS) {
+                            pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valueBitSPresent = true;
+                            addBitString(pDynMemHead, &pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valueBitS,
+                                        pE2_RANparameter_Item->ranParameter_Value.choice.valueBitS.size,
+                                        pE2_RANparameter_Item->ranParameter_Value.choice.valueBitS.buf,
+                                        pE2_RANparameter_Item->ranParameter_Value.choice.valueBitS.bits_unused);
+                        }
+                        else if (pE2_RANparameter_Item->ranParameter_Value.present == E2_RANparameter_Value_PR_valueOctS) {
+                            pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valueOctSPresent = true;
+                            addOctetString(pDynMemHead, &pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valueOctS,
+                                        pE2_RANparameter_Item->ranParameter_Value.choice.valueOctS.size,
+                                        pE2_RANparameter_Item->ranParameter_Value.choice.valueOctS.buf);
+                        }
+                        else if (pE2_RANparameter_Item->ranParameter_Value.present == E2_RANparameter_Value_PR_valuePrtS) {
+                            pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valuePrtSPresent = true;
+                            addOctetString(pDynMemHead, &pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterList[index].ranParameterValue.valuePrtS,
+                                        pE2_RANparameter_Item->ranParameter_Value.choice.valuePrtS.size,
+                                        pE2_RANparameter_Item->ranParameter_Value.choice.valuePrtS.buf);
+                        }
+                        else {
+                            ASN_STRUCT_FREE(asn_DEF_E2_E2SM_gNB_NRT_ActionDefinition, pE2_E2SM_gNB_NRT_ActionDefinition);
+                            return e2err_RICSubscriptionRequestNRTRanParameterItemRanParameterValueEmptyFail;
+                        }
                     }
                     else {
                         ASN_STRUCT_FREE(asn_DEF_E2_E2SM_gNB_NRT_ActionDefinition, pE2_E2SM_gNB_NRT_ActionDefinition);
-                        return e2err_RICSubscriptionRequestNRTRanParameterItemRanParameterValueEmptyFail;
+                        return e2err_RICSubscriptionRequestNRTAllocActionDefinitionFail;
                     }
+                    index++;
                 }
-                else {
-                    ASN_STRUCT_FREE(asn_DEF_E2_E2SM_gNB_NRT_ActionDefinition, pE2_E2SM_gNB_NRT_ActionDefinition);
-                    return e2err_RICSubscriptionRequestNRTAllocActionDefinitionFail;
-                }
-                index++;
+                pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterCount = index;
             }
-            pRICActionDefinitionChoice->actionDefinitionNRTFormat1->ranParameterCount = index;
         }
         ASN_STRUCT_FREE(asn_DEF_E2_E2SM_gNB_NRT_ActionDefinition, pE2_E2SM_gNB_NRT_ActionDefinition);
         return e2err_OK;
