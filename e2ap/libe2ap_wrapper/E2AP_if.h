@@ -27,7 +27,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <ProcedureCode.h>
-#include <PrintableString.h>
 #include "memtrack.h"
 
 #ifdef	__cplusplus
@@ -77,93 +76,6 @@ enum RICActionType_t {
      RICActionType_policy
 };
 
-typedef uint64_t StyleID_t;
-
-typedef uint32_t ParameterID_t;  // 0..255 (maxofActionParameters)
-
-typedef struct { // CHOICE. Only one value can be present
-    bool valueIntPresent;
-	int64_t valueInt;
-	bool valueEnumPresent;
-	int64_t valueEnum;
-    bool valueBoolPresent;
-	bool valueBool;
-    bool valueBitSPresent;
-	DynBitString_t valueBitS;
-    bool valueOctSPresent;
-	DynOctetString_t valueOctS;
-	bool valuePrtSPresent;
-	DynOctetString_t valuePrtS;
-} ActionParameterValue_t;
-
-typedef struct {
-    ParameterID_t parameterID;
-    ActionParameterValue_t actionParameterValue;
-} ActionParameterItem_t;
-
-typedef struct {
-    StyleID_t styleID;
-    uint8_t actionParameterCount;
-    ActionParameterItem_t actionParameterItem[255]; // OPTIONAL. 1..255 (maxofRANParameters)
-} E2SMgNBX2actionDefinition_t;
-
-enum RANParameterTest_t {
-	RANParameterTest_equal,
-	RANParameterTest_greaterthan,
-	RANParameterTest_lessthan,
-	RANParameterTest_contains,
-	RANParameterTest_present
-};
-
-typedef struct {
-    bool valueIntPresent;
-	int64_t valueInt;
-	bool valueEnumPresent;
-	int64_t valueEnum;
-    bool valueBoolPresent;
-	bool valueBool;
-    bool valueBitSPresent;
-	DynBitString_t valueBitS;
-    bool valueOctSPresent;
-	DynOctetString_t valueOctS;
-	bool valuePrtSPresent;
-	DynOctetString_t valuePrtS;
-} RANParameterValue_t;
-
-typedef int64_t RANueGroupID_t; // INTEGER
-typedef uint32_t RANParameterID_t; // 0..255 (maxofRANParameters)
-
-typedef struct {
-	RANParameterID_t ranParameterID;
-	RANParameterValue_t ranParameterValue;
-} RANParameterItem_t;
-
-typedef struct {
-	RANParameterID_t ranParameterID;
-	uint8_t ranParameterTest;               // This is type of enum RANParameterTest_t
-	RANParameterValue_t ranParameterValue;
-} RANueGroupDefItem_t;
-
-typedef struct {
-    uint8_t ranUeGroupDefCount;
-	RANueGroupDefItem_t ranUeGroupDefItem[255]; //OPTIONAL. 1..255 (maxofRANParameters)
-} RANueGroupDefinition_t;
-
-typedef struct {
-    uint8_t ranParameterCount;
-	RANParameterItem_t ranParameterItem[255]; //OPTIONAL. 1..255 (maxofRANParameters)
-} RANimperativePolicy_t;
-
-typedef struct {
-    RANueGroupID_t ranUEgroupID;
-	RANueGroupDefinition_t ranUEgroupDefinition;
-	RANimperativePolicy_t ranPolicy;
-} RANueGroupItem_t;
-
-typedef struct {
-    uint8_t ranUeGroupCount;
-    RANueGroupItem_t ranUeGroupItem[15]; // OPTIONAL. 1..15 (maxofUEgroup)
-} E2SMgNBX2ActionDefinitionFormat2_t;
 
 enum RICSubsequentActionType_t {
 	RICSubsequentActionType_Continue,
@@ -171,19 +83,7 @@ enum RICSubsequentActionType_t {
 };
 
 typedef struct {
-    uint8_t ranParameterCount;
-	RANParameterItem_t ranParameterList[255];	// OPTIONAL. 1..255 (maxofRANParameters)
-} E2SMgNBNRTActionDefinitionFormat1_t;
-
-typedef struct {
     OctetString_t octetString;   // This element is E2AP spec format
-    // CHOICE. Only one value can be present
-    bool actionDefinitionX2Format1Present;
-	E2SMgNBX2actionDefinition_t* actionDefinitionX2Format1; // This element is E2SM-gNB-X2 format
-	bool actionDefinitionX2Format2Present;
-	E2SMgNBX2ActionDefinitionFormat2_t* actionDefinitionX2Format2; // This element is E2SM-gNB-X2 format
-	bool actionDefinitionNRTFormat1Present;
-    E2SMgNBNRTActionDefinitionFormat1_t* actionDefinitionNRTFormat1; // This element is E2SM-gNB-NRT format
 } RICActionDefinitionChoice_t;
 
 enum RICTimeToWait_t {
@@ -263,81 +163,11 @@ enum InterfaceDirection__t {
 
 typedef uint8_t ProcedureCode__t;
 
-enum TypeOfMessage_t {
-    TypeOfMessage_nothing,
-    TypeOfMessage_InitiatingMessage,
-    TypeOfMessage_SuccessfulOutcome,
-    TypeOfMessage_UnsuccessfulOutcome
-};
-
-typedef struct  {
-	ProcedureCode__t procedureCode;
-	uint8_t typeOfMessage;  // This is type of enum TypeOfMessage_t
-} InterfaceMessageType_t;
-
-typedef uint32_t InterfaceProtocolIEID_t;
-
-enum InterfaceProtocolIETest_t {
-	ProtocolIEtestCondition_equal,
-	ProtocolIEtestCondition_greaterthan,
-	ProtocolIEtestCondition_lessthan,
-	ProtocolIEtestCondition_contains,
-	ProtocolIEtestCondition_present
-};
-
-typedef struct {   // CHOICE. Only one value can be present
-    bool valueIntPresent;
-	int64_t valueInt;
-	bool valueEnumPresent;
-	int64_t valueEnum;
-    bool valueBoolPresent;
-	bool valueBool;
-    bool valueBitStringPresent;
-	DynBitString_t valueBitString;
-    bool octetstringPresent;
-	DynOctetString_t octetString;
-} InterfaceProtocolIEValue_t;
-
-typedef struct {
-    InterfaceProtocolIEID_t interfaceProtocolIEID;
-    uint8_t interfaceProtocolIETest;                        // This is type of enum InterfaceProtocolIETest_t
-    InterfaceProtocolIEValue_t  interfaceProtocolIEValue;
-} InterfacProtocolIE_t;
 
 static const uint64_t cMaxofProtocolIE = 15;
 
 typedef struct {
-    InterfacProtocolIE_t InterfacProtocolIE[15]; // Table size is const cMaxofProtocolIE
-} InterfaceProtocolIEList_t;
-
-typedef struct {
-    InterfaceID_t interfaceID;
-    uint8_t interfaceDirection;  // This is type of enum InterfaceDirection_t
-    InterfaceMessageType_t interfaceMessageType;
-    bool interfaceProtocolIEListPresent;
-    InterfaceProtocolIEList_t interfaceProtocolIEList;  // OPTIONAL. Not used in RIC currently
-} E2SMgNBX2eventTriggerDefinition_t;
-
-enum NRTTriggerNature_t {
-    NRTTriggerNature_t_now,
-    NRTTriggerNature_t_onchange
-};
-
-typedef struct {
-	uint8_t triggerNature;  // This is type of enum NRTTriggerNature_t
-} E2SMgNBNRTEventTriggerDefinitionFormat1_t;
-
-typedef struct {
-    E2SMgNBNRTEventTriggerDefinitionFormat1_t eventDefinitionFormat1;
-} E2SMgNBNRTEventTriggerDefinition_t;
-
-typedef struct {
     OctetString_t octetString;   // This element is E2AP spec format
-    // CHOICE. Only one value can be present.
-    bool E2SMgNBX2EventTriggerDefinitionPresent;
-    E2SMgNBX2eventTriggerDefinition_t e2SMgNBX2eventTriggerDefinition;  // This element is E2SM-gNB-X2 spec format
-    bool E2SMgNBNRTEventTriggerDefinitionPresent;
-    E2SMgNBNRTEventTriggerDefinition_t e2SMgNBNRTEventTriggerDefinition; // This element is E2SM-gNB-NRT spec format
 } RICEventTriggerDefinition_t;
 
 typedef struct {
@@ -761,10 +591,6 @@ typedef void* e2ap_pdu_ptr_t;
 uint64_t packRICSubscriptionRequest(size_t*, byte*, char*,RICSubscriptionRequest_t*);
 uint64_t packRICEventTriggerDefinition(char*,RICEventTriggerDefinition_t*);
 uint64_t packRICActionDefinition(char*, RICActionDefinitionChoice_t*);
-uint64_t packRICEventTriggerDefinitionX2Format(char* pLogBuffer, RICEventTriggerDefinition_t*);
-uint64_t packRICEventTriggerDefinitionNRTFormat(char* pLogBuffer, RICEventTriggerDefinition_t*);
-uint64_t packActionDefinitionX2Format(char*, RICActionDefinitionChoice_t*);
-uint64_t packActionDefinitionNRTFormat(char*, RICActionDefinitionChoice_t*);
 uint64_t packRICSubscriptionResponse(size_t*, byte*, char*,RICSubscriptionResponse_t*);
 uint64_t packRICSubscriptionFailure(size_t*, byte*, char*,RICSubscriptionFailure_t*);
 uint64_t packRICSubscriptionDeleteRequest(size_t*, byte*, char*,RICSubscriptionDeleteRequest_t*);
@@ -774,11 +600,7 @@ uint64_t packRICSubscriptionDeleteFailure(size_t*, byte*, char*,RICSubscriptionD
 e2ap_pdu_ptr_t* unpackE2AP_pdu(const size_t, const byte*, char*, E2MessageInfo_t*);
 uint64_t getRICSubscriptionRequestData(mem_track_hdr_t *, e2ap_pdu_ptr_t*, RICSubscriptionRequest_t*);
 uint64_t getRICEventTriggerDefinitionData(RICEventTriggerDefinition_t*);
-uint64_t getRICEventTriggerDefinitionDataX2Format(RICEventTriggerDefinition_t*);
-uint64_t getRICEventTriggerDefinitionDataNRTFormat(RICEventTriggerDefinition_t*);
 uint64_t getRICActionDefinitionData(mem_track_hdr_t *, RICActionDefinitionChoice_t*);
-uint64_t getRICActionDefinitionDataX2Format(mem_track_hdr_t*, RICActionDefinitionChoice_t*);
-uint64_t getRICActionDefinitionDataNRTFormat(mem_track_hdr_t*, RICActionDefinitionChoice_t*);
 uint64_t getRICSubscriptionResponseData(e2ap_pdu_ptr_t*, RICSubscriptionResponse_t*);
 uint64_t getRICSubscriptionFailureData(e2ap_pdu_ptr_t*, RICSubscriptionFailure_t*);
 uint64_t getRICSubscriptionDeleteRequestData(e2ap_pdu_ptr_t*, RICSubscriptionDeleteRequest_t*);
@@ -788,10 +610,6 @@ uint64_t getRICSubscriptionDeleteFailureData(e2ap_pdu_ptr_t*, RICSubscriptionDel
 void* allocDynMem(mem_track_hdr_t*, size_t);
 bool addOctetString(mem_track_hdr_t *, DynOctetString_t*, uint64_t, void*);
 bool addBitString(mem_track_hdr_t *, DynBitString_t*, uint64_t, void*, uint8_t);
-
-uint64_t allocActionDefinitionX2Format1(mem_track_hdr_t*, E2SMgNBX2actionDefinition_t**);
-uint64_t allocActionDefinitionX2Format2(mem_track_hdr_t*, E2SMgNBX2ActionDefinitionFormat2_t**);
-uint64_t allocActionDefinitionNRTFormat1(mem_track_hdr_t*, E2SMgNBNRTActionDefinitionFormat1_t**);
 
 uint64_t allocateOctetStringBuffer(DynOctetString_t*, uint64_t);
 uint64_t allocateBitStringBuffer(mem_track_hdr_t *, DynBitString_t*, uint64_t);
