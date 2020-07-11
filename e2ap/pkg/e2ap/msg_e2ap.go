@@ -183,33 +183,8 @@ const (
 )
 
 type EventTriggerDefinition struct {
-	NBX2EventTriggerDefinitionPresent bool
-	X2EventTriggerDefinition
-	NBNRTEventTriggerDefinitionPresent bool
-	NBNRTEventTriggerDefinition
+	Data OctetString
 }
-
-//-----------------------------------------------------------------------------
-//
-//-----------------------------------------------------------------------------
-type X2EventTriggerDefinition struct {
-	InterfaceId
-	InterfaceDirection uint32
-	ProcedureCode      uint32
-	TypeOfMessage      uint64
-}
-
-//-----------------------------------------------------------------------------
-//
-//-----------------------------------------------------------------------------
-type NBNRTEventTriggerDefinition struct {
-	TriggerNature uint8
-}
-
-const ( // enum NRTTriggerNature
-	NRTTriggerNature_now = iota
-	NRTTriggerNature_onchange
-)
 
 /*
 //-----------------------------------------------------------------------------
@@ -221,129 +196,7 @@ type CallProcessId struct {
 */
 
 type ActionDefinitionChoice struct {
-	ActionDefinitionX2Format1Present  bool
-	ActionDefinitionX2Format1         E2SMgNBX2actionDefinition
-	ActionDefinitionX2Format2Present  bool
-	ActionDefinitionX2Format2         ActionDefinitionFormat2
-	ActionDefinitionNRTFormat1Present bool
-	ActionDefinitionNRTFormat1        E2SMgNBNRTActionDefinitionFormat1
-}
-
-//-----------------------------------------------------------------------------
-//
-//-----------------------------------------------------------------------------
-type E2SMgNBNRTActionDefinitionFormat1 struct {
-	RanParameterList []RANParameterItem // 1..255
-}
-
-//-----------------------------------------------------------------------------
-//
-//-----------------------------------------------------------------------------
-type E2SMgNBX2actionDefinition struct {
-	StyleID              uint64
-	ActionParameterItems []ActionParameterItem // 1..255
-}
-
-//-----------------------------------------------------------------------------
-//
-//-----------------------------------------------------------------------------
-type ActionParameterItem struct {
-	ParameterID          uint32 // 1..255
-	ActionParameterValue ActionParameterValue
-}
-
-//-----------------------------------------------------------------------------
-//
-//-----------------------------------------------------------------------------
-type ActionParameterValue struct {
-	ValueIntPresent  bool
-	ValueInt         int64
-	ValueEnumPresent bool
-	ValueEnum        int64
-	ValueBoolPresent bool
-	ValueBool        bool
-	ValueBitSPresent bool
-	ValueBitS        BitString
-	ValueOctSPresent bool
-	ValueOctS        OctetString
-	ValuePrtSPresent bool
-	ValuePrtS        OctetString
-}
-
-//-----------------------------------------------------------------------------
-//
-//-----------------------------------------------------------------------------
-type ActionDefinitionFormat2 struct {
-	RanUEgroupItems []RANueGroupItem // 1..15
-}
-
-//-----------------------------------------------------------------------------
-//
-//-----------------------------------------------------------------------------
-type RANueGroupItem struct {
-	RanUEgroupID         int64
-	RanUEgroupDefinition RANueGroupDefinition
-	RanPolicy            RANimperativePolicy
-}
-
-//-----------------------------------------------------------------------------
-//
-//-----------------------------------------------------------------------------
-type RANueGroupDefinition struct {
-	RanUEGroupDefItems []RANueGroupDefItem // 1..255
-}
-
-//-----------------------------------------------------------------------------
-//
-//-----------------------------------------------------------------------------
-type RANimperativePolicy struct {
-	RanParameterItems []RANParameterItem // 1..255
-}
-
-//-----------------------------------------------------------------------------
-//
-//-----------------------------------------------------------------------------
-type RANueGroupDefItem struct {
-	RanParameterID    uint32 // 1..255
-	RanParameterTest  uint8
-	RanParameterValue RANParameterValue
-}
-
-//-----------------------------------------------------------------------------
-//
-//-----------------------------------------------------------------------------
-type RANParameterItem struct {
-	RanParameterID    uint8 // 1..255
-	RanParameterValue RANParameterValue
-}
-
-//-----------------------------------------------------------------------------
-//
-//-----------------------------------------------------------------------------
-const ( // enum RANParameterTest
-	RANParameterTest_equal = iota
-	RANParameterTest_greaterthan
-	RANParameterTest_lessthan
-	RANParameterTest_contains
-	RANParameterTest_present
-)
-
-//-----------------------------------------------------------------------------
-//
-//-----------------------------------------------------------------------------
-type RANParameterValue struct {
-	ValueIntPresent  bool
-	ValueInt         int64
-	ValueEnumPresent bool
-	ValueEnum        int64
-	ValueBoolPresent bool
-	ValueBool        bool
-	ValueBitSPresent bool
-	ValueBitS        BitString
-	ValueOctSPresent bool
-	ValueOctS        OctetString
-	ValuePrtSPresent bool
-	ValuePrtS        OctetString
+	Data OctetString
 }
 
 //-----------------------------------------------------------------------------

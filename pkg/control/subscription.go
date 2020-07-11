@@ -23,7 +23,7 @@ import (
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
 	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/xapptweaks"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
-	"reflect"
+	//"reflect"
 	"sync"
 )
 
@@ -115,22 +115,13 @@ func (s *Subscription) IsMergeable(trans *TransactionXapp, subReqMsg *e2ap.E2APS
 	}
 
 	// EventTrigger check
-	if s.SubReqMsg.EventTriggerDefinition.InterfaceDirection != subReqMsg.EventTriggerDefinition.InterfaceDirection ||
-		s.SubReqMsg.EventTriggerDefinition.ProcedureCode != subReqMsg.EventTriggerDefinition.ProcedureCode ||
-		s.SubReqMsg.EventTriggerDefinition.TypeOfMessage != subReqMsg.EventTriggerDefinition.TypeOfMessage {
+	if s.SubReqMsg.EventTriggerDefinition.Data.Length != subReqMsg.EventTriggerDefinition.Data.Length {
 		return false
 	}
-
-	if s.SubReqMsg.EventTriggerDefinition.InterfaceId.GlobalEnbId.Present != subReqMsg.EventTriggerDefinition.InterfaceId.GlobalEnbId.Present ||
-		s.SubReqMsg.EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId != subReqMsg.EventTriggerDefinition.InterfaceId.GlobalEnbId.NodeId ||
-		s.SubReqMsg.EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.String() != subReqMsg.EventTriggerDefinition.InterfaceId.GlobalEnbId.PlmnIdentity.String() {
-		return false
-	}
-
-	if s.SubReqMsg.EventTriggerDefinition.InterfaceId.GlobalGnbId.Present != subReqMsg.EventTriggerDefinition.InterfaceId.GlobalGnbId.Present ||
-		s.SubReqMsg.EventTriggerDefinition.InterfaceId.GlobalGnbId.NodeId != subReqMsg.EventTriggerDefinition.InterfaceId.GlobalGnbId.NodeId ||
-		s.SubReqMsg.EventTriggerDefinition.InterfaceId.GlobalGnbId.PlmnIdentity.String() != subReqMsg.EventTriggerDefinition.InterfaceId.GlobalGnbId.PlmnIdentity.String() {
-		return false
+	for i := uint64(0); i < s.SubReqMsg.EventTriggerDefinition.Data.Length; i++ {
+		if s.SubReqMsg.EventTriggerDefinition.Data.Data[i] != subReqMsg.EventTriggerDefinition.Data.Data[i] {
+			return false
+		}
 	}
 
 	// Actions check
@@ -151,10 +142,19 @@ func (s *Subscription) IsMergeable(trans *TransactionXapp, subReqMsg *e2ap.E2APS
 				return false
 			}
 
-			if acts.RicActionDefinitionPresent != actt.RicActionDefinitionPresent ||
-				reflect.DeepEqual(acts.ActionDefinitionChoice, actt.ActionDefinitionChoice) == false {
+			if acts.RicActionDefinitionPresent != actt.RicActionDefinitionPresent {
 				return false
 			}
+
+			if acts.ActionDefinitionChoice.Data.Length != actt.ActionDefinitionChoice.Data.Length {
+				return false
+			}
+			for i := uint64(0); i < acts.ActionDefinitionChoice.Data.Length; i++ {
+				if acts.ActionDefinitionChoice.Data.Data[i] != actt.ActionDefinitionChoice.Data.Data[i] {
+					return false
+				}
+			}
+			//reflect.DeepEqual(acts.ActionDefinitionChoice, actt.ActionDefinitionChoice)
 
 			if acts.SubsequentAction.Present != actt.SubsequentAction.Present ||
 				acts.SubsequentAction.Type != actt.SubsequentAction.Type ||
