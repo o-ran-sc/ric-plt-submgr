@@ -372,14 +372,17 @@ func TestSubReqAndSubDelOkTwoParallel(t *testing.T) {
 	//Req1
 	rparams1 := &teststube2ap.E2StubSubsReqParams{}
 	rparams1.Init()
-	rparams1.Req.EventTriggerDefinition.ProcedureCode = 5
 	cretrans1 := xappConn1.SendSubsReq(t, rparams1, nil)
 	crereq1, cremsg1 := e2termConn1.RecvSubsReq(t)
 
 	//Req2
 	rparams2 := &teststube2ap.E2StubSubsReqParams{}
 	rparams2.Init()
-	rparams2.Req.EventTriggerDefinition.ProcedureCode = 28
+
+	rparams2.Req.EventTriggerDefinition.Data.Length = 1
+	rparams2.Req.EventTriggerDefinition.Data.Data = make([]uint8, rparams2.Req.EventTriggerDefinition.Data.Length)
+	rparams2.Req.EventTriggerDefinition.Data.Data[0] = 2
+
 	cretrans2 := xappConn2.SendSubsReq(t, rparams2, nil)
 	crereq2, cremsg2 := e2termConn1.RecvSubsReq(t)
 
