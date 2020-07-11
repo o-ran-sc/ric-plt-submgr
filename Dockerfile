@@ -23,7 +23,7 @@
 ###########################################################
 #
 ###########################################################
-FROM nexus3.o-ran-sc.org:10004/o-ran-sc/bldr-ubuntu18-c-go:8-u18.04 as submgrcore
+FROM nexus3.o-ran-sc.org:10004/o-ran-sc/bldr-ubuntu18-c-go:9-u18.04 as submgrcore
 
 RUN apt update && apt install -y iputils-ping net-tools curl tcpdump gdb valgrind
 
@@ -90,23 +90,8 @@ RUN cd 3rdparty/E2AP-v01.00.00 && \
     cp *.h /usr/local/include/ && \
     ldconfig
 
-RUN cd 3rdparty/E2SM-gNB-NRT_V4.0.1 && \
-    gcc -c ${CFLAGS} -I. -g -fPIC *.c  && \
-    gcc *.o -g -shared -o libgnbnrt.so && \
-    cp libgnbnrt.so /usr/local/lib/ && \
-    cp *.h /usr/local/include/ && \
-    ldconfig
-
-RUN cd 3rdparty/E2SM-gNB-X2-V4.0.1 && \
-    gcc -c ${CFLAGS} -I. -g -fPIC *.c  && \
-    gcc *.o -g -shared -o libgnbx2.so && \
-    cp libgnbx2.so /usr/local/lib/ && \
-    cp *.h /usr/local/include/ && \
-    ldconfig
 
 RUN echo "E2AP         E2AP-v01.00.00" >> /manifests/versions.txt
-RUN echo "E2SM-gNB-NRT E2SM-gNB-NRT_V4.0.1" >> /manifests/versions.txt
-RUN echo "E2SM-gNB-X2  E2SM-gNB-X2-V4.0.1" >> /manifests/versions.txt
 
 COPY e2ap e2ap
 RUN cd e2ap/libe2ap_wrapper && \
@@ -219,6 +204,5 @@ RUN chmod 755 /run_submgr.sh
 COPY config /opt/config
 ENV CFG_FILE=/opt/config/submgr-config.yaml
 ENV RMR_SEED_RT=/opt/config/submgr-uta-rtg.rt
-
 
 ENTRYPOINT ["/submgr"]
