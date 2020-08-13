@@ -23,7 +23,7 @@ import (
 	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/teststub"
 	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/teststubdummy"
 	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/teststube2ap"
-	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/xapptweaks"
+	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"os"
 	"testing"
 	"time"
@@ -34,7 +34,7 @@ import (
 //-----------------------------------------------------------------------------
 func CaseBegin(desc string) *teststub.TestWrapper {
 	tent := teststub.NewTestWrapper(desc)
-	tent.Logger.Info(desc)
+	tent.Info(desc)
 	return tent
 }
 
@@ -103,7 +103,7 @@ func ut_test_init() func() {
 	   defer os.Remove(cfgfilename)
 	   os.Setenv("CFG_FILE", cfgfilename)
 	*/
-	tent.Logger.Info("Using cfg file %s", os.Getenv("CFG_FILE"))
+	tent.Info("Using cfg file %s", os.Getenv("CFG_FILE"))
 
 	//---------------------------------
 	// Static routetable for rmr
@@ -120,12 +120,12 @@ func ut_test_init() func() {
 	// Entity
 	// -------------------
 
-	mainsrc := teststub.RmrSrcId{xapptweaks.RmrEndpoint{"localhost", 14560}}
-	xapp1src := teststub.RmrSrcId{xapptweaks.RmrEndpoint{"localhost", 13560}}
-	xapp2src := teststub.RmrSrcId{xapptweaks.RmrEndpoint{"localhost", 13660}}
-	e2term1src := teststub.RmrSrcId{xapptweaks.RmrEndpoint{"localhost", 15560}}
-	e2term2src := teststub.RmrSrcId{xapptweaks.RmrEndpoint{"localhost", 15660}}
-	dummysrc := teststub.RmrSrcId{xapptweaks.RmrEndpoint{"localhost", 16560}}
+	mainsrc := teststub.RmrSrcId{xapp.RmrEndpoint{"localhost", 14560}}
+	xapp1src := teststub.RmrSrcId{xapp.RmrEndpoint{"localhost", 13560}}
+	xapp2src := teststub.RmrSrcId{xapp.RmrEndpoint{"localhost", 13660}}
+	e2term1src := teststub.RmrSrcId{xapp.RmrEndpoint{"localhost", 15560}}
+	e2term2src := teststub.RmrSrcId{xapp.RmrEndpoint{"localhost", 15660}}
+	dummysrc := teststub.RmrSrcId{xapp.RmrEndpoint{"localhost", 16560}}
 
 	//---------------------------------
 	rt := &teststub.RmrRouteTable{}
@@ -151,12 +151,12 @@ func ut_test_init() func() {
 	rt.AddMeid(e2term2src.String(), []string{"RAN_NAME_11", "RAN_NAME_12"})
 
 	rt.Enable()
-	tent.Logger.Info("rttable[%s]", rt.Table())
+	tent.Info("rttable[%s]", rt.Table())
 
 	//---------------------------------
 	//
 	//---------------------------------
-	tent.Logger.Info("### submgr ctrl run ###")
+	tent.Info("### submgr ctrl run ###")
 	mainCtrl = createSubmgrControl(mainsrc, teststub.RmrRtgSvc{})
 
 	//
@@ -167,61 +167,61 @@ func ut_test_init() func() {
 	//env variables. Re-create rt info.
 	for i := 0; i < int(10)*2; i++ {
 		if os.Getenv("RMR_SEED_RT") == rt.FileName() {
-			tent.Logger.Info("Waiting that alarm alternates RMR_SEED_RT=%s", os.Getenv("RMR_SEED_RT"))
+			tent.Info("Waiting that alarm alternates RMR_SEED_RT=%s", os.Getenv("RMR_SEED_RT"))
 			time.Sleep(500 * time.Millisecond)
 		} else {
-			tent.Logger.Info("Alarm has alternated RMR_SEED_RT=%s, so waiting 0.5 secs before restoring it", os.Getenv("RMR_SEED_RT"))
+			tent.Info("Alarm has alternated RMR_SEED_RT=%s, so waiting 0.5 secs before restoring it", os.Getenv("RMR_SEED_RT"))
 			time.Sleep(500 * time.Millisecond)
 			rt.Enable()
-			tent.Logger.Info("rttable[%s]", rt.Table())
+			tent.Info("rttable[%s]", rt.Table())
 			break
 		}
 	}
 
 	if os.Getenv("RMR_SEED_RT") != rt.FileName() {
-		tent.Logger.Error("Unittest timing issue with alarm RMR_SEED_RT=%s", os.Getenv("RMR_SEED_RT"))
+		tent.Error("Unittest timing issue with alarm RMR_SEED_RT=%s", os.Getenv("RMR_SEED_RT"))
 		os.Exit(1)
 	}
 
 	//---------------------------------
 	//
 	//---------------------------------
-	tent.Logger.Info("### xapp1 stub run ###")
+	tent.Info("### xapp1 stub run ###")
 	xappConn1 = teststube2ap.CreateNewE2Stub("xappstub1", xapp1src, teststub.RmrRtgSvc{}, "RMRXAPP1STUB", teststubPortSeed)
 
 	//---------------------------------
 	//
 	//---------------------------------
-	tent.Logger.Info("### xapp2 stub run ###")
+	tent.Info("### xapp2 stub run ###")
 	xappConn2 = teststube2ap.CreateNewE2Stub("xappstub2", xapp2src, teststub.RmrRtgSvc{}, "RMRXAPP2STUB", teststubPortSeed)
 
 	//---------------------------------
 	//
 	//---------------------------------
-	tent.Logger.Info("### e2term1 stub run ###")
+	tent.Info("### e2term1 stub run ###")
 	e2termConn1 = teststube2ap.CreateNewE2termStub("e2termstub1", e2term1src, teststub.RmrRtgSvc{}, "RMRE2TERMSTUB1", teststubPortSeed)
 
 	//---------------------------------
 	//
 	//---------------------------------
-	tent.Logger.Info("### e2term2 stub run ###")
+	tent.Info("### e2term2 stub run ###")
 	e2termConn2 = teststube2ap.CreateNewE2termStub("e2termstub2", e2term2src, teststub.RmrRtgSvc{}, "RMRE2TERMSTUB2", teststubPortSeed)
 
 	//---------------------------------
 	// Just to test dummy stub
 	//---------------------------------
-	tent.Logger.Info("### dummy stub run ###")
+	tent.Info("### dummy stub run ###")
 	dummystub = teststubdummy.CreateNewRmrDummyStub("dummystub", dummysrc, teststub.RmrRtgSvc{}, "DUMMYSTUB", teststubPortSeed)
 
 	//---------------------------------
 	// Testing message sending
 	//---------------------------------
-	if teststub.RmrStubControlWaitAlive(10, teststubPortSeed, mainCtrl.c) == false {
+	if teststub.RmrStubControlWaitAlive(10, teststubPortSeed, mainCtrl.c.RMRClient, tent) == false {
 		os.Exit(1)
 	}
 
 	if os.Getenv("RMR_SEED_RT") != rt.FileName() {
-		tent.Logger.Error("Unittest timing issue with alarm RMR_SEED_RT=%s", os.Getenv("RMR_SEED_RT"))
+		tent.Error("Unittest timing issue with alarm RMR_SEED_RT=%s", os.Getenv("RMR_SEED_RT"))
 		os.Exit(1)
 	}
 

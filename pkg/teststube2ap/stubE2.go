@@ -23,7 +23,6 @@ import (
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap_wrapper"
 	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/teststub"
-	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/xapptweaks"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"strconv"
 	"testing"
@@ -43,7 +42,11 @@ type RmrTransactionId struct {
 }
 
 func (trans *RmrTransactionId) String() string {
-	return "trans(" + trans.xid + "/" + (&xapptweaks.RMRMeid{trans.meid}).String() + ")"
+	meidstr := "N/A"
+	if trans.meid != nil {
+		meidstr = trans.meid.String()
+	}
+	return "trans(" + trans.xid + "/" + meidstr + ")"
 }
 
 type E2Stub struct {
@@ -85,7 +88,7 @@ func (tc *E2Stub) NewRmrTransactionId(xid string, ranname string) *RmrTransactio
 		trans.xid = xid
 	}
 	trans.meid = &xapp.RMRMeid{RanName: ranname}
-	tc.Logger.Info("New test %s", trans.String())
+	tc.Info("New test %s", trans.String())
 	return trans
 }
 
@@ -172,7 +175,7 @@ func (tc *E2Stub) SendSubsReq(t *testing.T, rparams *E2StubSubsReqParams, oldTra
 		trans = tc.NewRmrTransactionId("", "RAN_NAME_1")
 	}
 
-	tc.Logger.Info("SendSubsReq %s", trans.String())
+	tc.Info("SendSubsReq %s", trans.String())
 	e2SubsReq := e2asnpacker.NewPackerSubscriptionRequest()
 
 	//---------------------------------
@@ -190,9 +193,9 @@ func (tc *E2Stub) SendSubsReq(t *testing.T, rparams *E2StubSubsReqParams, oldTra
 		tc.TestError(t, "pack NOK %s %s", trans.String(), err.Error())
 		return nil
 	}
-	tc.Logger.Debug("%s %s", trans.String(), e2SubsReq.String())
+	tc.Debug("%s %s", trans.String(), e2SubsReq.String())
 
-	params := xapptweaks.NewParams(nil)
+	params := &xapp.RMRParams{}
 	params.Mtype = xapp.RIC_SUB_REQ
 	params.SubId = -1
 	params.Payload = packedMsg.Buf
@@ -201,8 +204,8 @@ func (tc *E2Stub) SendSubsReq(t *testing.T, rparams *E2StubSubsReqParams, oldTra
 	params.Xid = trans.xid
 	params.Mbuf = nil
 
-	tc.Logger.Info("SEND SUB REQ: %s", params.String())
-	snderr := tc.RmrSend(params, 5)
+	tc.Info("SEND SUB REQ: %s", params.String())
+	snderr := tc.SendWithRetry(params, false, 5)
 	if snderr != nil {
 		tc.TestError(t, "RMR SEND FAILED: %s %s", trans.String(), snderr.Error())
 		return nil
@@ -213,8 +216,8 @@ func (tc *E2Stub) SendSubsReq(t *testing.T, rparams *E2StubSubsReqParams, oldTra
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-func (tc *E2Stub) RecvSubsReq(t *testing.T) (*e2ap.E2APSubscriptionRequest, *xapptweaks.RMRParams) {
-	tc.Logger.Info("RecvSubsReq")
+func (tc *E2Stub) RecvSubsReq(t *testing.T) (*e2ap.E2APSubscriptionRequest, *xapp.RMRParams) {
+	tc.Info("RecvSubsReq")
 	e2SubsReq := e2asnpacker.NewPackerSubscriptionRequest()
 
 	//---------------------------------
@@ -225,7 +228,7 @@ func (tc *E2Stub) RecvSubsReq(t *testing.T) (*e2ap.E2APSubscriptionRequest, *xap
 		if msg.Mtype != xapp.RICMessageTypes["RIC_SUB_REQ"] {
 			tc.TestError(t, "Received wrong mtype expected %s got %s, error", "RIC_SUB_REQ", xapp.RicMessageTypeToName[msg.Mtype])
 		} else {
-			tc.Logger.Info("Recv Subs Req")
+			tc.Info("Recv Subs Req")
 			packedData := &e2ap.PackedData{}
 			packedData.Buf = msg.Payload
 			unpackerr, req := e2SubsReq.UnPack(packedData)
@@ -244,8 +247,8 @@ func (tc *E2Stub) RecvSubsReq(t *testing.T) (*e2ap.E2APSubscriptionRequest, *xap
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-func (tc *E2Stub) SendSubsResp(t *testing.T, req *e2ap.E2APSubscriptionRequest, msg *xapptweaks.RMRParams) {
-	tc.Logger.Info("SendSubsResp")
+func (tc *E2Stub) SendSubsResp(t *testing.T, req *e2ap.E2APSubscriptionRequest, msg *xapp.RMRParams) {
+	tc.Info("SendSubsResp")
 	e2SubsResp := e2asnpacker.NewPackerSubscriptionResponse()
 
 	//---------------------------------
@@ -274,9 +277,9 @@ func (tc *E2Stub) SendSubsResp(t *testing.T, req *e2ap.E2APSubscriptionRequest, 
 	if packerr != nil {
 		tc.TestError(t, "pack NOK %s", packerr.Error())
 	}
-	tc.Logger.Debug("%s", e2SubsResp.String())
+	tc.Debug("%s", e2SubsResp.String())
 
-	params := xapptweaks.NewParams(nil)
+	params := &xapp.RMRParams{}
 	params.Mtype = xapp.RIC_SUB_RESP
 	//params.SubId = msg.SubId
 	params.SubId = -1
@@ -286,8 +289,8 @@ func (tc *E2Stub) SendSubsResp(t *testing.T, req *e2ap.E2APSubscriptionRequest, 
 	//params.Xid = msg.Xid
 	params.Mbuf = nil
 
-	tc.Logger.Info("SEND SUB RESP: %s", params.String())
-	snderr := tc.RmrSend(params, 5)
+	tc.Info("SEND SUB RESP: %s", params.String())
+	snderr := tc.SendWithRetry(params, false, 5)
 	if snderr != nil {
 		tc.TestError(t, "RMR SEND FAILED: %s", snderr.Error())
 	}
@@ -297,7 +300,7 @@ func (tc *E2Stub) SendSubsResp(t *testing.T, req *e2ap.E2APSubscriptionRequest, 
 //
 //-----------------------------------------------------------------------------
 func (tc *E2Stub) RecvSubsResp(t *testing.T, trans *RmrTransactionId) uint32 {
-	tc.Logger.Info("RecvSubsResp")
+	tc.Info("RecvSubsResp")
 	e2SubsResp := e2asnpacker.NewPackerSubscriptionResponse()
 	var e2SubsId uint32
 
@@ -324,7 +327,7 @@ func (tc *E2Stub) RecvSubsResp(t *testing.T, trans *RmrTransactionId) uint32 {
 			if unpackerr != nil {
 				tc.TestError(t, "RIC_SUB_RESP unpack failed err: %s", unpackerr.Error())
 			}
-			tc.Logger.Info("Recv Subs Resp rmr: xid=%s subid=%d, asn: instanceid=%d", msg.Xid, msg.SubId, resp.RequestId.InstanceId)
+			tc.Info("Recv Subs Resp rmr: xid=%s subid=%d, asn: instanceid=%d", msg.Xid, msg.SubId, resp.RequestId.InstanceId)
 			return e2SubsId
 		}
 	} else {
@@ -337,8 +340,8 @@ func (tc *E2Stub) RecvSubsResp(t *testing.T, trans *RmrTransactionId) uint32 {
 //
 //-----------------------------------------------------------------------------
 
-func (tc *E2Stub) SendSubsFail(t *testing.T, fparams *E2StubSubsFailParams, msg *xapptweaks.RMRParams) {
-	tc.Logger.Info("SendSubsFail")
+func (tc *E2Stub) SendSubsFail(t *testing.T, fparams *E2StubSubsFailParams, msg *xapp.RMRParams) {
+	tc.Info("SendSubsFail")
 	e2SubsFail := e2asnpacker.NewPackerSubscriptionFailure()
 
 	//---------------------------------
@@ -348,9 +351,9 @@ func (tc *E2Stub) SendSubsFail(t *testing.T, fparams *E2StubSubsFailParams, msg 
 	if packerr != nil {
 		tc.TestError(t, "pack NOK %s", packerr.Error())
 	}
-	tc.Logger.Debug("%s", e2SubsFail.String())
+	tc.Debug("%s", e2SubsFail.String())
 
-	params := xapptweaks.NewParams(nil)
+	params := &xapp.RMRParams{}
 	params.Mtype = xapp.RIC_SUB_FAILURE
 	params.SubId = msg.SubId
 	params.Payload = packedMsg.Buf
@@ -359,8 +362,8 @@ func (tc *E2Stub) SendSubsFail(t *testing.T, fparams *E2StubSubsFailParams, msg 
 	params.Xid = msg.Xid
 	params.Mbuf = nil
 
-	tc.Logger.Info("SEND SUB FAIL: %s", params.String())
-	snderr := tc.RmrSend(params, 5)
+	tc.Info("SEND SUB FAIL: %s", params.String())
+	snderr := tc.SendWithRetry(params, false, 5)
 	if snderr != nil {
 		tc.TestError(t, "RMR SEND FAILED: %s", snderr.Error())
 	}
@@ -370,7 +373,7 @@ func (tc *E2Stub) SendSubsFail(t *testing.T, fparams *E2StubSubsFailParams, msg 
 //
 //-----------------------------------------------------------------------------
 func (tc *E2Stub) RecvSubsFail(t *testing.T, trans *RmrTransactionId) uint32 {
-	tc.Logger.Info("RecvSubsFail")
+	tc.Info("RecvSubsFail")
 	e2SubsFail := e2asnpacker.NewPackerSubscriptionFailure()
 	var e2SubsId uint32
 
@@ -397,7 +400,7 @@ func (tc *E2Stub) RecvSubsFail(t *testing.T, trans *RmrTransactionId) uint32 {
 			if unpackerr != nil {
 				tc.TestError(t, "RIC_SUB_FAILURE unpack failed err: %s", unpackerr.Error())
 			}
-			tc.Logger.Info("Recv Subs Fail rmr: xid=%s subid=%d, asn: instanceid=%d", msg.Xid, msg.SubId, resp.RequestId.InstanceId)
+			tc.Info("Recv Subs Fail rmr: xid=%s subid=%d, asn: instanceid=%d", msg.Xid, msg.SubId, resp.RequestId.InstanceId)
 			return e2SubsId
 		}
 	} else {
@@ -416,7 +419,7 @@ func (tc *E2Stub) SendSubsDelReq(t *testing.T, oldTrans *RmrTransactionId, e2Sub
 		trans = tc.NewRmrTransactionId("", "RAN_NAME_1")
 	}
 
-	tc.Logger.Info("SendSubsDelReq %s", trans.String())
+	tc.Info("SendSubsDelReq %s", trans.String())
 	e2SubsDelReq := e2asnpacker.NewPackerSubscriptionDeleteRequest()
 	//---------------------------------
 	// xapp activity: Send Subs Del Req
@@ -431,9 +434,9 @@ func (tc *E2Stub) SendSubsDelReq(t *testing.T, oldTrans *RmrTransactionId, e2Sub
 		tc.TestError(t, "pack NOK %s %s", trans.String(), err.Error())
 		return nil
 	}
-	tc.Logger.Debug("%s %s", trans.String(), e2SubsDelReq.String())
+	tc.Debug("%s %s", trans.String(), e2SubsDelReq.String())
 
-	params := xapptweaks.NewParams(nil)
+	params := &xapp.RMRParams{}
 	params.Mtype = xapp.RIC_SUB_DEL_REQ
 	params.SubId = int(e2SubsId)
 	params.Payload = packedMsg.Buf
@@ -442,8 +445,8 @@ func (tc *E2Stub) SendSubsDelReq(t *testing.T, oldTrans *RmrTransactionId, e2Sub
 	params.Xid = trans.xid
 	params.Mbuf = nil
 
-	tc.Logger.Info("SEND SUB DEL REQ: %s", params.String())
-	snderr := tc.RmrSend(params, 5)
+	tc.Info("SEND SUB DEL REQ: %s", params.String())
+	snderr := tc.SendWithRetry(params, false, 5)
 	if snderr != nil {
 		tc.TestError(t, "RMR SEND FAILED: %s %s", trans.String(), snderr.Error())
 		return nil
@@ -454,8 +457,8 @@ func (tc *E2Stub) SendSubsDelReq(t *testing.T, oldTrans *RmrTransactionId, e2Sub
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-func (tc *E2Stub) RecvSubsDelReq(t *testing.T) (*e2ap.E2APSubscriptionDeleteRequest, *xapptweaks.RMRParams) {
-	tc.Logger.Info("RecvSubsDelReq")
+func (tc *E2Stub) RecvSubsDelReq(t *testing.T) (*e2ap.E2APSubscriptionDeleteRequest, *xapp.RMRParams) {
+	tc.Info("RecvSubsDelReq")
 	e2SubsDelReq := e2asnpacker.NewPackerSubscriptionDeleteRequest()
 
 	//---------------------------------
@@ -466,7 +469,7 @@ func (tc *E2Stub) RecvSubsDelReq(t *testing.T) (*e2ap.E2APSubscriptionDeleteRequ
 		if msg.Mtype != xapp.RICMessageTypes["RIC_SUB_DEL_REQ"] {
 			tc.TestError(t, "Received wrong mtype expected %s got %s, error", "RIC_SUB_DEL_REQ", xapp.RicMessageTypeToName[msg.Mtype])
 		} else {
-			tc.Logger.Info("Recv Subs Del Req")
+			tc.Info("Recv Subs Del Req")
 
 			packedData := &e2ap.PackedData{}
 			packedData.Buf = msg.Payload
@@ -485,8 +488,8 @@ func (tc *E2Stub) RecvSubsDelReq(t *testing.T) (*e2ap.E2APSubscriptionDeleteRequ
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-func (tc *E2Stub) SendSubsDelResp(t *testing.T, req *e2ap.E2APSubscriptionDeleteRequest, msg *xapptweaks.RMRParams) {
-	tc.Logger.Info("SendSubsDelResp")
+func (tc *E2Stub) SendSubsDelResp(t *testing.T, req *e2ap.E2APSubscriptionDeleteRequest, msg *xapp.RMRParams) {
+	tc.Info("SendSubsDelResp")
 	e2SubsDelResp := e2asnpacker.NewPackerSubscriptionDeleteResponse()
 
 	//---------------------------------
@@ -501,9 +504,9 @@ func (tc *E2Stub) SendSubsDelResp(t *testing.T, req *e2ap.E2APSubscriptionDelete
 	if packerr != nil {
 		tc.TestError(t, "pack NOK %s", packerr.Error())
 	}
-	tc.Logger.Debug("%s", e2SubsDelResp.String())
+	tc.Debug("%s", e2SubsDelResp.String())
 
-	params := xapptweaks.NewParams(nil)
+	params := &xapp.RMRParams{}
 	params.Mtype = xapp.RIC_SUB_DEL_RESP
 	params.SubId = msg.SubId
 	params.Payload = packedMsg.Buf
@@ -512,8 +515,8 @@ func (tc *E2Stub) SendSubsDelResp(t *testing.T, req *e2ap.E2APSubscriptionDelete
 	params.Xid = msg.Xid
 	params.Mbuf = nil
 
-	tc.Logger.Info("SEND SUB DEL RESP: %s", params.String())
-	snderr := tc.RmrSend(params, 5)
+	tc.Info("SEND SUB DEL RESP: %s", params.String())
+	snderr := tc.SendWithRetry(params, false, 5)
 	if snderr != nil {
 		tc.TestError(t, "RMR SEND FAILED: %s", snderr.Error())
 	}
@@ -523,7 +526,7 @@ func (tc *E2Stub) SendSubsDelResp(t *testing.T, req *e2ap.E2APSubscriptionDelete
 //
 //-----------------------------------------------------------------------------
 func (tc *E2Stub) RecvSubsDelResp(t *testing.T, trans *RmrTransactionId) {
-	tc.Logger.Info("RecvSubsDelResp")
+	tc.Info("RecvSubsDelResp")
 	e2SubsDelResp := e2asnpacker.NewPackerSubscriptionDeleteResponse()
 
 	//---------------------------------
@@ -544,7 +547,7 @@ func (tc *E2Stub) RecvSubsDelResp(t *testing.T, trans *RmrTransactionId) {
 			if unpackerr != nil {
 				tc.TestError(t, "RIC_SUB_DEL_RESP unpack failed err: %s", unpackerr.Error())
 			}
-			tc.Logger.Info("Recv Subs Del Resp rmr: xid=%s subid=%d, asn: instanceid=%d", msg.Xid, msg.SubId, resp.RequestId.InstanceId)
+			tc.Info("Recv Subs Del Resp rmr: xid=%s subid=%d, asn: instanceid=%d", msg.Xid, msg.SubId, resp.RequestId.InstanceId)
 			return
 		}
 	} else {
@@ -555,8 +558,8 @@ func (tc *E2Stub) RecvSubsDelResp(t *testing.T, trans *RmrTransactionId) {
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-func (tc *E2Stub) SendSubsDelFail(t *testing.T, req *e2ap.E2APSubscriptionDeleteRequest, msg *xapptweaks.RMRParams) {
-	tc.Logger.Info("SendSubsDelFail")
+func (tc *E2Stub) SendSubsDelFail(t *testing.T, req *e2ap.E2APSubscriptionDeleteRequest, msg *xapp.RMRParams) {
+	tc.Info("SendSubsDelFail")
 	e2SubsDelFail := e2asnpacker.NewPackerSubscriptionDeleteFailure()
 
 	//---------------------------------
@@ -573,9 +576,9 @@ func (tc *E2Stub) SendSubsDelFail(t *testing.T, req *e2ap.E2APSubscriptionDelete
 	if packerr != nil {
 		tc.TestError(t, "pack NOK %s", packerr.Error())
 	}
-	tc.Logger.Debug("%s", e2SubsDelFail.String())
+	tc.Debug("%s", e2SubsDelFail.String())
 
-	params := xapptweaks.NewParams(nil)
+	params := &xapp.RMRParams{}
 	params.Mtype = xapp.RIC_SUB_DEL_FAILURE
 	params.SubId = msg.SubId
 	params.Payload = packedMsg.Buf
@@ -584,8 +587,8 @@ func (tc *E2Stub) SendSubsDelFail(t *testing.T, req *e2ap.E2APSubscriptionDelete
 	params.Xid = msg.Xid
 	params.Mbuf = nil
 
-	tc.Logger.Info("SEND SUB DEL FAIL: %s", params.String())
-	snderr := tc.RmrSend(params, 5)
+	tc.Info("SEND SUB DEL FAIL: %s", params.String())
+	snderr := tc.SendWithRetry(params, false, 5)
 	if snderr != nil {
 		tc.TestError(t, "RMR SEND FAILED: %s", snderr.Error())
 	}

@@ -90,17 +90,17 @@ func (tc *testingHttpRtmgrStub) http_handler(w http.ResponseWriter, r *http.Requ
 		var req rtmgr_models.XappSubscriptionData
 		err := json.NewDecoder(r.Body).Decode(&req)
 		if err != nil {
-			tc.Logger.Error("%s", err.Error())
+			tc.Error("%s", err.Error())
 		}
-		tc.Logger.Info("handling SubscriptionID=%d Address=%s Port=%d", *req.SubscriptionID, *req.Address, *req.Port)
+		tc.Info("handling SubscriptionID=%d Address=%s Port=%d", *req.SubscriptionID, *req.Address, *req.Port)
 	}
 	if r.Method == http.MethodPut {
 		var req rtmgr_models.XappList
 		err := json.NewDecoder(r.Body).Decode(&req)
 		if err != nil {
-			tc.Logger.Error("%s", err.Error())
+			tc.Error("%s", err.Error())
 		}
-		tc.Logger.Info("handling put")
+		tc.Info("handling put")
 	}
 
 	var code int = 0
@@ -135,7 +135,7 @@ func (tc *testingHttpRtmgrStub) http_handler(w http.ResponseWriter, r *http.Requ
 	if waiter != nil {
 		waiter.SetResult(true)
 	}
-	tc.Logger.Info("Method=%s Reply with code %d", r.Method, code)
+	tc.Info("Method=%s Reply with code %d", r.Method, code)
 	w.WriteHeader(code)
 
 }

@@ -55,11 +55,11 @@ func (tc *RmrControl) Init(desc string, srcId RmrSrcId, rtgSvc RmrRtgSvc) {
 }
 
 func (tc *RmrControl) TestError(t *testing.T, pattern string, args ...interface{}) {
-	tc.Logger.Error(fmt.Sprintf(pattern, args...))
+	tc.Error(fmt.Sprintf(pattern, args...))
 	t.Errorf(fmt.Sprintf(pattern, args...))
 }
 
 func (tc *RmrControl) TestLog(t *testing.T, pattern string, args ...interface{}) {
-	tc.Logger.Info(fmt.Sprintf(pattern, args...))
+	tc.Info(fmt.Sprintf(pattern, args...))
 	t.Logf(fmt.Sprintf(pattern, args...))
 }
