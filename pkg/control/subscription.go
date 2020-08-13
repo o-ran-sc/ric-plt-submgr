@@ -21,7 +21,6 @@ package control
 
 import (
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
-	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/xapptweaks"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	//"reflect"
 	"sync"
@@ -36,7 +35,7 @@ type Subscription struct {
 	registry  *Registry                     // Registry
 	ReqId     RequestId                     // ReqId (Requestor Id + Seq Nro a.k.a subsid)
 	Meid      *xapp.RMRMeid                 // Meid/ RanName
-	EpList    xapptweaks.RmrEndpointList    // Endpoints
+	EpList    xapp.RmrEndpointList          // Endpoints
 	TransLock sync.Mutex                    // Lock transactions, only one executed per time for subs
 	TheTrans  TransactionIf                 // Ongoing transaction
 	SubReqMsg *e2ap.E2APSubscriptionRequest // Subscription information
@@ -44,7 +43,11 @@ type Subscription struct {
 }
 
 func (s *Subscription) String() string {
-	return "subs(" + s.ReqId.String() + "/" + (&xapptweaks.RMRMeid{s.Meid}).String() + "/" + s.EpList.String() + ")"
+	meidstr := "N/A"
+	if s.Meid != nil {
+		meidstr = s.Meid.String()
+	}
+	return "subs(" + s.ReqId.String() + "/" + meidstr + "/" + s.EpList.String() + ")"
 }
 
 func (s *Subscription) GetCachedResponse() (interface{}, bool) {

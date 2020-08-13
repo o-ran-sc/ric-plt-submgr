@@ -20,7 +20,6 @@
 package teststub
 
 import (
-	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/xapptweaks"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"os"
 	"strconv"
@@ -115,7 +114,7 @@ func (rrt *RmrRouteTable) Disable() {
 //-----------------------------------------------------------------------------
 
 type RmrSrcId struct {
-	xapptweaks.RmrEndpoint
+	xapp.RmrEndpoint
 }
 
 func (rsi *RmrSrcId) Enable() {
@@ -134,7 +133,7 @@ func (rsi *RmrSrcId) Disable() {
 //
 //-----------------------------------------------------------------------------
 type RmrRtgSvc struct {
-	xapptweaks.RmrEndpoint
+	xapp.RmrEndpoint
 }
 
 func (rrs *RmrRtgSvc) Enable() {

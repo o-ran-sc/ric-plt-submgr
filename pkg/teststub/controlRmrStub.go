@@ -19,7 +19,6 @@
 package teststub
 
 import (
-	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/xapptweaks"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"strconv"
 	"strings"
@@ -32,8 +31,8 @@ import (
 //-----------------------------------------------------------------------------
 type RmrStubControl struct {
 	RmrControl
-	xapptweaks.RmrWrapper
-	RecvChan chan *xapptweaks.RMRParams
+	*xapp.RMRClient
+	RecvChan chan *xapp.RMRParams
 	Active   bool
 	InitMsg  int
 	CheckXid bool
@@ -71,65 +70,62 @@ func (tc *RmrStubControl) TestMsgChanEmpty(t *testing.T) {
 func (tc *RmrStubControl) Init(desc string, srcId RmrSrcId, rtgSvc RmrRtgSvc, stat string, initMsg int) {
 	tc.InitMsg = initMsg
 	tc.Active = false
-	tc.RecvChan = make(chan *xapptweaks.RMRParams)
+	tc.RecvChan = make(chan *xapp.RMRParams)
 	tc.RmrControl.Init(desc, srcId, rtgSvc)
-	tc.RmrWrapper.Init()
 
-	tc.Rmr = xapp.NewRMRClientWithParams("tcp:"+strconv.FormatUint(uint64(srcId.Port), 10), 65534, 1, 0, stat)
-	tc.Rmr.SetReadyCB(tc.ReadyCB, nil)
-	go tc.Rmr.Start(tc)
+	tc.RMRClient = xapp.NewRMRClientWithParams("tcp:"+strconv.FormatUint(uint64(srcId.Port), 10), 65534, 0, stat)
+	tc.RMRClient.SetReadyCB(tc.ReadyCB, nil)
+	go tc.RMRClient.Start(tc)
 
 	tc.WaitCB()
 	allRmrStubs = append(allRmrStubs, tc)
 }
 
-func (tc *RmrStubControl) Consume(params *xapp.RMRParams) (err error) {
-	defer tc.Rmr.Free(params.Mbuf)
-	msg := xapptweaks.NewParams(params)
-	tc.CntRecvMsg++
+func (tc *RmrStubControl) Consume(msg *xapp.RMRParams) (err error) {
+	defer tc.RMRClient.Free(msg.Mbuf)
 
 	cPay := append(msg.Payload[:0:0], msg.Payload...)
 	msg.Payload = cPay
 	msg.PayloadLen = len(cPay)
 
 	if msg.Mtype == tc.InitMsg {
-		tc.Logger.Info("Testing message ignore %s", msg.String())
+		tc.Info("Testing message ignore %s", msg.String())
 		tc.SetActive()
 		return
 	}
 
 	if tc.IsCheckXid() == true && strings.Contains(msg.Xid, tc.GetDesc()) == false {
-		tc.Logger.Info("Ignore %s", msg.String())
+		tc.Info("Ignore %s", msg.String())
 		return
 	}
 
-	tc.Logger.Info("Consume %s", msg.String())
+	tc.Info("Consume %s", msg.String())
 	tc.PushMsg(msg)
 	return
 }
 
-func (tc *RmrStubControl) PushMsg(msg *xapptweaks.RMRParams) {
-	tc.Logger.Debug("RmrStubControl PushMsg ... msg(%d) waiting", msg.Mtype)
+func (tc *RmrStubControl) PushMsg(msg *xapp.RMRParams) {
+	tc.Debug("RmrStubControl PushMsg ... msg(%d) waiting", msg.Mtype)
 	tc.RecvChan <- msg
-	tc.Logger.Debug("RmrStubControl PushMsg ... done")
+	tc.Debug("RmrStubControl PushMsg ... done")
 }
 
-func (tc *RmrStubControl) WaitMsg(secs time.Duration) *xapptweaks.RMRParams {
-	tc.Logger.Debug("RmrStubControl WaitMsg ... waiting")
+func (tc *RmrStubControl) WaitMsg(secs time.Duration) *xapp.RMRParams {
+	tc.Debug("RmrStubControl WaitMsg ... waiting")
 	if secs == 0 {
 		msg := <-tc.RecvChan
-		tc.Logger.Debug("RmrStubControl WaitMsg ... msg(%d) done", msg.Mtype)
+		tc.Debug("RmrStubControl WaitMsg ... msg(%d) done", msg.Mtype)
 		return msg
 	}
 	select {
 	case msg := <-tc.RecvChan:
-		tc.Logger.Debug("RmrStubControl WaitMsg ... msg(%d) done", msg.Mtype)
+		tc.Debug("RmrStubControl WaitMsg ... msg(%d) done", msg.Mtype)
 		return msg
 	case <-time.After(secs * time.Second):
-		tc.Logger.Debug("RmrStubControl WaitMsg ... timeout")
+		tc.Debug("RmrStubControl WaitMsg ... timeout")
 		return nil
 	}
-	tc.Logger.Debug("RmrStubControl WaitMsg ... error")
+	tc.Debug("RmrStubControl WaitMsg ... error")
 	return nil
 }
 
@@ -139,11 +135,11 @@ var allRmrStubs []*RmrStubControl
 //
 //-----------------------------------------------------------------------------
 
-func RmrStubControlWaitAlive(seconds int, mtype int, rmr xapptweaks.XAppWrapperIf) bool {
+func RmrStubControlWaitAlive(seconds int, mtype int, rmr *xapp.RMRClient, tent *TestWrapper) bool {
 
 	var dummyBuf []byte = make([]byte, 100)
 
-	params := xapptweaks.NewParams(nil)
+	params := &xapp.RMRParams{}
 	params.Mtype = mtype
 	params.SubId = -1
 	params.Payload = dummyBuf
@@ -153,15 +149,15 @@ func RmrStubControlWaitAlive(seconds int, mtype int, rmr xapptweaks.XAppWrapperI
 	params.Mbuf = nil
 
 	if len(allRmrStubs) == 0 {
-		rmr.GetLogger().Info("No rmr stubs so no need to wait those to be alive")
+		tent.Info("No rmr stubs so no need to wait those to be alive")
 		return true
 	}
 	status := false
 	i := 1
 	for ; i <= seconds*2 && status == false; i++ {
 
-		rmr.GetLogger().Info("SEND TESTPING: %s", params.String())
-		rmr.RmrSend(params, 0)
+		tent.Info("SEND TESTPING: %s", params.String())
+		rmr.SendWithRetry(params, false, 0)
 
 		status = true
 		for _, val := range allRmrStubs {
@@ -173,12 +169,12 @@ func RmrStubControlWaitAlive(seconds int, mtype int, rmr xapptweaks.XAppWrapperI
 		if status == true {
 			break
 		}
-		rmr.GetLogger().Info("Sleep 0.5 secs and try routes again")
+		tent.Info("Sleep 0.5 secs and try routes again")
 		time.Sleep(500 * time.Millisecond)
 	}
 
 	if status == false {
-		rmr.GetLogger().Error("Could not initialize routes")
+		tent.Error("Could not initialize routes")
 	}
 	return status
 }

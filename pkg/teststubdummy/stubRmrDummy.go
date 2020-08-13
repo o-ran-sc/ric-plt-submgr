@@ -25,7 +25,6 @@ package teststubdummy
 
 import (
 	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/teststub"
-	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/xapptweaks"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"testing"
 )
@@ -55,12 +54,12 @@ func CreateNewRmrDummyStub(desc string, srcId teststub.RmrSrcId, rtgSvc teststub
 //-----------------------------------------------------------------------------
 
 func (tc *RmrDummyStub) SendReq(t *testing.T, plen int) {
-	tc.Logger.Info("SendReq")
+	tc.Info("SendReq")
 	len := plen
 	if len == 0 {
 		len = 100
 	}
-	params := xapptweaks.NewParams(nil)
+	params := &xapp.RMRParams{}
 	params.Mtype = tc.reqMsg
 	params.SubId = -1
 
@@ -70,7 +69,7 @@ func (tc *RmrDummyStub) SendReq(t *testing.T, plen int) {
 	params.Xid = "TEST"
 	params.Mbuf = nil
 
-	snderr := tc.RmrSend(params, 5)
+	snderr := tc.SendWithRetry(params, false, 5)
 	if snderr != nil {
 		tc.TestError(t, "%s", snderr.Error())
 	}
@@ -78,12 +77,12 @@ func (tc *RmrDummyStub) SendReq(t *testing.T, plen int) {
 }
 
 func (tc *RmrDummyStub) SendResp(t *testing.T, plen int) {
-	tc.Logger.Info("SendReq")
+	tc.Info("SendReq")
 	len := plen
 	if len == 0 {
 		len = 100
 	}
-	params := xapptweaks.NewParams(nil)
+	params := &xapp.RMRParams{}
 	params.Mtype = tc.respMsg
 	params.SubId = -1
 	params.Payload = make([]byte, len)
@@ -92,7 +91,7 @@ func (tc *RmrDummyStub) SendResp(t *testing.T, plen int) {
 	params.Xid = "TEST"
 	params.Mbuf = nil
 
-	snderr := tc.RmrSend(params, 5)
+	snderr := tc.SendWithRetry(params, false, 5)
 	if snderr != nil {
 		tc.TestError(t, "%s", snderr.Error())
 	}
@@ -100,7 +99,7 @@ func (tc *RmrDummyStub) SendResp(t *testing.T, plen int) {
 }
 
 func (tc *RmrDummyStub) RecvReq(t *testing.T) bool {
-	tc.Logger.Info("RecvReq")
+	tc.Info("RecvReq")
 
 	msg := tc.WaitMsg(15)
 	if msg != nil {
@@ -116,7 +115,7 @@ func (tc *RmrDummyStub) RecvReq(t *testing.T) bool {
 }
 
 func (tc *RmrDummyStub) RecvResp(t *testing.T) bool {
-	tc.Logger.Info("RecvResp")
+	tc.Info("RecvResp")
 
 	msg := tc.WaitMsg(15)
 	if msg != nil {

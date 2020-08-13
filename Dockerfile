@@ -57,7 +57,7 @@ RUN export GOBIN=/usr/local/bin/ ; \
 #
 # RMR
 #
-ARG RMRVERSION=4.0.2
+ARG RMRVERSION=4.1.2
 ARG RMRLIBURL=https://packagecloud.io/o-ran-sc/release/packages/debian/stretch/rmr_${RMRVERSION}_amd64.deb/download.deb
 ARG RMRDEVURL=https://packagecloud.io/o-ran-sc/release/packages/debian/stretch/rmr-dev_${RMRVERSION}_amd64.deb/download.deb
 RUN wget --content-disposition ${RMRLIBURL} && dpkg -i rmr_${RMRVERSION}_amd64.deb
@@ -92,6 +92,7 @@ RUN cd 3rdparty/E2AP-v01.00.00 && \
 
 
 RUN echo "E2AP         E2AP-v01.00.00" >> /manifests/versions.txt
+
 
 COPY e2ap e2ap
 RUN cd e2ap/libe2ap_wrapper && \
@@ -172,15 +173,26 @@ ENV RMR_SEED_RT=/opt/submgr/test/uta_rtg.rt
 #ENV CGO_LDFLAGS="-fsanitize=address"
 #ENV CGO_CFLAGS="-fsanitize=address"
 
-RUN go test -test.coverprofile /tmp/submgr_cover.out -count=1 -v ./pkg/control 
-RUN go tool cover -html=/tmp/submgr_cover.out -o /tmp/submgr_cover.html
+#
+# To get debug from rmr
+#
+#RUN echo 5 >  /opt/submgr/level
+#RUN RMR_VCTL_FILE=/opt/submgr/level go test -test.coverprofile /tmp/submgr_cover.out -count=1 -v ./pkg/control 
+
+#
+# go tests. comment out ipv6 localhost if exist when tests are executed.
+#
+RUN sed -r  "s/^(::1.*)/#\1/" /etc/hosts  > /etc/hosts.new \
+    && cat /etc/hosts.new > /etc/hosts \
+    && cat /etc/hosts  \
+    && go test -test.coverprofile /tmp/submgr_cover.out -count=1 -v ./pkg/control \
+    && go tool cover -html=/tmp/submgr_cover.out -o /tmp/submgr_cover.html
 
 # test formating (not important)
 RUN test -z "$(gofmt -l pkg/control/*.go)"
 RUN test -z "$(gofmt -l pkg/teststub/*.go)"
 RUN test -z "$(gofmt -l pkg/teststubdummy/*.go)"
 RUN test -z "$(gofmt -l pkg/teststube2ap/*.go)"
-RUN test -z "$(gofmt -l pkg/xapptweaks/*.go)"
 
 
 ###########################################################

@@ -20,23 +20,31 @@ package teststub
 
 import (
 	"fmt"
-	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/xapptweaks"
+	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
+	"strings"
 	"testing"
 )
 
 type TestWrapper struct {
-	xapptweaks.LogWrapper
+	*xapp.Log
+	desc string
 }
 
 func (tw *TestWrapper) Init(desc string) {
-	tw.LogWrapper.Init(desc)
+	tw.desc = strings.ToUpper(desc)
+	tw.Log = xapp.NewLogger(tw.desc)
+	//tw.SetLevel(defaultLogLevel)
+}
+
+func (tw *TestWrapper) GetDesc() string {
+	return tw.desc
 }
 
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
 func (tw *TestWrapper) TestError(t *testing.T, pattern string, args ...interface{}) {
-	tw.Logger.Error(fmt.Sprintf(pattern, args...))
+	tw.Error(fmt.Sprintf(pattern, args...))
 	t.Errorf(fmt.Sprintf(pattern, args...))
 }
 
@@ -44,7 +52,7 @@ func (tw *TestWrapper) TestError(t *testing.T, pattern string, args ...interface
 //
 //-----------------------------------------------------------------------------
 func (tw *TestWrapper) TestLog(t *testing.T, pattern string, args ...interface{}) {
-	tw.Logger.Info(fmt.Sprintf(pattern, args...))
+	tw.Info(fmt.Sprintf(pattern, args...))
 	t.Logf(fmt.Sprintf(pattern, args...))
 }
 

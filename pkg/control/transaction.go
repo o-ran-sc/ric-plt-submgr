@@ -21,7 +21,6 @@ package control
 
 import (
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
-	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/xapptweaks"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"strconv"
 	"sync"
@@ -53,7 +52,11 @@ type Transaction struct {
 }
 
 func (t *Transaction) String() string {
-	return "trans(" + strconv.FormatUint(uint64(t.Seq), 10) + "/" + (&xapptweaks.RMRMeid{t.Meid}).String() + ")"
+	meidstr := "N/A"
+	if t.Meid != nil {
+		meidstr = t.Meid.String()
+	}
+	return "trans(" + strconv.FormatUint(uint64(t.Seq), 10) + "/" + meidstr + ")"
 }
 
 func (t *Transaction) SendEvent(event interface{}, waittime time.Duration) (bool, bool) {
@@ -126,7 +129,7 @@ func (t *TransactionSubs) Release() {
 //
 //-----------------------------------------------------------------------------
 type TransactionXappKey struct {
-	xapptweaks.RmrEndpoint
+	xapp.RmrEndpoint
 	Xid string // xapp xid in req
 }
 
@@ -151,7 +154,7 @@ func (t *TransactionXapp) String() string {
 	return "transxapp(" + t.Transaction.String() + "/" + transkey + "/" + strconv.FormatUint(uint64(t.SubId), 10) + ")"
 }
 
-func (t *TransactionXapp) GetEndpoint() *xapptweaks.RmrEndpoint {
+func (t *TransactionXapp) GetEndpoint() *xapp.RmrEndpoint {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 	if t.XappKey != nil {
