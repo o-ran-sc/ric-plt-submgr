@@ -196,6 +196,7 @@ func (r *Registry) AssignToSubscription(trans *TransactionXapp, subReqMsg *e2ap.
 func (r *Registry) CheckActionTypes(subReqMsg *e2ap.E2APSubscriptionRequest) (uint64, error) {
 	var reportFound bool = false
 	var policyFound bool = false
+	var insertFound bool = false
 
 	for _, acts := range subReqMsg.ActionSetups {
 		if acts.ActionType == e2ap.E2AP_ActionTypeReport {
@@ -204,15 +205,21 @@ func (r *Registry) CheckActionTypes(subReqMsg *e2ap.E2APSubscriptionRequest) (ui
 		if acts.ActionType == e2ap.E2AP_ActionTypePolicy {
 			policyFound = true
 		}
+		if acts.ActionType == e2ap.E2AP_ActionTypeInsert {
+			insertFound = true
+		}
 	}
-	if reportFound == true && policyFound == true {
-		return e2ap.E2AP_ActionTypeInvalid, fmt.Errorf("Report and Policy in same RICactions-ToBeSetup-List")
+	if reportFound == true && policyFound == true || reportFound == true && insertFound == true || policyFound == true && insertFound == true {
+		return e2ap.E2AP_ActionTypeInvalid, fmt.Errorf("Different action types (Report, Policy or Insert) in same RICactions-ToBeSetup-List")
 	}
 	if reportFound == true {
 		return e2ap.E2AP_ActionTypeReport, nil
 	}
 	if policyFound == true {
 		return e2ap.E2AP_ActionTypePolicy, nil
+	}
+	if insertFound == true {
+		return e2ap.E2AP_ActionTypeInsert, nil
 	}
 	return e2ap.E2AP_ActionTypeInvalid, fmt.Errorf("Invalid action type in RICactions-ToBeSetup-List")
 }

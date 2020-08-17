@@ -37,8 +37,8 @@ sends response to xApp.
 There can be only one ongoing RIC Subscription or RIC Subscription Delete procedure towards RAN at any time. That is because Subscription
 Manager is able to merge new subscriptions only which those it has already received successful response from RAN. Subscriptions
 and delete subscriptions are therefore queued in Subscription Manager. Subscription Manager may need to do reties during subscribe or
-unsubscribe procedure. As it can increase completion time of the procedure, this needs to be considered when retries are implemented
-in xApp side. xApp's retry delay should not be too short.
+unsubscribe procedure. This needs to be considered when retries are implemented in xApp side, as it can increase completion time of the
+procedure. xApp's retry delay should not be too short.
 
     .. image:: images/PlaceInRICSoftwareArchitecture.png
       :width: 600
@@ -67,11 +67,9 @@ Architecture
       header when E2 Termination sends the subscribed message to xApp. When xApp wants to delete the subscription, the same sequence number
       must be included in the ASN.1 encoded RIC Subscription Delete Request message sent to Subscription Manager.
 
-      Subscription Manager responds to xApp with xApp allocated RIC Requestor ID. In merge case subscription is created only for the first
-      requestor. RAN gets the Requestor ID of the xApp who makes the first subscription. RAN uses that Requestor ID in all RIC Indication
-      messages it sends to RIC for the subscription. Therefore xApp may get Requestor ID in RIC Indication message that belongs to another xApp.
-      The xApp whose subscription is merged into the first subscription will also get Requestor ID of the first subscribed xApp in the RIC
-      Subscription Response and RIC Subscription Delete Response messages.
+      Subscription Manager allocates RIC Requestor ID. Currently the ID value is always 123. In merge case subscription is created only for
+      the first requestor. RAN gets the Request of the xApp who makes the first subscription. RAN uses Subscription Manager allocated Requestor
+      ID in all RIC Indication messages it sends to RIC for the subscription.
 
       TransactionId (Xid) in RMR message header is used to track messages between xApp and Subscription Manager. xApp allocates it. Subscription
       Manager returns TransactionId received from xApp in response message to xApp. xApp uses it to map response messages to request messages
@@ -90,13 +88,11 @@ Architecture
       RIC Indication messages which are used to transport subscribed messages from RAN are routed from E2 Termination to xApps
       directly using the routes created during Subscription procedure.
 
-      ``Routing manager has 1 second delay in routing create in R3 release before it responds to Subscription Manager. That is because of delay in route create to RMR.``
-
-      Subscription Manager supports REPORT and POLICY type subscriptions (RICActionTypes). CONTROL and INSERT are not supported. POLICY type
+      Subscription Manager supports REPORT, POLICY and INSERT type subscriptions (RICActionTypes). CONTROL is not supported. POLICY type
       subscription can be updated. In update case signaling sequence is the same as above, except route is not created to Routing manager.
       xApp uses initially allocated TransactionId and RIC Request Sequence Number in update case. Route in POLICY type subscription case is needed
       only that Subscription Manager can send response messages to xApp. RIC Subscription Request message contains list of RICaction-ToBeSetup-ItemIEs.
-      The list cannot have both REPORT and POLICY action types at the same time. Subscription Manager checks actions types in the message.
+      The list cannot have REPORT, POLICY, INSERT action types at the same time. Subscription Manager checks actions types in the message.
       If both action types is found the message is dropped.
 
 
@@ -232,6 +228,7 @@ Supported E2 procedures and RAN services
 
       - REPORT
       - POLICY
+      - INSERT
 
     * RIC Subscription Delete procedure
 

@@ -1593,3 +1593,63 @@ func TestSubReqAndSubDelOkTwoE2termParallel(t *testing.T) {
 	e2termConn2.TestMsgChanEmpty(t)
 	mainCtrl.wait_registry_empty(t, 10)
 }
+
+//-----------------------------------------------------------------------------
+// TestSubReqInsertAndSubDelOk
+//
+//   stub                          stub
+// +-------+     +---------+    +---------+
+// | xapp  |     | submgr  |    | e2term  |
+// +-------+     +---------+    +---------+
+//     |              |              |
+//     | SubReq       |              |
+//     |------------->|              |
+//     |              |              |
+//     |              | SubReq       |
+//     |              |------------->|
+//     |              |              |
+//     |              |      SubResp |
+//     |              |<-------------|
+//     |              |              |
+//     |      SubResp |              |
+//     |<-------------|              |
+//     |              |              |
+//     |              |              |
+//     | SubDelReq    |              |
+//     |------------->|              |
+//     |              |              |
+//     |              | SubDelReq    |
+//     |              |------------->|
+//     |              |              |
+//     |              |   SubDelResp |
+//     |              |<-------------|
+//     |              |              |
+//     |   SubDelResp |              |
+//     |<-------------|              |
+//
+//-----------------------------------------------------------------------------
+func TestSubReqInsertAndSubDelOk(t *testing.T) {
+	CaseBegin("TestInsertSubReqAndSubDelOk")
+
+	rparams1 := &teststube2ap.E2StubSubsReqParams{}
+	rparams1.Init()
+	rparams1.Req.ActionSetups[0].ActionType = e2ap.E2AP_ActionTypeInsert
+	cretrans := xappConn1.SendSubsReq(t, rparams1, nil)
+
+	crereq, cremsg := e2termConn1.RecvSubsReq(t)
+	e2termConn1.SendSubsResp(t, crereq, cremsg)
+	e2SubsId := xappConn1.RecvSubsResp(t, cretrans)
+	deltrans := xappConn1.SendSubsDelReq(t, nil, e2SubsId)
+	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+
+	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
+	xappConn1.RecvSubsDelResp(t, deltrans)
+
+	//Wait that subs is cleaned
+	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
+
+	xappConn1.TestMsgChanEmpty(t)
+	xappConn2.TestMsgChanEmpty(t)
+	e2termConn1.TestMsgChanEmpty(t)
+	mainCtrl.wait_registry_empty(t, 10)
+}
