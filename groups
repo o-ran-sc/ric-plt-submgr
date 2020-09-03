@@ -2,4 +2,3 @@
 #
 7d3d43f8edf787e8e629da0670cec4aa44f2bb68                                       	saml/oran-gerrit-ric-plt-submgr-committers
 add1d629e64dce7097223c93ca6e710c1460b5ba                                       	GitHub Replication
-ldap:cn=oran-gerrit-ric-plt-submgr-committers,ou=Groups,dc=freestandards,dc=org	ldap/oran-gerrit-ric-plt-submgr-committers
