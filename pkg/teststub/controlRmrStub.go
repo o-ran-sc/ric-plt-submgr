@@ -73,7 +73,15 @@ func (tc *RmrStubControl) Init(desc string, srcId RmrSrcId, rtgSvc RmrRtgSvc, st
 	tc.RecvChan = make(chan *xapp.RMRParams)
 	tc.RmrControl.Init(desc, srcId, rtgSvc)
 
-	tc.RMRClient = xapp.NewRMRClientWithParams("tcp:"+strconv.FormatUint(uint64(srcId.Port), 10), 65534, 0, stat)
+	tc.RMRClient = xapp.NewRMRClientWithParams(&xapp.RMRClientParams{
+		ProtPort:   "tcp:" + strconv.FormatUint(uint64(srcId.Port), 10),
+		MaxSize:    65534,
+		ThreadType: 0,
+		StatDesc:   stat,
+		LowLatency: false,
+		FastAck:    false,
+	})
+
 	tc.RMRClient.SetReadyCB(tc.ReadyCB, nil)
 	go tc.RMRClient.Start(tc)
 
