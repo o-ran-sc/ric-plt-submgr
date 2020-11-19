@@ -1,10 +1,10 @@
 ---
 distribution_type: container
-container_release_tag: 0.5.3
+container_release_tag: 0.5.4
 container_pull_registry: nexus3.o-ran-sc.org:10004
 container_push_registry: nexus3.o-ran-sc.org:10002
 project: ric-plt/submgr
 ref: 3d2a3a1a8588eb63f9c9b04f792bda65f21e40fe
 containers:
     - name: ric-plt-submgr
-      version: 0.5.3
+      version: 0.5.4
