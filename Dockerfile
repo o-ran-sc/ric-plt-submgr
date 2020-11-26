@@ -198,7 +198,7 @@ RUN test -z "$(gofmt -l pkg/teststube2ap/*.go)"
 ###########################################################
 #
 ###########################################################
-FROM ubuntu:18.04 as submgr
+FROM ubuntu:18.04
 
 RUN apt update && apt install -y iputils-ping net-tools curl tcpdump
 
