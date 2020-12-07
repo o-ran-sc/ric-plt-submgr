@@ -213,6 +213,12 @@ Architecture
 
      If Subscription Manager receives unknown message, Subscription Manager drops the message.
 
+  * xApp restart
+
+    When xApp is restarted for any reason it may resend the subscriptions which have already been subscribed. In this case Subscription Manager sends
+    successful response to such requests without updating Routing Manager and BTS. In restart IP address of the xApp may change but service address name
+    does not. Message routing uses service address name.
+
 RAN services explained
 ----------------------
   RIC hosted xApps may use the following RAN services from a RAN node:
@@ -239,4 +245,4 @@ Recommendations for xApps
 
    * Recommended retry delay
 
-     Recommended retry delay for xApp is > 10 seconds
+     Recommended retry delay for xApp is >= 5 seconds

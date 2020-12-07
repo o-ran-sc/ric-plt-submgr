@@ -87,7 +87,7 @@ func (r *Registry) allocateSubs(trans *TransactionXapp, subReqMsg *e2ap.E2APSubs
 	return nil, fmt.Errorf("Registry: Failed to reserve subscription no free ids")
 }
 
-func (r *Registry) findExistingSubs(trans *TransactionXapp, subReqMsg *e2ap.E2APSubscriptionRequest) *Subscription {
+func (r *Registry) findExistingSubs(trans *TransactionXapp, subReqMsg *e2ap.E2APSubscriptionRequest) (*Subscription, bool) {
 
 	for _, subs := range r.register {
 		if subs.IsMergeable(trans, subReqMsg) {
@@ -106,18 +106,19 @@ func (r *Registry) findExistingSubs(trans *TransactionXapp, subReqMsg *e2ap.E2AP
 				subs.mutex.Unlock()
 				continue
 			}
-			// try to add to endpointlist.
+			// Try to add to endpointlist. Adding fails if endpoint is already in the list
 			if subs.EpList.AddEndpoint(trans.GetEndpoint()) == false {
 				subs.mutex.Unlock()
-				continue
+				xapp.Logger.Debug("Registry: Subs with requesting endpoint found. %s for %s", subs.String(), trans.String())
+				return subs, true
 			}
 			subs.mutex.Unlock()
 
-			xapp.Logger.Debug("Registry: Mergeable subs found %s for %s", subs.String(), trans.String())
-			return subs
+			xapp.Logger.Debug("Registry: Mergeable subs found. %s for %s", subs.String(), trans.String())
+			return subs, false
 		}
 	}
-	return nil
+	return nil, false
 }
 
 func (r *Registry) AssignToSubscription(trans *TransactionXapp, subReqMsg *e2ap.E2APSubscriptionRequest) (*Subscription, error) {
@@ -140,7 +141,7 @@ func (r *Registry) AssignToSubscription(trans *TransactionXapp, subReqMsg *e2ap.
 	//
 	if actionType == e2ap.E2AP_ActionTypePolicy {
 		if subs, ok := r.register[trans.GetSubId()]; ok {
-			xapp.Logger.Debug("CREATE %s. Existing subscription for Policy found", subs.String())
+			xapp.Logger.Debug("CREATE %s. Existing subscription for Policy found.", subs.String())
 			// Update message data to subscription
 			subs.SubReqMsg = subReqMsg
 			subs.SetCachedResponse(nil, true)
@@ -148,13 +149,18 @@ func (r *Registry) AssignToSubscription(trans *TransactionXapp, subReqMsg *e2ap.
 		}
 	}
 
-	subs := r.findExistingSubs(trans, subReqMsg)
+	subs, endPointFound := r.findExistingSubs(trans, subReqMsg)
 	if subs == nil {
 		subs, err = r.allocateSubs(trans, subReqMsg)
 		if err != nil {
 			return nil, err
 		}
 		newAlloc = true
+	} else if endPointFound == true {
+		// Requesting endpoint is already present in existing subscription. This can happen if xApp is restarted.
+		xapp.Logger.Debug("CREATE: subscription already exists. %s", subs.String())
+		xapp.Logger.Debug("Registry: substable=%v", r.register)
+		return subs, nil
 	}
 
 	//
