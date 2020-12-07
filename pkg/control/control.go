@@ -54,12 +54,11 @@ func idstring(err error, entries ...fmt.Stringer) string {
 //
 //-----------------------------------------------------------------------------
 
-var e2tSubReqTimeout time.Duration = 5 * time.Second
-var e2tSubDelReqTime time.Duration = 5 * time.Second
-var e2tMaxSubReqTryCount uint64 = 2    // Initial try + retry
-var e2tMaxSubDelReqTryCount uint64 = 2 // Initial try + retry
-
-var e2tRecvMsgTimeout time.Duration = 5 * time.Second
+var e2tSubReqTimeout time.Duration
+var e2tSubDelReqTime time.Duration
+var e2tRecvMsgTimeout time.Duration
+var e2tMaxSubReqTryCount uint64    // Initial try + retry
+var e2tMaxSubDelReqTryCount uint64 // Initial try + retry
 
 type Control struct {
 	*xapp.RMRClient
@@ -84,6 +83,18 @@ func init() {
 }
 
 func NewControl() *Control {
+
+	// viper.GetDuration returns nanoseconds
+	e2tSubReqTimeout = viper.GetDuration("controls.e2tSubReqTimeout_ms") * 1000000
+	xapp.Logger.Info("e2tSubReqTimeout %v", e2tSubReqTimeout)
+	e2tSubDelReqTime = viper.GetDuration("controls.e2tSubDelReqTime_ms") * 1000000
+	xapp.Logger.Info("e2tSubDelReqTime %v", e2tSubDelReqTime)
+	e2tRecvMsgTimeout = viper.GetDuration("controls.e2tRecvMsgTimeout_ms") * 1000000
+	xapp.Logger.Info("e2tRecvMsgTimeout %v", e2tRecvMsgTimeout)
+	e2tMaxSubReqTryCount = viper.GetUint64("controls.e2tMaxSubReqTryCount")
+	xapp.Logger.Info("e2tMaxSubReqTryCount %v", e2tMaxSubReqTryCount)
+	e2tMaxSubDelReqTryCount = viper.GetUint64("controls.e2tMaxSubDelReqTryCount")
+	xapp.Logger.Info("e2tMaxSubDelReqTryCount %v", e2tMaxSubDelReqTryCount)
 
 	transport := httptransport.New(viper.GetString("rtmgr.HostAddr")+":"+viper.GetString("rtmgr.port"), viper.GetString("rtmgr.baseUrl"), []string{"http"})
 	rtmgrClient := RtmgrClient{rtClient: rtmgrclient.New(transport, strfmt.Default)}

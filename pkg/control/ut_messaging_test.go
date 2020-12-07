@@ -1653,3 +1653,71 @@ func TestSubReqInsertAndSubDelOk(t *testing.T) {
 	e2termConn1.TestMsgChanEmpty(t)
 	mainCtrl.wait_registry_empty(t, 10)
 }
+
+//-----------------------------------------------------------------------------
+// TestSubReqRetransmissionWithSameSubIdDiffXid
+//
+// This case simulates case where xApp restarts and starts sending same
+// subscription requests which have already subscribed successfully
+
+//   stub                          stub
+// +-------+     +---------+    +---------+
+// | xapp  |     | submgr  |    | e2term  |
+// +-------+     +---------+    +---------+
+//     |              |              |
+//     |  SubReq      |              |
+//     |------------->|              |
+//     |              |              |
+//     |              | SubReq       |
+//     |              |------------->|
+//     |              |              |
+//     |              |      SubResp |
+//     |              |<-------------|
+//     |              |              |
+//     |      SubResp |              |
+//     |<-------------|              |
+//     |              |              |
+//     | xApp restart |              |
+//     |              |              |
+//     |  SubReq      |              |
+//     | (retrans with same xApp generated subid but diff xid)
+//     |------------->|              |
+//     |              |              |
+//     |      SubResp |              |
+//     |<-------------|              |
+//     |              |              |
+//     |         [SUBS DELETE]       |
+//     |              |              |
+//
+//-----------------------------------------------------------------------------
+func TestSubReqRetransmissionWithSameSubIdDiffXid(t *testing.T) {
+	CaseBegin("TestSubReqRetransmissionWithSameSubIdDiffXid")
+
+	//Subs Create
+	cretrans := xappConn1.SendSubsReq(t, nil, nil)
+	crereq, cremsg := e2termConn1.RecvSubsReq(t)
+	e2termConn1.SendSubsResp(t, crereq, cremsg)
+	e2SubsId := xappConn1.RecvSubsResp(t, cretrans)
+
+	// xApp restart here
+	// --> artificial delay
+	<-time.After(1 * time.Second)
+
+	//Subs Create
+	cretrans = xappConn1.SendSubsReq(t, nil, nil) //Retransmitted SubReq
+	e2SubsId = xappConn1.RecvSubsResp(t, cretrans)
+
+	//Subs Delete
+	deltrans := xappConn1.SendSubsDelReq(t, nil, e2SubsId)
+	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
+	xappConn1.RecvSubsDelResp(t, deltrans)
+
+	//Wait that subs is cleaned
+	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
+
+	xappConn1.TestMsgChanEmpty(t)
+	xappConn2.TestMsgChanEmpty(t)
+	e2termConn1.TestMsgChanEmpty(t)
+	mainCtrl.wait_registry_empty(t, 10)
+}
