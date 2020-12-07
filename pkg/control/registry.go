@@ -42,8 +42,8 @@ type Registry struct {
 func (r *Registry) Initialize() {
 	r.register = make(map[uint32]*Subscription)
 	var i uint32
-	for i = 0; i < 65535; i++ {
-		r.subIds = append(r.subIds, i+1)
+	for i = 1; i < 65535; i++ {
+		r.subIds = append(r.subIds, i)
 	}
 }
 
@@ -60,7 +60,7 @@ func (r *Registry) QueryHandler() (models.SubscriptionList, error) {
 	return resp, nil
 }
 
-func (r *Registry) allocateSubs(trans *TransactionXapp, subReqMsg *e2ap.E2APSubscriptionRequest) (*Subscription, error) {
+func (r *Registry) allocateSubs(trans *TransactionXapp, subReqMsg *e2ap.E2APSubscriptionRequest, resetTestFlag bool) (*Subscription, error) {
 	if len(r.subIds) > 0 {
 		subId := r.subIds[0]
 		r.subIds = r.subIds[1:]
@@ -69,19 +69,26 @@ func (r *Registry) allocateSubs(trans *TransactionXapp, subReqMsg *e2ap.E2APSubs
 			return nil, fmt.Errorf("Registry: Failed to reserve subscription exists")
 		}
 		subs := &Subscription{
-			registry:  r,
-			Meid:      trans.Meid,
-			SubReqMsg: subReqMsg,
-			valid:     true,
+			registry:         r,
+			Meid:             trans.Meid,
+			SubReqMsg:        subReqMsg,
+			valid:            true,
+			RetryFromXapp:    false,
+			SubRespRcvd:      false,
+			DeleteFromDb:     false,
+			NoRespToXapp:     false,
+			DoNotWaitSubResp: false,
 		}
 		subs.ReqId.Id = 123
 		subs.ReqId.InstanceId = subId
+		if resetTestFlag == true {
+			subs.DoNotWaitSubResp = true
+		}
 
 		if subs.EpList.AddEndpoint(trans.GetEndpoint()) == false {
 			r.subIds = append(r.subIds, subs.ReqId.InstanceId)
 			return nil, fmt.Errorf("Registry: Endpoint existing already in subscription")
 		}
-
 		return subs, nil
 	}
 	return nil, fmt.Errorf("Registry: Failed to reserve subscription no free ids")
@@ -121,7 +128,7 @@ func (r *Registry) findExistingSubs(trans *TransactionXapp, subReqMsg *e2ap.E2AP
 	return nil, false
 }
 
-func (r *Registry) AssignToSubscription(trans *TransactionXapp, subReqMsg *e2ap.E2APSubscriptionRequest) (*Subscription, error) {
+func (r *Registry) AssignToSubscription(trans *TransactionXapp, subReqMsg *e2ap.E2APSubscriptionRequest, resetTestFlag bool) (*Subscription, error) {
 	var err error
 	var newAlloc bool
 	r.mutex.Lock()
@@ -151,15 +158,16 @@ func (r *Registry) AssignToSubscription(trans *TransactionXapp, subReqMsg *e2ap.
 
 	subs, endPointFound := r.findExistingSubs(trans, subReqMsg)
 	if subs == nil {
-		subs, err = r.allocateSubs(trans, subReqMsg)
+		subs, err = r.allocateSubs(trans, subReqMsg, resetTestFlag)
 		if err != nil {
 			return nil, err
 		}
 		newAlloc = true
 	} else if endPointFound == true {
 		// Requesting endpoint is already present in existing subscription. This can happen if xApp is restarted.
+		subs.RetryFromXapp = true
 		xapp.Logger.Debug("CREATE: subscription already exists. %s", subs.String())
-		xapp.Logger.Debug("Registry: substable=%v", r.register)
+		//xapp.Logger.Debug("Registry: substable=%v", r.register)
 		return subs, nil
 	}
 
@@ -231,7 +239,7 @@ func (r *Registry) CheckActionTypes(subReqMsg *e2ap.E2APSubscriptionRequest) (ui
 }
 
 // TODO: Works with concurrent calls, but check if can be improved
-func (r *Registry) RemoveFromSubscription(subs *Subscription, trans *TransactionXapp, waitRouteClean time.Duration) error {
+func (r *Registry) RemoveFromSubscription(subs *Subscription, trans *TransactionXapp, waitRouteClean time.Duration, c *Control) error {
 
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
@@ -276,7 +284,6 @@ func (r *Registry) RemoveFromSubscription(subs *Subscription, trans *Transaction
 				xapp.Logger.Debug("Registry: substable=%v", r.register)
 			}
 			r.subIds = append(r.subIds, subId)
-
 		} else if subs.EpList.Size() > 0 {
 			//
 			// Subscription route updates
@@ -284,10 +291,28 @@ func (r *Registry) RemoveFromSubscription(subs *Subscription, trans *Transaction
 			subRouteAction := SubRouteInfo{subs.EpList, uint16(subId)}
 			r.rtmgrClient.SubscriptionRequestUpdate(subRouteAction)
 		}
-
 	}()
 
 	return nil
+}
+
+func (r *Registry) UpdateSubscriptionToDb(subs *Subscription, c *Control) {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	subs.mutex.Lock()
+	defer subs.mutex.Unlock()
+
+	epamount := subs.EpList.Size()
+	if epamount == 0 {
+		if _, ok := r.register[subs.ReqId.InstanceId]; ok {
+			// Not merged subscription is being deleted
+			c.RemoveSubscriptionFromDb(subs)
+
+		}
+	} else if subs.EpList.Size() > 0 {
+		// Endpoint of merged subscription is being deleted
+		c.WriteSubscriptionToDb(subs)
+	}
 }
 
 func (r *Registry) GetSubscription(subId uint32) *Subscription {
