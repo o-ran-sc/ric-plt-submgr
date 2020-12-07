@@ -35,8 +35,8 @@ type E2APSubscriptionRequest struct {
 type E2APSubscriptionResponse struct {
 	RequestId
 	FunctionId
-	ActionAdmittedList
-	ActionNotAdmittedList
+	ActionAdmittedList    ActionAdmittedList    // SDL JSON encode requires this format (name data-type) to work correctly
+	ActionNotAdmittedList ActionNotAdmittedList // SDL JSON encode requires this format (name data-type) to work correctly
 }
 
 //-----------------------------------------------------------------------------
