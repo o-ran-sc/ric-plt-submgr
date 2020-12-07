@@ -21,14 +21,18 @@ package control
 
 import (
 	"fmt"
+	"net/http"
+	"os"
+	"time"
+
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
 	rtmgrclient "gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/rtmgr_client"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/models"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
+	"github.com/gorilla/mux"
 	"github.com/spf13/viper"
-	"time"
 )
 
 //-----------------------------------------------------------------------------
@@ -65,8 +69,10 @@ type Control struct {
 	e2ap     *E2ap
 	registry *Registry
 	tracker  *Tracker
+	db       Sdlnterface
 	//subscriber *xapp.Subscriber
-	CntRecvMsg uint64
+	CntRecvMsg    uint64
+	ResetTestFlag bool
 }
 
 type RMRMeid struct {
@@ -74,6 +80,9 @@ type RMRMeid struct {
 	EnbID   string
 	RanName string
 }
+
+type SubmgrRestartTestEvent struct{}
+type SubmgrRestartUpEvent struct{}
 
 func init() {
 	xapp.Logger.Info("SUBMGR")
@@ -126,11 +135,48 @@ func NewControl() *Control {
 	c := &Control{e2ap: new(E2ap),
 		registry: registry,
 		tracker:  tracker,
+		db:       CreateSdl(),
 		//subscriber: subscriber,
 	}
+
+	// Register REST handler for testing support
+	xapp.Resource.InjectRoute("/ric/v1/test/{testId}", c.TestRestHandler, "POST")
+
 	go xapp.Subscription.Listen(c.SubscriptionHandler, c.QueryHandler, c.SubscriptionDeleteHandler)
 	//go c.subscriber.Listen(c.SubscriptionHandler, c.QueryHandler)
+
+	readSubsFromDb := viper.GetString("controls.readSubsFromDb")
+	xapp.Logger.Info("readSubsFromDb %v", readSubsFromDb)
+	if readSubsFromDb == "false" {
+		return c
+	}
+
+	// Read subscriptions from db
+	xapp.Logger.Info("Reading subscriptions from db")
+	subIds, register, err := c.ReadAllSubscriptionsFromSdl()
+	if err != nil {
+		xapp.Logger.Error("%v", err)
+	} else {
+		c.registry.subIds = subIds
+		c.registry.register = register
+		c.HandleUncompletedSubscriptions(register)
+	}
 	return c
+}
+
+//-------------------------------------------------------------------
+//
+//-------------------------------------------------------------------
+func (c *Control) HandleUncompletedSubscriptions(register map[uint32]*Subscription) {
+
+	xapp.Logger.Debug("HandleUncompletedSubscriptions. len(register) = %v", len(register))
+	for subId, subs := range register {
+		if subs.SubRespRcvd == false {
+			subs.NoRespToXapp = true
+			xapp.Logger.Debug("SendSubscriptionDeleteReq. subId = %v", subId)
+			c.SendSubscriptionDeleteReq(subs)
+		}
+	}
 }
 
 func (c *Control) ReadyCB(data interface{}) {
@@ -164,12 +210,33 @@ func (c *Control) SubscriptionHandler(stype models.SubscriptionType, params inte
 	return &models.SubscriptionResponse{}, fmt.Errorf("Subscription rest interface not implemented")
 }
 
-func (c *Control) SubscriptionDeleteHandler(string) error {
-	return fmt.Errorf("Subscription rest interface not implemented")
+func (c *Control) SubscriptionDeleteHandler(s string) error {
+	return nil
 }
 
 func (c *Control) QueryHandler() (models.SubscriptionList, error) {
 	return c.registry.QueryHandler()
+}
+
+func (c *Control) TestRestHandler(w http.ResponseWriter, r *http.Request) {
+
+	xapp.Logger.Info("TestRestHandler() called")
+
+	pathParams := mux.Vars(r)
+	s := pathParams["testId"]
+
+	// This can be used to empty db from subscriptions
+	if s == "emptydb" {
+		xapp.Logger.Info("RemoveAllSubscriptionsFromSdl() called")
+		c.RemoveAllSubscriptionsFromSdl()
+		return
+	}
+
+	// This is meant for submgr restart testing
+	if s == "exit" {
+		xapp.Logger.Info("Exit(1) called")
+		os.Exit(1)
+	}
 }
 
 //-------------------------------------------------------------------
@@ -270,7 +337,7 @@ func (c *Control) handleXAPPSubscriptionRequest(params *xapp.RMRParams) {
 	}
 
 	//TODO handle subscription toward e2term inside AssignToSubscription / hide handleSubscriptionCreate in it?
-	subs, err := c.registry.AssignToSubscription(trans, subReqMsg)
+	subs, err := c.registry.AssignToSubscription(trans, subReqMsg, c.ResetTestFlag)
 	if err != nil {
 		xapp.Logger.Error("XAPP-SubReq: %s", idstring(err, trans))
 		return
@@ -281,7 +348,6 @@ func (c *Control) handleXAPPSubscriptionRequest(params *xapp.RMRParams) {
 	//
 	go c.handleSubscriptionCreate(subs, trans)
 	event, _ := trans.WaitEvent(0) //blocked wait as timeout is handled in subs side
-
 	err = nil
 	if event != nil {
 		switch themsg := event.(type) {
@@ -344,7 +410,12 @@ func (c *Control) handleXAPPSubscriptionDeleteRequest(params *xapp.RMRParams) {
 
 	xapp.Logger.Debug("XAPP-SubDelReq: Handling event %s ", idstring(nil, trans, subs))
 
-	// Whatever is received send ok delete response
+	if subs.NoRespToXapp == true {
+		// Do no send delete responses to xapps due to submgr restart is deleting uncompleted subscriptions
+		return
+	}
+
+	// Whatever is received success, fail or timeout, send successful delete response
 	subDelRespMsg := &e2ap.E2APSubscriptionDeleteResponse{}
 	subDelRespMsg.RequestId = subs.GetReqId().RequestId
 	subDelRespMsg.FunctionId = subs.SubReqMsg.FunctionId
@@ -362,6 +433,7 @@ func (c *Control) handleXAPPSubscriptionDeleteRequest(params *xapp.RMRParams) {
 //-------------------------------------------------------------------
 func (c *Control) handleSubscriptionCreate(subs *Subscription, parentTrans *TransactionXapp) {
 
+	var removeSubscriptionFromDb bool = false
 	trans := c.tracker.NewSubsTransaction(subs)
 	subs.WaitTransactionTurn(trans)
 	defer subs.ReleaseTransactionTurn(trans)
@@ -386,7 +458,9 @@ func (c *Control) handleSubscriptionCreate(subs *Subscription, parentTrans *Tran
 			switch themsg := event.(type) {
 			case *e2ap.E2APSubscriptionResponse:
 				subRfMsg, valid = subs.SetCachedResponse(event, true)
+				subs.SubRespRcvd = true
 			case *e2ap.E2APSubscriptionFailure:
+				removeSubscriptionFromDb = true
 				subRfMsg, valid = subs.SetCachedResponse(event, false)
 				doRetry = true
 				for _, item := range themsg.ActionNotAdmittedList.Items {
@@ -397,13 +471,17 @@ func (c *Control) handleSubscriptionCreate(subs *Subscription, parentTrans *Tran
 				}
 				xapp.Logger.Info("SUBS-SubReq: internal delete and possible retry due event(%s) retry(%t,%d/%d) %s", typeofSubsMessage(event), doRetry, retries, maxRetries, idstring(nil, trans, subs, parentTrans))
 				c.sendE2TSubscriptionDeleteRequest(subs, trans, parentTrans)
+			case *SubmgrRestartTestEvent:
+				// This simulates that no response has been received and after restart subscriptions are restored from db
+				xapp.Logger.Info("Test restart flag is active. Dropping this transaction to test restart case")
+				return
 			default:
 				xapp.Logger.Info("SUBS-SubReq: internal delete due event(%s) %s", typeofSubsMessage(event), idstring(nil, trans, subs, parentTrans))
+				removeSubscriptionFromDb = true
 				subRfMsg, valid = subs.SetCachedResponse(nil, false)
 				c.sendE2TSubscriptionDeleteRequest(subs, trans, parentTrans)
 			}
 		}
-
 		xapp.Logger.Debug("SUBS-SubReq: Handling (e2t response %s) %s", typeofSubsMessage(subRfMsg), idstring(nil, trans, subs, parentTrans))
 	} else {
 		xapp.Logger.Debug("SUBS-SubReq: Handling (cached response %s) %s", typeofSubsMessage(subRfMsg), idstring(nil, trans, subs, parentTrans))
@@ -411,7 +489,15 @@ func (c *Control) handleSubscriptionCreate(subs *Subscription, parentTrans *Tran
 
 	//Now RemoveFromSubscription in here to avoid race conditions (mostly concerns delete)
 	if valid == false {
-		c.registry.RemoveFromSubscription(subs, parentTrans, 5*time.Second)
+		c.registry.RemoveFromSubscription(subs, parentTrans, 5*time.Second, c)
+	}
+
+	if removeSubscriptionFromDb == true {
+		// Subscription was written in db already when subscription request was sent to BTS, except for merged request
+		c.RemoveSubscriptionFromDb(subs)
+	} else {
+		// Write is needed for merge case here. Also update is needed for successful response
+		c.WriteSubscriptionToDb(subs)
 	}
 	parentTrans.SendEvent(subRfMsg, 0)
 }
@@ -440,7 +526,8 @@ func (c *Control) handleSubscriptionDelete(subs *Subscription, parentTrans *Tran
 	//Now RemoveFromSubscription in here to avoid race conditions (mostly concerns delete)
 	//  If parallel deletes ongoing both might pass earlier sendE2TSubscriptionDeleteRequest(...) if
 	//  RemoveFromSubscription locates in caller side (now in handleXAPPSubscriptionDeleteRequest(...))
-	c.registry.RemoveFromSubscription(subs, parentTrans, 5*time.Second)
+	c.registry.RemoveFromSubscription(subs, parentTrans, 5*time.Second, c)
+	c.registry.UpdateSubscriptionToDb(subs, c)
 	parentTrans.SendEvent(nil, 0)
 }
 
@@ -460,12 +547,19 @@ func (c *Control) sendE2TSubscriptionRequest(subs *Subscription, trans *Transact
 		return event
 	}
 
+	// Write uncompleted subscrition in db. If no response for subscrition it need to be re-processed (deleted) after restart
+	c.WriteSubscriptionToDb(subs)
 	for retries := uint64(0); retries < e2tMaxSubReqTryCount; retries++ {
 		desc := fmt.Sprintf("(retry %d)", retries)
 		c.rmrSendToE2T(desc, subs, trans)
-		event, timedOut = trans.WaitEvent(e2tSubReqTimeout)
-		if timedOut {
-			continue
+		if subs.DoNotWaitSubResp == false {
+			event, timedOut = trans.WaitEvent(e2tSubReqTimeout)
+			if timedOut {
+				continue
+			}
+		} else {
+			// Simulating case where subscrition request has been sent but response has not been received before restart
+			event = &SubmgrRestartTestEvent{}
 		}
 		break
 	}
@@ -642,5 +736,60 @@ func typeofSubsMessage(v interface{}) string {
 		return "SubDelFail"
 	default:
 		return "Unknown"
+	}
+}
+
+//-------------------------------------------------------------------
+//
+//-------------------------------------------------------------------
+func (c *Control) WriteSubscriptionToDb(subs *Subscription) {
+	xapp.Logger.Debug("Write subscription to db. subId = %v", subs.ReqId.InstanceId)
+	err := c.WriteSubscriptionToSdl(subs.ReqId.InstanceId, subs)
+	if err != nil {
+		xapp.Logger.Error("%v", err)
+	}
+}
+
+//-------------------------------------------------------------------
+//
+//-------------------------------------------------------------------
+func (c *Control) RemoveSubscriptionFromDb(subs *Subscription) {
+	xapp.Logger.Debug("Remove subscription from db. subId = %v", subs.ReqId.InstanceId)
+	err := c.RemoveSubscriptionFromSdl(subs.ReqId.InstanceId)
+	if err != nil {
+		xapp.Logger.Error("%v", err)
+	}
+}
+
+func (c *Control) SendSubscriptionDeleteReq(subs *Subscription) {
+
+	xapp.Logger.Debug("Sending subscription delete due to restart. subId = %v", subs.ReqId.InstanceId)
+
+	// Send delete for every endpoint in the subscription
+	subDelReqMsg := &e2ap.E2APSubscriptionDeleteRequest{}
+	subDelReqMsg.RequestId = subs.GetReqId().RequestId
+	subDelReqMsg.FunctionId = subs.SubReqMsg.FunctionId
+	mType, payload, err := c.e2ap.PackSubscriptionDeleteRequest(subDelReqMsg)
+	if err != nil {
+		xapp.Logger.Error("SubDelReq: %s", idstring(err))
+	}
+	for _, endPoint := range subs.EpList.Endpoints {
+		params := &xapp.RMRParams{}
+		params.Mtype = mType
+		params.SubId = int(subs.GetReqId().InstanceId)
+		params.Xid = ""
+		params.Meid = subs.Meid
+		params.Src = endPoint.String()
+		params.PayloadLen = len(payload.Buf)
+		params.Payload = payload.Buf
+		params.Mbuf = nil
+
+		if params == nil {
+			xapp.Logger.Error("params == nil")
+			os.Exit(1)
+		}
+
+		subs.DeleteFromDb = true
+		c.handleXAPPSubscriptionDeleteRequest(params)
 	}
 }
