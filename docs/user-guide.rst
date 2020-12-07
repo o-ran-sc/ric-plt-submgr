@@ -112,12 +112,18 @@ Architecture
       :width: 600
       :alt: Subscription failure picture
 
-    * Timeout case
+    * Timeout in Subscription Manager
 
      In case of timeout in Subscription Manager, Subscription Manager may resend the RIC Subscription Request to RAN. If there is no response
       after retry, Subscription Manager shall NOT send any response to xApp. xApp may retry RIC Subscription Request, if it wishes to do so.
       Subscription Manager does no handle the retry if Subscription Manager has ongoing subscription procedure for the same subscription.
       Subscription just drops the request.
+
+    * Timeout in xApp
+
+      xApp may resend the same request if there is no response in expected time. If xApp resends the same request while processing of previous
+      request has not been completed in Subscription Manager then Subscription Manager drops the new request, makes a log writing and continues
+      processing previous request.
 
     .. image:: images/Subscription_Timeout.png
       :width: 600
@@ -146,10 +152,16 @@ Architecture
       :width: 600
       :alt: Subscription delete failure picture
 
-    * Timeout case
+    * Timeout in Subscription Manager
 
       In case of timeout in Subscription Manager, Subscription Manager may resend the RIC Subscription Delete Request to RAN. If there is no
       response after retry, Subscription Manager responds to xApp with RIC Subscription Delete Response.
+
+    * Timeout in xApp
+
+      xApp may resend the same request if there is no response in expected time. If xApp resends the same request while processing of previous
+      request has not been completed in Subscription Manager then Subscription Manager drops the new request, makes a log writing and continues
+      processing previous request.
 
     .. image:: images/Subscription_Delete_Timeout.png
       :width: 600
@@ -183,10 +195,16 @@ Architecture
       Failure case is basically the same as in normal subscription procedure. Failure can come only from RAN when merge is not yet done.
       If error happens during route create Subscription Manager drops the RIC Subscription Request message and xApp does not get any response.
 
-    * Timeout case
+    * Timeout in Subscription Manager
 
       Timeout case is basically the same as in normal subscription procedure but timeout can come only in route create during merge operation.
       If error happens during route create, Subscription Manager drops the RIC Subscription Request message and xApp does not get any response.
+
+    * Timeout in xApp
+
+      xApp may resend the same request if there is no response in expected time. If xApp resends the same request while processing of previous
+      request has not been completed in Subscription Manager then Subscription Manager drops the new request, makes a log writing and continues
+      processing previous request.
 
   * Subscription delete merge procedure
 
@@ -205,9 +223,15 @@ Architecture
 
       Delete procedure cannot fail from xApp point of view. Subscription Manager responds with RIC Subscription Delete Response message to xApp.
 
-    * Timeout case
+    * Timeout in Subscription Manager
 
       Timeout can only happen in route delete to Routing manager. Subscription Manager responds with RIC Subscription Delete Response message to xApp.
+
+    * Timeout in xApp
+
+      xApp may resend the same request if there is no response in expected time. If xApp resends the same request while processing of previous
+      request has not been completed in Subscription Manager then Subscription Manager drops the new request, makes a log writing and continues
+      processing previous request.
 
   * Unknown message
 
@@ -215,9 +239,75 @@ Architecture
 
   * xApp restart
 
-    When xApp is restarted for any reason it may resend the subscriptions which have already been subscribed. In this case Subscription Manager sends
-    successful response to such requests without updating Routing Manager and BTS. In restart IP address of the xApp may change but service address name
-    does not. Message routing uses service address name.
+    When xApp is restarted for any reason it may resend subscription requests for subscriptions which have already been subscribed. If REPORT or INSERT type
+    subscription already exists and RMR endpoint of requesting xApp is attached to subscription then successful response is sent to xApp directly without
+    updating Routing Manager and BTS. If POLICY type subscription already exists, request is forwarded to BTS and successful response is sent to xApp.
+    BTS is expected to accept duplicate POLICY type requests. In restart IP address of the xApp may change but domain service address name does not.
+    RMR message routing uses domain service address name.
+
+  * Subscription Manager restart
+
+    Subscription Manager stores successfully described subscriptions from db (SDL). Subscriptions are restored from db in restart. For subscriptions which
+    were not successfully completed, Subscription Manager sends delete request to BTS and removes routes created for those. Restoring subscriptions from
+    db can be disable via submgr-config.yaml file by setting "readSubsFromDb": "false".
+
+REST interface for debugging and testing
+----------------------------------------
+ Give following commands to get Subscription Manager pod's IP address
+
+ .. code-block:: none
+
+  kubectl get pods -A | grep submgr
+  
+  ricplt        submgr-75bccb84b6-n9vnt          1/1     Running             0          81m
+
+  Syntax: kubectl exec -t -n ricplt <add-submgr-pod-name> -- cat /etc/hosts | grep submgr | awk '{print $1}'
+  
+  Example: kubectl exec -t -n ricplt submgr-75bccb84b6-n9vnt -- cat /etc/hosts | grep submgr | awk '{print $1}'
+
+  10.244.0.181
+
+ Get subscriptions
+
+ .. code-block:: none
+
+  Example: curl -X GET "http://10.244.0.181:8088/ric/v1/subscriptions"
+
+  []
+
+ Delete single subscription from db
+
+ .. code-block:: none
+
+  Syntax: curl -X POST "http://10.244.0.181:8080/ric/v1/test/deletesubid={SubscriptionId}"
+  
+  Example: curl -X POST "http://10.244.0.181:8080/ric/v1/test/deletesubid=1"
+
+ Remove all subscriptions from db
+
+ .. code-block:: none
+
+  Example: curl -X POST "http://10.244.0.181:8080/ric/v1/test/emptydb"
+
+ Make Subscription Manager restart
+
+ .. code-block:: none
+
+  Example: curl -X POST "http://10.244.0.181:8080/ric/v1/test/restart"
+
+ Use this command to get Subscription Manager's log writings
+
+ .. code-block:: none
+
+   Example: kubectl logs -n ricplt submgr-75bccb84b6-n9vnt
+
+ Logger level in configmap.yaml file in Helm chart is by default 2. It means that only info logs are printed.
+ To see debug log writings it has to be changed to 4.
+
+ .. code-block:: none
+
+    "logger":
+      "level": 4
 
 RAN services explained
 ----------------------
@@ -243,6 +333,8 @@ Supported E2 procedures and RAN services
 Recommendations for xApps
 -------------------------
 
-   * Recommended retry delay
+   * Recommended retry delay in xApp
 
-     Recommended retry delay for xApp is >= 5 seconds
+     Recommended retry delay for xApp is >= 5 seconds. Length of supervising timers in Subscription Manager for the requests it sends to BTS is by default 2
+     seconds. Subscription Manager makes one retry by default. There can be only one ongoing request towards per RAN other requests are queued in Subscription
+     Manager.

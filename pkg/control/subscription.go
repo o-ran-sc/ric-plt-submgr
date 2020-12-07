@@ -22,6 +22,7 @@ package control
 import (
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
+
 	//"reflect"
 	"sync"
 )
@@ -30,16 +31,20 @@ import (
 //
 //-----------------------------------------------------------------------------
 type Subscription struct {
-	mutex     sync.Mutex                    // Lock
-	valid     bool                          // valid
-	registry  *Registry                     // Registry
-	ReqId     RequestId                     // ReqId (Requestor Id + Seq Nro a.k.a subsid)
-	Meid      *xapp.RMRMeid                 // Meid/ RanName
-	EpList    xapp.RmrEndpointList          // Endpoints
-	TransLock sync.Mutex                    // Lock transactions, only one executed per time for subs
-	TheTrans  TransactionIf                 // Ongoing transaction
-	SubReqMsg *e2ap.E2APSubscriptionRequest // Subscription information
-	SubRFMsg  interface{}                   // Subscription information
+	mutex            sync.Mutex                    // Lock
+	valid            bool                          // valid
+	registry         *Registry                     // Registry
+	ReqId            RequestId                     // ReqId (Requestor Id + Seq Nro a.k.a subsid)
+	Meid             *xapp.RMRMeid                 // Meid/ RanName
+	EpList           xapp.RmrEndpointList          // Endpoints
+	TransLock        sync.Mutex                    // Lock transactions, only one executed per time for subs
+	TheTrans         TransactionIf                 // Ongoing transaction
+	SubReqMsg        *e2ap.E2APSubscriptionRequest // Subscription information
+	SubRFMsg         interface{}                   // Subscription information
+	SubRespRcvd      bool                          // Subscription response received
+	DeleteFromDb     bool                          // Delete subscription form db
+	NoRespToXapp     bool                          // Send no response for subscription delete to xApp after restart
+	DoNotWaitSubResp bool                          // Test flag. Response is not waited for Subscription Request
 }
 
 func (s *Subscription) String() string {
