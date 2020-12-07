@@ -20,7 +20,9 @@
 package control
 
 import (
+	"fmt"
 	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/teststub"
+	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/models"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"testing"
 	"time"
@@ -38,11 +40,66 @@ func createSubmgrControl(srcId teststub.RmrSrcId, rtgSvc teststub.RmrRtgSvc) *te
 	mainCtrl = &testingSubmgrControl{}
 	mainCtrl.RmrControl.Init("SUBMGRCTL", srcId, rtgSvc)
 	mainCtrl.c = NewControl()
+	xapp.Logger.Debug("Replacing real db with test db")
+	mainCtrl.c.db = CreateMock() // This overrides real database for testing
 	xapp.SetReadyCB(mainCtrl.ReadyCB, nil)
 	go xapp.RunWithParams(mainCtrl.c, false)
 	mainCtrl.WaitCB()
 	mainCtrl.c.ReadyCB(nil)
 	return mainCtrl
+}
+
+func (mc *testingSubmgrControl) SimulateRestart(t *testing.T) {
+	mc.TestLog(t, "Simulating submgr restart")
+	mainCtrl.c.registry.subIds = nil
+	// Initialize subIds slice and subscription map
+	mainCtrl.c.registry.Initialize()
+	// Read subIds and subscriptions from database
+	subIds, register, err := mainCtrl.c.ReadAllSubscriptionsFromSdl()
+	if err != nil {
+		mc.TestError(t, "%v", err)
+	} else {
+		mainCtrl.c.registry.register = nil
+		mainCtrl.c.registry.subIds = subIds
+		mainCtrl.c.registry.register = register
+
+		fmt.Println("register")
+		for subId, subs := range register {
+			fmt.Println("subId", subId)
+			fmt.Println("subs.SubRespRcvd", subs.SubRespRcvd)
+			fmt.Printf("subs %v\n", subs)
+		}
+
+		fmt.Println("mainCtrl.c.registry.register")
+		for subId, subs := range mainCtrl.c.registry.register {
+			fmt.Println("subId", subId)
+			fmt.Println("subs.SubRespRcvd", subs.SubRespRcvd)
+			fmt.Printf("subs %v\n", subs)
+		}
+	}
+	go mainCtrl.c.HandleUncompletedSubscriptions(mainCtrl.c.registry.register)
+}
+
+func (mc *testingSubmgrControl) SetResetTestFlag(t *testing.T, status bool) {
+	mc.TestLog(t, "ResetTestFlag set to %v", status)
+	mainCtrl.c.ResetTestFlag = status
+}
+
+func (mc *testingSubmgrControl) removeExistingSubscriptions(t *testing.T) {
+
+	mc.TestLog(t, "Removing existing subscriptions")
+	mainCtrl.c.RemoveAllSubscriptionsFromSdl()
+	mainCtrl.c.registry.subIds = nil
+	// Initialize subIds slice and subscription map
+	mainCtrl.c.registry.Initialize()
+}
+
+func PringSubscriptionQueryResult(resp models.SubscriptionList) {
+	for _, item := range resp {
+		fmt.Printf("item.SubscriptionID %v\n", item.SubscriptionID)
+		fmt.Printf("item.Meid %v\n", item.Meid)
+		fmt.Printf("item.Endpoint %v\n", item.Endpoint)
+	}
 }
 
 func (mc *testingSubmgrControl) wait_registry_empty(t *testing.T, secs int) bool {

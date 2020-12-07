@@ -10,9 +10,16 @@
   "hostAddr": "localhost"
   "port"    : "8989"
   "baseUrl" : "/ric/v1"
+"db":
+  "sessionNamespace": "XMSession"
+  "host": ":6379"
+  "prot": "tcp"
+  "maxIdle": 80
+  "maxActive": 12000
 "controls":
   "e2tSubReqTimeout_ms": 2000
   "e2tSubDelReqTime_ms": 2000
   "e2tRecvMsgTimeout_ms": 2000
   "e2tMaxSubReqTryCount": 2
   "e2tMaxSubDelReqTryCount": 2
+  "readSubsFromDb": "false"
