@@ -33,3 +33,11 @@ type RequestId struct {
 func (rid *RequestId) String() string {
 	return "reqid(" + rid.RequestId.String() + ")"
 }
+
+type Sdlnterface interface {
+	Set(pairs ...interface{}) error
+	Get(keys []string) (map[string]interface{}, error)
+	GetAll() ([]string, error)
+	Remove(keys []string) error
+	RemoveAll() error
+}

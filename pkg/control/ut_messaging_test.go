@@ -1721,3 +1721,248 @@ func TestSubReqRetransmissionWithSameSubIdDiffXid(t *testing.T) {
 	e2termConn1.TestMsgChanEmpty(t)
 	mainCtrl.wait_registry_empty(t, 10)
 }
+
+//-----------------------------------------------------------------------------
+// TestSubReqNokAndSubDelOkWithRestartInMiddle
+//
+//   stub                          stub
+// +-------+     +---------+    +---------+
+// | xapp  |     | submgr  |    | e2term  |
+// +-------+     +---------+    +---------+
+//     |              |              |
+//     | SubReq       |              |
+//     |------------->|              |
+//     |              |              |
+//     |              | SubReq       |
+//     |              |------------->|
+//     |              |              |
+//     |              |      SubResp |
+//     |                        <----|
+//     |                             |
+//     |        Submgr restart       |
+//     |                             |
+//     |              |              |
+//     |              | SubDelReq    |
+//     |              |------------->|
+//     |              |              |
+//     |              |   SubDelResp |
+//     |              |<-------------|
+//     |              |              |
+//
+//-----------------------------------------------------------------------------
+
+func TestSubReqNokAndSubDelOkWithRestartInMiddle(t *testing.T) {
+	CaseBegin("TestSubReqNokAndSubDelOkWithRestartInMiddle")
+
+	// Remove possible existing subscrition
+	mainCtrl.removeExistingSubscriptions(t)
+
+	mainCtrl.SetResetTestFlag(t, true) // subs.DoNotWaitSubResp will be set TRUE for the subscription
+	xappConn1.SendSubsReq(t, nil, nil)
+	e2termConn1.RecvSubsReq(t)
+	mainCtrl.SetResetTestFlag(t, false)
+
+	resp, _ := xapp.Subscription.QuerySubscriptions()
+	assert.Equal(t, resp[0].Meid, "RAN_NAME_1")
+	assert.Equal(t, resp[0].Endpoint, []string{"localhost:13560"})
+	e2SubsId := uint32(resp[0].SubscriptionID)
+	t.Logf("e2SubsId = %v", e2SubsId)
+
+	mainCtrl.SimulateRestart(t) // This will trigger sending of SubDelReq
+
+	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
+
+	// Wait that subs is cleaned
+	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
+
+	xappConn1.TestMsgChanEmpty(t)
+	xappConn2.TestMsgChanEmpty(t)
+	e2termConn1.TestMsgChanEmpty(t)
+	mainCtrl.wait_registry_empty(t, 10)
+}
+
+//-----------------------------------------------------------------------------
+// TestSubReqAndSubDelOkWithRestartInMiddle
+//
+//   stub                          stub
+// +-------+     +---------+    +---------+
+// | xapp  |     | submgr  |    | e2term  |
+// +-------+     +---------+    +---------+
+//     |              |              |
+//     | SubReq       |              |
+//     |------------->|              |
+//     |              |              |
+//     |              | SubReq       |
+//     |              |------------->|
+//     |              |              |
+//     |              |      SubResp |
+//     |              |<-------------|
+//     |              |              |
+//     |      SubResp |              |
+//     |<-------------|              |
+//     |              |              |
+//     |                             |
+//     |        Submgr restart       |
+//     |                             |
+//     | SubDelReq    |              |
+//     |------------->|              |
+//     |              |              |
+//     |              | SubDelReq    |
+//     |              |------------->|
+//     |              |              |
+//     |              |   SubDelResp |
+//     |              |<-------------|
+//     |              |              |
+//     |   SubDelResp |              |
+//     |<-------------|              |
+//
+//-----------------------------------------------------------------------------
+
+func TestSubReqAndSubDelOkWithRestartInMiddle(t *testing.T) {
+	CaseBegin("TestSubReqAndSubDelOkWithRestartInMiddle")
+
+	cretrans := xappConn1.SendSubsReq(t, nil, nil)
+	crereq, cremsg := e2termConn1.RecvSubsReq(t)
+	e2termConn1.SendSubsResp(t, crereq, cremsg)
+	e2SubsId := xappConn1.RecvSubsResp(t, cretrans)
+
+	// Check subscription
+	resp, _ := xapp.Subscription.QuerySubscriptions()
+	assert.Equal(t, resp[0].SubscriptionID, int64(e2SubsId))
+	assert.Equal(t, resp[0].Meid, "RAN_NAME_1")
+	assert.Equal(t, resp[0].Endpoint, []string{"localhost:13560"})
+
+	mainCtrl.SimulateRestart(t)
+
+	// Check that subscription is restored correctly after restart
+	resp, _ = xapp.Subscription.QuerySubscriptions()
+	assert.Equal(t, resp[0].SubscriptionID, int64(e2SubsId))
+	assert.Equal(t, resp[0].Meid, "RAN_NAME_1")
+	assert.Equal(t, resp[0].Endpoint, []string{"localhost:13560"})
+
+	deltrans := xappConn1.SendSubsDelReq(t, nil, e2SubsId)
+	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
+	xappConn1.RecvSubsDelResp(t, deltrans)
+
+	//Wait that subs is cleaned
+	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
+
+	xappConn1.TestMsgChanEmpty(t)
+	xappConn2.TestMsgChanEmpty(t)
+	e2termConn1.TestMsgChanEmpty(t)
+	mainCtrl.wait_registry_empty(t, 10)
+}
+
+//-----------------------------------------------------------------------------
+// TestSubReqAndSubDelOkSameActionWithRestartsInMiddle
+//
+//   stub                          stub
+// +-------+     +-------+     +---------+    +---------+
+// | xapp2 |     | xapp1 |     | submgr  |    | e2term  |
+// +-------+     +-------+     +---------+    +---------+
+//     |             |              |              |
+//     |             |              |              |
+//     |             |              |              |
+//     |             | SubReq1      |              |
+//     |             |------------->|              |
+//     |             |              |              |
+//     |             |              | SubReq1      |
+//     |             |              |------------->|
+//     |             |              |    SubResp1  |
+//     |             |              |<-------------|
+//     |             |    SubResp1  |              |
+//     |             |<-------------|              |
+//     |             |              |              |
+//     |                                           |
+//     |              submgr restart               |
+//     |                                           |
+//     |             |              |              |
+//     |             |              |              |
+//     |          SubReq2           |              |
+//     |--------------------------->|              |
+//     |             |              |              |
+//     |          SubResp2          |              |
+//     |<---------------------------|              |
+//     |             |              |              |
+//     |             | SubDelReq 1  |              |
+//     |             |------------->|              |
+//     |             |              |              |
+//     |             | SubDelResp 1 |              |
+//     |             |<-------------|              |
+//     |             |              |              |
+//     |             |              |              |
+//     |                                           |
+//     |              submgr restart               |
+//     |                                           |
+//     |             |              |              |
+//     |         SubDelReq 2        |              |
+//     |--------------------------->|              |
+//     |             |              |              |
+//     |             |              | SubDelReq 2  |
+//     |             |              |------------->|
+//     |             |              |              |
+//     |             |              | SubDelReq 2  |
+//     |             |              |------------->|
+//     |             |              |              |
+//     |         SubDelResp 2       |              |
+//     |<---------------------------|              |
+//
+//-----------------------------------------------------------------------------
+
+func TestSubReqAndSubDelOkSameActionWithRestartsInMiddle(t *testing.T) {
+	CaseBegin("TestSubReqAndSubDelOkSameActionWithRestartsInMiddle")
+
+	//Req1
+	rparams1 := &teststube2ap.E2StubSubsReqParams{}
+	rparams1.Init()
+	cretrans1 := xappConn1.SendSubsReq(t, rparams1, nil)
+	crereq1, cremsg1 := e2termConn1.RecvSubsReq(t)
+	e2termConn1.SendSubsResp(t, crereq1, cremsg1)
+	e2SubsId1 := xappConn1.RecvSubsResp(t, cretrans1)
+
+	//Req2
+	rparams2 := &teststube2ap.E2StubSubsReqParams{}
+	rparams2.Init()
+	cretrans2 := xappConn2.SendSubsReq(t, rparams2, nil)
+	e2SubsId2 := xappConn2.RecvSubsResp(t, cretrans2)
+
+	// Check subscription
+	resp, _ := xapp.Subscription.QuerySubscriptions() ////////////////////////////////
+	assert.Equal(t, resp[0].SubscriptionID, int64(e2SubsId1))
+	assert.Equal(t, resp[0].Meid, "RAN_NAME_1")
+	assert.Equal(t, resp[0].Endpoint, []string{"localhost:13560", "localhost:13660"})
+
+	mainCtrl.SimulateRestart(t)
+
+	// Check that subscription is restored correctly after restart
+	resp, _ = xapp.Subscription.QuerySubscriptions()
+	assert.Equal(t, resp[0].SubscriptionID, int64(e2SubsId1))
+	assert.Equal(t, resp[0].Meid, "RAN_NAME_1")
+	assert.Equal(t, resp[0].Endpoint, []string{"localhost:13560", "localhost:13660"})
+
+	//Del1
+	deltrans1 := xappConn1.SendSubsDelReq(t, nil, e2SubsId1)
+	xapp.Logger.Debug("xappConn1.RecvSubsDelResp")
+	xappConn1.RecvSubsDelResp(t, deltrans1)
+	xapp.Logger.Debug("xappConn1.RecvSubsDelResp received")
+
+	mainCtrl.SimulateRestart(t)
+	xapp.Logger.Debug("mainCtrl.SimulateRestart done")
+
+	//Del2
+	deltrans2 := xappConn2.SendSubsDelReq(t, nil, e2SubsId2)
+	delreq2, delmsg2 := e2termConn1.RecvSubsDelReq(t)
+
+	e2termConn1.SendSubsDelResp(t, delreq2, delmsg2)
+	xappConn2.RecvSubsDelResp(t, deltrans2)
+
+	//Wait that subs is cleaned
+	mainCtrl.wait_subs_clean(t, e2SubsId2, 10)
+
+	xappConn1.TestMsgChanEmpty(t)
+	xappConn2.TestMsgChanEmpty(t)
+	e2termConn1.TestMsgChanEmpty(t)
+	mainCtrl.wait_registry_empty(t, 10)
+}
