@@ -86,14 +86,29 @@ func NewControl() *Control {
 
 	// viper.GetDuration returns nanoseconds
 	e2tSubReqTimeout = viper.GetDuration("controls.e2tSubReqTimeout_ms") * 1000000
+	if e2tSubReqTimeout == 0 {
+		e2tSubReqTimeout = 2000 * 1000000
+	}
 	xapp.Logger.Info("e2tSubReqTimeout %v", e2tSubReqTimeout)
 	e2tSubDelReqTime = viper.GetDuration("controls.e2tSubDelReqTime_ms") * 1000000
+	if e2tSubDelReqTime == 0 {
+		e2tSubDelReqTime = 2000 * 1000000
+	}
 	xapp.Logger.Info("e2tSubDelReqTime %v", e2tSubDelReqTime)
 	e2tRecvMsgTimeout = viper.GetDuration("controls.e2tRecvMsgTimeout_ms") * 1000000
+	if e2tRecvMsgTimeout == 0 {
+		e2tRecvMsgTimeout = 2000 * 1000000
+	}
 	xapp.Logger.Info("e2tRecvMsgTimeout %v", e2tRecvMsgTimeout)
 	e2tMaxSubReqTryCount = viper.GetUint64("controls.e2tMaxSubReqTryCount")
+	if e2tMaxSubReqTryCount == 0 {
+		e2tMaxSubReqTryCount = 1
+	}
 	xapp.Logger.Info("e2tMaxSubReqTryCount %v", e2tMaxSubReqTryCount)
 	e2tMaxSubDelReqTryCount = viper.GetUint64("controls.e2tMaxSubDelReqTryCount")
+	if e2tMaxSubDelReqTryCount == 0 {
+		e2tMaxSubDelReqTryCount = 1
+	}
 	xapp.Logger.Info("e2tMaxSubDelReqTryCount %v", e2tMaxSubDelReqTryCount)
 
 	transport := httptransport.New(viper.GetString("rtmgr.HostAddr")+":"+viper.GetString("rtmgr.port"), viper.GetString("rtmgr.baseUrl"), []string{"http"})
