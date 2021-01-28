@@ -21,11 +21,16 @@ package control
 
 import (
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"strconv"
+	"strings"
+	"testing"
+	"time"
+
 	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/teststub"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/models"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
-	"testing"
-	"time"
 )
 
 //-----------------------------------------------------------------------------
@@ -35,6 +40,14 @@ type testingSubmgrControl struct {
 	teststub.RmrControl
 	c *Control
 }
+
+type Counter struct {
+	Name  string
+	Value uint64
+}
+
+var countersBeforeMap map[string]Counter
+var toBeAddedCountersMap map[string]Counter
 
 func createSubmgrControl(srcId teststub.RmrSrcId, rtgSvc teststub.RmrRtgSvc) *testingSubmgrControl {
 	mainCtrl = &testingSubmgrControl{}
@@ -63,25 +76,25 @@ func (mc *testingSubmgrControl) SimulateRestart(t *testing.T) {
 		mainCtrl.c.registry.subIds = subIds
 		mainCtrl.c.registry.register = register
 
-		fmt.Println("register:")
+		mc.TestLog(t, "register:")
 		for subId, subs := range register {
-			fmt.Println("  subId", subId)
-			fmt.Println("  subs.SubRespRcvd", subs.SubRespRcvd)
-			fmt.Printf("  subs %v\n", subs)
+			mc.TestLog(t, "  subId=%v", subId)
+			mc.TestLog(t, "  subs.SubRespRcvd=%v", subs.SubRespRcvd)
+			mc.TestLog(t, "  subs=%v\n", subs)
 		}
 
-		fmt.Println("mainCtrl.c.registry.register:")
+		mc.TestLog(t, "mainCtrl.c.registry.register:")
 		for subId, subs := range mainCtrl.c.registry.register {
-			fmt.Println("  subId", subId)
-			fmt.Println("  subs.SubRespRcvd", subs.SubRespRcvd)
-			fmt.Printf("  subs %v\n", subs)
+			mc.TestLog(t, "  subId=%v", subId)
+			mc.TestLog(t, "  subs.SubRespRcvd=%v", subs.SubRespRcvd)
+			mc.TestLog(t, "  subs=%v\n", subs)
 		}
 	}
 	go mainCtrl.c.HandleUncompletedSubscriptions(mainCtrl.c.registry.register)
 }
 
 func (mc *testingSubmgrControl) SetResetTestFlag(t *testing.T, status bool) {
-	mc.TestLog(t, "ResetTestFlag set to %v", status)
+	mc.TestLog(t, "ResetTestFlag set to %v=", status)
 	mainCtrl.c.ResetTestFlag = status
 }
 
@@ -96,9 +109,9 @@ func (mc *testingSubmgrControl) removeExistingSubscriptions(t *testing.T) {
 
 func PringSubscriptionQueryResult(resp models.SubscriptionList) {
 	for _, item := range resp {
-		fmt.Printf("item.SubscriptionID %v\n", item.SubscriptionID)
-		fmt.Printf("item.Meid %v\n", item.Meid)
-		fmt.Printf("item.Endpoint %v\n", item.Endpoint)
+		fmt.Printf("item.SubscriptionID=%v\n", item.SubscriptionID)
+		fmt.Printf("item.Meid=%v\n", item.Meid)
+		fmt.Printf("item.Endpoint=%v\n", item.Endpoint)
 	}
 }
 
@@ -224,4 +237,95 @@ func (mc *testingSubmgrControl) wait_msgcounter_change(t *testing.T, orig uint64
 	}
 	mc.TestError(t, "(submgr) no msg counter change within %d secs", secs)
 	return 0, false
+}
+
+func (mc *testingSubmgrControl) GetMetrics(t *testing.T) (string, error) {
+	req, err := http.NewRequest("GET", "http://localhost:8080/ric/v1/metrics", nil)
+	if err != nil {
+		return "", fmt.Errorf("Error reading request. %v", err)
+	}
+	client := &http.Client{Timeout: time.Second * 10}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("Error reading response. %v", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("Error reading body. %v", err)
+	}
+	return string(respBody[:]), nil
+}
+
+func (mc *testingSubmgrControl) SetTimesCounterWillBeAdded(counterName string, addedValue uint64) {
+	if len(toBeAddedCountersMap) == 0 {
+		toBeAddedCountersMap = make(map[string]Counter)
+	}
+	counter := Counter{}
+	counter.Name = counterName
+	counter.Value = addedValue
+	toBeAddedCountersMap[counterName] = counter
+}
+
+func (mc *testingSubmgrControl) GetCounterValuesBefore(t *testing.T) {
+	countersBeforeMap = make(map[string]Counter)
+	countersBeforeMap = mc.GetCurrentCounterValues(t, toBeAddedCountersMap)
+}
+
+func (mc *testingSubmgrControl) VerifyCounterValues(t *testing.T) {
+	currentCountersMap := mc.GetCurrentCounterValues(t, toBeAddedCountersMap)
+	for _, toBeAddedCounter := range toBeAddedCountersMap {
+		if currentCounter, ok := currentCountersMap[toBeAddedCounter.Name]; ok == true {
+			if beforeCounter, ok := countersBeforeMap[toBeAddedCounter.Name]; ok == true {
+				if currentCounter.Value != beforeCounter.Value+toBeAddedCounter.Value {
+					mc.TestError(t, "Error in expected counter value: counterName %v, current value %v, expected value %v",
+						currentCounter.Name, currentCounter.Value, beforeCounter.Value+toBeAddedCounter.Value)
+
+					//fmt.Printf("beforeCounter.Value=%v, toBeAddedCounter.Value=%v, \n",beforeCounter.Value, toBeAddedCounter.Value)
+				}
+			} else {
+				mc.TestError(t, "Counter %v not in countersBeforeMap", toBeAddedCounter.Name)
+			}
+		} else {
+			mc.TestError(t, "Counter %v not in currentCountersMap", toBeAddedCounter.Name)
+		}
+	}
+
+	// Make map empty
+	//fmt.Printf("toBeAddedCountersMap=%v\n",toBeAddedCountersMap)
+	toBeAddedCountersMap = make(map[string]Counter)
+}
+
+func (mc *testingSubmgrControl) GetCurrentCounterValues(t *testing.T, chekedCountersMap map[string]Counter) map[string]Counter {
+	countersString, err := mc.GetMetrics(t)
+	if err != nil {
+		mc.TestError(t, "Error GetMetrics() failed %v", err)
+		return nil
+	}
+
+	retCounterMap := make(map[string]Counter)
+	stringsTable := strings.Split(countersString, "\n")
+	for _, counter := range chekedCountersMap {
+		for _, counterString := range stringsTable {
+			if !strings.Contains(counterString, "#") && strings.Contains(counterString, counter.Name) {
+				counterString := strings.Split(counterString, " ")
+				if strings.Contains(counterString[0], counter.Name) {
+					val, err := strconv.ParseUint(counterString[1], 10, 64)
+					if err != nil {
+						mc.TestError(t, "Error: strconv.ParseUint failed %v", err)
+					}
+					counter.Value = val
+					//fmt.Printf("counter=%v\n", counter)
+					retCounterMap[counter.Name] = counter
+				}
+			}
+		}
+	}
+
+	if len(retCounterMap) != len(chekedCountersMap) {
+		mc.TestError(t, "Error: len(retCounterMap) != len(chekedCountersMap)")
+
+	}
+	return retCounterMap
 }

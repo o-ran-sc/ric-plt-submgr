@@ -20,12 +20,13 @@
 package control
 
 import (
+	"testing"
+	"time"
+
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
 	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/teststube2ap"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"github.com/stretchr/testify/assert"
-	"testing"
-	"time"
 )
 
 //-----------------------------------------------------------------------------
@@ -33,7 +34,7 @@ import (
 //
 //   stub                          stub
 // +-------+     +---------+    +---------+
-// | xapp  |     | submgr  |    | rtmgr   |
+// | xapp  |     | submgr  |    |  rtmgr  |
 // +-------+     +---------+    +---------+
 //     |              |              |
 //     | SubReq       |              |
@@ -54,6 +55,11 @@ import (
 func TestSubReqAndRouteNok(t *testing.T) {
 	CaseBegin("TestSubReqAndRouteNok")
 
+	// Init counter check
+	mainCtrl.SetTimesCounterWillBeAdded(cSubReqFromXapp, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cRouteCreateFail, 1)
+	mainCtrl.GetCounterValuesBefore(t)
+
 	waiter := rtmgrHttp.AllocNextEvent(false)
 	newSubsId := mainCtrl.get_registry_next_subid(t)
 	xappConn1.SendSubsReq(t, nil, nil)
@@ -66,7 +72,269 @@ func TestSubReqAndRouteNok(t *testing.T) {
 	xappConn2.TestMsgChanEmpty(t)
 	e2termConn1.TestMsgChanEmpty(t)
 	mainCtrl.wait_registry_empty(t, 10)
+
+	<-time.After(1 * time.Second)
+	mainCtrl.VerifyCounterValues(t)
 }
+
+//-----------------------------------------------------------------------------
+// TestSubReqAndRouteUpdateNok
+
+//   stub                          stub
+// +-------+     +-------+     +---------+    +---------+
+// | xapp2 |     | xapp1 |     | submgr  |    |  rtmgr  |
+// +-------+     +-------+     +---------+    +---------+
+//     |             |              |              |
+//     |        [SUBS CREATE]       |              |
+//     |             |              |              |
+//     |             |              |              |
+//     |             |              |              |
+//     | SubReq (mergeable)         |              |
+//     |--------------------------->|              |              |
+//     |             |              |              |
+//     |             |              | RouteUpdate  |
+//     |             |              |------------->|
+//     |             |              |              |
+//     |             |              | RouteUpdate  |
+//     |             |              |  status:400  |
+//     |             |              |<-------------|
+//     |             |              |              |
+//     |       [SUBS INT DELETE]    |              |
+//     |             |              |              |
+//     |             |              |              |
+//     |        [SUBS DELETE]       |              |
+//     |             |              |              |
+func TestSubReqAndRouteUpdateNok(t *testing.T) {
+	CaseBegin("TestSubReqAndRouteUpdateNok")
+
+	// Init counter check
+	mainCtrl.SetTimesCounterWillBeAdded(cSubReqFromXapp, 2)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubReqToE2, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubRespFromE2, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubRespToXapp, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cRouteCreateUpdateFail, 1)
+
+	mainCtrl.SetTimesCounterWillBeAdded(cSubDelReqFromXapp, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubDelReqToE2, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubDelRespFromE2, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubDelRespToXapp, 1)
+	mainCtrl.GetCounterValuesBefore(t)
+
+	cretrans := xappConn1.SendSubsReq(t, nil, nil)
+	crereq, cremsg := e2termConn1.RecvSubsReq(t)
+	e2termConn1.SendSubsResp(t, crereq, cremsg)
+	e2SubsId := xappConn1.RecvSubsResp(t, cretrans)
+
+	resp, _ := xapp.Subscription.QuerySubscriptions()
+	assert.Equal(t, resp[0].SubscriptionID, int64(e2SubsId))
+	assert.Equal(t, resp[0].Meid, "RAN_NAME_1")
+	assert.Equal(t, resp[0].Endpoint, []string{"localhost:13560"})
+
+	waiter := rtmgrHttp.AllocNextEvent(false)
+	newSubsId := mainCtrl.get_registry_next_subid(t)
+	xappConn2.SendSubsReq(t, nil, nil)
+	waiter.WaitResult(t)
+
+	deltrans := xappConn1.SendSubsDelReq(t, nil, e2SubsId)
+	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+
+	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
+	xappConn1.RecvSubsDelResp(t, deltrans)
+
+	//Wait that subs is cleaned
+	mainCtrl.wait_subs_clean(t, newSubsId, 10)
+	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
+
+	xappConn1.TestMsgChanEmpty(t)
+	xappConn2.TestMsgChanEmpty(t)
+	e2termConn1.TestMsgChanEmpty(t)
+	mainCtrl.wait_registry_empty(t, 10)
+
+	mainCtrl.VerifyCounterValues(t)
+}
+
+//-----------------------------------------------------------------------------
+// TestSubDelReqAndRouteDeleteNok
+//
+//   stub                          stub
+// +-------+     +---------+    +---------+    +---------+
+// | xapp  |     | submgr  |    | e2term  |    |  rtmgr  |
+// +-------+     +---------+    +---------+    +---------+
+//     |              |              |              |
+//     |         [SUBS CREATE]       |              |
+//     |              |              |              |
+//     |              |              |              |
+//     |              |              |              |
+//     | SubDelReq    |              |              |
+//     |------------->|              |              |
+//     |              |  SubDelReq   |              |
+//     |              |------------->|              |
+//     |              |  SubDelRsp   |              |
+//     |              |<-------------|              |
+//     |  SubDelRsp   |              |              |
+//     |<-------------|              |              |
+//     |              | RouteDelete  |              |
+//     |              |---------------------------->|
+//     |              |              |              |
+//     |              | RouteDelete  |              |
+//     |              |  status:400  |              |
+//     |              |<----------------------------|
+//     |              |              |              |
+func TestSubDelReqAndRouteDeleteNok(t *testing.T) {
+	CaseBegin("TestSubDelReqAndRouteDeleteNok")
+
+	// Init counter check
+	mainCtrl.SetTimesCounterWillBeAdded(cSubReqFromXapp, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubReqToE2, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubRespFromE2, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubRespToXapp, 1)
+
+	mainCtrl.SetTimesCounterWillBeAdded(cSubDelReqFromXapp, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cRouteDeleteFail, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubDelReqToE2, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubDelRespFromE2, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubDelRespToXapp, 1)
+	mainCtrl.GetCounterValuesBefore(t)
+
+	cretrans := xappConn1.SendSubsReq(t, nil, nil)
+	crereq, cremsg := e2termConn1.RecvSubsReq(t)
+	e2termConn1.SendSubsResp(t, crereq, cremsg)
+	e2SubsId := xappConn1.RecvSubsResp(t, cretrans)
+
+	resp, _ := xapp.Subscription.QuerySubscriptions()
+	assert.Equal(t, resp[0].SubscriptionID, int64(e2SubsId))
+	assert.Equal(t, resp[0].Meid, "RAN_NAME_1")
+	assert.Equal(t, resp[0].Endpoint, []string{"localhost:13560"})
+
+	deltrans := xappConn1.SendSubsDelReq(t, nil, e2SubsId)
+	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+
+	waiter := rtmgrHttp.AllocNextEvent(false)
+	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
+	waiter.WaitResult(t)
+
+	xappConn1.RecvSubsDelResp(t, deltrans)
+
+	//Wait that subs is cleaned
+	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
+
+	xappConn1.TestMsgChanEmpty(t)
+	xappConn2.TestMsgChanEmpty(t)
+	e2termConn1.TestMsgChanEmpty(t)
+	mainCtrl.wait_registry_empty(t, 10)
+
+	mainCtrl.VerifyCounterValues(t)
+}
+
+//-----------------------------------------------------------------------------
+// TestSubMergeDelAndRouteUpdateNok
+//   stub                          stub
+// +-------+     +-------+     +---------+    +---------+
+// | xapp2 |     | xapp1 |     | submgr  |    | e2term  |
+// +-------+     +-------+     +---------+    +---------+
+//     |             |              |              |
+//     |             |              |              |
+//     |             |              |              |
+//     |             | SubReq1      |              |
+//     |             |------------->|              |
+//     |             |              |              |
+//     |             |              | SubReq1      |
+//     |             |              |------------->|
+//     |             |              |    SubResp1  |
+//     |             |              |<-------------|
+//     |             |    SubResp1  |              |
+//     |             |<-------------|              |
+//     |             |              |              |
+//     |          SubReq2           |              |
+//     |--------------------------->|              |
+//     |             |              |              |
+//     |          SubResp2          |              |
+//     |<---------------------------|              |
+//     |             |              |              |
+//     |             | SubDelReq 1  |              |
+//     |             |------------->|              |
+//     |             |              | RouteUpdate  |
+//     |             |              |-----> rtmgr  |
+//     |             |              |              |
+//     |             |              | RouteUpdate  |
+//     |             |              |  status:400  |
+//     |             |              |<----- rtmgr  |
+//     |             |              |              |
+//     |             | SubDelResp 1 |              |
+//     |             |<-------------|              |
+//     |             |              |              |
+//     |         SubDelReq 2        |              |
+//     |--------------------------->|              |
+//     |             |              |              |
+//     |             |              | SubDelReq 2  |
+//     |             |              |------------->|
+//     |             |              |              |
+//     |             |              | SubDelReq 2  |
+//     |             |              |------------->|
+//     |             |              |              |
+//     |         SubDelResp 2       |              |
+//     |<---------------------------|              |
+//
+//-----------------------------------------------------------------------------
+func TestSubMergeDelAndRouteUpdateNok(t *testing.T) {
+	CaseBegin("TestSubMergeDelAndRouteUpdateNok")
+
+	// Init counter check
+	mainCtrl.SetTimesCounterWillBeAdded(cSubReqFromXapp, 2)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubReqToE2, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubRespFromE2, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubRespToXapp, 2)
+
+	mainCtrl.SetTimesCounterWillBeAdded(cSubDelReqFromXapp, 2)
+	mainCtrl.SetTimesCounterWillBeAdded(cRouteDeleteUpdateFail, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubDelReqToE2, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubDelRespFromE2, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubDelRespToXapp, 2)
+	mainCtrl.GetCounterValuesBefore(t)
+
+	//Req1
+	rparams1 := &teststube2ap.E2StubSubsReqParams{}
+	rparams1.Init()
+	cretrans1 := xappConn1.SendSubsReq(t, rparams1, nil)
+	crereq1, cremsg1 := e2termConn1.RecvSubsReq(t)
+	e2termConn1.SendSubsResp(t, crereq1, cremsg1)
+	e2SubsId1 := xappConn1.RecvSubsResp(t, cretrans1)
+
+	//Req2
+	rparams2 := &teststube2ap.E2StubSubsReqParams{}
+	rparams2.Init()
+	cretrans2 := xappConn2.SendSubsReq(t, rparams2, nil)
+	e2SubsId2 := xappConn2.RecvSubsResp(t, cretrans2)
+
+	resp, _ := xapp.Subscription.QuerySubscriptions()
+	assert.Equal(t, resp[0].SubscriptionID, int64(e2SubsId1))
+	assert.Equal(t, resp[0].Meid, "RAN_NAME_1")
+	assert.Equal(t, resp[0].Endpoint, []string{"localhost:13560", "localhost:13660"})
+
+	//Del1
+	waiter := rtmgrHttp.AllocNextEvent(false)
+	deltrans1 := xappConn1.SendSubsDelReq(t, nil, e2SubsId1)
+	waiter.WaitResult(t)
+
+	xappConn1.RecvSubsDelResp(t, deltrans1)
+
+	//Del2
+	deltrans2 := xappConn2.SendSubsDelReq(t, nil, e2SubsId2)
+	delreq2, delmsg2 := e2termConn1.RecvSubsDelReq(t)
+	e2termConn1.SendSubsDelResp(t, delreq2, delmsg2)
+	xappConn2.RecvSubsDelResp(t, deltrans2)
+	//Wait that subs is cleaned
+	mainCtrl.wait_subs_clean(t, e2SubsId2, 10)
+
+	xappConn1.TestMsgChanEmpty(t)
+	xappConn2.TestMsgChanEmpty(t)
+	e2termConn1.TestMsgChanEmpty(t)
+	mainCtrl.wait_registry_empty(t, 10)
+
+	mainCtrl.VerifyCounterValues(t)
+}
+
+//-----------------------------------------------------------------------------
 
 //-----------------------------------------------------------------------------
 // TestSubReqAndSubDelOk
@@ -105,8 +373,19 @@ func TestSubReqAndRouteNok(t *testing.T) {
 func TestSubReqAndSubDelOk(t *testing.T) {
 	CaseBegin("TestSubReqAndSubDelOk")
 
-	cretrans := xappConn1.SendSubsReq(t, nil, nil)
+	// Init counter check
+	mainCtrl.SetTimesCounterWillBeAdded(cSubReqFromXapp, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubReqToE2, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubRespFromE2, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubRespToXapp, 1)
 
+	mainCtrl.SetTimesCounterWillBeAdded(cSubDelReqFromXapp, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubDelReqToE2, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubDelRespFromE2, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubDelRespToXapp, 1)
+	mainCtrl.GetCounterValuesBefore(t)
+
+	cretrans := xappConn1.SendSubsReq(t, nil, nil)
 	crereq, cremsg := e2termConn1.RecvSubsReq(t)
 	e2termConn1.SendSubsResp(t, crereq, cremsg)
 	e2SubsId := xappConn1.RecvSubsResp(t, cretrans)
@@ -129,6 +408,8 @@ func TestSubReqAndSubDelOk(t *testing.T) {
 	xappConn2.TestMsgChanEmpty(t)
 	e2termConn1.TestMsgChanEmpty(t)
 	mainCtrl.wait_registry_empty(t, 10)
+
+	mainCtrl.VerifyCounterValues(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -530,6 +811,16 @@ func TestSameSubsDiffRan(t *testing.T) {
 func TestSubReqRetryInSubmgr(t *testing.T) {
 
 	CaseBegin("TestSubReqRetryInSubmgr start")
+	mainCtrl.SetTimesCounterWillBeAdded(cSubReqFromXapp, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubReqToE2, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubReReqToE2, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubRespFromE2, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubRespToXapp, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubDelReqFromXapp, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubDelReqToE2, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubDelRespFromE2, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubDelRespToXapp, 1)
+	mainCtrl.GetCounterValuesBefore(t)
 
 	// Xapp: Send SubsReq
 	cretrans := xappConn1.SendSubsReq(t, nil, nil)
@@ -556,6 +847,8 @@ func TestSubReqRetryInSubmgr(t *testing.T) {
 	xappConn2.TestMsgChanEmpty(t)
 	e2termConn1.TestMsgChanEmpty(t)
 	mainCtrl.wait_registry_empty(t, 10)
+
+	mainCtrl.VerifyCounterValues(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -579,11 +872,6 @@ func TestSubReqRetryInSubmgr(t *testing.T) {
 //     |              | SubDelReq    |
 //     |              |------------->|
 //     |              |              |
-//     |              |              |
-//     |              | SubDelReq    |
-//     |              |------------->|
-//     |              |              |
-//     |              |              |
 //     |              |   SubDelResp |
 //     |              |<-------------|
 //     |              |              |
@@ -593,6 +881,13 @@ func TestSubReqRetryInSubmgr(t *testing.T) {
 func TestSubReqRetryNoRespSubDelRespInSubmgr(t *testing.T) {
 
 	CaseBegin("TestSubReqTwoRetriesNoRespSubDelRespInSubmgr start")
+	mainCtrl.SetTimesCounterWillBeAdded(cSubReqFromXapp, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubReqToE2, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubReReqToE2, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubReqTimerExpiry, 2)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubDelReqToE2, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubDelRespFromE2, 1)
+	mainCtrl.GetCounterValuesBefore(t)
 
 	// Xapp: Send SubsReq
 	xappConn1.SendSubsReq(t, nil, nil)
@@ -614,6 +909,8 @@ func TestSubReqRetryNoRespSubDelRespInSubmgr(t *testing.T) {
 	xappConn2.TestMsgChanEmpty(t)
 	e2termConn1.TestMsgChanEmpty(t)
 	mainCtrl.wait_registry_empty(t, 10)
+
+	mainCtrl.VerifyCounterValues(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -648,6 +945,13 @@ func TestSubReqRetryNoRespSubDelRespInSubmgr(t *testing.T) {
 func TestSubReqTwoRetriesNoRespAtAllInSubmgr(t *testing.T) {
 
 	CaseBegin("TestSubReqTwoRetriesNoRespAtAllInSubmgr start")
+	mainCtrl.SetTimesCounterWillBeAdded(cSubReqFromXapp, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubReqToE2, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubReReqToE2, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubReqTimerExpiry, 2)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubDelReqToE2, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubDelReqTimerExpiry, 2)
+	mainCtrl.GetCounterValuesBefore(t)
 
 	// Xapp: Send SubsReq
 	xappConn1.SendSubsReq(t, nil, nil)
@@ -671,6 +975,8 @@ func TestSubReqTwoRetriesNoRespAtAllInSubmgr(t *testing.T) {
 	xappConn2.TestMsgChanEmpty(t)
 	e2termConn1.TestMsgChanEmpty(t)
 	mainCtrl.wait_registry_empty(t, 10)
+
+	mainCtrl.VerifyCounterValues(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -705,6 +1011,13 @@ func TestSubReqTwoRetriesNoRespAtAllInSubmgr(t *testing.T) {
 func TestSubReqSubFailRespInSubmgr(t *testing.T) {
 
 	CaseBegin("TestSubReqSubFailRespInSubmgr start")
+	mainCtrl.SetTimesCounterWillBeAdded(cSubReqFromXapp, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubReqToE2, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubFailFromE2, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubDelReqToE2, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubDelRespFromE2, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubFailToXapp, 1)
+	mainCtrl.GetCounterValuesBefore(t)
 
 	// Xapp: Send SubsReq
 	cretrans := xappConn1.SendSubsReq(t, nil, nil)
@@ -729,164 +1042,8 @@ func TestSubReqSubFailRespInSubmgr(t *testing.T) {
 	xappConn2.TestMsgChanEmpty(t)
 	e2termConn1.TestMsgChanEmpty(t)
 	mainCtrl.wait_registry_empty(t, 10)
-}
 
-//-----------------------------------------------------------------------------
-// TestSubReqSubFailRespInSubmgrWithDuplicate
-//
-//   stub                          stub
-// +-------+     +---------+    +---------+
-// | xapp  |     | submgr  |    | e2term  |
-// +-------+     +---------+    +---------+
-//     |              |              |
-//     |  SubReq      |              |
-//     |------------->|              |
-//     |              |              |
-//     |              | SubReq       |
-//     |              |------------->|
-//     |              |              |
-//     |              |      SubFail |
-//     |              |<-------------|
-//     |              |              |
-//     |              | SubDelReq    |
-//     |              |------------->|
-//     |              |              |
-//     |              |   SubDelResp |
-//     |              |<-------------|
-//     |              |              |
-//     |              | SubReq       |
-//     |              |------------->|
-//     |              |              |
-//     |              |      SubResp |
-//     |              |<-------------|
-//     |              |              |
-//     |      SubResp |              |
-//     |<-------------|              |
-//     |              |              |
-//     |         [SUBS DELETE]       |
-//     |              |              |
-//
-//-----------------------------------------------------------------------------
-
-func TestSubReqSubFailRespInSubmgrWithDuplicate(t *testing.T) {
-
-	CaseBegin("TestSubReqSubFailRespInSubmgrWithDuplicate start")
-
-	// Xapp: Send SubsReq
-	cretrans := xappConn1.SendSubsReq(t, nil, nil)
-
-	// E2t: Receive SubsReq and send SubsFail (first)
-	crereq1, cremsg1 := e2termConn1.RecvSubsReq(t)
-	fparams1 := &teststube2ap.E2StubSubsFailParams{}
-	fparams1.Set(crereq1)
-	fparams1.SetCauseVal(-1, 5, 3)
-	e2termConn1.SendSubsFail(t, fparams1, cremsg1)
-
-	// E2t: Receive SubsDelReq and send SubsDelResp (internal)
-	delreq1, delmsg1 := e2termConn1.RecvSubsDelReq(t)
-	e2termConn1.SendSubsDelResp(t, delreq1, delmsg1)
-
-	// E2t: Receive SubsReq and send SubsResp (second)
-	crereq2, cremsg2 := e2termConn1.RecvSubsReq(t)
-	e2termConn1.SendSubsResp(t, crereq2, cremsg2)
-
-	// XAPP: Receive SubsResp
-	e2SubsId := xappConn1.RecvSubsResp(t, cretrans)
-
-	// Delete
-	deltrans2 := xappConn1.SendSubsDelReq(t, nil, e2SubsId)
-	delreq2, delmsg2 := e2termConn1.RecvSubsDelReq(t)
-	e2termConn1.SendSubsDelResp(t, delreq2, delmsg2)
-	xappConn1.RecvSubsDelResp(t, deltrans2)
-
-	// Wait that subs is cleaned
-	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
-
-	xappConn1.TestMsgChanEmpty(t)
-	xappConn2.TestMsgChanEmpty(t)
-	e2termConn1.TestMsgChanEmpty(t)
-	mainCtrl.wait_registry_empty(t, 10)
-}
-
-//-----------------------------------------------------------------------------
-// TestSubReqSubFailRespInSubmgrWithDuplicateFail
-//
-//   stub                          stub
-// +-------+     +---------+    +---------+
-// | xapp  |     | submgr  |    | e2term  |
-// +-------+     +---------+    +---------+
-//     |              |              |
-//     |  SubReq      |              |
-//     |------------->|              |
-//     |              |              |
-//     |              | SubReq       |
-//     |              |------------->|
-//     |              |              |
-//     |              |      SubFail |
-//     |              |<-------------|
-//     |              |              |
-//     |              | SubDelReq    |
-//     |              |------------->|
-//     |              |              |
-//     |              |   SubDelResp |
-//     |              |<-------------|
-//     |              |              |
-//     |              | SubReq       |
-//     |              |------------->|
-//     |              |              |
-//     |              |      SubFail |
-//     |              |<-------------|
-//     |              |              |
-//     |              | SubDelReq    |
-//     |              |------------->|
-//     |              |              |
-//     |              |   SubDelResp |
-//     |              |<-------------|
-//     |      SubFail |              |
-//     |<-------------|              |
-//     |              |              |
-//
-//-----------------------------------------------------------------------------
-
-func TestSubReqSubFailRespInSubmgrWithDuplicateFail(t *testing.T) {
-
-	CaseBegin("TestSubReqSubFailRespInSubmgrWithDuplicateFail start")
-
-	// Xapp: Send SubsReq
-	cretrans := xappConn1.SendSubsReq(t, nil, nil)
-
-	// E2t: Receive SubsReq and send SubsFail (first)
-	crereq1, cremsg1 := e2termConn1.RecvSubsReq(t)
-	fparams1 := &teststube2ap.E2StubSubsFailParams{}
-	fparams1.Set(crereq1)
-	fparams1.SetCauseVal(-1, 5, 3)
-	e2termConn1.SendSubsFail(t, fparams1, cremsg1)
-
-	// E2t: Receive SubsDelReq and send SubsDelResp (internal first)
-	delreq1, delmsg1 := e2termConn1.RecvSubsDelReq(t)
-	e2termConn1.SendSubsDelResp(t, delreq1, delmsg1)
-
-	// E2t: Receive SubsReq and send SubsFail (second)
-	crereq2, cremsg2 := e2termConn1.RecvSubsReq(t)
-	fparams2 := &teststube2ap.E2StubSubsFailParams{}
-	fparams2.Set(crereq2)
-	fparams2.SetCauseVal(-1, 5, 3)
-	e2termConn1.SendSubsFail(t, fparams2, cremsg2)
-
-	// E2t: Receive SubsDelReq and send SubsDelResp (internal second)
-	delreq2, delmsg2 := e2termConn1.RecvSubsDelReq(t)
-	e2termConn1.SendSubsDelResp(t, delreq2, delmsg2)
-
-	// Xapp: Receive SubsFail
-	e2SubsId := xappConn1.RecvSubsFail(t, cretrans)
-
-	// Wait that subs is cleaned
-	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
-
-	xappConn1.TestMsgChanEmpty(t)
-	xappConn2.TestMsgChanEmpty(t)
-	e2termConn1.TestMsgChanEmpty(t)
-	mainCtrl.wait_registry_empty(t, 10)
+	mainCtrl.VerifyCounterValues(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -1037,6 +1194,15 @@ func TestSubDelReqTwoRetriesNoRespInSubmgr(t *testing.T) {
 func TestSubDelReqSubDelFailRespInSubmgr(t *testing.T) {
 
 	CaseBegin("TestSubReqSubDelFailRespInSubmgr start")
+	mainCtrl.SetTimesCounterWillBeAdded(cSubReqFromXapp, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubReqToE2, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubRespFromE2, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubRespToXapp, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubDelReqFromXapp, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubDelReqToE2, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubDelFailFromE2, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubDelRespToXapp, 1)
+	mainCtrl.GetCounterValuesBefore(t)
 
 	// Subs Create
 	cretrans := xappConn1.SendSubsReq(t, nil, nil)
@@ -1061,6 +1227,8 @@ func TestSubDelReqSubDelFailRespInSubmgr(t *testing.T) {
 	xappConn2.TestMsgChanEmpty(t)
 	e2termConn1.TestMsgChanEmpty(t)
 	mainCtrl.wait_registry_empty(t, 10)
+
+	mainCtrl.VerifyCounterValues(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -1111,6 +1279,19 @@ func TestSubDelReqSubDelFailRespInSubmgr(t *testing.T) {
 func TestSubReqAndSubDelOkSameAction(t *testing.T) {
 	CaseBegin("TestSubReqAndSubDelOkSameAction")
 
+	// Init counter check
+	mainCtrl.SetTimesCounterWillBeAdded(cSubReqFromXapp, 2)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubReqToE2, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubRespFromE2, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubRespToXapp, 2)
+	mainCtrl.SetTimesCounterWillBeAdded(cMergedSubscriptions, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cUnmergedSubscriptions, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubDelReqFromXapp, 2)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubDelReqToE2, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubDelRespFromE2, 1)
+	mainCtrl.SetTimesCounterWillBeAdded(cSubDelRespToXapp, 2)
+	mainCtrl.GetCounterValuesBefore(t)
+
 	//Req1
 	rparams1 := &teststube2ap.E2StubSubsReqParams{}
 	rparams1.Init()
@@ -1152,6 +1333,8 @@ func TestSubReqAndSubDelOkSameAction(t *testing.T) {
 	xappConn2.TestMsgChanEmpty(t)
 	e2termConn1.TestMsgChanEmpty(t)
 	mainCtrl.wait_registry_empty(t, 10)
+
+	mainCtrl.VerifyCounterValues(t)
 }
 
 //-----------------------------------------------------------------------------

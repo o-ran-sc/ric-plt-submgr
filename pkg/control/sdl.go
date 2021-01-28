@@ -67,8 +67,8 @@ func (c *Control) WriteSubscriptionToSdl(subId uint32, subs *Subscription) error
 		return fmt.Errorf("SDL: WriteSubscriptionToSdl() json.Marshal error: %s", err.Error())
 	}
 
-	err = c.db.Set(strconv.FormatUint(uint64(subId), 10), jsonData)
-	if err != nil {
+	if err = c.db.Set(strconv.FormatUint(uint64(subId), 10), jsonData); err != nil {
+		c.UpdateCounter(cSDLWriteFailure)
 		return fmt.Errorf("SDL: WriteSubscriptionToSdl(): %s", err.Error())
 	} else {
 		xapp.Logger.Debug("SDL: Subscription written in db. subId = %v", subId)
@@ -82,6 +82,7 @@ func (c *Control) ReadSubscriptionFromSdl(subId uint32) (*Subscription, error) {
 	key := strconv.FormatUint(uint64(subId), 10)
 	retMap, err := c.db.Get([]string{key})
 	if err != nil {
+		c.UpdateCounter(cSDLReadFailure)
 		return nil, fmt.Errorf("SDL: ReadSubscriptionFromSdl(): %s", err.Error())
 	} else {
 		xapp.Logger.Debug("SDL: Subscription read from db.  subId = %v", subId)
@@ -97,8 +98,7 @@ func (c *Control) ReadSubscriptionFromSdl(subId uint32) (*Subscription, error) {
 		subscriptionInfo := &SubscriptionInfo{}
 		jsonSubscriptionInfo := iSubscriptionInfo.(string)
 
-		err := json.Unmarshal([]byte(jsonSubscriptionInfo), subscriptionInfo)
-		if err != nil {
+		if err := json.Unmarshal([]byte(jsonSubscriptionInfo), subscriptionInfo); err != nil {
 			return nil, fmt.Errorf("SDL: ReadSubscriptionFromSdl() json.unmarshal error: %s\n", err.Error())
 		}
 
@@ -143,8 +143,7 @@ func (c *Control) CreateSubscription(subscriptionInfo *SubscriptionInfo, jsonSub
 func (c *Control) RemoveSubscriptionFromSdl(subId uint32) error {
 
 	key := strconv.FormatUint(uint64(subId), 10)
-	err := c.db.Remove([]string{key})
-	if err != nil {
+	if err := c.db.Remove([]string{key}); err != nil {
 		return fmt.Errorf("SDL: RemoveSubscriptionfromSdl(): %s\n", err.Error())
 	} else {
 		xapp.Logger.Debug("SDL: Subscription removed from db. subId = %v", subId)
@@ -165,6 +164,7 @@ func (c *Control) ReadAllSubscriptionsFromSdl() ([]uint32, map[uint32]*Subscript
 	// Get all keys
 	keys, err := c.db.GetAll()
 	if err != nil {
+		c.UpdateCounter(cSDLReadFailure)
 		return nil, nil, fmt.Errorf("SDL: ReadAllSubscriptionsFromSdl(), GetAll(). Error while reading keys from DBAAS %s\n", err.Error())
 	}
 
@@ -175,6 +175,7 @@ func (c *Control) ReadAllSubscriptionsFromSdl() ([]uint32, map[uint32]*Subscript
 	// Get all subscriptionInfos
 	iSubscriptionMap, err := c.db.Get(keys)
 	if err != nil {
+		c.UpdateCounter(cSDLReadFailure)
 		return nil, nil, fmt.Errorf("SDL: ReadAllSubscriptionsFromSdl(), Get():  Error while reading subscriptions from DBAAS %s\n", err.Error())
 	}
 
@@ -187,8 +188,7 @@ func (c *Control) ReadAllSubscriptionsFromSdl() ([]uint32, map[uint32]*Subscript
 		subscriptionInfo := &SubscriptionInfo{}
 		jsonSubscriptionInfo := iSubscriptionInfo.(string)
 
-		err := json.Unmarshal([]byte(jsonSubscriptionInfo), subscriptionInfo)
-		if err != nil {
+		if err := json.Unmarshal([]byte(jsonSubscriptionInfo), subscriptionInfo); err != nil {
 			return nil, nil, fmt.Errorf("SDL: ReadAllSubscriptionsFromSdl() json.unmarshal error: %s\n", err.Error())
 		}
 
@@ -219,8 +219,8 @@ func removeNumber(s []uint32, removedNum uint32) ([]uint32, error) {
 }
 func (c *Control) RemoveAllSubscriptionsFromSdl() error {
 
-	err := c.db.RemoveAll()
-	if err != nil {
+	if err := c.db.RemoveAll(); err != nil {
+		c.UpdateCounter(cSDLRemoveFailure)
 		return fmt.Errorf("SDL: RemoveAllSubscriptionsFromSdl(): %s\n", err.Error())
 	} else {
 		xapp.Logger.Debug("SDL: All subscriptions removed from db")
