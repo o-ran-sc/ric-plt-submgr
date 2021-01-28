@@ -53,7 +53,7 @@ func (rc *RtmgrClient) SubscriptionRequestCreate(subRouteAction SubRouteInfo) er
 	subID := int32(subRouteAction.SubID)
 	xapp.Logger.Debug("CREATE %s ongoing", subRouteAction.String())
 	createData := rtmgr_models.XappSubscriptionData{&subRouteAction.EpList.Endpoints[0].Addr, &subRouteAction.EpList.Endpoints[0].Port, &subID}
-	createHandle := rtmgrhandle.NewProvideXappSubscriptionHandleParamsWithTimeout(10 * time.Second)
+	createHandle := rtmgrhandle.NewProvideXappSubscriptionHandleParamsWithTimeout(2 * time.Second)
 	createHandle.WithXappSubscriptionData(&createData)
 	_, err := rc.rtClient.Handle.ProvideXappSubscriptionHandle(createHandle)
 	if err != nil && !(strings.Contains(err.Error(), "status 200")) {
@@ -69,7 +69,7 @@ func (rc *RtmgrClient) SubscriptionRequestUpdate(subRouteAction SubRouteInfo) er
 	for i := range subRouteAction.EpList.Endpoints {
 		updateData = append(updateData, &rtmgr_models.XappElement{Address: &subRouteAction.EpList.Endpoints[i].Addr, Port: &subRouteAction.EpList.Endpoints[i].Port})
 	}
-	updateHandle := rtmgrhandle.NewUpdateXappSubscriptionHandleParamsWithTimeout(10 * time.Second)
+	updateHandle := rtmgrhandle.NewUpdateXappSubscriptionHandleParamsWithTimeout(2 * time.Second)
 	updateHandle.WithSubscriptionID(subRouteAction.SubID)
 	updateHandle.WithXappList(updateData)
 	_, err := rc.rtClient.Handle.UpdateXappSubscriptionHandle(updateHandle)
@@ -85,7 +85,7 @@ func (rc *RtmgrClient) SubscriptionRequestDelete(subRouteAction SubRouteInfo) er
 	subID := int32(subRouteAction.SubID)
 	xapp.Logger.Debug("DELETE %s ongoing", subRouteAction.String())
 	deleteData := rtmgr_models.XappSubscriptionData{&subRouteAction.EpList.Endpoints[0].Addr, &subRouteAction.EpList.Endpoints[0].Port, &subID}
-	deleteHandle := rtmgrhandle.NewDeleteXappSubscriptionHandleParamsWithTimeout(10 * time.Second)
+	deleteHandle := rtmgrhandle.NewDeleteXappSubscriptionHandleParamsWithTimeout(2 * time.Second)
 	deleteHandle.WithXappSubscriptionData(&deleteData)
 	_, _, err := rc.rtClient.Handle.DeleteXappSubscriptionHandle(deleteHandle)
 	if err != nil && !(strings.Contains(err.Error(), "status 200")) {

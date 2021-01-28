@@ -121,10 +121,7 @@ FROM submgre2apbuild as submgrbuild
 #
 #
 COPY go.mod go.mod
-COPY go.sum go.sum
-
 RUN go mod download
-RUN go mod tidy
 
 #
 #
@@ -153,12 +150,12 @@ RUN echo "rtmgrapi ${RTMGRVERSION} https://gerrit.o-ran-sc.org/r/ric-plt/rtmgr" 
 COPY pkg pkg
 COPY cmd cmd
 
+COPY go.sum go.sum
+RUN go mod tidy
+
 RUN mkdir -p /opt/bin && \
     go build -o /opt/bin/submgr cmd/submgr.go && \
     mkdir -p /opt/build/container/usr/local
-
-
-RUN go mod tidy
 
 RUN cp go.mod go.sum /manifests/
 RUN grep gerrit /manifests/go.sum > /manifests/go_gerrit.sum

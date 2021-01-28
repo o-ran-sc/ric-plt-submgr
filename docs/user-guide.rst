@@ -251,6 +251,41 @@ Architecture
     were not successfully completed, Subscription Manager sends delete request to BTS and removes routes created for those. Restoring subscriptions from
     db can be disable via submgr-config.yaml file by setting "readSubsFromDb": "false".
 
+Metrics
+-------
+ Subscription Manager adds following statistic counters:
+
+ Subscription create counters:
+		- SubReqFromXapp: The total number of SubscriptionRequest messages received from xApp
+		- SubRespToXapp: The total number of SubscriptionResponse messages sent to xApp
+		- SubFailToXapp: The total number of SubscriptionFailure messages sent to xApp
+		- SubReqToE2: The total number of SubscriptionRequest messages sent to E2Term
+		- SubReReqToE2: The total number of SubscriptionRequest messages resent to E2Term
+		- SubRespFromE2: The total number of SubscriptionResponse messages from E2Term
+		- SubFailFromE2: The total number of SubscriptionFailure messages from E2Term
+		- SubReqTimerExpiry: The total number of SubscriptionRequest timer expires
+		- RouteCreateFail: The total number of subscription route create failure
+		- RouteCreateUpdateFail: The total number of subscription route create update failure
+		- MergedSubscriptions: The total number of merged Subscriptions
+
+ Subscription delete counters:
+		- SubDelReqFromXapp: The total number of SubscriptionDeleteResponse messages received from xApp
+		- SubDelRespToXapp: The total number of SubscriptionDeleteResponse messages sent to xApp
+		- SubDelReqToE2: The total number of SubscriptionDeleteRequest messages sent to E2Term
+		- SubDelReReqToE2: The total number of SubscriptionDeleteRequest messages resent to E2Term
+		- SubDelRespFromE2: The total number of SubscriptionDeleteResponse messages from E2Term
+		- SubDelFailFromE2: The total number of SubscriptionDeleteFailure messages from E2Term
+		- SubDelReqTimerExpiry: The total number of SubscriptionDeleteRequest timer expires
+		- RouteDeleteFail: The total number of subscription route delete failure
+		- RouteDeleteUpdateFail: The total number of subscription route delete update failure
+		- UnmergedSubscriptions: The total number of unmerged Subscriptions
+
+ SDL failure counters:
+		- SDLWriteFailure: The total number of SDL write failures
+		- SDLReadFailure: The total number of SDL read failures
+		- SDLRemoveFailure: The total number of SDL read failures
+
+
 REST interface for debugging and testing
 ----------------------------------------
  Give following commands to get Subscription Manager pod's IP address
@@ -267,13 +302,17 @@ REST interface for debugging and testing
 
   10.244.0.181
 
+ Get metrics
+
+ .. code-block:: none
+
+  Example: curl -s GET "http://10.244.0.181:8080/ric/v1/metrics"
+
  Get subscriptions
 
  .. code-block:: none
 
   Example: curl -X GET "http://10.244.0.181:8088/ric/v1/subscriptions"
-
-  []
 
  Delete single subscription from db
 
