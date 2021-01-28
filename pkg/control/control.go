@@ -76,6 +76,7 @@ type Control struct {
 	//subscriber *xapp.Subscriber
 	CntRecvMsg    uint64
 	ResetTestFlag bool
+	Counters      map[string]xapp.Counter
 }
 
 type RMRMeid struct {
@@ -114,6 +115,7 @@ func NewControl() *Control {
 		tracker:  tracker,
 		db:       CreateSdl(),
 		//subscriber: subscriber,
+		Counters: xapp.Metric.RegisterCounterGroup(GetMetricsOpts(), "SUBMGR"),
 	}
 
 	// Register REST handler for testing support
@@ -342,6 +344,7 @@ func (c *Control) Consume(msg *xapp.RMRParams) (err error) {
 //------------------------------------------------------------------
 func (c *Control) handleXAPPSubscriptionRequest(params *xapp.RMRParams) {
 	xapp.Logger.Info("MSG from XAPP: %s", params.String())
+	c.UpdateCounter(cSubReqFromXapp)
 
 	subReqMsg, err := c.e2ap.UnpackSubscriptionRequest(params.Payload)
 	if err != nil {
@@ -363,7 +366,7 @@ func (c *Control) handleXAPPSubscriptionRequest(params *xapp.RMRParams) {
 	}
 
 	//TODO handle subscription toward e2term inside AssignToSubscription / hide handleSubscriptionCreate in it?
-	subs, err := c.registry.AssignToSubscription(trans, subReqMsg, c.ResetTestFlag)
+	subs, err := c.registry.AssignToSubscription(trans, subReqMsg, c.ResetTestFlag, c)
 	if err != nil {
 		xapp.Logger.Error("XAPP-SubReq: %s", idstring(err, trans))
 		return
@@ -381,12 +384,14 @@ func (c *Control) handleXAPPSubscriptionRequest(params *xapp.RMRParams) {
 			trans.Mtype, trans.Payload, err = c.e2ap.PackSubscriptionResponse(themsg)
 			if err == nil {
 				trans.Release()
+				c.UpdateCounter(cSubRespToXapp)
 				c.rmrSendToXapp("", subs, trans)
 				return
 			}
 		case *e2ap.E2APSubscriptionFailure:
 			trans.Mtype, trans.Payload, err = c.e2ap.PackSubscriptionFailure(themsg)
 			if err == nil {
+				c.UpdateCounter(cSubFailToXapp)
 				c.rmrSendToXapp("", subs, trans)
 			}
 		default:
@@ -402,6 +407,7 @@ func (c *Control) handleXAPPSubscriptionRequest(params *xapp.RMRParams) {
 //------------------------------------------------------------------
 func (c *Control) handleXAPPSubscriptionDeleteRequest(params *xapp.RMRParams) {
 	xapp.Logger.Info("MSG from XAPP: %s", params.String())
+	c.UpdateCounter(cSubDelReqFromXapp)
 
 	subDelReqMsg, err := c.e2ap.UnpackSubscriptionDeleteRequest(params.Payload)
 	if err != nil {
@@ -447,6 +453,7 @@ func (c *Control) handleXAPPSubscriptionDeleteRequest(params *xapp.RMRParams) {
 	subDelRespMsg.FunctionId = subs.SubReqMsg.FunctionId
 	trans.Mtype, trans.Payload, err = c.e2ap.PackSubscriptionDeleteResponse(subDelRespMsg)
 	if err == nil {
+		c.UpdateCounter(cSubDelRespToXapp)
 		c.rmrSendToXapp("", subs, trans)
 	}
 
@@ -517,6 +524,7 @@ func (c *Control) handleSubscriptionDelete(subs *Subscription, parentTrans *Tran
 	xapp.Logger.Debug("SUBS-SubDelReq: Handling %s", idstring(nil, trans, subs, parentTrans))
 
 	subs.mutex.Lock()
+
 	if subs.valid && subs.EpList.HasEndpoint(parentTrans.GetEndpoint()) && subs.EpList.Size() == 1 {
 		subs.valid = false
 		subs.mutex.Unlock()
@@ -552,10 +560,16 @@ func (c *Control) sendE2TSubscriptionRequest(subs *Subscription, trans *Transact
 	c.WriteSubscriptionToDb(subs)
 	for retries := uint64(0); retries < e2tMaxSubReqTryCount; retries++ {
 		desc := fmt.Sprintf("(retry %d)", retries)
+		if retries == 0 {
+			c.UpdateCounter(cSubReqToE2)
+		} else {
+			c.UpdateCounter(cSubReReqToE2)
+		}
 		c.rmrSendToE2T(desc, subs, trans)
 		if subs.DoNotWaitSubResp == false {
 			event, timedOut = trans.WaitEvent(e2tSubReqTimeout)
 			if timedOut {
+				c.UpdateCounter(cSubReqTimerExpiry)
 				continue
 			}
 		} else {
@@ -588,9 +602,15 @@ func (c *Control) sendE2TSubscriptionDeleteRequest(subs *Subscription, trans *Tr
 
 	for retries := uint64(0); retries < e2tMaxSubDelReqTryCount; retries++ {
 		desc := fmt.Sprintf("(retry %d)", retries)
+		if retries == 0 {
+			c.UpdateCounter(cSubDelReqToE2)
+		} else {
+			c.UpdateCounter(cSubDelReReqToE2)
+		}
 		c.rmrSendToE2T(desc, subs, trans)
 		event, timedOut = trans.WaitEvent(e2tSubDelReqTime)
 		if timedOut {
+			c.UpdateCounter(cSubDelReqTimerExpiry)
 			continue
 		}
 		break
@@ -600,10 +620,11 @@ func (c *Control) sendE2TSubscriptionDeleteRequest(subs *Subscription, trans *Tr
 }
 
 //-------------------------------------------------------------------
-// handle from E2T Subscription Reponse
+// handle from E2T Subscription Response
 //-------------------------------------------------------------------
 func (c *Control) handleE2TSubscriptionResponse(params *xapp.RMRParams) {
 	xapp.Logger.Info("MSG from E2T: %s", params.String())
+	c.UpdateCounter(cSubRespFromE2)
 	subRespMsg, err := c.e2ap.UnpackSubscriptionResponse(params.Payload)
 	if err != nil {
 		xapp.Logger.Error("MSG-SubResp %s", idstring(err, params))
@@ -633,6 +654,7 @@ func (c *Control) handleE2TSubscriptionResponse(params *xapp.RMRParams) {
 //-------------------------------------------------------------------
 func (c *Control) handleE2TSubscriptionFailure(params *xapp.RMRParams) {
 	xapp.Logger.Info("MSG from E2T: %s", params.String())
+	c.UpdateCounter(cSubFailFromE2)
 	subFailMsg, err := c.e2ap.UnpackSubscriptionFailure(params.Payload)
 	if err != nil {
 		xapp.Logger.Error("MSG-SubFail %s", idstring(err, params))
@@ -662,6 +684,7 @@ func (c *Control) handleE2TSubscriptionFailure(params *xapp.RMRParams) {
 //-------------------------------------------------------------------
 func (c *Control) handleE2TSubscriptionDeleteResponse(params *xapp.RMRParams) (err error) {
 	xapp.Logger.Info("MSG from E2T: %s", params.String())
+	c.UpdateCounter(cSubDelRespFromE2)
 	subDelRespMsg, err := c.e2ap.UnpackSubscriptionDeleteResponse(params.Payload)
 	if err != nil {
 		xapp.Logger.Error("MSG-SubDelResp: %s", idstring(err, params))
@@ -691,6 +714,7 @@ func (c *Control) handleE2TSubscriptionDeleteResponse(params *xapp.RMRParams) (e
 //-------------------------------------------------------------------
 func (c *Control) handleE2TSubscriptionDeleteFailure(params *xapp.RMRParams) {
 	xapp.Logger.Info("MSG from E2T: %s", params.String())
+	c.UpdateCounter(cSubDelFailFromE2)
 	subDelFailMsg, err := c.e2ap.UnpackSubscriptionDeleteFailure(params.Payload)
 	if err != nil {
 		xapp.Logger.Error("MSG-SubDelFail: %s", idstring(err, params))

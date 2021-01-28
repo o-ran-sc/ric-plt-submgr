@@ -68,6 +68,7 @@ func (c *Control) WriteSubscriptionToSdl(subId uint32, subs *Subscription) error
 	}
 
 	if err = c.db.Set(strconv.FormatUint(uint64(subId), 10), jsonData); err != nil {
+		c.UpdateCounter(cSDLWriteFailure)
 		return fmt.Errorf("SDL: WriteSubscriptionToSdl(): %s", err.Error())
 	} else {
 		xapp.Logger.Debug("SDL: Subscription written in db. subId = %v", subId)
@@ -81,6 +82,7 @@ func (c *Control) ReadSubscriptionFromSdl(subId uint32) (*Subscription, error) {
 	key := strconv.FormatUint(uint64(subId), 10)
 	retMap, err := c.db.Get([]string{key})
 	if err != nil {
+		c.UpdateCounter(cSDLReadFailure)
 		return nil, fmt.Errorf("SDL: ReadSubscriptionFromSdl(): %s", err.Error())
 	} else {
 		xapp.Logger.Debug("SDL: Subscription read from db.  subId = %v", subId)
@@ -162,6 +164,7 @@ func (c *Control) ReadAllSubscriptionsFromSdl() ([]uint32, map[uint32]*Subscript
 	// Get all keys
 	keys, err := c.db.GetAll()
 	if err != nil {
+		c.UpdateCounter(cSDLReadFailure)
 		return nil, nil, fmt.Errorf("SDL: ReadAllSubscriptionsFromSdl(), GetAll(). Error while reading keys from DBAAS %s\n", err.Error())
 	}
 
@@ -172,6 +175,7 @@ func (c *Control) ReadAllSubscriptionsFromSdl() ([]uint32, map[uint32]*Subscript
 	// Get all subscriptionInfos
 	iSubscriptionMap, err := c.db.Get(keys)
 	if err != nil {
+		c.UpdateCounter(cSDLReadFailure)
 		return nil, nil, fmt.Errorf("SDL: ReadAllSubscriptionsFromSdl(), Get():  Error while reading subscriptions from DBAAS %s\n", err.Error())
 	}
 
@@ -216,6 +220,7 @@ func removeNumber(s []uint32, removedNum uint32) ([]uint32, error) {
 func (c *Control) RemoveAllSubscriptionsFromSdl() error {
 
 	if err := c.db.RemoveAll(); err != nil {
+		c.UpdateCounter(cSDLRemoveFailure)
 		return fmt.Errorf("SDL: RemoveAllSubscriptionsFromSdl(): %s\n", err.Error())
 	} else {
 		xapp.Logger.Debug("SDL: All subscriptions removed from db")
