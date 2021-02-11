@@ -231,11 +231,12 @@ func (c *Control) SubscriptionDeleteHandler(s string) error {
 }
 
 func (c *Control) QueryHandler() (models.SubscriptionList, error) {
+	xapp.Logger.Info("QueryHandler() called")
+
 	return c.registry.QueryHandler()
 }
 
 func (c *Control) TestRestHandler(w http.ResponseWriter, r *http.Request) {
-
 	xapp.Logger.Info("TestRestHandler() called")
 
 	pathParams := mux.Vars(r)
@@ -352,7 +353,7 @@ func (c *Control) handleXAPPSubscriptionRequest(params *xapp.RMRParams) {
 		return
 	}
 
-	trans := c.tracker.NewXappTransaction(xapp.NewRmrEndpoint(params.Src), params.Xid, subReqMsg.RequestId.InstanceId, params.Meid)
+	trans := c.tracker.NewXappTransaction(xapp.NewRmrEndpoint(params.Src), params.Xid, subReqMsg.RequestId, params.Meid)
 	if trans == nil {
 		xapp.Logger.Error("XAPP-SubReq: %s", idstring(fmt.Errorf("transaction not created"), params))
 		return
@@ -381,6 +382,7 @@ func (c *Control) handleXAPPSubscriptionRequest(params *xapp.RMRParams) {
 	if event != nil {
 		switch themsg := event.(type) {
 		case *e2ap.E2APSubscriptionResponse:
+			themsg.RequestId.Id = trans.RequestId.Id
 			trans.Mtype, trans.Payload, err = c.e2ap.PackSubscriptionResponse(themsg)
 			if err == nil {
 				trans.Release()
@@ -389,6 +391,7 @@ func (c *Control) handleXAPPSubscriptionRequest(params *xapp.RMRParams) {
 				return
 			}
 		case *e2ap.E2APSubscriptionFailure:
+			themsg.RequestId.Id = trans.RequestId.Id
 			trans.Mtype, trans.Payload, err = c.e2ap.PackSubscriptionFailure(themsg)
 			if err == nil {
 				c.UpdateCounter(cSubFailToXapp)
@@ -415,7 +418,7 @@ func (c *Control) handleXAPPSubscriptionDeleteRequest(params *xapp.RMRParams) {
 		return
 	}
 
-	trans := c.tracker.NewXappTransaction(xapp.NewRmrEndpoint(params.Src), params.Xid, subDelReqMsg.RequestId.InstanceId, params.Meid)
+	trans := c.tracker.NewXappTransaction(xapp.NewRmrEndpoint(params.Src), params.Xid, subDelReqMsg.RequestId, params.Meid)
 	if trans == nil {
 		xapp.Logger.Error("XAPP-SubDelReq: %s", idstring(fmt.Errorf("transaction not created"), params))
 		return
@@ -449,7 +452,8 @@ func (c *Control) handleXAPPSubscriptionDeleteRequest(params *xapp.RMRParams) {
 
 	// Whatever is received success, fail or timeout, send successful delete response
 	subDelRespMsg := &e2ap.E2APSubscriptionDeleteResponse{}
-	subDelRespMsg.RequestId = subs.GetReqId().RequestId
+	subDelRespMsg.RequestId.Id = trans.RequestId.Id
+	subDelRespMsg.RequestId.InstanceId = subs.GetReqId().RequestId.InstanceId
 	subDelRespMsg.FunctionId = subs.SubReqMsg.FunctionId
 	trans.Mtype, trans.Payload, err = c.e2ap.PackSubscriptionDeleteResponse(subDelRespMsg)
 	if err == nil {

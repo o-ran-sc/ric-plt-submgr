@@ -21,6 +21,7 @@ package control
 
 import (
 	"fmt"
+	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"sync"
 )
@@ -58,13 +59,13 @@ func (t *Tracker) NewSubsTransaction(subs *Subscription) *TransactionSubs {
 func (t *Tracker) NewXappTransaction(
 	endpoint *xapp.RmrEndpoint,
 	xid string,
-	subid uint32,
+	requestId e2ap.RequestId,
 	meid *xapp.RMRMeid) *TransactionXapp {
 
 	trans := &TransactionXapp{}
 	trans.XappKey = &TransactionXappKey{*endpoint, xid}
 	trans.Meid = meid
-	trans.SubId = subid
+	trans.RequestId = requestId
 	t.initTransaction(&trans.Transaction)
 	xapp.Logger.Debug("CREATE %s", trans.String())
 	return trans

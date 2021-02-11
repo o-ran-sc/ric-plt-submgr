@@ -91,7 +91,7 @@ func GetSubscription(t *testing.T, e2SubId uint32, responseType int, srcEndPoint
 	params.Meid = &meid
 
 	// Create xApp transaction
-	trans := mainCtrl.c.tracker.NewXappTransaction(xapp.NewRmrEndpoint(params.Src), params.Xid, subReqParams.Req.RequestId.InstanceId, params.Meid)
+	trans := mainCtrl.c.tracker.NewXappTransaction(xapp.NewRmrEndpoint(params.Src), params.Xid, subReqParams.Req.RequestId, params.Meid)
 	if trans == nil {
 		t.Errorf("TEST: %s", idstring(fmt.Errorf("transaction not created"), params))
 		return nil

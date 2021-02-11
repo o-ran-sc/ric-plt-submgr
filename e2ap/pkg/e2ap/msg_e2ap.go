@@ -119,8 +119,8 @@ func (msgInfo *MessageInfo) String() string {
 //
 //-----------------------------------------------------------------------------
 type RequestId struct {
-	Id         uint32
-	InstanceId uint32
+	Id         uint32 //RequestorId
+	InstanceId uint32 //Same as SubId in many place in the code. Name changed in E2 spec SubId -> InstanceId
 }
 
 func (rid *RequestId) String() string {

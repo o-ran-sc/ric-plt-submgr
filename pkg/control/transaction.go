@@ -142,8 +142,8 @@ func (key *TransactionXappKey) String() string {
 //-----------------------------------------------------------------------------
 type TransactionXapp struct {
 	Transaction
-	XappKey *TransactionXappKey
-	SubId   uint32
+	XappKey   *TransactionXappKey
+	RequestId e2ap.RequestId
 }
 
 func (t *TransactionXapp) String() string {
@@ -151,7 +151,7 @@ func (t *TransactionXapp) String() string {
 	if t.XappKey != nil {
 		transkey = t.XappKey.String()
 	}
-	return "transxapp(" + t.Transaction.String() + "/" + transkey + "/" + strconv.FormatUint(uint64(t.SubId), 10) + ")"
+	return "transxapp(" + t.Transaction.String() + "/" + transkey + "/" + strconv.FormatUint(uint64(t.RequestId.InstanceId), 10) + ")"
 }
 
 func (t *TransactionXapp) GetEndpoint() *xapp.RmrEndpoint {
@@ -184,7 +184,7 @@ func (t *TransactionXapp) GetSrc() string {
 func (t *TransactionXapp) GetSubId() uint32 {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
-	return t.SubId
+	return t.RequestId.InstanceId
 }
 
 func (t *TransactionXapp) Release() {
