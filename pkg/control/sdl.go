@@ -35,7 +35,6 @@ type SubscriptionInfo struct {
 	EpList      xapp.RmrEndpointList
 	SubReqMsg   e2ap.E2APSubscriptionRequest
 	SubRespMsg  e2ap.E2APSubscriptionResponse
-	SubFailMsg  e2ap.E2APSubscriptionFailure
 	SubRespRcvd string
 }
 
@@ -55,9 +54,6 @@ func (c *Control) WriteSubscriptionToSdl(subId uint32, subs *Subscription) error
 	if typeofSubsMessage(subs.SubRFMsg) == "SubResp" {
 		subscriptionInfo.SubRespRcvd = "SubResp"
 		subscriptionInfo.SubRespMsg = *subs.SubRFMsg.(*e2ap.E2APSubscriptionResponse)
-	} else if typeofSubsMessage(subs.SubRFMsg) == "SubFail" {
-		subscriptionInfo.SubRespRcvd = "SubFail"
-		subscriptionInfo.SubFailMsg = *subs.SubRFMsg.(*e2ap.E2APSubscriptionFailure)
 	} else {
 		subscriptionInfo.SubRespRcvd = ""
 	}
@@ -127,11 +123,6 @@ func (c *Control) CreateSubscription(subscriptionInfo *SubscriptionInfo, jsonSub
 		subResp := e2ap.E2APSubscriptionResponse{}
 		subResp = subscriptionInfo.SubRespMsg
 		subs.SubRFMsg = &subResp
-	} else if subscriptionInfo.SubRespRcvd == "SubFail" {
-		subs.SubRespRcvd = false
-		subFail := e2ap.E2APSubscriptionFailure{}
-		subFail = subscriptionInfo.SubFailMsg
-		subs.SubRFMsg = &subFail
 	} else {
 		subs.SubRespRcvd = false
 		subs.SubRFMsg = nil

@@ -1003,12 +1003,6 @@ func TestSubReqTwoRetriesNoRespAtAllInSubmgr(t *testing.T) {
 //     |              |      SubFail |
 //     |              |<-------------|
 //     |              |              |
-//     |              | SubDelReq    |
-//     |              |------------->|
-//     |              |              |
-//     |              |   SubDelResp |
-//     |              |<-------------|
-//     |              |              |
 //     |      SubFail |              |
 //     |<-------------|              |
 //     |              |              |
@@ -1022,8 +1016,6 @@ func TestSubReqSubFailRespInSubmgr(t *testing.T) {
 		Counter{cSubReqFromXapp, 1},
 		Counter{cSubReqToE2, 1},
 		Counter{cSubFailFromE2, 1},
-		Counter{cSubDelReqToE2, 1},
-		Counter{cSubDelRespFromE2, 1},
 		Counter{cSubFailToXapp, 1},
 	})
 
@@ -1035,10 +1027,6 @@ func TestSubReqSubFailRespInSubmgr(t *testing.T) {
 	fparams1 := &teststube2ap.E2StubSubsFailParams{}
 	fparams1.Set(crereq1)
 	e2termConn1.SendSubsFail(t, fparams1, cremsg1)
-
-	// E2t: Receive SubsDelReq and send SubsDelResp (internal first)
-	delreq1, delmsg1 := e2termConn1.RecvSubsDelReq(t)
-	e2termConn1.SendSubsDelResp(t, delreq1, delmsg1)
 
 	// Xapp: Receive SubsFail
 	e2SubsId := xappConn1.RecvSubsFail(t, cretrans)
@@ -1451,11 +1439,6 @@ func TestSubReqAndSubDelOkSameActionParallel(t *testing.T) {
 //     |             |              |    SubFail1  |
 //     |             |              |<-------------|
 //     |             |              |              |
-//     |             |              | SubDelReq    |
-//     |             |              |------------->|
-//     |             |              |   SubDelResp |
-//     |             |              |<-------------|
-//     |             |              |              |
 //     |             |    SubFail1  |              |
 //     |             |<-------------|              |
 //     |             |              |              |
@@ -1485,10 +1468,6 @@ func TestSubReqAndSubDelNokSameActionParallel(t *testing.T) {
 	fparams1 := &teststube2ap.E2StubSubsFailParams{}
 	fparams1.Set(crereq1)
 	e2termConn1.SendSubsFail(t, fparams1, cremsg1)
-
-	// E2t: internal delete
-	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
-	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
 
 	//Fail1
 	e2SubsId1 := xappConn1.RecvSubsFail(t, cretrans1)
