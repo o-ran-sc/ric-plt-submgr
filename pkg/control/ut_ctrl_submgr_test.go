@@ -46,6 +46,8 @@ type Counter struct {
 	Value uint64
 }
 
+type CountersToBeAdded []Counter
+
 var countersBeforeMap map[string]Counter
 var toBeAddedCountersMap map[string]Counter
 
@@ -258,14 +260,15 @@ func (mc *testingSubmgrControl) GetMetrics(t *testing.T) (string, error) {
 	return string(respBody[:]), nil
 }
 
-func (mc *testingSubmgrControl) SetTimesCounterWillBeAdded(counterName string, addedValue uint64) {
+func (mc *testingSubmgrControl) CounterValuesToBeVeriefied(t *testing.T, countersToBeAdded CountersToBeAdded) {
+
 	if len(toBeAddedCountersMap) == 0 {
 		toBeAddedCountersMap = make(map[string]Counter)
 	}
-	counter := Counter{}
-	counter.Name = counterName
-	counter.Value = addedValue
-	toBeAddedCountersMap[counterName] = counter
+	for _, counter := range countersToBeAdded {
+		toBeAddedCountersMap[counter.Name] = counter
+	}
+	mc.GetCounterValuesBefore(t)
 }
 
 func (mc *testingSubmgrControl) GetCounterValuesBefore(t *testing.T) {

@@ -26,32 +26,32 @@ import (
 func TestAddAllCountersOnce(t *testing.T) {
 
 	// Check that all counters can be added correctly
-	mainCtrl.SetTimesCounterWillBeAdded(cSubReqFromXapp, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubRespToXapp, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubFailToXapp, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubReqToE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubReReqToE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubRespFromE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubFailFromE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubReqTimerExpiry, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cRouteCreateFail, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cRouteCreateUpdateFail, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cMergedSubscriptions, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubDelReqFromXapp, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubDelRespToXapp, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubDelReqToE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubDelReReqToE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubDelRespFromE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubDelFailFromE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubDelReqTimerExpiry, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cRouteDeleteFail, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cRouteDeleteUpdateFail, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cUnmergedSubscriptions, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSDLWriteFailure, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSDLReadFailure, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSDLRemoveFailure, 1)
-
-	mainCtrl.GetCounterValuesBefore(t)
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cSubReqFromXapp, 1},
+		Counter{cSubReqFromXapp, 1},
+		Counter{cSubRespToXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cSubReReqToE2, 1},
+		Counter{cSubRespFromE2, 1},
+		Counter{cSubFailFromE2, 1},
+		Counter{cSubReqTimerExpiry, 1},
+		Counter{cRouteCreateFail, 1},
+		Counter{cRouteCreateUpdateFail, 1},
+		Counter{cMergedSubscriptions, 1},
+		Counter{cSubDelReqFromXapp, 1},
+		Counter{cSubDelRespToXapp, 1},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelReReqToE2, 1},
+		Counter{cSubDelRespFromE2, 1},
+		Counter{cSubDelFailFromE2, 1},
+		Counter{cSubDelReqTimerExpiry, 1},
+		Counter{cRouteDeleteFail, 1},
+		Counter{cRouteDeleteUpdateFail, 1},
+		Counter{cUnmergedSubscriptions, 1},
+		Counter{cSDLWriteFailure, 1},
+		Counter{cSDLReadFailure, 1},
+		Counter{cSDLRemoveFailure, 1},
+	})
 
 	mainCtrl.c.UpdateCounter(cSubReqFromXapp)
 	mainCtrl.c.UpdateCounter(cSubRespToXapp)

@@ -360,8 +360,7 @@ func (c *Control) handleXAPPSubscriptionRequest(params *xapp.RMRParams) {
 	}
 	defer trans.Release()
 
-	err = c.tracker.Track(trans)
-	if err != nil {
+	if err = c.tracker.Track(trans); err != nil {
 		xapp.Logger.Error("XAPP-SubReq: %s", idstring(err, trans))
 		return
 	}
@@ -373,12 +372,17 @@ func (c *Control) handleXAPPSubscriptionRequest(params *xapp.RMRParams) {
 		return
 	}
 
-	//
-	// Wake subs request
-	//
+	c.wakeSubscriptionRequest(subs, trans)
+}
+
+//-------------------------------------------------------------------
+// Wake Subscription Request to E2node
+//------------------------------------------------------------------
+func (c *Control) wakeSubscriptionRequest(subs *Subscription, trans *TransactionXapp) {
+
 	go c.handleSubscriptionCreate(subs, trans)
 	event, _ := trans.WaitEvent(0) //blocked wait as timeout is handled in subs side
-	err = nil
+	var err error
 	if event != nil {
 		switch themsg := event.(type) {
 		case *e2ap.E2APSubscriptionResponse:

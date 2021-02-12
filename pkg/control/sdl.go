@@ -200,8 +200,7 @@ func (c *Control) ReadAllSubscriptionsFromSdl() ([]uint32, map[uint32]*Subscript
 		retMap[subscriptionInfo.ReqId.InstanceId] = subs
 
 		// Remove subId from free subIds. Original slice is modified here!
-		subIds, err = removeNumber(subIds, subscriptionInfo.ReqId.InstanceId)
-		if err != nil {
+		if subIds, err = removeNumber(subIds, subscriptionInfo.ReqId.InstanceId); err != nil {
 			return nil, nil, fmt.Errorf("SDL: ReadAllSubscriptionsFromSdl() error: %s\n", err.Error())
 		}
 	}

@@ -56,9 +56,10 @@ func TestSubReqAndRouteNok(t *testing.T) {
 	CaseBegin("TestSubReqAndRouteNok")
 
 	// Init counter check
-	mainCtrl.SetTimesCounterWillBeAdded(cSubReqFromXapp, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cRouteCreateFail, 1)
-	mainCtrl.GetCounterValuesBefore(t)
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cSubReqFromXapp, 1},
+		Counter{cRouteCreateFail, 1},
+	})
 
 	waiter := rtmgrHttp.AllocNextEvent(false)
 	newSubsId := mainCtrl.get_registry_next_subid(t)
@@ -108,17 +109,17 @@ func TestSubReqAndRouteUpdateNok(t *testing.T) {
 	CaseBegin("TestSubReqAndRouteUpdateNok")
 
 	// Init counter check
-	mainCtrl.SetTimesCounterWillBeAdded(cSubReqFromXapp, 2)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubReqToE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubRespFromE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubRespToXapp, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cRouteCreateUpdateFail, 1)
-
-	mainCtrl.SetTimesCounterWillBeAdded(cSubDelReqFromXapp, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubDelReqToE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubDelRespFromE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubDelRespToXapp, 1)
-	mainCtrl.GetCounterValuesBefore(t)
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cSubReqFromXapp, 2},
+		Counter{cSubReqToE2, 1},
+		Counter{cSubRespFromE2, 1},
+		Counter{cSubRespToXapp, 1},
+		Counter{cRouteCreateUpdateFail, 1},
+		Counter{cSubDelReqFromXapp, 1},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelRespFromE2, 1},
+		Counter{cSubDelRespToXapp, 1},
+	})
 
 	cretrans := xappConn1.SendSubsReq(t, nil, nil)
 	crereq, cremsg := e2termConn1.RecvSubsReq(t)
@@ -184,17 +185,17 @@ func TestSubDelReqAndRouteDeleteNok(t *testing.T) {
 	CaseBegin("TestSubDelReqAndRouteDeleteNok")
 
 	// Init counter check
-	mainCtrl.SetTimesCounterWillBeAdded(cSubReqFromXapp, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubReqToE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubRespFromE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubRespToXapp, 1)
-
-	mainCtrl.SetTimesCounterWillBeAdded(cSubDelReqFromXapp, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cRouteDeleteFail, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubDelReqToE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubDelRespFromE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubDelRespToXapp, 1)
-	mainCtrl.GetCounterValuesBefore(t)
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cSubReqFromXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cSubRespFromE2, 1},
+		Counter{cSubRespToXapp, 1},
+		Counter{cSubDelReqFromXapp, 1},
+		Counter{cRouteDeleteFail, 1},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelRespFromE2, 1},
+		Counter{cSubDelRespToXapp, 1},
+	})
 
 	cretrans := xappConn1.SendSubsReq(t, nil, nil)
 	crereq, cremsg := e2termConn1.RecvSubsReq(t)
@@ -280,17 +281,17 @@ func TestSubMergeDelAndRouteUpdateNok(t *testing.T) {
 	CaseBegin("TestSubMergeDelAndRouteUpdateNok")
 
 	// Init counter check
-	mainCtrl.SetTimesCounterWillBeAdded(cSubReqFromXapp, 2)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubReqToE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubRespFromE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubRespToXapp, 2)
-
-	mainCtrl.SetTimesCounterWillBeAdded(cSubDelReqFromXapp, 2)
-	mainCtrl.SetTimesCounterWillBeAdded(cRouteDeleteUpdateFail, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubDelReqToE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubDelRespFromE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubDelRespToXapp, 2)
-	mainCtrl.GetCounterValuesBefore(t)
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cSubReqFromXapp, 2},
+		Counter{cSubReqToE2, 1},
+		Counter{cSubRespFromE2, 1},
+		Counter{cSubRespToXapp, 2},
+		Counter{cSubDelReqFromXapp, 2},
+		Counter{cRouteDeleteUpdateFail, 1},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelRespFromE2, 1},
+		Counter{cSubDelRespToXapp, 2},
+	})
 
 	//Req1
 	rparams1 := &teststube2ap.E2StubSubsReqParams{}
@@ -374,16 +375,16 @@ func TestSubReqAndSubDelOk(t *testing.T) {
 	CaseBegin("TestSubReqAndSubDelOk")
 
 	// Init counter check
-	mainCtrl.SetTimesCounterWillBeAdded(cSubReqFromXapp, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubReqToE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubRespFromE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubRespToXapp, 1)
-
-	mainCtrl.SetTimesCounterWillBeAdded(cSubDelReqFromXapp, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubDelReqToE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubDelRespFromE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubDelRespToXapp, 1)
-	mainCtrl.GetCounterValuesBefore(t)
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cSubReqFromXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cSubRespFromE2, 1},
+		Counter{cSubRespToXapp, 1},
+		Counter{cSubDelReqFromXapp, 1},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelRespFromE2, 1},
+		Counter{cSubDelRespToXapp, 1},
+	})
 
 	cretrans := xappConn1.SendSubsReq(t, nil, nil)
 	crereq, cremsg := e2termConn1.RecvSubsReq(t)
@@ -809,18 +810,20 @@ func TestSameSubsDiffRan(t *testing.T) {
 //-----------------------------------------------------------------------------
 
 func TestSubReqRetryInSubmgr(t *testing.T) {
-
 	CaseBegin("TestSubReqRetryInSubmgr start")
-	mainCtrl.SetTimesCounterWillBeAdded(cSubReqFromXapp, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubReqToE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubReReqToE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubRespFromE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubRespToXapp, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubDelReqFromXapp, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubDelReqToE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubDelRespFromE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubDelRespToXapp, 1)
-	mainCtrl.GetCounterValuesBefore(t)
+
+	// Init counter check
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cSubReqFromXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cSubReReqToE2, 1},
+		Counter{cSubRespFromE2, 1},
+		Counter{cSubRespToXapp, 1},
+		Counter{cSubDelReqFromXapp, 1},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelRespFromE2, 1},
+		Counter{cSubDelRespToXapp, 1},
+	})
 
 	// Xapp: Send SubsReq
 	cretrans := xappConn1.SendSubsReq(t, nil, nil)
@@ -879,15 +882,17 @@ func TestSubReqRetryInSubmgr(t *testing.T) {
 //-----------------------------------------------------------------------------
 
 func TestSubReqRetryNoRespSubDelRespInSubmgr(t *testing.T) {
-
 	CaseBegin("TestSubReqTwoRetriesNoRespSubDelRespInSubmgr start")
-	mainCtrl.SetTimesCounterWillBeAdded(cSubReqFromXapp, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubReqToE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubReReqToE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubReqTimerExpiry, 2)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubDelReqToE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubDelRespFromE2, 1)
-	mainCtrl.GetCounterValuesBefore(t)
+
+	// Init counter check
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cSubReqFromXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cSubReReqToE2, 1},
+		Counter{cSubReqTimerExpiry, 2},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelRespFromE2, 1},
+	})
 
 	// Xapp: Send SubsReq
 	xappConn1.SendSubsReq(t, nil, nil)
@@ -943,15 +948,17 @@ func TestSubReqRetryNoRespSubDelRespInSubmgr(t *testing.T) {
 //-----------------------------------------------------------------------------
 
 func TestSubReqTwoRetriesNoRespAtAllInSubmgr(t *testing.T) {
-
 	CaseBegin("TestSubReqTwoRetriesNoRespAtAllInSubmgr start")
-	mainCtrl.SetTimesCounterWillBeAdded(cSubReqFromXapp, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubReqToE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubReReqToE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubReqTimerExpiry, 2)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubDelReqToE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubDelReqTimerExpiry, 2)
-	mainCtrl.GetCounterValuesBefore(t)
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cSubReqFromXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cSubReReqToE2, 1},
+		Counter{cSubReqTimerExpiry, 2},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelReReqToE2, 1},
+		Counter{cSubDelReqTimerExpiry, 2},
+	})
 
 	// Xapp: Send SubsReq
 	xappConn1.SendSubsReq(t, nil, nil)
@@ -1009,15 +1016,16 @@ func TestSubReqTwoRetriesNoRespAtAllInSubmgr(t *testing.T) {
 //-----------------------------------------------------------------------------
 
 func TestSubReqSubFailRespInSubmgr(t *testing.T) {
-
 	CaseBegin("TestSubReqSubFailRespInSubmgr start")
-	mainCtrl.SetTimesCounterWillBeAdded(cSubReqFromXapp, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubReqToE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubFailFromE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubDelReqToE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubDelRespFromE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubFailToXapp, 1)
-	mainCtrl.GetCounterValuesBefore(t)
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cSubReqFromXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cSubFailFromE2, 1},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelRespFromE2, 1},
+		Counter{cSubFailToXapp, 1},
+	})
 
 	// Xapp: Send SubsReq
 	cretrans := xappConn1.SendSubsReq(t, nil, nil)
@@ -1192,17 +1200,18 @@ func TestSubDelReqTwoRetriesNoRespInSubmgr(t *testing.T) {
 //-----------------------------------------------------------------------------
 
 func TestSubDelReqSubDelFailRespInSubmgr(t *testing.T) {
-
 	CaseBegin("TestSubReqSubDelFailRespInSubmgr start")
-	mainCtrl.SetTimesCounterWillBeAdded(cSubReqFromXapp, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubReqToE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubRespFromE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubRespToXapp, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubDelReqFromXapp, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubDelReqToE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubDelFailFromE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubDelRespToXapp, 1)
-	mainCtrl.GetCounterValuesBefore(t)
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cSubReqFromXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cSubRespFromE2, 1},
+		Counter{cSubRespToXapp, 1},
+		Counter{cSubDelReqFromXapp, 1},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelFailFromE2, 1},
+		Counter{cSubDelRespToXapp, 1},
+	})
 
 	// Subs Create
 	cretrans := xappConn1.SendSubsReq(t, nil, nil)
@@ -1280,17 +1289,18 @@ func TestSubReqAndSubDelOkSameAction(t *testing.T) {
 	CaseBegin("TestSubReqAndSubDelOkSameAction")
 
 	// Init counter check
-	mainCtrl.SetTimesCounterWillBeAdded(cSubReqFromXapp, 2)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubReqToE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubRespFromE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubRespToXapp, 2)
-	mainCtrl.SetTimesCounterWillBeAdded(cMergedSubscriptions, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cUnmergedSubscriptions, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubDelReqFromXapp, 2)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubDelReqToE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubDelRespFromE2, 1)
-	mainCtrl.SetTimesCounterWillBeAdded(cSubDelRespToXapp, 2)
-	mainCtrl.GetCounterValuesBefore(t)
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cSubReqFromXapp, 2},
+		Counter{cSubReqToE2, 1},
+		Counter{cSubRespFromE2, 1},
+		Counter{cSubRespToXapp, 2},
+		Counter{cMergedSubscriptions, 1},
+		Counter{cUnmergedSubscriptions, 1},
+		Counter{cSubDelReqFromXapp, 2},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelRespFromE2, 1},
+		Counter{cSubDelRespToXapp, 2},
+	})
 
 	//Req1
 	rparams1 := &teststube2ap.E2StubSubsReqParams{}
