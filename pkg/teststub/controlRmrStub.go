@@ -20,7 +20,6 @@ package teststub
 
 import (
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -67,19 +66,24 @@ func (tc *RmrStubControl) TestMsgChanEmpty(t *testing.T) {
 	}
 }
 
-func (tc *RmrStubControl) Init(desc string, srcId RmrSrcId, rtgSvc RmrRtgSvc, stat string, initMsg int) {
+func (tc *RmrStubControl) Init(desc string, srcId RmrSrcId, rtgSvc RmrRtgSvc, statDesc string, initMsg int) {
 	tc.InitMsg = initMsg
 	tc.Active = false
 	tc.RecvChan = make(chan *xapp.RMRParams)
 	tc.RmrControl.Init(desc, srcId, rtgSvc)
 
 	tc.RMRClient = xapp.NewRMRClientWithParams(&xapp.RMRClientParams{
-		ProtPort:   "tcp:" + strconv.FormatUint(uint64(srcId.Port), 10),
-		MaxSize:    65534,
-		ThreadType: 0,
-		StatDesc:   stat,
-		LowLatency: false,
-		FastAck:    false,
+		StatDesc: statDesc,
+		RmrData: xapp.PortData{
+			Name:       "", // Not used currently
+			Port:       int(srcId.Port),
+			MaxSize:    65534,
+			ThreadType: 0,
+			LowLatency: false,
+			FastAck:    false,
+			//Policies:				// Not used currently
+			MaxRetryOnFailure: 1,
+		},
 	})
 
 	tc.RMRClient.SetReadyCB(tc.ReadyCB, nil)
