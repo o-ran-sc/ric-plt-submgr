@@ -67,9 +67,10 @@ Architecture
       header when E2 Termination sends the subscribed message to xApp. When xApp wants to delete the subscription, the same sequence number
       must be included in the ASN.1 encoded RIC Subscription Delete Request message sent to Subscription Manager.
 
-      Subscription Manager allocates RIC Requestor ID. Currently the ID value is always 123. In merge case subscription is created only for
-      the first requestor. RAN gets the Request of the xApp who makes the first subscription. RAN uses Subscription Manager allocated Requestor
-      ID in all RIC Indication messages it sends to RIC for the subscription.
+      Subscription Manager allocates and substitutes RIC Requestor ID for E2 interface communication. Currently the ID value is always 123.
+      RAN gets the Request of the xApp who makes the first subscription. RAN uses Subscription Manager allocated Requestor ID in all RIC
+      Indication messages it sends to RIC for the subscription.  Subscription Manager returns the same RIC Requestor ID in response message
+      to xApp as was in the request. In merge case subscription is created only for the first requestor.
 
       TransactionId (Xid) in RMR message header is used to track messages between xApp and Subscription Manager. xApp allocates it. Subscription
       Manager returns TransactionId received from xApp in response message to xApp. xApp uses it to map response messages to request messages
@@ -285,6 +286,36 @@ Metrics
 		- SDLReadFailure: The total number of SDL read failures
 		- SDLRemoveFailure: The total number of SDL read failures
 
+Configurable parameters
+-----------------------
+ Subscription Manager has following configurable parameters.
+   - Retry timeout for RIC Subscription Request message
+      - e2tSubReqTimeout_ms: 2000 is the default value
+
+   - Retry timeout for RIC Subscription Delete Request message
+      - e2tSubDelReqTime_ms: 2000 is the default value
+
+   - Waiting time for RIC Subscription Response and RIC Subscription Delete Response messages
+      - e2tRecvMsgTimeout_ms: 2000 is the default value
+
+   - Try count for RIC Subscription Request message   
+      - e2tMaxSubReqTryCount: 2 is the default value
+
+   - Try count for RIC Subscription Delete Request message   
+      - e2tMaxSubDelReqTryCount: 2 is the default value
+   
+   - Are subscriptions read from database in Subscription Manager startup
+      - readSubsFromDb: "true"  is the default value
+ 
+ The parameters can be changed on the fly via Kubernetes Configmap. Default parameters values are defined in Helm chart
+
+ Use following command to open Subscription Manager's Configmap in Nano editor. Firts change parameter and then store the
+ change by pressing first Ctrl + o. Close editor by pressing the Ctrl + x. The change is visible in Subscription Manager's
+ log after some 20 - 30 seconds.
+ 
+ .. code-block:: none
+
+  KUBE_EDITOR="nano" kubectl edit cm configmap-ricplt-submgr-submgrcfg -n ricplt
 
 REST interface for debugging and testing
 ----------------------------------------

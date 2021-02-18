@@ -51,7 +51,6 @@ func idstring(err error, entries ...fmt.Stringer) string {
 	if err != nil {
 		retval += filler + "err(" + err.Error() + ")"
 		filler = " "
-
 	}
 	return retval
 }
@@ -97,7 +96,6 @@ func init() {
 
 func NewControl() *Control {
 
-	ReadConfigParameters()
 	transport := httptransport.New(viper.GetString("rtmgr.HostAddr")+":"+viper.GetString("rtmgr.port"), viper.GetString("rtmgr.baseUrl"), []string{"http"})
 	rtmgrClient := RtmgrClient{rtClient: rtmgrclient.New(transport, strfmt.Default)}
 
@@ -108,8 +106,6 @@ func NewControl() *Control {
 	tracker := new(Tracker)
 	tracker.Init()
 
-	//subscriber := xapp.NewSubscriber(viper.GetString("subscription.host"), viper.GetInt("subscription.timeout"))
-
 	c := &Control{e2ap: new(E2ap),
 		registry: registry,
 		tracker:  tracker,
@@ -117,12 +113,12 @@ func NewControl() *Control {
 		//subscriber: subscriber,
 		Counters: xapp.Metric.RegisterCounterGroup(GetMetricsOpts(), "SUBMGR"),
 	}
+	c.ReadConfigParameters("")
 
 	// Register REST handler for testing support
 	xapp.Resource.InjectRoute("/ric/v1/test/{testId}", c.TestRestHandler, "POST")
 
 	go xapp.Subscription.Listen(c.SubscriptionHandler, c.QueryHandler, c.SubscriptionDeleteHandler)
-	//go c.subscriber.Listen(c.SubscriptionHandler, c.QueryHandler)
 
 	if readSubsFromDb == "false" {
 		return c
@@ -144,7 +140,7 @@ func NewControl() *Control {
 //-------------------------------------------------------------------
 //
 //-------------------------------------------------------------------
-func ReadConfigParameters() {
+func (c *Control) ReadConfigParameters(f string) {
 
 	// viper.GetDuration returns nanoseconds
 	e2tSubReqTimeout = viper.GetDuration("controls.e2tSubReqTimeout_ms") * 1000000
@@ -203,6 +199,7 @@ func (c *Control) ReadyCB(data interface{}) {
 
 func (c *Control) Run() {
 	xapp.SetReadyCB(c.ReadyCB, nil)
+	xapp.AddConfigChangeListener(c.ReadConfigParameters)
 	xapp.Run(c)
 }
 
