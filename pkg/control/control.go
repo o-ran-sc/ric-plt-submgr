@@ -117,6 +117,7 @@ func NewControl() *Control {
 
 	// Register REST handler for testing support
 	xapp.Resource.InjectRoute("/ric/v1/test/{testId}", c.TestRestHandler, "POST")
+	xapp.Resource.InjectRoute("/ric/v1/symptomdata", c.SymptomDataHandler, "GET")
 
 	go xapp.Subscription.Listen(c.SubscriptionHandler, c.QueryHandler, c.SubscriptionDeleteHandler)
 
@@ -135,6 +136,11 @@ func NewControl() *Control {
 		c.HandleUncompletedSubscriptions(register)
 	}
 	return c
+}
+
+func (c *Control) SymptomDataHandler(w http.ResponseWriter, r *http.Request) {
+	subscriptions, _ := c.registry.QueryHandler()
+	xapp.Resource.SendSymptomDataJson(w, r, subscriptions, "platform/subscriptions.json")
 }
 
 //-------------------------------------------------------------------
@@ -280,7 +286,11 @@ func (c *Control) rmrSendToE2T(desc string, subs *Subscription, trans *Transacti
 	params.Payload = trans.Payload.Buf
 	params.Mbuf = nil
 	xapp.Logger.Info("MSG to E2T: %s %s %s", desc, trans.String(), params.String())
-	return c.SendWithRetry(params, false, 5)
+	err = c.SendWithRetry(params, false, 5)
+	if err != nil {
+		xapp.Logger.Error("rmrSendToE2T: Send failed: %+v", err)
+	}
+	return err
 }
 
 func (c *Control) rmrSendToXapp(desc string, subs *Subscription, trans *TransactionXapp) (err error) {
@@ -295,7 +305,11 @@ func (c *Control) rmrSendToXapp(desc string, subs *Subscription, trans *Transact
 	params.Payload = trans.Payload.Buf
 	params.Mbuf = nil
 	xapp.Logger.Info("MSG to XAPP: %s %s %s", desc, trans.String(), params.String())
-	return c.SendWithRetry(params, false, 5)
+	err = c.SendWithRetry(params, false, 5)
+	if err != nil {
+		xapp.Logger.Error("rmrSendToXapp: Send failed: %+v", err)
+	}
+	return err
 }
 
 func (c *Control) Consume(msg *xapp.RMRParams) (err error) {
