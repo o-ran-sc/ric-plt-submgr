@@ -54,7 +54,7 @@ func (r *Registry) QueryHandler() (models.SubscriptionList, error) {
 	resp := models.SubscriptionList{}
 	for _, subs := range r.register {
 		subs.mutex.Lock()
-		resp = append(resp, &models.SubscriptionData{SubscriptionID: int64(subs.ReqId.InstanceId), Meid: subs.Meid.RanName, Endpoint: subs.EpList.StringList()})
+		resp = append(resp, &models.SubscriptionData{SubscriptionID: int64(subs.ReqId.InstanceId), Meid: subs.Meid.RanName, ClientEndpoint: subs.EpList.StringList()})
 		subs.mutex.Unlock()
 	}
 	return resp, nil
