@@ -212,7 +212,7 @@ func (c *Control) Run() {
 //-------------------------------------------------------------------
 //
 //-------------------------------------------------------------------
-func (c *Control) SubscriptionHandler(stype models.SubscriptionType, params interface{}) (*models.SubscriptionResponse, error) {
+func (c *Control) SubscriptionHandler(params interface{}) (*models.SubscriptionResponse, error) {
 	/*
 	   switch p := params.(type) {
 	   case *models.ReportParams:
