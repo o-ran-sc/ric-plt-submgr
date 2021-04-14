@@ -129,7 +129,7 @@ func TestSubReqAndRouteUpdateNok(t *testing.T) {
 	resp, _ := xapp.Subscription.QuerySubscriptions()
 	assert.Equal(t, resp[0].SubscriptionID, int64(e2SubsId))
 	assert.Equal(t, resp[0].Meid, "RAN_NAME_1")
-	assert.Equal(t, resp[0].Endpoint, []string{"localhost:13560"})
+	assert.Equal(t, resp[0].ClientEndpoint, []string{"localhost:13560"})
 
 	waiter := rtmgrHttp.AllocNextEvent(false)
 	newSubsId := mainCtrl.get_registry_next_subid(t)
@@ -205,7 +205,7 @@ func TestSubDelReqAndRouteDeleteNok(t *testing.T) {
 	resp, _ := xapp.Subscription.QuerySubscriptions()
 	assert.Equal(t, resp[0].SubscriptionID, int64(e2SubsId))
 	assert.Equal(t, resp[0].Meid, "RAN_NAME_1")
-	assert.Equal(t, resp[0].Endpoint, []string{"localhost:13560"})
+	assert.Equal(t, resp[0].ClientEndpoint, []string{"localhost:13560"})
 
 	deltrans := xappConn1.SendSubsDelReq(t, nil, e2SubsId)
 	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
@@ -310,7 +310,7 @@ func TestSubMergeDelAndRouteUpdateNok(t *testing.T) {
 	resp, _ := xapp.Subscription.QuerySubscriptions()
 	assert.Equal(t, resp[0].SubscriptionID, int64(e2SubsId1))
 	assert.Equal(t, resp[0].Meid, "RAN_NAME_1")
-	assert.Equal(t, resp[0].Endpoint, []string{"localhost:13560", "localhost:13660"})
+	assert.Equal(t, resp[0].ClientEndpoint, []string{"localhost:13560", "localhost:13660"})
 
 	//Del1
 	waiter := rtmgrHttp.AllocNextEvent(false)
@@ -394,7 +394,7 @@ func TestSubReqAndSubDelOk(t *testing.T) {
 	resp, _ := xapp.Subscription.QuerySubscriptions()
 	assert.Equal(t, resp[0].SubscriptionID, int64(e2SubsId))
 	assert.Equal(t, resp[0].Meid, "RAN_NAME_1")
-	assert.Equal(t, resp[0].Endpoint, []string{"localhost:13560"})
+	assert.Equal(t, resp[0].ClientEndpoint, []string{"localhost:13560"})
 
 	deltrans := xappConn1.SendSubsDelReq(t, nil, e2SubsId)
 	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
@@ -1309,7 +1309,7 @@ func TestSubReqAndSubDelOkSameAction(t *testing.T) {
 	resp, _ := xapp.Subscription.QuerySubscriptions()
 	assert.Equal(t, resp[0].SubscriptionID, int64(e2SubsId1))
 	assert.Equal(t, resp[0].Meid, "RAN_NAME_1")
-	assert.Equal(t, resp[0].Endpoint, []string{"localhost:13560", "localhost:13660"})
+	assert.Equal(t, resp[0].ClientEndpoint, []string{"localhost:13560", "localhost:13660"})
 
 	//Del1
 	deltrans1 := xappConn1.SendSubsDelReq(t, nil, e2SubsId1)
@@ -1936,7 +1936,7 @@ func TestSubReqNokAndSubDelOkWithRestartInMiddle(t *testing.T) {
 
 	resp, _ := xapp.Subscription.QuerySubscriptions()
 	assert.Equal(t, resp[0].Meid, "RAN_NAME_1")
-	assert.Equal(t, resp[0].Endpoint, []string{"localhost:13560"})
+	assert.Equal(t, resp[0].ClientEndpoint, []string{"localhost:13560"})
 	e2SubsId := uint32(resp[0].SubscriptionID)
 	t.Logf("e2SubsId = %v", e2SubsId)
 
@@ -2003,7 +2003,7 @@ func TestSubReqAndSubDelOkWithRestartInMiddle(t *testing.T) {
 	resp, _ := xapp.Subscription.QuerySubscriptions()
 	assert.Equal(t, resp[0].SubscriptionID, int64(e2SubsId))
 	assert.Equal(t, resp[0].Meid, "RAN_NAME_1")
-	assert.Equal(t, resp[0].Endpoint, []string{"localhost:13560"})
+	assert.Equal(t, resp[0].ClientEndpoint, []string{"localhost:13560"})
 
 	mainCtrl.SimulateRestart(t)
 
@@ -2011,7 +2011,7 @@ func TestSubReqAndSubDelOkWithRestartInMiddle(t *testing.T) {
 	resp, _ = xapp.Subscription.QuerySubscriptions()
 	assert.Equal(t, resp[0].SubscriptionID, int64(e2SubsId))
 	assert.Equal(t, resp[0].Meid, "RAN_NAME_1")
-	assert.Equal(t, resp[0].Endpoint, []string{"localhost:13560"})
+	assert.Equal(t, resp[0].ClientEndpoint, []string{"localhost:13560"})
 
 	deltrans := xappConn1.SendSubsDelReq(t, nil, e2SubsId)
 	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
@@ -2104,7 +2104,7 @@ func TestSubReqAndSubDelOkSameActionWithRestartsInMiddle(t *testing.T) {
 	resp, _ := xapp.Subscription.QuerySubscriptions() ////////////////////////////////
 	assert.Equal(t, resp[0].SubscriptionID, int64(e2SubsId1))
 	assert.Equal(t, resp[0].Meid, "RAN_NAME_1")
-	assert.Equal(t, resp[0].Endpoint, []string{"localhost:13560", "localhost:13660"})
+	assert.Equal(t, resp[0].ClientEndpoint, []string{"localhost:13560", "localhost:13660"})
 
 	mainCtrl.SimulateRestart(t)
 
@@ -2112,7 +2112,7 @@ func TestSubReqAndSubDelOkSameActionWithRestartsInMiddle(t *testing.T) {
 	resp, _ = xapp.Subscription.QuerySubscriptions()
 	assert.Equal(t, resp[0].SubscriptionID, int64(e2SubsId1))
 	assert.Equal(t, resp[0].Meid, "RAN_NAME_1")
-	assert.Equal(t, resp[0].Endpoint, []string{"localhost:13560", "localhost:13660"})
+	assert.Equal(t, resp[0].ClientEndpoint, []string{"localhost:13560", "localhost:13660"})
 
 	//Del1
 	deltrans1 := xappConn1.SendSubsDelReq(t, nil, e2SubsId1)
