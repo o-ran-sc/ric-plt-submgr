@@ -1,0 +1,172 @@
+diff --git a/go.mod b/go.mod
+index 9d884ab..2ea2cc8 100644
+--- a/go.mod
++++ b/go.mod
+@@ -4,7 +4,7 @@ go 1.12
+ 
+ replace gerrit.o-ran-sc.org/r/ric-plt/sdlgo => gerrit.o-ran-sc.org/r/ric-plt/sdlgo.git v0.5.2
+ 
+-replace gerrit.o-ran-sc.org/r/ric-plt/xapp-frame => gerrit.o-ran-sc.org/r/ric-plt/xapp-frame.git v0.7.3
++replace gerrit.o-ran-sc.org/r/ric-plt/xapp-frame => gerrit.o-ran-sc.org/r/ric-plt/xapp-frame.git v0.8.1
+ 
+ replace gerrit.o-ran-sc.org/r/com/golog => gerrit.o-ran-sc.org/r/com/golog.git v0.0.2
+ 
+diff --git a/pkg/control/control.go b/pkg/control/control.go
+index 3446f25..0202d7e 100755
+--- a/pkg/control/control.go
++++ b/pkg/control/control.go
+@@ -212,7 +212,7 @@ func (c *Control) Run() {
+ //-------------------------------------------------------------------
+ //
+ //-------------------------------------------------------------------
+-func (c *Control) SubscriptionHandler(stype models.SubscriptionType, params interface{}) (*models.SubscriptionResponse, error) {
++func (c *Control) SubscriptionHandler(params interface{}) (*models.SubscriptionResponse, error) {
+ 	/*
+ 	   switch p := params.(type) {
+ 	   case *models.ReportParams:
+diff --git a/pkg/control/registry.go b/pkg/control/registry.go
+index 33d480a..1c6ab3d 100644
+--- a/pkg/control/registry.go
++++ b/pkg/control/registry.go
+@@ -54,7 +54,7 @@ func (r *Registry) QueryHandler() (models.SubscriptionList, error) {
+ 	resp := models.SubscriptionList{}
+ 	for _, subs := range r.register {
+ 		subs.mutex.Lock()
+-		resp = append(resp, &models.SubscriptionData{SubscriptionID: int64(subs.ReqId.InstanceId), Meid: subs.Meid.RanName, Endpoint: subs.EpList.StringList()})
++		resp = append(resp, &models.SubscriptionData{SubscriptionID: int64(subs.ReqId.InstanceId), Meid: subs.Meid.RanName, ClientEndpoint: subs.EpList.StringList()})
+ 		subs.mutex.Unlock()
+ 	}
+ 	return resp, nil
+diff --git a/pkg/control/ut_ctrl_submgr_test.go b/pkg/control/ut_ctrl_submgr_test.go
+index 009e70b..8f4e5ae 100644
+--- a/pkg/control/ut_ctrl_submgr_test.go
++++ b/pkg/control/ut_ctrl_submgr_test.go
+@@ -113,7 +113,7 @@ func PringSubscriptionQueryResult(resp models.SubscriptionList) {
+ 	for _, item := range resp {
+ 		fmt.Printf("item.SubscriptionID=%v\n", item.SubscriptionID)
+ 		fmt.Printf("item.Meid=%v\n", item.Meid)
+-		fmt.Printf("item.Endpoint=%v\n", item.Endpoint)
++		fmt.Printf("item.ClientEndpoint=%v\n", item.ClientEndpoint)
+ 	}
+ }
+ 
+diff --git a/pkg/control/ut_messaging_test.go b/pkg/control/ut_messaging_test.go
+index f3b8b8e..ff07a91 100644
+--- a/pkg/control/ut_messaging_test.go
++++ b/pkg/control/ut_messaging_test.go
+@@ -129,7 +129,7 @@ func TestSubReqAndRouteUpdateNok(t *testing.T) {
+ 	resp, _ := xapp.Subscription.QuerySubscriptions()
+ 	assert.Equal(t, resp[0].SubscriptionID, int64(e2SubsId))
+ 	assert.Equal(t, resp[0].Meid, "RAN_NAME_1")
+-	assert.Equal(t, resp[0].Endpoint, []string{"localhost:13560"})
++	assert.Equal(t, resp[0].ClientEndpoint, []string{"localhost:13560"})
+ 
+ 	waiter := rtmgrHttp.AllocNextEvent(false)
+ 	newSubsId := mainCtrl.get_registry_next_subid(t)
+@@ -205,7 +205,7 @@ func TestSubDelReqAndRouteDeleteNok(t *testing.T) {
+ 	resp, _ := xapp.Subscription.QuerySubscriptions()
+ 	assert.Equal(t, resp[0].SubscriptionID, int64(e2SubsId))
+ 	assert.Equal(t, resp[0].Meid, "RAN_NAME_1")
+-	assert.Equal(t, resp[0].Endpoint, []string{"localhost:13560"})
++	assert.Equal(t, resp[0].ClientEndpoint, []string{"localhost:13560"})
+ 
+ 	deltrans := xappConn1.SendSubsDelReq(t, nil, e2SubsId)
+ 	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+@@ -310,7 +310,7 @@ func TestSubMergeDelAndRouteUpdateNok(t *testing.T) {
+ 	resp, _ := xapp.Subscription.QuerySubscriptions()
+ 	assert.Equal(t, resp[0].SubscriptionID, int64(e2SubsId1))
+ 	assert.Equal(t, resp[0].Meid, "RAN_NAME_1")
+-	assert.Equal(t, resp[0].Endpoint, []string{"localhost:13560", "localhost:13660"})
++	assert.Equal(t, resp[0].ClientEndpoint, []string{"localhost:13560", "localhost:13660"})
+ 
+ 	//Del1
+ 	waiter := rtmgrHttp.AllocNextEvent(false)
+@@ -394,7 +394,7 @@ func TestSubReqAndSubDelOk(t *testing.T) {
+ 	resp, _ := xapp.Subscription.QuerySubscriptions()
+ 	assert.Equal(t, resp[0].SubscriptionID, int64(e2SubsId))
+ 	assert.Equal(t, resp[0].Meid, "RAN_NAME_1")
+-	assert.Equal(t, resp[0].Endpoint, []string{"localhost:13560"})
++	assert.Equal(t, resp[0].ClientEndpoint, []string{"localhost:13560"})
+ 
+ 	deltrans := xappConn1.SendSubsDelReq(t, nil, e2SubsId)
+ 	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+@@ -1309,7 +1309,7 @@ func TestSubReqAndSubDelOkSameAction(t *testing.T) {
+ 	resp, _ := xapp.Subscription.QuerySubscriptions()
+ 	assert.Equal(t, resp[0].SubscriptionID, int64(e2SubsId1))
+ 	assert.Equal(t, resp[0].Meid, "RAN_NAME_1")
+-	assert.Equal(t, resp[0].Endpoint, []string{"localhost:13560", "localhost:13660"})
++	assert.Equal(t, resp[0].ClientEndpoint, []string{"localhost:13560", "localhost:13660"})
+ 
+ 	//Del1
+ 	deltrans1 := xappConn1.SendSubsDelReq(t, nil, e2SubsId1)
+@@ -1936,7 +1936,7 @@ func TestSubReqNokAndSubDelOkWithRestartInMiddle(t *testing.T) {
+ 
+ 	resp, _ := xapp.Subscription.QuerySubscriptions()
+ 	assert.Equal(t, resp[0].Meid, "RAN_NAME_1")
+-	assert.Equal(t, resp[0].Endpoint, []string{"localhost:13560"})
++	assert.Equal(t, resp[0].ClientEndpoint, []string{"localhost:13560"})
+ 	e2SubsId := uint32(resp[0].SubscriptionID)
+ 	t.Logf("e2SubsId = %v", e2SubsId)
+ 
+@@ -2003,7 +2003,7 @@ func TestSubReqAndSubDelOkWithRestartInMiddle(t *testing.T) {
+ 	resp, _ := xapp.Subscription.QuerySubscriptions()
+ 	assert.Equal(t, resp[0].SubscriptionID, int64(e2SubsId))
+ 	assert.Equal(t, resp[0].Meid, "RAN_NAME_1")
+-	assert.Equal(t, resp[0].Endpoint, []string{"localhost:13560"})
++	assert.Equal(t, resp[0].ClientEndpoint, []string{"localhost:13560"})
+ 
+ 	mainCtrl.SimulateRestart(t)
+ 
+@@ -2011,7 +2011,7 @@ func TestSubReqAndSubDelOkWithRestartInMiddle(t *testing.T) {
+ 	resp, _ = xapp.Subscription.QuerySubscriptions()
+ 	assert.Equal(t, resp[0].SubscriptionID, int64(e2SubsId))
+ 	assert.Equal(t, resp[0].Meid, "RAN_NAME_1")
+-	assert.Equal(t, resp[0].Endpoint, []string{"localhost:13560"})
++	assert.Equal(t, resp[0].ClientEndpoint, []string{"localhost:13560"})
+ 
+ 	deltrans := xappConn1.SendSubsDelReq(t, nil, e2SubsId)
+ 	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+@@ -2104,7 +2104,7 @@ func TestSubReqAndSubDelOkSameActionWithRestartsInMiddle(t *testing.T) {
+ 	resp, _ := xapp.Subscription.QuerySubscriptions() ////////////////////////////////
+ 	assert.Equal(t, resp[0].SubscriptionID, int64(e2SubsId1))
+ 	assert.Equal(t, resp[0].Meid, "RAN_NAME_1")
+-	assert.Equal(t, resp[0].Endpoint, []string{"localhost:13560", "localhost:13660"})
++	assert.Equal(t, resp[0].ClientEndpoint, []string{"localhost:13560", "localhost:13660"})
+ 
+ 	mainCtrl.SimulateRestart(t)
+ 
+@@ -2112,7 +2112,7 @@ func TestSubReqAndSubDelOkSameActionWithRestartsInMiddle(t *testing.T) {
+ 	resp, _ = xapp.Subscription.QuerySubscriptions()
+ 	assert.Equal(t, resp[0].SubscriptionID, int64(e2SubsId1))
+ 	assert.Equal(t, resp[0].Meid, "RAN_NAME_1")
+-	assert.Equal(t, resp[0].Endpoint, []string{"localhost:13560", "localhost:13660"})
++	assert.Equal(t, resp[0].ClientEndpoint, []string{"localhost:13560", "localhost:13660"})
+ 
+ 	//Del1
+ 	deltrans1 := xappConn1.SendSubsDelReq(t, nil, e2SubsId1)
+diff --git a/test/config-file.json b/test/config-file.json
+index 7d15902..df0beeb 100644
+--- a/test/config-file.json
++++ b/test/config-file.json
+@@ -22,16 +22,16 @@
+       "port" : "8989",
+       "baseUrl" : "/"
+     },
+-    "subscription": {
+-      "host": "localhost:8088",
+-      "timeout": 2
+-    },
+     "controls": {
+       "e2tSubReqTimeout_ms": 2000,
+       "e2tSubDelReqTime_ms": 2000,
+       "e2tRecvMsgTimeout_ms": 2000,
+       "e2tMaxSubReqTryCount": 2,
+       "e2tMaxSubDelReqTryCount": 2,
+-      "readSubsFromDb": "true"
++      "readSubsFromDb": "true",
++      "subscription": {
++          "host": "localhost:8088",
++          "timeout": 2
++      }
+     }
+ }

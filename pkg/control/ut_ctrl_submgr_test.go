@@ -113,7 +113,7 @@ func PringSubscriptionQueryResult(resp models.SubscriptionList) {
 	for _, item := range resp {
 		fmt.Printf("item.SubscriptionID=%v\n", item.SubscriptionID)
 		fmt.Printf("item.Meid=%v\n", item.Meid)
-		fmt.Printf("item.Endpoint=%v\n", item.Endpoint)
+		fmt.Printf("item.ClientEndpoint=%v\n", item.ClientEndpoint)
 	}
 }
 
