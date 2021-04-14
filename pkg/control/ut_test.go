@@ -20,13 +20,14 @@
 package control
 
 import (
+	"os"
+	"testing"
+	"time"
+
 	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/teststub"
 	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/teststubdummy"
 	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/teststube2ap"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
-	"os"
-	"testing"
-	"time"
 )
 
 //-----------------------------------------------------------------------------
@@ -187,13 +188,13 @@ func ut_test_init() func() {
 	//
 	//---------------------------------
 	tent.Info("### xapp1 stub run ###")
-	xappConn1 = teststube2ap.CreateNewE2Stub("xappstub1", xapp1src, teststub.RmrRtgSvc{}, "RMRXAPP1STUB", teststubPortSeed)
+	xappConn1 = teststube2ap.CreateNewE2Stub("xappstub1", xapp1src, teststub.RmrRtgSvc{}, "RMRXAPP1STUB", teststubPortSeed, "RAN_NAME_1", "localhost", 13560, 8080)
 
 	//---------------------------------
 	//
 	//---------------------------------
 	tent.Info("### xapp2 stub run ###")
-	xappConn2 = teststube2ap.CreateNewE2Stub("xappstub2", xapp2src, teststub.RmrRtgSvc{}, "RMRXAPP2STUB", teststubPortSeed)
+	xappConn2 = teststube2ap.CreateNewE2Stub("xappstub2", xapp2src, teststub.RmrRtgSvc{}, "RMRXAPP2STUB", teststubPortSeed, "RAN_NAME_2", "localhost", 13660, 8080)
 
 	//---------------------------------
 	//

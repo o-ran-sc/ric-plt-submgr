@@ -20,11 +20,12 @@
 package control
 
 import (
-	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
-	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"strconv"
 	"sync"
 	"time"
+
+	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
+	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 )
 
 //-----------------------------------------------------------------------------

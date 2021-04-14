@@ -21,13 +21,14 @@ package control
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
+	"time"
+
 	rtmgrclient "gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/rtmgr_client"
 	rtmgrhandle "gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/rtmgr_client/handle"
 	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/rtmgr_models"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
-	"strconv"
-	"strings"
-	"time"
 )
 
 //-----------------------------------------------------------------------------

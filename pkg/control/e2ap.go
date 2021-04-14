@@ -29,12 +29,57 @@ import (
 	"fmt"
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap_wrapper"
+	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/models"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 )
 
 var packerif e2ap.E2APPackerIf = e2ap_wrapper.NewAsn1E2Packer()
 
 type E2ap struct {
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+func (c *E2ap) FillSubscriptionReqMsgs(params interface{}, subreqList *e2ap.SubscriptionRequestList, restSubscription *RESTSubscription) error {
+	xapp.Logger.Info("FillSubscriptionReqMsgs")
+
+	p := params.(*models.SubscriptionParams)
+
+	for _, subscriptionDetail := range p.SubscriptionDetails {
+		subReqMsg := e2ap.E2APSubscriptionRequest{}
+
+		if p.RANFunctionID != nil {
+			subReqMsg.FunctionId = (e2ap.FunctionId)(*p.RANFunctionID)
+		}
+		subReqMsg.RequestId = e2ap.RequestId{uint32(*subscriptionDetail.RequestorID), uint32(*subscriptionDetail.InstanceID)}
+
+		subReqMsg.EventTriggerDefinition.Data.Data = []byte(subscriptionDetail.EventTriggers.OctetString)
+		subReqMsg.EventTriggerDefinition.Data.Length = uint64(len(subscriptionDetail.EventTriggers.OctetString))
+
+		for _, actionToBeSetup := range subscriptionDetail.ActionToBeSetupList {
+			actionToBeSetupItem := e2ap.ActionToBeSetupItem{}
+			actionToBeSetupItem.ActionType = e2ap.E2AP_ActionTypeInvalid
+			actionToBeSetupItem.ActionId = uint64(*actionToBeSetup.ActionID)
+
+			actionToBeSetupItem.ActionType = e2ap.E2AP_ActionTypeStrMap[*actionToBeSetup.ActionType]
+			actionToBeSetupItem.RicActionDefinitionPresent = true
+
+			if actionToBeSetup.ActionDefinition != nil {
+				actionToBeSetupItem.ActionDefinitionChoice.Data.Data = []byte(actionToBeSetup.ActionDefinition.OctetString)
+				actionToBeSetupItem.ActionDefinitionChoice.Data.Length = uint64(len(actionToBeSetup.ActionDefinition.OctetString))
+
+			}
+			if actionToBeSetup.SubsequentAction != nil {
+				actionToBeSetupItem.SubsequentAction.Present = true
+				actionToBeSetupItem.SubsequentAction.Type = e2ap.E2AP_SubSeqActionTypeStrMap[*actionToBeSetup.SubsequentAction.SubsequentActionType]
+				actionToBeSetupItem.SubsequentAction.TimetoWait = e2ap.E2AP_TimeToWaitStrMap[*actionToBeSetup.SubsequentAction.TimeToWait]
+			}
+			subReqMsg.ActionSetups = append(subReqMsg.ActionSetups, actionToBeSetupItem)
+		}
+		subreqList.E2APSubscriptionRequests = append(subreqList.E2APSubscriptionRequests, subReqMsg)
+	}
+	return nil
 }
 
 //-----------------------------------------------------------------------------
