@@ -1,0 +1,8 @@
+Verified+1: ORAN Jobbuilder <releng+oran-jobbuilder@linuxfoundation.org>
+Code-Review+1: Konstantinos Archangelof <konstantinos.archangelof@nokia.com>
+Code-Review+2: Anssi Mannila <anssi.mannila@nokia.com>
+Submitted-by: Anssi Mannila <anssi.mannila@nokia.com>
+Submitted-at: Fri, 16 Apr 2021 09:37:12 +0000
+Reviewed-on: https://gerrit.o-ran-sc.org/r/c/ric-plt/submgr/+/5897
+Project: ric-plt/submgr
+Branch: refs/heads/master
