@@ -2138,3 +2138,37 @@ func TestSubReqAndSubDelOkSameActionWithRestartsInMiddle(t *testing.T) {
 	e2termConn1.TestMsgChanEmpty(t)
 	mainCtrl.wait_registry_empty(t, 10)
 }
+
+//-----------------------------------------------------------------------------
+// Test debug GET and POST requests
+//
+//   curl
+// +-------+     +---------+
+// | user  |     | submgr  |
+// +-------+     +---------+
+//     |              |
+//     | GET/POST Req |
+//     |------------->|
+//     |         Resp |
+//     |<-------------|
+//     |              |
+
+func TestGetSubscriptions(t *testing.T) {
+
+	mainCtrl.sendGetRequest(t, "localhost:8088", "/ric/v1/subscriptions")
+}
+
+func TestGetSymptomData(t *testing.T) {
+
+	mainCtrl.sendGetRequest(t, "localhost:8080", "/ric/v1/symptomdata")
+}
+
+func TestPostdeleteSubId(t *testing.T) {
+
+	mainCtrl.sendPostRequest(t, "localhost:8080", "/ric/v1/test/deletesubid=1")
+}
+
+func TestPostEmptyDb(t *testing.T) {
+
+	mainCtrl.sendPostRequest(t, "localhost:8080", "/ric/v1/test/emptydb")
+}
