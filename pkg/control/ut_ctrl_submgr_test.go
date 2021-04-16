@@ -332,3 +332,68 @@ func (mc *testingSubmgrControl) GetCurrentCounterValues(t *testing.T, chekedCoun
 	}
 	return retCounterMap
 }
+
+func (mc *testingSubmgrControl) sendGetRequest(t *testing.T, addr string, path string) {
+
+	mc.TestLog(t, "GET http://"+addr+"%v", path)
+	req, err := http.NewRequest("GET", "http://"+addr+path, nil)
+	if err != nil {
+		mc.TestError(t, "Error reading request. %v", err)
+		return
+	}
+	req.Header.Set("Cache-Control", "no-cache")
+	client := &http.Client{Timeout: time.Second * 2}
+	resp, err := client.Do(req)
+	if err != nil {
+		mc.TestError(t, "Error reading response. %v", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	mc.TestLog(t, "Response status: %v", resp.Status)
+	mc.TestLog(t, "Response Headers: %v", resp.Header)
+	if !strings.Contains(resp.Status, "200 OK") {
+		mc.TestError(t, "Wrong response status")
+		return
+	}
+
+	respBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		mc.TestError(t, "Error reading body. %v", err)
+		return
+	}
+	mc.TestLog(t, "%s", respBody)
+	return
+}
+
+func (mc *testingSubmgrControl) sendPostRequest(t *testing.T, addr string, path string) {
+
+	mc.TestLog(t, "POST http://"+addr+"%v", path)
+	req, err := http.NewRequest("POST", "http://"+addr+path, nil)
+	if err != nil {
+		mc.TestError(t, "Error reading request. %v", err)
+		return
+	}
+	client := &http.Client{Timeout: time.Second * 2}
+	resp, err := client.Do(req)
+	if err != nil {
+		mc.TestError(t, "Error reading response. %v", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	mc.TestLog(t, "Response status: %v", resp.Status)
+	mc.TestLog(t, "Response Headers: %v", resp.Header)
+	if !strings.Contains(resp.Status, "200 OK") {
+		mc.TestError(t, "Wrong response status")
+		return
+	}
+
+	respBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		mc.TestError(t, "Error reading body. %v", err)
+		return
+	}
+	mc.TestLog(t, "%s", respBody)
+	return
+}

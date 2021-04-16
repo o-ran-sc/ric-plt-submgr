@@ -844,12 +844,6 @@ func (c *Control) SendSubscriptionDeleteReq(subs *Subscription) {
 		params.PayloadLen = len(payload.Buf)
 		params.Payload = payload.Buf
 		params.Mbuf = nil
-
-		if params == nil {
-			xapp.Logger.Error("SendSubscriptionDeleteReq() params == nil")
-			return
-		}
-
 		subs.DeleteFromDb = true
 		c.handleXAPPSubscriptionDeleteRequest(params)
 	}
