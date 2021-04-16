@@ -28,9 +28,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"reflect"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 )
+
+var sdlShouldReturnError bool = false
+
+const sdlTestErrorString string = "Test sdl returned error on purpose"
 
 const (
 	subsResponse = 1
@@ -180,7 +185,6 @@ func PrintSubscriptionData(t *testing.T, subs *Subscription) {
 }
 
 func TestWriteSubscriptionToSdl(t *testing.T) {
-	t.Log("TestWriteSubscriptionToSdl")
 
 	// Write one subscription
 	subId := mock.AllocNextSubId()
@@ -190,12 +194,10 @@ func TestWriteSubscriptionToSdl(t *testing.T) {
 	err := mainCtrl.c.WriteSubscriptionToSdl(subId, subs)
 	if err != nil {
 		t.Errorf("TEST: %s", err.Error())
-		return
 	}
 }
 
 func TestReadSubscriptionFromSdl(t *testing.T) {
-	t.Log("TestReadSubscriptionFromSdl")
 
 	subId := mock.lastAllocatedSubId
 	t.Logf("Reading subId = %v\n", subId)
@@ -209,7 +211,6 @@ func TestReadSubscriptionFromSdl(t *testing.T) {
 }
 
 func TestRemoveSubscriptionFromSdl(t *testing.T) {
-	t.Log("TestRemoveSubscriptionFromSdl")
 
 	subId := mock.lastAllocatedSubId
 	err := mainCtrl.c.RemoveSubscriptionFromSdl(subId)
@@ -223,7 +224,6 @@ func TestRemoveSubscriptionFromSdl(t *testing.T) {
 }
 
 func TestReadNotExistingSubscriptionFromSdl(t *testing.T) {
-	t.Log("TestReadNotExistingSubscriptionFromSdl")
 
 	var subId uint32 = 0
 	subs, err := mainCtrl.c.ReadSubscriptionFromSdl(subId)
@@ -236,7 +236,6 @@ func TestReadNotExistingSubscriptionFromSdl(t *testing.T) {
 }
 
 func TestReadNotExistingSubscriptionFromSdl2(t *testing.T) {
-	t.Log("TestReadNotExistingSubscriptionFromSdl")
 
 	var subId uint32 = 7
 	subs, err := mainCtrl.c.ReadSubscriptionFromSdl(subId)
@@ -249,7 +248,6 @@ func TestReadNotExistingSubscriptionFromSdl2(t *testing.T) {
 }
 
 func TestRemoveNotExistingSubscriptionFromSdl(t *testing.T) {
-	t.Log("TestRemoveNotExistingSubscriptionFromSdl")
 
 	var subId uint32 = 0
 	err := mainCtrl.c.RemoveSubscriptionFromSdl(subId)
@@ -261,7 +259,6 @@ func TestRemoveNotExistingSubscriptionFromSdl(t *testing.T) {
 }
 
 func TestWriteSubscriptionsToSdl(t *testing.T) {
-	t.Log("TestWriteSubscriptionsToSdl")
 
 	// Write 1st subscription
 	subId := mock.AllocNextSubId()
@@ -301,7 +298,6 @@ func TestWriteSubscriptionsToSdl(t *testing.T) {
 }
 
 func TestReadSubscriptionsFromSdl(t *testing.T) {
-	t.Log("TestReadSubscriptionsFromSdl")
 
 	// Subscription with subId 1 was added and and removed above. Then subscriptions with subIds 2, 3 and 4 was added
 	// Db subscriptions should now contain subIDs 2, 3 and 4
@@ -317,7 +313,6 @@ func TestReadSubscriptionsFromSdl(t *testing.T) {
 }
 
 func TestReadAllSubscriptionsFromSdl(t *testing.T) {
-	t.Log("TestReadAllSubscriptionsFromSdl")
 
 	// This test cases simulates submgr restart. SubIds and subscriptions are restored from db
 	// after initializing mock.subIds and mock.register
@@ -340,7 +335,6 @@ func TestReadAllSubscriptionsFromSdl(t *testing.T) {
 }
 
 func TestRemoveAllSubscriptionsFromSdl(t *testing.T) {
-	t.Log("TestRemoveAllSubscriptionsFromSdl")
 
 	err := mainCtrl.c.RemoveAllSubscriptionsFromSdl()
 	if err != nil {
@@ -351,7 +345,6 @@ func TestRemoveAllSubscriptionsFromSdl(t *testing.T) {
 }
 
 func TestReadAllSubscriptionsFromSdl2(t *testing.T) {
-	t.Log("TestReadAllSubscriptionsFromSdl2")
 
 	// This test cases simulates submgr startup. SubIds and subscriptions are restored from empty db
 	// after initializing mock.subIds and mock.register
@@ -367,9 +360,113 @@ func TestReadAllSubscriptionsFromSdl2(t *testing.T) {
 	assert.Equal(t, len(register), 0)
 }
 
+func TestWriteSubscriptionToSdlFail(t *testing.T) {
+
+	// Try to write one subscription. Test db should return test error string
+	MakeNextSdlCallFail()
+	subId := mock.AllocNextSubId()
+	subs := GetSubscription(t, subId, subsResponse, "localhost:13560", "RAN_NAME_1", "123456")
+	PrintSubscriptionData(t, subs)
+	t.Logf("TEST: Writing subId = %v\n", subId)
+	err := mainCtrl.c.WriteSubscriptionToSdl(subId, subs)
+	if err != nil {
+		if !strings.Contains(fmt.Sprintf("%s", err), sdlTestErrorString) {
+			t.Errorf("TEST: %s", err.Error())
+		}
+	} else {
+		t.Errorf("TEST: This test case should return error")
+	}
+}
+
+func TestReadSubscriptionFromSdlFail(t *testing.T) {
+
+	// Try to read one subscription. Test db should return test error string
+	MakeNextSdlCallFail()
+	subId := mock.lastAllocatedSubId
+	t.Logf("Reading subId = %v\n", subId)
+	subs, err := mainCtrl.c.ReadSubscriptionFromSdl(subId)
+	if err != nil {
+		if !strings.Contains(fmt.Sprintf("%s", err), sdlTestErrorString) {
+			t.Errorf("TEST: %s", err.Error())
+		}
+		return
+	} else {
+		t.Errorf("TEST: This test case should return error")
+	}
+	PrintSubscriptionData(t, subs)
+	assert.Equal(t, mock.register[subId].SubReqMsg, subs.SubReqMsg)
+}
+
+func TestRemoveSubscriptionFromSdlFail(t *testing.T) {
+
+	// Try to remove one subscription. Test db should return test error string
+	MakeNextSdlCallFail()
+	subId := mock.lastAllocatedSubId
+	err := mainCtrl.c.RemoveSubscriptionFromSdl(subId)
+	if err != nil {
+		if !strings.Contains(fmt.Sprintf("%s", err), sdlTestErrorString) {
+			t.Errorf("TEST: %s", err.Error())
+		}
+		return
+	} else {
+		t.Errorf("TEST: This test case should return error")
+	}
+	delete(mock.register, subId)
+	mock.subIds = append(mock.subIds, subId)
+	t.Logf("TEST: subscription removed from db. subId = %v", subId)
+}
+
+func TestReadAllSubscriptionsFromSdlFail(t *testing.T) {
+
+	// Try to read all subscriptions. Test db should return test error string
+	MakeNextSdlCallFail()
+	// This test cases simulates submgr restart. SubIds and subscriptions are restored from db
+	// after initializing mock.subIds and mock.register
+	//	var err error
+	subIds, register, err := mainCtrl.c.ReadAllSubscriptionsFromSdl()
+	if err != nil {
+		if !strings.Contains(fmt.Sprintf("%s", err), sdlTestErrorString) {
+			t.Errorf("TEST: %s", err.Error())
+		}
+		return
+	} else {
+		t.Errorf("TEST: This test case should return error")
+	}
+	//	for _, subs := range mock.register {
+	for _, subs := range register {
+		PrintSubscriptionData(t, subs)
+	}
+	// SubIds slices before and after restart can't be directly compared as original slice is not stored
+	// in the db. SubId values 1, 2, 3, 4 are already removed from the beginning of subIds slice above
+	// so far. Next free subId is 5 in the beginning of mock.subIds slice. The db contains now however only
+	// 3 subscriptions with subIds 2, 3 and 4, so only subId values 2, 3, 4 are removed from the returned
+	// subIds slice and there next free value is 1
+	assert.Equal(t, uint32(0x1), subIds[0])
+}
+
+func TestRemoveAllSubscriptionsFromSdlFail(t *testing.T) {
+
+	// Try to remove all subscriptions. Test db should return test error string
+	MakeNextSdlCallFail()
+	err := mainCtrl.c.RemoveAllSubscriptionsFromSdl()
+	if err != nil {
+		if !strings.Contains(fmt.Sprintf("%s", err), sdlTestErrorString) {
+			t.Errorf("TEST: %s", err.Error())
+		}
+		return
+	} else {
+		t.Errorf("TEST: This test case should return error")
+	}
+	t.Log("TEST: All subscription removed from db")
+}
+
 func (m *Mock) Set(pairs ...interface{}) error {
 	var key string
 	var val string
+
+	if sdlShouldReturnError == true {
+		return GetSdlError()
+	}
 
 	for _, v := range pairs {
 		reflectType := reflect.TypeOf(v)
@@ -410,6 +507,10 @@ func (m *Mock) Get(keys []string) (map[string]interface{}, error) {
 		return nil, fmt.Errorf("Get() error: len(key) == 0\n")
 	}
 
+	if sdlShouldReturnError == true {
+		return nil, GetSdlError()
+	}
+
 	for _, key := range keys {
 		if key != "" {
 			retMap[key] = m.subsDB[key]
@@ -421,6 +522,10 @@ func (m *Mock) Get(keys []string) (map[string]interface{}, error) {
 }
 
 func (m *Mock) GetAll() ([]string, error) {
+
+	if sdlShouldReturnError == true {
+		return nil, GetSdlError()
+	}
 
 	keys := []string{}
 	for key, _ := range m.subsDB {
@@ -437,6 +542,11 @@ func (m *Mock) Remove(keys []string) error {
 	if err != nil {
 		return fmt.Errorf("Remove() ParseUint() error: %s\n", err.Error())
 	}
+
+	if sdlShouldReturnError == true {
+		return GetSdlError()
+	}
+
 	subId := uint32(subId64)
 	delete(m.subsDB, keys[0])
 	delete(m.register, subId)
@@ -445,15 +555,31 @@ func (m *Mock) Remove(keys []string) error {
 }
 
 func (m *Mock) RemoveAll() error {
+
 	for key := range m.subsDB {
 		subId64, err := strconv.ParseUint(key, 10, 64)
 		if err != nil {
 			return fmt.Errorf("RemoveAll() ParseUint() error: %s\n", err.Error())
 		}
+
 		subId := uint32(subId64)
 		delete(m.subsDB, key)
 		delete(m.register, subId)
 		m.subIds = append(m.subIds, subId)
 	}
+
+	if sdlShouldReturnError == true {
+		return GetSdlError()
+	}
+
 	return nil
+}
+
+func MakeNextSdlCallFail() {
+	sdlShouldReturnError = true
+}
+
+func GetSdlError() error {
+	sdlShouldReturnError = false
+	return fmt.Errorf(sdlTestErrorString)
 }

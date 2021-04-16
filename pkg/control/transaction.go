@@ -101,12 +101,13 @@ func (t *Transaction) GetMeid() *xapp.RMRMeid {
 	return nil
 }
 
+/*  // This function is not used. Commented out to get better test coverage result
 func (t *Transaction) GetPayload() *e2ap.PackedData {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 	return t.Payload
 }
-
+*/
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
@@ -172,6 +173,7 @@ func (t *TransactionXapp) GetXid() string {
 	return ""
 }
 
+/*  // This function is not used. Commented out to get better test coverage result
 func (t *TransactionXapp) GetSrc() string {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
@@ -180,7 +182,7 @@ func (t *TransactionXapp) GetSrc() string {
 	}
 	return ""
 }
-
+*/
 func (t *TransactionXapp) GetSubId() uint32 {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
