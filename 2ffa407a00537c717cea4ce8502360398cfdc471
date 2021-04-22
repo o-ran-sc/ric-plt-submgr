@@ -1,0 +1,9 @@
+Code-Review+1: Markku Virtanen <markku.virtanen@nokia.com>
+Code-Review+1: Konstantinos Archangelof <konstantinos.archangelof@nokia.com>
+Code-Review+2: Anssi Mannila <anssi.mannila@nokia.com>
+Verified+1: Anssi Mannila <anssi.mannila@nokia.com>
+Submitted-by: Anssi Mannila <anssi.mannila@nokia.com>
+Submitted-at: Thu, 22 Apr 2021 12:15:40 +0000
+Reviewed-on: https://gerrit.o-ran-sc.org/r/c/ric-plt/submgr/+/5923
+Project: ric-plt/submgr
+Branch: refs/heads/rest_interfce
