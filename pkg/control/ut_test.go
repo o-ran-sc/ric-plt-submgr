@@ -23,6 +23,7 @@ import (
 	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/teststub"
 	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/teststubdummy"
 	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/teststube2ap"
+	clientmodel "gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/clientmodel"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"os"
 	"testing"
@@ -187,13 +188,17 @@ func ut_test_init() func() {
 	//
 	//---------------------------------
 	tent.Info("### xapp1 stub run ###")
-	xappConn1 = teststube2ap.CreateNewE2Stub("xappstub1", xapp1src, teststub.RmrRtgSvc{}, "RMRXAPP1STUB", teststubPortSeed)
+	var HTTPPort1 int64 = 8080
+	var RMRPort1 int64 = 1234
+	xappConn1 = teststube2ap.CreateNewE2Stub("xappstub1", xapp1src, teststub.RmrRtgSvc{}, "RMRXAPP1STUB", teststubPortSeed, "RAN_NAME_1", clientmodel.SubscriptionParamsClientEndpoint{&HTTPPort1, "localhost", &RMRPort1})
 
 	//---------------------------------
 	//
 	//---------------------------------
 	tent.Info("### xapp2 stub run ###")
-	xappConn2 = teststube2ap.CreateNewE2Stub("xappstub2", xapp2src, teststub.RmrRtgSvc{}, "RMRXAPP2STUB", teststubPortSeed)
+	var HTTPPort2 int64 = 8080
+	var RMRPort2 int64 = 1234
+	xappConn2 = teststube2ap.CreateNewE2Stub("xappstub2", xapp2src, teststub.RmrRtgSvc{}, "RMRXAPP2STUB", teststubPortSeed, "RAN_NAME_2", clientmodel.SubscriptionParamsClientEndpoint{&HTTPPort2, "localhost", &RMRPort2})
 
 	//---------------------------------
 	//

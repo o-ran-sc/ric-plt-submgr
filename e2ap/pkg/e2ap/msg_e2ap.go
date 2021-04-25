@@ -224,6 +224,11 @@ const (
 	E2AP_SubSeqActionTypeWait     uint64 = 1
 )
 
+var E2AP_SubSeqActionTypeStrMap = map[string]uint64{
+	"continue": E2AP_SubSeqActionTypeContinue,
+	"wait":     E2AP_SubSeqActionTypeWait,
+}
+
 const (
 	E2AP_TimeToWaitZero   uint64 = 0
 	E2AP_TimeToWaitW1ms   uint64 = 1
@@ -245,6 +250,27 @@ const (
 	E2AP_TimeToWaitW60    uint64 = 16
 )
 
+var E2AP_TimeToWaitStrMap = map[string]uint64{
+	"zero":   E2AP_TimeToWaitZero,
+	"w1ms":   E2AP_TimeToWaitW1ms,
+	"w2ms":   E2AP_TimeToWaitW2ms,
+	"w5ms":   E2AP_TimeToWaitW5ms,
+	"w10ms":  E2AP_TimeToWaitW10ms,
+	"w20ms":  E2AP_TimeToWaitW20ms,
+	"w30ms":  E2AP_TimeToWaitW30ms,
+	"w40ms":  E2AP_TimeToWaitW40ms,
+	"w50ms":  E2AP_TimeToWaitW50ms,
+	"w100ms": E2AP_TimeToWaitW100ms,
+	"w200ms": E2AP_TimeToWaitW200ms,
+	"w500ms": E2AP_TimeToWaitW500ms,
+	"w1s":    E2AP_TimeToWaitW1s,
+	"w2s":    E2AP_TimeToWaitW2s,
+	"w5s":    E2AP_TimeToWaitW5s,
+	"w10s":   E2AP_TimeToWaitW10s,
+	"w20s":   E2AP_TimeToWaitW20s,
+	"w60s":   E2AP_TimeToWaitW60,
+}
+
 type SubsequentAction struct {
 	Present    bool
 	Type       uint64
@@ -261,6 +287,12 @@ const (
 	E2AP_ActionTypePolicy  uint64 = 2
 	E2AP_ActionTypeInvalid uint64 = 99 // For RIC internal usage only
 )
+
+var E2AP_ActionTypeStrMap = map[string]uint64{
+	"report": E2AP_ActionTypeReport,
+	"insert": E2AP_ActionTypeInsert,
+	"policy": E2AP_ActionTypePolicy,
+}
 
 type ActionToBeSetupItem struct {
 	ActionId                   uint64
