@@ -20,12 +20,15 @@
 package teststube2ap
 
 import (
+	"fmt"
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap_wrapper"
 	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/teststub"
+	clientmodel "gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/clientmodel"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"strconv"
 	"testing"
+	"time"
 )
 
 //-----------------------------------------------------------------------------
@@ -51,17 +54,27 @@ func (trans *RmrTransactionId) String() string {
 
 type E2Stub struct {
 	teststub.RmrStubControl
-	xid_seq uint64
+	xid_seq              uint64
+	subscriptionId       string
+	requestCount         int
+	CallBackNotification chan int64
+	RESTNotification     chan uint32
+	clientEndpoint       clientmodel.SubscriptionParamsClientEndpoint
+	meid                 string
 }
 
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-func CreateNewE2Stub(desc string, srcId teststub.RmrSrcId, rtgSvc teststub.RmrRtgSvc, stat string, mtypeseed int) *E2Stub {
+func CreateNewE2Stub(desc string, srcId teststub.RmrSrcId, rtgSvc teststub.RmrRtgSvc, stat string, mtypeseed int, ranName string, clientEndPoint clientmodel.SubscriptionParamsClientEndpoint) *E2Stub {
 	tc := &E2Stub{}
 	tc.RmrStubControl.Init(desc, srcId, rtgSvc, stat, mtypeseed)
 	tc.xid_seq = 1
 	tc.SetCheckXid(true)
+	tc.CallBackNotification = make(chan int64)
+	tc.RESTNotification = make(chan uint32)
+	tc.clientEndpoint = clientEndPoint // Real endpoint example: service-ricxapp-ueec-http.ricxapp:8080
+	tc.meid = ranName
 	return tc
 }
 
@@ -592,4 +605,159 @@ func (tc *E2Stub) SendSubsDelFail(t *testing.T, req *e2ap.E2APSubscriptionDelete
 	if snderr != nil {
 		tc.TestError(t, "RMR SEND FAILED: %s", snderr.Error())
 	}
+}
+
+// REST code below all
+
+/*****************************************************************************/
+// REST interface specific functions are below
+
+//-----------------------------------------------------------------------------
+// Callback handler for subscription response notifications
+//-----------------------------------------------------------------------------
+func (tc *E2Stub) SubscriptionRespHandler(resp *clientmodel.SubscriptionResponse) {
+	if tc.subscriptionId == *resp.SubscriptionID {
+		tc.Info("REST notification received SubscriptionID=%s, InstanceID=%v, RequestorID=%v",
+			*resp.SubscriptionID, *resp.SubscriptionInstances[0].InstanceID, *resp.SubscriptionInstances[0].RequestorID)
+		tc.CallBackNotification <- *resp.SubscriptionInstances[0].InstanceID
+	}
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+func (tc *E2Stub) WaitRESTNotification(t *testing.T) {
+	tc.Info("Started waiting REST notification")
+	xapp.Subscription.SetResponseCB(tc.SubscriptionRespHandler)
+	go func() {
+		select {
+		case instanceId := <-tc.CallBackNotification:
+			tc.requestCount--
+			if tc.requestCount == 0 {
+				tc.Info("All expected REST notifications received for endpoint=%s", tc.clientEndpoint)
+			}
+			tc.RESTNotification <- (uint32)(instanceId)
+		case <-time.After(15 * time.Second):
+			err := fmt.Errorf("Timeout 15s expired while waiting REST notification")
+			tc.TestError(t, "%s", err.Error())
+			tc.RESTNotification <- 0
+		}
+	}()
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+func (tc *E2Stub) SendRESTSubsReq(t *testing.T, params *RESTSubsReqParams) string { // This need to be edited according to new specification
+	tc.Info("Posting REST Report subscriptions to Submgr")
+
+	if params == nil {
+		tc.Info("SendRESTReportSubsReq: params == nil")
+		return ""
+	}
+
+	resp, err := xapp.Subscription.Subscribe(&params.SubsReqParams)
+	if err != nil {
+		// Swagger generated code makes checks for the values that are inserted the subscription function
+		// If error cause is unknown and POST is not done, the problem is in the inserted values
+		tc.Error("REST report subscriptions failed %s", err.Error())
+	}
+	tc.subscriptionId = *resp.SubscriptionID
+	tc.Info("REST report subscriptions pushed successfully. SubscriptionID = %s, RequestCount = %v", *resp.SubscriptionID, tc.requestCount)
+	return *resp.SubscriptionID
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+func (tc *E2Stub) GetRESTSubsReqReportParams(subReqCount int, parameterSet int, actionDefinitionPresent bool, actionParamCount int) *RESTSubsReqParams {
+
+	reportParams := RESTSubsReqParams{}
+	if parameterSet == 1 {
+		reportParams.GetRESTSubsReqReportParams1(subReqCount, actionDefinitionPresent, actionParamCount, &tc.clientEndpoint, &tc.meid)
+	} else if parameterSet == 2 {
+
+	} else {
+		tc.Error("Invalid parameterSet=%v", parameterSet)
+	}
+	tc.requestCount = subReqCount
+	return &reportParams
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+func (tc *E2Stub) GetRESTSubsReqReportParams1(subReqCount int, actionDefinitionPresent bool, actionParamCount int) *RESTSubsReqParams {
+
+	reportParams := RESTSubsReqParams{}
+	reportParams.GetRESTSubsReqReportParams1(subReqCount, actionDefinitionPresent, actionParamCount, &tc.clientEndpoint, &tc.meid)
+	tc.requestCount = subReqCount
+	return &reportParams
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type RESTSubsReqParams struct {
+	SubsReqParams clientmodel.SubscriptionParams
+}
+
+func (p *RESTSubsReqParams) GetRESTSubsReqReportParams1(subReqCount int, actionDefinitionPresent bool, actionParamCount int, clientEndpoint *clientmodel.SubscriptionParamsClientEndpoint, meid *string) {
+
+	// E2SM-gNB-X2
+	p.SubsReqParams.ClientEndpoint = clientEndpoint
+	p.SubsReqParams.Meid = meid
+	var rANFunctionID int64 = 33
+	p.SubsReqParams.RANFunctionID = &rANFunctionID
+
+	//	reqId := int64(1)
+	//seqId := int64(1)
+	actionId := int64(1)
+	actionType := "report"
+	subsequestActioType := "continue"
+	timeToWait := "w10ms"
+
+	for requestCount := 0; requestCount < subReqCount; requestCount++ {
+		reqId := int64(requestCount)
+		seqId := int64(requestCount)
+		subscriptionDetail := &clientmodel.SubscriptionDetail{
+			RequestorID: &reqId,
+			InstanceID:  &seqId,
+			EventTriggers: &clientmodel.EventTriggerDefinition{
+				OctetString: "1234",
+			},
+			ActionToBeSetupList: clientmodel.ActionsToBeSetup{
+				&clientmodel.ActionToBeSetup{
+					ActionID:   &actionId,
+					ActionType: &actionType,
+					ActionDefinition: &clientmodel.ActionDefinition{
+						OctetString: "5678",
+					},
+					SubsequentAction: &clientmodel.SubsequentAction{
+						SubsequentActionType: &subsequestActioType,
+						TimeToWait:           &timeToWait,
+					},
+				},
+			},
+		}
+		p.SubsReqParams.SubscriptionDetails = append(p.SubsReqParams.SubscriptionDetails, subscriptionDetail)
+	}
+
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+func (tc *E2Stub) SendRESTSubsDelReq(t *testing.T, subscriptionID *string) {
+
+	if *subscriptionID == "" {
+		tc.Error("REST error in deleting subscriptions. Empty SubscriptionID = %s", *subscriptionID)
+	}
+	tc.Info("REST deleting E2 subscriptions. SubscriptionID = %s", *subscriptionID)
+
+	err := xapp.Subscription.Unsubscribe(*subscriptionID)
+	if err != nil {
+		tc.Error("REST Delete subscription failed %s", err.Error())
+	}
+	tc.Info("REST delete subscription pushed to submgr successfully. SubscriptionID = %s", *subscriptionID)
 }
