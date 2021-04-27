@@ -120,7 +120,7 @@ func NewControl() *Control {
 	xapp.Resource.InjectRoute("/ric/v1/test/{testId}", c.TestRestHandler, "POST")
 	xapp.Resource.InjectRoute("/ric/v1/symptomdata", c.SymptomDataHandler, "GET")
 
-	go xapp.Subscription.Listen(c.SubscriptionHandler, c.QueryHandler, c.RESTSubscriptionDeleteHandler)
+	go xapp.Subscription.Listen(c.SubscriptionHandler, c.QueryHandler, c.SubscriptionDeleteHandlerCB)
 
 	if readSubsFromDb == "false" {
 		return c
@@ -273,7 +273,7 @@ func (c *Control) processSubscriptionRequests(trans *TransactionXapp, restSubscr
 	for index, subReqMsg := range subReqList.E2APSubscriptionRequests {
 		xapp.Logger.Info("Handle SubscriptionRequest index=%v, %s", index, idstring(nil, trans))
 
-		subRespMsg, err := c.handleSubscriptionRequest(trans, &subReqMsg, meid, restSubId, subReqMsg.ActionSetups[0].ActionType)
+		subRespMsg, err := c.handleSubscriptionRequest(trans, &subReqMsg, meid, restSubId)
 		if err != nil {
 			// Send notification to xApp that prosessing of a Subscription Request has failed. Currently it is not possible
 			// to indicate error. Such possibility should be added. As a workaround requestorID and instanceId are set to zero value
@@ -317,7 +317,7 @@ func (c *Control) processSubscriptionRequests(trans *TransactionXapp, restSubscr
 //
 //------------------------------------------------------------------
 func (c *Control) handleSubscriptionRequest(trans *TransactionXapp, subReqMsg *e2ap.E2APSubscriptionRequest, meid *string,
-	restSubId *string, actionType uint64) (*e2ap.E2APSubscriptionResponse, error) {
+	restSubId *string) (*e2ap.E2APSubscriptionResponse, error) {
 
 	err := c.tracker.Track(trans)
 	if err != nil {
@@ -326,7 +326,7 @@ func (c *Control) handleSubscriptionRequest(trans *TransactionXapp, subReqMsg *e
 		return nil, err
 	}
 
-	subs, err := c.registry.AssignToSubscription(trans, subReqMsg, false, c)
+	subs, err := c.registry.AssignToSubscription(trans, subReqMsg, c.ResetTestFlag, c)
 	if err != nil {
 		err = fmt.Errorf("XAPP-SubReq: %s", idstring(err, trans))
 		xapp.Logger.Error("%s", err.Error())
@@ -361,7 +361,7 @@ func (c *Control) handleSubscriptionRequest(trans *TransactionXapp, subReqMsg *e
 //-------------------------------------------------------------------
 //
 //-------------------------------------------------------------------
-func (c *Control) RESTSubscriptionDeleteHandler(restSubId string) error {
+func (c *Control) SubscriptionDeleteHandlerCB(restSubId string) error {
 	xapp.Logger.Info("SubscriptionDeleteRequest from XAPP")
 
 	restSubscription, err := c.registry.GetRESTSubscription(restSubId)
@@ -430,11 +430,6 @@ func (c *Control) SubscriptionDeleteHandler(restSubId *string, endPoint *string,
 	trans.WaitEvent(0) //blocked wait as timeout is handled in subs side
 
 	xapp.Logger.Debug("XAPP-SubDelReq: Handling event %s ", idstring(nil, trans, subs))
-
-	// Whatever is received send ok delete response
-	if err == nil {
-		return nil
-	}
 
 	c.registry.RemoveFromSubscription(subs, trans, 5*time.Second, c)
 
