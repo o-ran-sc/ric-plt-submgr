@@ -20,13 +20,12 @@
 package control
 
 import (
-	"testing"
-	"time"
-
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
 	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/teststube2ap"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"github.com/stretchr/testify/assert"
+	"testing"
+	"time"
 )
 
 //-----------------------------------------------------------------------------
@@ -2171,4 +2170,169 @@ func TestPostdeleteSubId(t *testing.T) {
 func TestPostEmptyDb(t *testing.T) {
 
 	mainCtrl.sendPostRequest(t, "localhost:8080", "/ric/v1/test/emptydb")
+}
+
+/******************************************************************************/
+//  REST interface test cases
+/******************************************************************************/
+
+//-----------------------------------------------------------------------------
+// TestRESTSubReqAndRouteNok   It is not possible currently to indicate failure to xapp via REST interface
+//
+//   stub                             stub
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | rtmgr   |
+// +-------+        +---------+    +---------+
+//     |                 |              |
+//     | RESTSubReq      |              |
+//     |---------------->|              |
+//     |                 |              |
+//     |     RESTSubResp |              |
+//     |<----------------|              |
+//     |                 | RouteCreate  |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 | RouteCreate  |
+//     |                 |  status:400  |
+//     |                 |(Bad request) |
+//     |                 |<-------------|
+//     |       RESTNotif |              |
+//     |<----------------|              |
+//     |                 |              |
+//     |          [SUBS INT DELETE]     |
+//     |                 |              |
+//     | RESTSubDelReq   |              |
+//     |---------------->|              |
+//     |  RESTSubDelResp |              |
+//     |<----------------|              |
+//
+//-----------------------------------------------------------------------------
+
+func TestRESTSubReqAndRouteNok(t *testing.T) {
+	CaseBegin("TestRESTSubReqAndRouteNok")
+
+	waiter := rtmgrHttp.AllocNextEvent(false)
+	newSubsId := mainCtrl.get_registry_next_subid(t)
+
+	const subReqCount int = 1
+	const parameterSet = 1
+	const actionDefinitionPresent bool = true
+	const actionParamCount int = 1
+
+	// Req
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	restSubId := xappConn1.SendRESTSubsReq(t, params)
+
+	waiter.WaitResult(t)
+
+	xappConn1.WaitRESTNotification(t)
+	e2SubsId := <-xappConn1.RESTNotification
+	xapp.Logger.Info("TEST: REST notification received e2SubsId=%v", e2SubsId)
+
+	// Del
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+
+	// Wait that subs is cleaned
+	mainCtrl.wait_subs_clean(t, newSubsId, 10)
+	xappConn1.TestMsgChanEmpty(t)
+	e2termConn1.TestMsgChanEmpty(t)
+	mainCtrl.wait_registry_empty(t, 10)
+}
+
+//-----------------------------------------------------------------------------
+// TestRESTReportSubReqAndSubDelOk and
+// TestRESTPolicySubReqAndSubDelOk
+//
+//   stub                             stub
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//     |                 |              |
+//     | RestSubReq      |              |
+//     |---------------->|              |
+//     |                 |              |
+//     |     RESTSubResp |              |
+//     |<----------------|              |
+//     |                 |              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |      SubResp |
+//     |                 |<-------------|
+//     | RESTNotif       |              |
+//     |<----------------|              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |      SubResp |
+//     |                 |<-------------|
+//     | RESTNotif       |              |
+//     |<----------------|              |
+//     |       ...       |     ...      |
+//     |                 |              |
+//     |                 |              |
+//     | RESTSubDelReq   |              |
+//     |---------------->|              |
+//     |                 |              |
+//     |                 | SubDelReq    |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |   SubDelResp |
+//     |                 |<-------------|
+//     |                 |              |
+//     |   RESTSubDelResp|              |
+//     |<----------------|              |
+//
+//-----------------------------------------------------------------------------
+
+func TestRESTReportSubReqAndSubDelOk(t *testing.T) {
+	CaseBegin("TestRESTReportSubReqAndSubDelOk")
+	subReqCount := 1
+	parameterSet := 1 // E2SM-gNB-X2
+	actionDefinitionPresent := true
+	actionParamCount := 1
+	testIndex := 1
+	RESTReportSubReqAndSubDelOk(t, subReqCount, parameterSet, actionDefinitionPresent, actionParamCount, testIndex)
+
+}
+
+func RESTReportSubReqAndSubDelOk(t *testing.T, subReqCount int, parameterSet int, actionDefinitionPresent bool, actionParamCount int, testIndex int) {
+	xapp.Logger.Info("TEST: TestRESTReportSubReqAndSubDelOk with parameter set %v", testIndex)
+
+	// Req
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	restSubId := xappConn1.SendRESTSubsReq(t, params)
+
+	var e2SubsId []uint32
+	for i := 0; i < subReqCount; i++ {
+		crereq, cremsg := e2termConn1.RecvSubsReq(t)
+		xappConn1.WaitRESTNotification(t)
+
+		e2termConn1.SendSubsResp(t, crereq, cremsg)
+		instanceId := <-xappConn1.RESTNotification
+		xapp.Logger.Info("TEST: REST notification received e2SubsId=%v", instanceId)
+		e2SubsId = append(e2SubsId, instanceId)
+		resp, _ := xapp.Subscription.QuerySubscriptions()
+		assert.Equal(t, resp[i].SubscriptionID, (int64)(instanceId))
+		assert.Equal(t, resp[i].Meid, "RAN_NAME_1")
+		assert.Equal(t, resp[i].ClientEndpoint, []string{"localhost:8080"})
+
+	}
+
+	// Del
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+
+	for i := 0; i < subReqCount; i++ {
+		delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+		e2termConn1.SendSubsDelResp(t, delreq, delmsg)
+	}
+
+	// Wait that subs is cleaned
+	for i := 0; i < subReqCount; i++ {
+		mainCtrl.wait_subs_clean(t, e2SubsId[i], 10)
+	}
+
+	xappConn1.TestMsgChanEmpty(t)
+	e2termConn1.TestMsgChanEmpty(t)
+	mainCtrl.wait_registry_empty(t, 10)
 }
