@@ -39,7 +39,7 @@ func (bcd *bcdbase) index(c byte) int {
 }
 
 func (bcd *bcdbase) byte(i int) byte {
-	if i < 0 && i > 15 {
+	if i < 0 || i > 15 {
 		return '?'
 	}
 	return bcd.convtbl[i]
