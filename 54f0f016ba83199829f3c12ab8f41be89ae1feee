@@ -189,6 +189,23 @@
     },
     {
       "key": {
+        "uuid": "7334d9bc_9477c57c",
+        "filename": "pkg/control/ut_test.go",
+        "patchSetId": 1
+      },
+      "lineNbr": 194,
+      "author": {
+        "id": 1001275
+      },
+      "writtenOn": "2021-04-27T07:52:11Z",
+      "side": 1,
+      "message": "The port numbers are hardcoded and could be set in testcase to the request (on client side) as follows:\n\n\tparams :\u003d xappConn1.GetRESTSubsReqParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)\n\tparams.SetMeid(\"RAN_NAME_1\")\n\tparams.SetHTTPEndpoint(8080, host)\n\tparams.SetRMREndpoint(13560, host)",
+      "revId": "54f0f016ba83199829f3c12ab8f41be89ae1feee",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": true
+    },
+    {
+      "key": {
         "uuid": "68739895_c6f51acd",
         "filename": "pkg/teststube2ap/stubE2.go",
         "patchSetId": 1
