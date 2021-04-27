@@ -1,0 +1,208 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "ffa9f335_0a135aaf",
+        "filename": "pkg/control/control.go",
+        "patchSetId": 1
+      },
+      "lineNbr": 123,
+      "author": {
+        "id": 1001275
+      },
+      "writtenOn": "2021-04-27T06:54:39Z",
+      "side": 1,
+      "message": "All callback functions should be named in similar fashion. Should we drop the REST prefix here?",
+      "revId": "54f0f016ba83199829f3c12ab8f41be89ae1feee",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "436794d4_42202c33",
+        "filename": "pkg/control/control.go",
+        "patchSetId": 1
+      },
+      "lineNbr": 221,
+      "author": {
+        "id": 1001275
+      },
+      "writtenOn": "2021-04-27T06:54:39Z",
+      "side": 1,
+      "message": "Should the param type be checked via resolve before casting (switch/case)?",
+      "revId": "54f0f016ba83199829f3c12ab8f41be89ae1feee",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "a0dc813c_0b19578c",
+        "filename": "pkg/control/control.go",
+        "patchSetId": 1
+      },
+      "lineNbr": 276,
+      "author": {
+        "id": 1001275
+      },
+      "writtenOn": "2021-04-27T06:54:39Z",
+      "side": 1,
+      "message": "Is the subtype really needed here? The function where it\u0027s being passed apparently uses if for nothing.",
+      "revId": "54f0f016ba83199829f3c12ab8f41be89ae1feee",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "88c48a05_b4322767",
+        "filename": "pkg/control/control.go",
+        "patchSetId": 1
+      },
+      "lineNbr": 320,
+      "author": {
+        "id": 1001275
+      },
+      "writtenOn": "2021-04-27T06:54:39Z",
+      "side": 1,
+      "message": "actionType can be removed, not used for anything.",
+      "revId": "54f0f016ba83199829f3c12ab8f41be89ae1feee",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "9419ae35_5c0423d6",
+        "filename": "pkg/control/control.go",
+        "patchSetId": 1
+      },
+      "lineNbr": 329,
+      "author": {
+        "id": 1001275
+      },
+      "writtenOn": "2021-04-27T06:54:39Z",
+      "side": 1,
+      "message": "Should here be c.ResetTestFlag instead of false?",
+      "revId": "54f0f016ba83199829f3c12ab8f41be89ae1feee",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "67bbd68b_e872a7c0",
+        "filename": "pkg/control/control.go",
+        "patchSetId": 1
+      },
+      "lineNbr": 435,
+      "author": {
+        "id": 1001275
+      },
+      "writtenOn": "2021-04-27T06:54:39Z",
+      "side": 1,
+      "message": "This if looks like a mistake (done earlier) and should perhaps be removed. The code cannot reach the end of the function, thus leaving the removefromsubscription being called.",
+      "revId": "54f0f016ba83199829f3c12ab8f41be89ae1feee",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "4284359e_3003d5ad",
+        "filename": "pkg/control/e2ap.go",
+        "patchSetId": 1
+      },
+      "lineNbr": 47,
+      "author": {
+        "id": 1001275
+      },
+      "writtenOn": "2021-04-27T06:54:39Z",
+      "side": 1,
+      "message": "Would it be possible to pass this information in modesl.subscriptionparams as it was casted already in caller function?",
+      "revId": "54f0f016ba83199829f3c12ab8f41be89ae1feee",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "a546ec2f_aa08d08f",
+        "filename": "pkg/control/restendpoint.go",
+        "patchSetId": 1
+      },
+      "lineNbr": 45,
+      "author": {
+        "id": 1001275
+      },
+      "writtenOn": "2021-04-27T06:54:39Z",
+      "side": 1,
+      "message": "http endpoint port number setting missing?",
+      "revId": "54f0f016ba83199829f3c12ab8f41be89ae1feee",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "758c55c3_ca7a2138",
+        "filename": "pkg/control/restendpoint.go",
+        "patchSetId": 1
+      },
+      "lineNbr": 54,
+      "author": {
+        "id": 1001275
+      },
+      "writtenOn": "2021-04-27T06:54:39Z",
+      "side": 1,
+      "message": "HTTP port number is not being appended to the xapphttpendpoint here.",
+      "revId": "54f0f016ba83199829f3c12ab8f41be89ae1feee",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "85d4194d_c1a10fd6",
+        "filename": "pkg/control/ut_messaging_test.go",
+        "patchSetId": 1
+      },
+      "lineNbr": 2299,
+      "author": {
+        "id": 1001275
+      },
+      "writtenOn": "2021-04-27T06:54:39Z",
+      "side": 1,
+      "message": "This way of splitting test case is a bit confusing as the REST function below is not really configurable enough to be a service, so would it be better to provide smaller functions instead, say one for rest subreq sending ie?",
+      "revId": "54f0f016ba83199829f3c12ab8f41be89ae1feee",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "3c008973_af04de92",
+        "filename": "pkg/control/ut_test.go",
+        "patchSetId": 1
+      },
+      "lineNbr": 191,
+      "author": {
+        "id": 1001275
+      },
+      "writtenOn": "2021-04-27T06:54:39Z",
+      "side": 1,
+      "message": "Let\u0027s keep the original ports numbers instead and not define new ones here.",
+      "revId": "54f0f016ba83199829f3c12ab8f41be89ae1feee",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "68739895_c6f51acd",
+        "filename": "pkg/teststube2ap/stubE2.go",
+        "patchSetId": 1
+      },
+      "lineNbr": 673,
+      "author": {
+        "id": 1001275
+      },
+      "writtenOn": "2021-04-27T06:54:39Z",
+      "side": 1,
+      "message": "Should these funciton names be generic, instead of being named after report?",
+      "revId": "54f0f016ba83199829f3c12ab8f41be89ae1feee",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53",
+      "unresolved": true
+    }
+  ]
+}
