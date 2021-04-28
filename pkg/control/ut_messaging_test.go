@@ -20,12 +20,13 @@
 package control
 
 import (
+	"testing"
+	"time"
+
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
 	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/teststube2ap"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"github.com/stretchr/testify/assert"
-	"testing"
-	"time"
 )
 
 //-----------------------------------------------------------------------------
@@ -104,6 +105,7 @@ func TestSubReqAndRouteNok(t *testing.T) {
 //     |             |              |              |
 //     |        [SUBS DELETE]       |              |
 //     |             |              |              |
+
 func TestSubReqAndRouteUpdateNok(t *testing.T) {
 	CaseBegin("TestSubReqAndRouteUpdateNok")
 
@@ -149,6 +151,95 @@ func TestSubReqAndRouteUpdateNok(t *testing.T) {
 	xappConn2.TestMsgChanEmpty(t)
 	e2termConn1.TestMsgChanEmpty(t)
 	mainCtrl.wait_registry_empty(t, 10)
+
+	mainCtrl.VerifyCounterValues(t)
+}
+
+const subReqCount int = 1
+const parameterSet = 1
+const actionDefinitionPresent bool = true
+const actionParamCount int = 1
+const host string = "localhost"
+
+func createXapp1Subscription(t *testing.T) (string, uint32) {
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	restSubId := xappConn1.SendRESTSubsReq(t, params)
+	xapp.Logger.Info("Send REST subscriber request for subscriberId : %v", restSubId)
+
+	crereq1, cremsg1 := e2termConn1.RecvSubsReq(t)
+	xappConn1.WaitRESTNotification(t)
+	e2termConn1.SendSubsResp(t, crereq1, cremsg1)
+	e2SubsId := <-xappConn1.RESTNotification
+	xapp.Logger.Info("REST notification received e2SubsId=%v", e2SubsId)
+
+	return restSubId, e2SubsId
+}
+
+func deleteXapp1Subscription(t *testing.T, restSubId *string) {
+	xappConn1.SendRESTSubsDelReq(t, restSubId)
+	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
+}
+
+func queryXappSubscription(t *testing.T, e2SubsId int64, meid string, endpoint string) {
+	resp, _ := xapp.Subscription.QuerySubscriptions()
+	assert.Equal(t, resp[0].SubscriptionID, e2SubsId)
+	assert.Equal(t, resp[0].Meid, meid)
+	assert.Equal(t, resp[0].ClientEndpoint, []string{endpoint})
+}
+
+func waitSubsCleanup(t *testing.T, e2SubsId uint32, timeout int) {
+	//Wait that subs is cleaned
+	mainCtrl.wait_subs_clean(t, e2SubsId, timeout)
+
+	xappConn1.TestMsgChanEmpty(t)
+	xappConn2.TestMsgChanEmpty(t)
+	e2termConn1.TestMsgChanEmpty(t)
+	mainCtrl.wait_registry_empty(t, timeout)
+}
+
+func TestSubReqAndRouteUpdateNok2(t *testing.T) {
+	CaseBegin("TestSubReqAndRouteUpdateNok2")
+
+	// Init counter check
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cSubReqFromXapp, 2},
+		Counter{cSubReqToE2, 1},
+		Counter{cSubRespFromE2, 1},
+		Counter{cSubRespToXapp, 2},
+		Counter{cRouteCreateUpdateFail, 1},
+		Counter{cSubDelReqFromXapp, 1},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelRespFromE2, 1},
+		Counter{cSubDelRespToXapp, 1},
+	})
+
+	restSubId, e2SubsId := createXapp1Subscription(t)
+
+	queryXappSubscription(t, int64(e2SubsId), "RAN_NAME_1", "localhost:13560")
+
+	// xapp2 ROUTE creation shall fail with  400 from rtmgr -> submgr
+	waiter := rtmgrHttp.AllocNextEvent(false)
+	newSubsId := mainCtrl.get_registry_next_subid(t)
+
+	params := xappConn2.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params.SetMeid("RAN_NAME_1")
+	restSubId2 := xappConn2.SendRESTSubsReq(t, params)
+	xapp.Logger.Info("Send REST subscriber request for subscriberId : %v", restSubId2)
+
+	waiter.WaitResult(t)
+
+	xappConn2.WaitRESTNotification(t)
+	e2SubsId2 := <-xappConn2.RESTNotification
+	xapp.Logger.Info("REST notification received e2SubsId=%v", e2SubsId2)
+
+	queryXappSubscription(t, int64(e2SubsId), "RAN_NAME_1", "localhost:13560")
+
+	deleteXapp1Subscription(t, &restSubId)
+
+	mainCtrl.wait_subs_clean(t, newSubsId, 10)
+	//Wait that subs is cleaned
+	waitSubsCleanup(t, e2SubsId, 10)
 
 	mainCtrl.VerifyCounterValues(t)
 }
@@ -2315,7 +2406,7 @@ func RESTReportSubReqAndSubDelOk(t *testing.T, subReqCount int, parameterSet int
 		resp, _ := xapp.Subscription.QuerySubscriptions()
 		assert.Equal(t, resp[i].SubscriptionID, (int64)(instanceId))
 		assert.Equal(t, resp[i].Meid, "RAN_NAME_1")
-		assert.Equal(t, resp[i].ClientEndpoint, []string{"localhost:8080"})
+		assert.Equal(t, resp[i].ClientEndpoint, []string{"localhost:13560"})
 
 	}
 
