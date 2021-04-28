@@ -21,12 +21,13 @@ package control
 
 import (
 	"encoding/json"
-	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/rtmgr_models"
-	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/teststub"
 	"net/http"
 	"sync"
 	"testing"
 	"time"
+
+	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/rtmgr_models"
+	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/teststub"
 )
 
 //-----------------------------------------------------------------------------
@@ -37,6 +38,7 @@ type HttpEventWaiter struct {
 	teststub.TestWrapper
 	resultChan   chan bool
 	nextActionOk bool
+	sleep        int
 }
 
 func (msg *HttpEventWaiter) SetResult(res bool) {
@@ -81,10 +83,22 @@ func (tc *testingHttpRtmgrStub) AllocNextEvent(nextAction bool) *HttpEventWaiter
 	return eventWaiter
 }
 
+func (tc *testingHttpRtmgrStub) AllocNextSleep(sleep int, nextAction bool) *HttpEventWaiter {
+	eventWaiter := &HttpEventWaiter{
+		resultChan:   make(chan bool),
+		nextActionOk: nextAction,
+		sleep:        sleep,
+	}
+	eventWaiter.TestWrapper.Init("localhost:" + tc.port)
+	tc.NextEvent(eventWaiter)
+	return eventWaiter
+}
+
 func (tc *testingHttpRtmgrStub) http_handler(w http.ResponseWriter, r *http.Request) {
 
 	tc.Lock()
 	defer tc.Unlock()
+	var id int32 = -1
 
 	if r.Method == http.MethodPost || r.Method == http.MethodDelete {
 		var req rtmgr_models.XappSubscriptionData
@@ -93,6 +107,7 @@ func (tc *testingHttpRtmgrStub) http_handler(w http.ResponseWriter, r *http.Requ
 			tc.Error("%s", err.Error())
 		}
 		tc.Info("handling SubscriptionID=%d Address=%s Port=%d", *req.SubscriptionID, *req.Address, *req.Port)
+		id = *req.SubscriptionID
 	}
 	if r.Method == http.MethodPut {
 		var req rtmgr_models.XappList
@@ -110,6 +125,10 @@ func (tc *testingHttpRtmgrStub) http_handler(w http.ResponseWriter, r *http.Requ
 		if tc.eventWaiter != nil {
 			if tc.eventWaiter.nextActionOk == false {
 				code = 400
+			}
+			if tc.eventWaiter.sleep != 0 {
+				<-time.After(time.Duration(tc.eventWaiter.sleep) * time.Millisecond)
+				tc.Info("sleeping done, %v", id)
 			}
 		}
 	case http.MethodDelete:

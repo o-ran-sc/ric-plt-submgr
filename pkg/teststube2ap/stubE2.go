@@ -45,6 +45,11 @@ type RmrTransactionId struct {
 	meid *xapp.RMRMeid
 }
 
+type E2RestIds struct {
+	RestSubsId string
+	E2SubsId   uint32
+}
+
 func (trans *RmrTransactionId) String() string {
 	meidstr := "N/A"
 	if trans.meid != nil {
@@ -55,13 +60,16 @@ func (trans *RmrTransactionId) String() string {
 
 type E2Stub struct {
 	teststub.RmrStubControl
-	xid_seq              uint64
-	subscriptionId       string
-	requestCount         int
-	CallBackNotification chan int64
-	RESTNotification     chan uint32
-	clientEndpoint       clientmodel.SubscriptionParamsClientEndpoint
-	meid                 string
+	xid_seq                     uint64
+	subscriptionId              string
+	requestCount                int
+	CallBackNotification        chan int64
+	RESTNotification            chan uint32
+	CallBackListedNotifications chan E2RestIds
+	ListedRESTNotifications     chan E2RestIds
+	clientEndpoint              clientmodel.SubscriptionParamsClientEndpoint
+	meid                        string
+	restSubsIdList              []string
 }
 
 //-----------------------------------------------------------------------------
@@ -74,6 +82,8 @@ func CreateNewE2Stub(desc string, srcId teststub.RmrSrcId, rtgSvc teststub.RmrRt
 	tc.SetCheckXid(true)
 	tc.CallBackNotification = make(chan int64)
 	tc.RESTNotification = make(chan uint32)
+	tc.CallBackListedNotifications = make(chan E2RestIds)
+	tc.ListedRESTNotifications = make(chan E2RestIds, 2)
 	var endPoint clientmodel.SubscriptionParamsClientEndpoint
 	endPoint.Host = host
 	endPoint.HTTPPort = &HTTPPort
@@ -622,32 +632,132 @@ func (tc *E2Stub) SendSubsDelFail(t *testing.T, req *e2ap.E2APSubscriptionDelete
 //-----------------------------------------------------------------------------
 func (tc *E2Stub) SubscriptionRespHandler(resp *clientmodel.SubscriptionResponse) {
 	if tc.subscriptionId == *resp.SubscriptionID {
-		tc.Info("REST notification received SubscriptionID=%s, InstanceID=%v, RequestorID=%v",
-			*resp.SubscriptionID, *resp.SubscriptionInstances[0].InstanceID, *resp.SubscriptionInstances[0].RequestorID)
+		tc.Info("REST notification received SubscriptionID=%s, InstanceID=%v, RequestorID=%v (%v)",
+			*resp.SubscriptionID, *resp.SubscriptionInstances[0].InstanceID, *resp.SubscriptionInstances[0].RequestorID, tc)
 		tc.CallBackNotification <- *resp.SubscriptionInstances[0].InstanceID
+	} else {
+		tc.Info("MISMATCHING REST notification received SubscriptionID=%s<>%s, InstanceID=%v, RequestorID=%v (%v)",
+			tc.subscriptionId, *resp.SubscriptionID, *resp.SubscriptionInstances[0].InstanceID, *resp.SubscriptionInstances[0].RequestorID, tc)
 	}
 }
 
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-func (tc *E2Stub) WaitRESTNotification(t *testing.T) {
-	tc.Info("Started waiting REST notification")
-	xapp.Subscription.SetResponseCB(tc.SubscriptionRespHandler)
+func (tc *E2Stub) ExpectRESTNotification(t *testing.T, restSubsId string) {
+
+	tc.Info("### Started to wait REST notification for %v on port %v f(RMR port %v), %v responses expected", restSubsId, *tc.clientEndpoint.HTTPPort, *tc.clientEndpoint.RMRPort, tc.requestCount)
+	tc.restSubsIdList = []string{restSubsId}
+	xapp.Subscription.SetResponseCB(tc.ListedRestNotifHandler)
+	if tc.requestCount == 0 {
+		tc.TestError(t, "### NO REST notifications SET received for endpoint=%s, request zount ZERO! (%v)", tc.clientEndpoint, tc)
+	}
 	go func() {
 		select {
-		case instanceId := <-tc.CallBackNotification:
-			tc.requestCount--
+		case e2Ids := <-tc.CallBackListedNotifications:
 			if tc.requestCount == 0 {
-				tc.Info("All expected REST notifications received for endpoint=%s", tc.clientEndpoint)
+				tc.TestError(t, "### REST notification count unexpectedly ZERO for %s (%v)", restSubsId, tc)
+			} else if e2Ids.RestSubsId != restSubsId {
+				tc.TestError(t, "### Unexpected REST notifications received |%s:%s| (%v)", e2Ids.RestSubsId, restSubsId, tc)
+			} else {
+				tc.requestCount--
+				if tc.requestCount == 0 {
+					tc.Info("### All expected REST notifications received for %s (%v)", e2Ids.RestSubsId, tc)
+				} else {
+					tc.Info("### Expected REST notifications received for %s, (%v)", e2Ids.RestSubsId, tc)
+				}
+				tc.Info("### REST Notification received Notif for %s : %v", e2Ids.RestSubsId, e2Ids.E2SubsId)
+				tc.ListedRESTNotifications <- e2Ids
 			}
-			tc.RESTNotification <- (uint32)(instanceId)
 		case <-time.After(15 * time.Second):
-			err := fmt.Errorf("Timeout 15s expired while waiting REST notification")
+			err := fmt.Errorf("### Timeout 15s expired while expecting REST notification for subsId: %v", restSubsId)
+			tc.TestError(t, "%s", err.Error())
+		}
+	}()
+}
+
+func (tc *E2Stub) WaitRESTNotification(t *testing.T, restSubsId string) uint32 {
+	select {
+	case e2SubsId := <-tc.ListedRESTNotifications:
+		if e2SubsId.RestSubsId == restSubsId {
+			tc.Info("### Expected REST notifications received %s, e2SubsId %v for endpoint=%s, (%v)", e2SubsId.RestSubsId, e2SubsId.E2SubsId, tc.clientEndpoint, tc)
+			return e2SubsId.E2SubsId
+		} else {
+			tc.TestError(t, "### Unexpected REST notifications received %s, expected %s for endpoint=%s, (%v)", e2SubsId.RestSubsId, restSubsId, tc.clientEndpoint, tc)
+			return 0
+		}
+	case <-time.After(15 * time.Second):
+		err := fmt.Errorf("### Timeout 15s expired while waiting REST notification for subsId: %v", restSubsId)
+		tc.TestError(t, "%s", err.Error())
+		panic("WaitRESTNotification - timeout error")
+	}
+	return 0
+}
+
+func (tc *E2Stub) WaitRESTNotificationForAnySubscriptionId(t *testing.T) {
+	go func() {
+		tc.Info("### REST notifications received for endpoint=%s, (%v)", tc.clientEndpoint, tc)
+		select {
+		case e2SubsId := <-tc.CallBackNotification:
+			tc.Info("### REST notifications received e2SubsId %v for endpoint=%s, (%v)", e2SubsId, tc.clientEndpoint, tc)
+			tc.RESTNotification <- (uint32)(e2SubsId)
+		case <-time.After(15 * time.Second):
+			err := fmt.Errorf("### Timeout 15s expired while waiting REST notification")
 			tc.TestError(t, "%s", err.Error())
 			tc.RESTNotification <- 0
 		}
 	}()
+}
+
+func (tc *E2Stub) ListedRestNotifHandler(resp *clientmodel.SubscriptionResponse) {
+
+	if len(tc.restSubsIdList) == 0 {
+		tc.Error("Unexpected listed REST notifications received for endpoint=%s, expected restSubsId list size was ZERO!", tc.clientEndpoint)
+	} else {
+		for i, subsId := range tc.restSubsIdList {
+			if *resp.SubscriptionID == subsId {
+				//tc.Info("Listed REST notifications received SubscriptionID=%s, InstanceID=%v, RequestorID=%v",
+				//	*resp.SubscriptionID, *resp.SubscriptionInstances[0].InstanceID, *resp.SubscriptionInstances[0].RequestorID)
+
+				tc.restSubsIdList = append(tc.restSubsIdList[:i], tc.restSubsIdList[i+1:]...)
+				//tc.Info("Removed %s from Listed REST notifications, %v entries left", *resp.SubscriptionID, len(tc.restSubsIdList))
+
+				tc.CallBackListedNotifications <- E2RestIds{*resp.SubscriptionID, uint32(*resp.SubscriptionInstances[0].InstanceID)}
+
+				if len(tc.restSubsIdList) == 0 {
+					//tc.Info("All listed REST notifications received for endpoint=%s", tc.clientEndpoint)
+				}
+
+				return
+			}
+		}
+		tc.Error("UNKONWN REST notification received SubscriptionID=%s<>%s, InstanceID=%v, RequestorID=%v (%v)",
+			tc.subscriptionId, *resp.SubscriptionID, *resp.SubscriptionInstances[0].InstanceID, *resp.SubscriptionInstances[0].RequestorID, tc)
+	}
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+func (tc *E2Stub) WaitListedRestNotifications(t *testing.T, restSubsIds []string) {
+	tc.Info("Started to wait REST notifications %v on port %v f(RMR port %v)", restSubsIds, *tc.clientEndpoint.HTTPPort, *tc.clientEndpoint.RMRPort)
+
+	tc.restSubsIdList = restSubsIds
+	xapp.Subscription.SetResponseCB(tc.ListedRestNotifHandler)
+
+	for i := 0; i < len(restSubsIds); i++ {
+		go func() {
+			select {
+			case e2Ids := <-tc.CallBackListedNotifications:
+				tc.Info("Listed Notification waiter received Notif for %s : %v", e2Ids.RestSubsId, e2Ids.E2SubsId)
+				tc.ListedRESTNotifications <- e2Ids
+			case <-time.After(15 * time.Second):
+				err := fmt.Errorf("Timeout 15s expired while waiting Listed REST notification")
+				tc.TestError(t, "%s", err.Error())
+				tc.RESTNotification <- 0
+			}
+		}()
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -723,20 +833,20 @@ func (p *RESTSubsReqParams) GetRESTSubsReqReportParams1(subReqCount int, actionD
 	timeToWait := "w10ms"
 
 	for requestCount := 0; requestCount < subReqCount; requestCount++ {
-		reqId := int64(requestCount)
-		seqId := int64(requestCount)
+		reqId := int64(requestCount) + 1
+		seqId := int64(requestCount) + 1
 		subscriptionDetail := &clientmodel.SubscriptionDetail{
 			RequestorID: &reqId,
 			InstanceID:  &seqId,
 			EventTriggers: &clientmodel.EventTriggerDefinition{
-				OctetString: "1234",
+				OctetString: "1234" + strconv.Itoa(requestCount),
 			},
 			ActionToBeSetupList: clientmodel.ActionsToBeSetup{
 				&clientmodel.ActionToBeSetup{
 					ActionID:   &actionId,
 					ActionType: &actionType,
 					ActionDefinition: &clientmodel.ActionDefinition{
-						OctetString: "5678",
+						OctetString: "5678" + strconv.Itoa(requestCount),
 					},
 					SubsequentAction: &clientmodel.SubsequentAction{
 						SubsequentActionType: &subsequestActioType,
@@ -809,6 +919,17 @@ func (p *RESTSubsReqParams) SetRMREndpoint(RMR_port int64, host string) {
 	}
 }
 
+func (p *RESTSubsReqParams) SetTimeToWait(timeToWait string) {
+
+	for _, subDetail := range p.SubsReqParams.SubscriptionDetails {
+		for _, action := range subDetail.ActionToBeSetupList {
+			if action != nil && action.SubsequentAction != nil {
+				action.SubsequentAction.TimeToWait = &timeToWait
+			}
+		}
+	}
+}
+
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
@@ -824,4 +945,60 @@ func (tc *E2Stub) SendRESTSubsDelReq(t *testing.T, subscriptionID *string) {
 		tc.Error("REST Delete subscription failed %s", err.Error())
 	}
 	tc.Info("REST delete subscription pushed to submgr successfully. SubscriptionID = %s", *subscriptionID)
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+func (tc *E2Stub) GetRESTSubsReqPolicyParams(subReqCount int, actionDefinitionPresent bool, policyParamCount int) *RESTSubsReqParams {
+
+	policyParams := RESTSubsReqParams{}
+	policyParams.GetRESTSubsReqPolicyParams(subReqCount, actionDefinitionPresent, policyParamCount, &tc.clientEndpoint, &tc.meid)
+	tc.requestCount = subReqCount
+	return &policyParams
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+func (p *RESTSubsReqParams) GetRESTSubsReqPolicyParams(subReqCount int, actionDefinitionPresent bool, policyParamCount int, clientEndpoint *clientmodel.SubscriptionParamsClientEndpoint, meid *string) {
+
+	p.SubsReqParams.ClientEndpoint = clientEndpoint
+	p.SubsReqParams.Meid = meid
+	var rANFunctionID int64 = 33
+	p.SubsReqParams.RANFunctionID = &rANFunctionID
+
+	//	reqId := int64(1)
+	//seqId := int64(1)
+	actionId := int64(1)
+	actionType := "policy"
+	subsequestActioType := "continue"
+	timeToWait := "w10ms"
+
+	for requestCount := 0; requestCount < subReqCount; requestCount++ {
+		reqId := int64(requestCount) + 1
+		seqId := int64(0)
+		subscriptionDetail := &clientmodel.SubscriptionDetail{
+			RequestorID: &reqId,
+			InstanceID:  &seqId,
+			EventTriggers: &clientmodel.EventTriggerDefinition{
+				OctetString: "1234" + strconv.Itoa(requestCount),
+			},
+			ActionToBeSetupList: clientmodel.ActionsToBeSetup{
+				&clientmodel.ActionToBeSetup{
+					ActionID:   &actionId,
+					ActionType: &actionType,
+					ActionDefinition: &clientmodel.ActionDefinition{
+						OctetString: "5678" + strconv.Itoa(requestCount),
+					},
+					SubsequentAction: &clientmodel.SubsequentAction{
+						SubsequentActionType: &subsequestActioType,
+						TimeToWait:           &timeToWait,
+					},
+				},
+			},
+		}
+		p.SubsReqParams.SubscriptionDetails = append(p.SubsReqParams.SubscriptionDetails, subscriptionDetail)
+	}
+
 }

@@ -21,11 +21,12 @@ package control
 
 import (
 	"fmt"
+	"sync"
+	"time"
+
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/models"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
-	"sync"
-	"time"
 )
 
 //-----------------------------------------------------------------------------
@@ -79,7 +80,7 @@ func (r *Registry) CreateRESTSubscription(restSubId *string, xAppRmrEndPoint *st
 	newRestSubscription.SubReqOngoing = true
 	newRestSubscription.SubDelReqOngoing = false
 	r.restSubscriptions[*restSubId] = &newRestSubscription
-	xapp.Logger.Info("Registry: Created REST subscription successfully. restSubId=%v, subscriptionCount=%v", *restSubId, len(r.restSubscriptions))
+	xapp.Logger.Info("Registry: Created REST subscription successfully. restSubId=%v, subscriptionCount=%v, e2apCubscriptionCount=%v", *restSubId, len(r.restSubscriptions), len(r.register))
 	return &newRestSubscription, nil
 }
 

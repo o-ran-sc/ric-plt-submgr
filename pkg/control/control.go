@@ -220,6 +220,8 @@ func (c *Control) SubscriptionHandler(params interface{}) (*models.SubscriptionR
 	subResp.SubscriptionID = &restSubId
 	p := params.(*models.SubscriptionParams)
 
+	c.CntRecvMsg++
+
 	c.UpdateCounter(cSubReqFromXapp)
 
 	if p.ClientEndpoint == nil {
@@ -247,14 +249,7 @@ func (c *Control) SubscriptionHandler(params interface{}) (*models.SubscriptionR
 		return nil, err
 	}
 
-	trans := c.tracker.NewXappTransaction(xapp.NewRmrEndpoint(xAppRmrEndpoint), restSubId, e2ap.RequestId{0, 0}, &xapp.RMRMeid{RanName: *p.Meid})
-	if trans == nil {
-		c.registry.DeleteRESTSubscription(&restSubId)
-		xapp.Logger.Error("XAPP-SubReq transaction not created. RESTSubId=%s, EndPoint=%s, Meid=%s", restSubId, xAppRmrEndpoint, *p.Meid)
-		return nil, fmt.Errorf("")
-	}
-
-	go c.processSubscriptionRequests(trans, restSubscription, &subReqList, p.ClientEndpoint, p.Meid, &restSubId)
+	go c.processSubscriptionRequests(restSubscription, &subReqList, p.ClientEndpoint, p.Meid, &restSubId)
 
 	return &subResp, nil
 
@@ -264,17 +259,31 @@ func (c *Control) SubscriptionHandler(params interface{}) (*models.SubscriptionR
 //
 //-------------------------------------------------------------------
 
-func (c *Control) processSubscriptionRequests(trans *TransactionXapp, restSubscription *RESTSubscription, subReqList *e2ap.SubscriptionRequestList,
+func (c *Control) processSubscriptionRequests(restSubscription *RESTSubscription, subReqList *e2ap.SubscriptionRequestList,
 	clientEndpoint *models.SubscriptionParamsClientEndpoint, meid *string, restSubId *string) {
 
-	xapp.Logger.Info("Subscription Request count=%v, %s", len(subReqList.E2APSubscriptionRequests), idstring(nil, trans))
-	defer trans.Release()
+	xapp.Logger.Info("Subscription Request count=%v ", len(subReqList.E2APSubscriptionRequests))
+
+	_, xAppRmrEndpoint, err := ConstructEndpointAddresses(*clientEndpoint)
+	if err != nil {
+		xapp.Logger.Error("%s", err.Error())
+		return
+	}
 
 	var requestorID int64
 	var instanceId int64
-	for index, subReqMsg := range subReqList.E2APSubscriptionRequests {
-		xapp.Logger.Info("Handle SubscriptionRequest index=%v, %s", index, idstring(nil, trans))
+	for index := 0; index < len(subReqList.E2APSubscriptionRequests); index++ {
+		subReqMsg := subReqList.E2APSubscriptionRequests[index]
 
+		trans := c.tracker.NewXappTransaction(xapp.NewRmrEndpoint(xAppRmrEndpoint), *restSubId, subReqMsg.RequestId, &xapp.RMRMeid{RanName: *meid})
+		if trans == nil {
+			c.registry.DeleteRESTSubscription(restSubId)
+			xapp.Logger.Error("XAPP-SubReq transaction not created. RESTSubId=%s, EndPoint=%s, Meid=%s", *restSubId, xAppRmrEndpoint, *meid)
+			return
+		}
+
+		defer trans.Release()
+		xapp.Logger.Info("Handle SubscriptionRequest index=%v, %s", index, idstring(nil, trans))
 		subRespMsg, err := c.handleSubscriptionRequest(trans, &subReqMsg, meid, restSubId)
 		if err != nil {
 			// Send notification to xApp that prosessing of a Subscription Request has failed. Currently it is not possible
@@ -287,7 +296,7 @@ func (c *Control) processSubscriptionRequests(trans *TransactionXapp, restSubscr
 					&models.SubscriptionInstance{RequestorID: &requestorID, InstanceID: &instanceId},
 				},
 			}
-			// Mark REST subscription request processesd.
+			// Mark REST subscription request processed.
 			restSubscription.SetProcessed()
 			xapp.Logger.Info("Sending unsuccessful REST notification to endpoint=%v:%v, InstanceId=%v, %s", clientEndpoint.Host, clientEndpoint.HTTPPort, instanceId, idstring(nil, trans))
 			xapp.Subscription.Notify(resp, *clientEndpoint)
@@ -365,6 +374,7 @@ func (c *Control) handleSubscriptionRequest(trans *TransactionXapp, subReqMsg *e
 //-------------------------------------------------------------------
 func (c *Control) SubscriptionDeleteHandlerCB(restSubId string) error {
 
+	c.CntRecvMsg++
 	c.UpdateCounter(cSubDelReqFromXapp)
 
 	xapp.Logger.Info("SubscriptionDeleteRequest from XAPP")
@@ -377,7 +387,7 @@ func (c *Control) SubscriptionDeleteHandlerCB(restSubId string) error {
 			return nil
 		} else {
 			if restSubscription.SubReqOngoing == true {
-				err := fmt.Errorf("Handling of the REST Subscription Request still ongoing %s:", restSubId)
+				err := fmt.Errorf("Handling of the REST Subscription Request still ongoing %s", restSubId)
 				xapp.Logger.Error("%s", err.Error())
 				return err
 			} else if restSubscription.SubDelReqOngoing == true {
@@ -449,6 +459,8 @@ func (c *Control) SubscriptionDeleteHandler(restSubId *string, endPoint *string,
 //-------------------------------------------------------------------
 func (c *Control) QueryHandler() (models.SubscriptionList, error) {
 	xapp.Logger.Info("QueryHandler() called")
+
+	c.CntRecvMsg++
 
 	return c.registry.QueryHandler()
 }
@@ -718,6 +730,7 @@ func (c *Control) handleSubscriptionCreate(subs *Subscription, parentTrans *Tran
 			removeSubscriptionFromDb = true
 			subRfMsg, valid = subs.SetCachedResponse(event, false)
 			xapp.Logger.Info("SUBS-SubReq: internal delete due event(%s) %s", typeofSubsMessage(event), idstring(nil, trans, subs, parentTrans))
+			c.sendE2TSubscriptionDeleteRequest(subs, trans, parentTrans)
 		case *SubmgrRestartTestEvent:
 			// This simulates that no response has been received and after restart subscriptions are restored from db
 			xapp.Logger.Debug("Test restart flag is active. Dropping this transaction to test restart case")
