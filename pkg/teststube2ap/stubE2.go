@@ -21,14 +21,15 @@ package teststube2ap
 
 import (
 	"fmt"
+	"strconv"
+	"testing"
+	"time"
+
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap_wrapper"
 	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/teststub"
 	clientmodel "gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/clientmodel"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
-	"strconv"
-	"testing"
-	"time"
 )
 
 //-----------------------------------------------------------------------------
@@ -66,14 +67,18 @@ type E2Stub struct {
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-func CreateNewE2Stub(desc string, srcId teststub.RmrSrcId, rtgSvc teststub.RmrRtgSvc, stat string, mtypeseed int, ranName string, clientEndPoint clientmodel.SubscriptionParamsClientEndpoint) *E2Stub {
+func CreateNewE2Stub(desc string, srcId teststub.RmrSrcId, rtgSvc teststub.RmrRtgSvc, stat string, mtypeseed int, ranName string, host string, RMRPort int64, HTTPPort int64) *E2Stub {
 	tc := &E2Stub{}
 	tc.RmrStubControl.Init(desc, srcId, rtgSvc, stat, mtypeseed)
 	tc.xid_seq = 1
 	tc.SetCheckXid(true)
 	tc.CallBackNotification = make(chan int64)
 	tc.RESTNotification = make(chan uint32)
-	tc.clientEndpoint = clientEndPoint // Real endpoint example: service-ricxapp-ueec-http.ricxapp:8080
+	var endPoint clientmodel.SubscriptionParamsClientEndpoint
+	endPoint.Host = host
+	endPoint.HTTPPort = &HTTPPort
+	endPoint.RMRPort = &RMRPort
+	tc.clientEndpoint = endPoint
 	tc.meid = ranName
 	return tc
 }
@@ -743,6 +748,65 @@ func (p *RESTSubsReqParams) GetRESTSubsReqReportParams1(subReqCount int, actionD
 		p.SubsReqParams.SubscriptionDetails = append(p.SubsReqParams.SubscriptionDetails, subscriptionDetail)
 	}
 
+}
+
+func (p *RESTSubsReqParams) SetMeid(MEID string) {
+	p.SubsReqParams.Meid = &MEID
+}
+
+func (p *RESTSubsReqParams) SetEndpoint(HTTP_port int64, RMR_port int64, host string) {
+	var endpoint clientmodel.SubscriptionParamsClientEndpoint
+	endpoint.HTTPPort = &HTTP_port
+	endpoint.RMRPort = &RMR_port
+	endpoint.Host = host
+	p.SubsReqParams.ClientEndpoint = &endpoint
+}
+
+func (p *RESTSubsReqParams) SetEndpointHost(host string) {
+
+	if p.SubsReqParams.ClientEndpoint.Host != "" {
+		if p.SubsReqParams.ClientEndpoint.Host != host {
+			// Renaming toto, print something tc.Info("Posting REST subscription request to Submgr")
+			err := fmt.Errorf("hostname change attempt: %s -> %s", p.SubsReqParams.ClientEndpoint.Host, host)
+			panic(err)
+		}
+	}
+	p.SubsReqParams.ClientEndpoint.Host = host
+}
+
+func (p *RESTSubsReqParams) SetHTTPEndpoint(HTTP_port int64, host string) {
+
+	p.SubsReqParams.ClientEndpoint.HTTPPort = &HTTP_port
+
+	p.SetEndpointHost(host)
+
+	if p.SubsReqParams.ClientEndpoint.RMRPort == nil {
+		var RMR_port int64
+		p.SubsReqParams.ClientEndpoint.RMRPort = &RMR_port
+	}
+}
+
+func (p *RESTSubsReqParams) SetSubActionTypes(actionType string) {
+
+	for _, subDetail := range p.SubsReqParams.SubscriptionDetails {
+		for _, action := range subDetail.ActionToBeSetupList {
+			if action != nil {
+				action.ActionType = &actionType
+			}
+		}
+	}
+}
+
+func (p *RESTSubsReqParams) SetRMREndpoint(RMR_port int64, host string) {
+
+	p.SubsReqParams.ClientEndpoint.RMRPort = &RMR_port
+
+	p.SetEndpointHost(host)
+
+	if p.SubsReqParams.ClientEndpoint.HTTPPort == nil {
+		var HTTP_port int64
+		p.SubsReqParams.ClientEndpoint.HTTPPort = &HTTP_port
+	}
 }
 
 //-----------------------------------------------------------------------------

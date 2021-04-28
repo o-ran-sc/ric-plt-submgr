@@ -21,10 +21,10 @@ package control
 
 import (
 	"fmt"
+	"strconv"
+
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/models"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
-	"strconv"
-	"strings"
 )
 
 //-----------------------------------------------------------------------------
@@ -32,28 +32,26 @@ import (
 //-----------------------------------------------------------------------------
 func ConstructEndpointAddresses(clientEndpoint models.SubscriptionParamsClientEndpoint) (string, string, error) {
 
-	if clientEndpoint.Host == "" {
-		err := fmt.Errorf("Incorrect ClientEndpoint Host value =%s.", clientEndpoint.Host)
-		return "", "", err
+	var HTTP_port int64 = *clientEndpoint.HTTPPort
+	var RMR_port int64 = *clientEndpoint.RMRPort
+	var host string = clientEndpoint.Host
+	var xAppHTTPEndPoint string
+	var xAppRMREndPoint string
+
+	if *clientEndpoint.HTTPPort > 0 {
+		xAppHTTPEndPoint = host + ":" + strconv.FormatInt(*clientEndpoint.HTTPPort, 10)
+	}
+	if *clientEndpoint.RMRPort > 0 {
+		xAppRMREndPoint = host + ":" + strconv.FormatInt(*clientEndpoint.RMRPort, 10)
+	}
+	if host == "" || (HTTP_port == 0 && RMR_port == 0) {
+		err := fmt.Errorf("ClientEndpoint aprovided no PORT numbers")
+		return "INVALID_HTTP_ADDRESS:" + host + (string)(*clientEndpoint.HTTPPort),
+			"INVALID_RMR_ADDRESS:" + host + (string)(*clientEndpoint.RMRPort),
+			err
 	}
 
-	xAppHttpEndPoint := clientEndpoint.Host
-	var xAppRrmEndPoint string
-	// Submgr's test address need to be in this form: localhost:13560
-	if i := strings.Index(clientEndpoint.Host, "localhost"); i != -1 {
-		// Test address is used. clientEndpoint contains already the RMR address we need
-		xAppRrmEndPoint = xAppHttpEndPoint + ":" + strconv.FormatInt(*clientEndpoint.HTTPPort, 10)
-		return xAppHttpEndPoint, xAppRrmEndPoint, nil
+	xapp.Logger.Info("xAppHttpEndPoint=%v, xAppRrmEndPoint=%v", xAppHTTPEndPoint, xAppRMREndPoint)
 
-	}
-
-	if i := strings.Index(clientEndpoint.Host, "http"); i != -1 {
-		// Fix http -> rmr
-		xAppRrmEndPoint = strings.Replace(clientEndpoint.Host, "http", "rmr", -1)
-	}
-	xAppRrmEndPoint = xAppRrmEndPoint + ":" + strconv.FormatInt(*clientEndpoint.RMRPort, 10)
-
-	xapp.Logger.Info("xAppHttpEndPoint=%v, xAppRrmEndPoint=%v", xAppHttpEndPoint, xAppRrmEndPoint)
-
-	return xAppHttpEndPoint, xAppRrmEndPoint, nil
+	return xAppHTTPEndPoint, xAppRMREndPoint, nil
 }

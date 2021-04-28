@@ -220,6 +220,8 @@ func (c *Control) SubscriptionHandler(params interface{}) (*models.SubscriptionR
 	subResp.SubscriptionID = &restSubId
 	p := params.(*models.SubscriptionParams)
 
+	c.UpdateCounter(cSubReqFromXapp)
+
 	if p.ClientEndpoint == nil {
 		xapp.Logger.Error("ClientEndpoint == nil")
 		return nil, fmt.Errorf("")
@@ -287,7 +289,7 @@ func (c *Control) processSubscriptionRequests(trans *TransactionXapp, restSubscr
 			}
 			// Mark REST subscription request processesd.
 			restSubscription.SetProcessed()
-			xapp.Logger.Info("Sending unsuccessful REST notification to endpoint=%v, InstanceId=%v, %s", *clientEndpoint, instanceId, idstring(nil, trans))
+			xapp.Logger.Info("Sending unsuccessful REST notification to endpoint=%v:%v, InstanceId=%v, %s", clientEndpoint.Host, clientEndpoint.HTTPPort, instanceId, idstring(nil, trans))
 			xapp.Subscription.Notify(resp, *clientEndpoint)
 		} else {
 			xapp.Logger.Info("SubscriptionRequest index=%v processed successfully. endpoint=%v, InstanceId=%v, %s", index, *clientEndpoint, instanceId, idstring(nil, trans))
@@ -309,7 +311,7 @@ func (c *Control) processSubscriptionRequests(trans *TransactionXapp, restSubscr
 			xapp.Logger.Info("Sending successful REST notification to endpoint=%v, InstanceId=%v, %s", *clientEndpoint, instanceId, idstring(nil, trans))
 			xapp.Subscription.Notify(resp, *clientEndpoint)
 		}
-
+		c.UpdateCounter(cSubRespToXapp)
 	}
 }
 
@@ -362,6 +364,9 @@ func (c *Control) handleSubscriptionRequest(trans *TransactionXapp, subReqMsg *e
 //
 //-------------------------------------------------------------------
 func (c *Control) SubscriptionDeleteHandlerCB(restSubId string) error {
+
+	c.UpdateCounter(cSubDelReqFromXapp)
+
 	xapp.Logger.Info("SubscriptionDeleteRequest from XAPP")
 
 	restSubscription, err := c.registry.GetRESTSubscription(restSubId)
@@ -395,6 +400,9 @@ func (c *Control) SubscriptionDeleteHandlerCB(restSubId string) error {
 		}
 		c.registry.DeleteRESTSubscription(&restSubId)
 	}()
+
+	c.UpdateCounter(cSubDelRespToXapp)
+
 	return nil
 }
 
