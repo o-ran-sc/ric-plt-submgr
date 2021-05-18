@@ -3249,7 +3249,9 @@ func TestRESTSubReqAndSubDelOkSameAction(t *testing.T) {
 
 	xapp.Subscription.SetResponseCB(xappConn2.SubscriptionRespHandler)
 	xappConn2.WaitRESTNotificationForAnySubscriptionId(t)
+	waiter := rtmgrHttp.AllocNextSleep(10, true)
 	restSubId2 := xappConn2.SendRESTSubsReq(t, params)
+	waiter.WaitResult(t)
 	xapp.Logger.Info("Send REST subscriber request for subscriberId : %v", restSubId2)
 	e2SubsId2 := <-xappConn2.RESTNotification
 	xapp.Logger.Info("REST notification received e2SubsId=%v", e2SubsId2)
