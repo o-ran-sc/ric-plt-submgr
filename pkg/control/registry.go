@@ -101,7 +101,7 @@ func (r *Registry) GetRESTSubscription(restSubId string) (*RESTSubscription, err
 			r.restSubscriptions[restSubId] = restSubscription
 			return restSubscription, nil
 		} else {
-			return restSubscription, fmt.Errorf("Registry: REST delete request is still ongoing for the endpoint=%v, restSubId=%v, SubDelReqOngoing=%v, SubReqOngoing=%v", restSubscription, restSubId, restSubscription.SubDelReqOngoing, restSubscription.SubReqOngoing)
+			return restSubscription, fmt.Errorf("Registry: REST request is still ongoing for the endpoint=%v, restSubId=%v, SubDelReqOngoing=%v, SubReqOngoing=%v", restSubscription, restSubId, restSubscription.SubDelReqOngoing, restSubscription.SubReqOngoing)
 		}
 		return restSubscription, nil
 	}

@@ -170,6 +170,35 @@ func (mc *testingSubmgrControl) wait_subs_clean(t *testing.T, e2SubsId uint32, s
 	return false
 }
 
+func (mc *testingSubmgrControl) wait_multi_subs_clean(t *testing.T, e2SubsIds []uint32, secs int) bool {
+	var subs *Subscription
+	var purgedSubscriptions int
+	i := 1
+	k := 0
+	for ; i <= secs*2; i++ {
+		purgedSubscriptions = 0
+		for k = 0; k <= len(e2SubsIds); i++ {
+			subs = mc.c.registry.GetSubscription(e2SubsIds[k])
+			if subs == nil {
+				mc.TestLog(t, "(submgr) subscriber purged for esSubsId %v", e2SubsIds[k])
+				purgedSubscriptions += 1
+				if purgedSubscriptions == len(e2SubsIds) {
+					return true
+				} else {
+					continue
+				}
+			} else {
+				mc.TestLog(t, "(submgr) subscriber %s no clean within %d secs: subs(N/A) - purged subscriptions %v", subs.String(), secs, purgedSubscriptions)
+				time.Sleep(500 * time.Millisecond)
+			}
+		}
+	}
+
+	mc.TestError(t, "(submgr) no clean within %d secs: subs(N/A) - %v/%v subscriptions found still", secs, purgedSubscriptions, len(e2SubsIds))
+
+	return false
+}
+
 func (mc *testingSubmgrControl) wait_subs_trans_clean(t *testing.T, e2SubsId uint32, secs int) bool {
 	var trans TransactionIf
 	i := 1

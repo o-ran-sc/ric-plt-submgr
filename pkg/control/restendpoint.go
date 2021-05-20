@@ -22,6 +22,7 @@ package control
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/models"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
@@ -38,17 +39,21 @@ func ConstructEndpointAddresses(clientEndpoint models.SubscriptionParamsClientEn
 	var xAppHTTPEndPoint string
 	var xAppRMREndPoint string
 
-	if *clientEndpoint.HTTPPort > 0 {
-		xAppHTTPEndPoint = host + ":" + strconv.FormatInt(*clientEndpoint.HTTPPort, 10)
-	}
-	if *clientEndpoint.RMRPort > 0 {
-		xAppRMREndPoint = host + ":" + strconv.FormatInt(*clientEndpoint.RMRPort, 10)
-	}
 	if host == "" || (HTTP_port == 0 && RMR_port == 0) {
 		err := fmt.Errorf("ClientEndpoint aprovided no PORT numbers")
 		return "INVALID_HTTP_ADDRESS:" + host + (string)(*clientEndpoint.HTTPPort),
 			"INVALID_RMR_ADDRESS:" + host + (string)(*clientEndpoint.RMRPort),
 			err
+	}
+
+	if *clientEndpoint.HTTPPort > 0 {
+		xAppHTTPEndPoint = host + ":" + strconv.FormatInt(*clientEndpoint.HTTPPort, 10)
+	}
+	if *clientEndpoint.RMRPort > 0 {
+		if i := strings.Index(host, "http"); i != -1 {
+			host = strings.Replace(host, "http", "rmr", -1)
+		}
+		xAppRMREndPoint = host + ":" + strconv.FormatInt(*clientEndpoint.RMRPort, 10)
 	}
 
 	xapp.Logger.Info("xAppHttpEndPoint=%v, xAppRrmEndPoint=%v", xAppHTTPEndPoint, xAppRMREndPoint)

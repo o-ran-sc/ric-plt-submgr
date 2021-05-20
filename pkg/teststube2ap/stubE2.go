@@ -764,7 +764,7 @@ func (tc *E2Stub) WaitListedRestNotifications(t *testing.T, restSubsIds []string
 //
 //-----------------------------------------------------------------------------
 func (tc *E2Stub) SendRESTSubsReq(t *testing.T, params *RESTSubsReqParams) string { // This need to be edited according to new specification
-	tc.Info("Posting REST Report subscriptions to Submgr")
+	tc.Info("======== Posting REST Report subscriptions to Submgr ======")
 
 	if params == nil {
 		tc.Info("SendRESTReportSubsReq: params == nil")
@@ -775,10 +775,11 @@ func (tc *E2Stub) SendRESTSubsReq(t *testing.T, params *RESTSubsReqParams) strin
 	if err != nil {
 		// Swagger generated code makes checks for the values that are inserted the subscription function
 		// If error cause is unknown and POST is not done, the problem is in the inserted values
-		tc.Error("REST report subscriptions failed %s", err.Error())
+		tc.Error("======== REST report subscriptions failed %s ========", err.Error())
+		return ""
 	}
 	tc.subscriptionId = *resp.SubscriptionID
-	tc.Info("REST report subscriptions pushed successfully. SubscriptionID = %s, RequestCount = %v", *resp.SubscriptionID, tc.requestCount)
+	tc.Info("======== REST report subscriptions posted successfully. SubscriptionID = %s, RequestCount = %v ========", *resp.SubscriptionID, tc.requestCount)
 	return *resp.SubscriptionID
 }
 

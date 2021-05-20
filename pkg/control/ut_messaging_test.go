@@ -2245,16 +2245,16 @@ func TestRESTSubReqAndRouteNok(t *testing.T) {
 	const parameterSet = 1
 	const actionDefinitionPresent bool = true
 	const actionParamCount int = 1
-	waiter := rtmgrHttp.AllocNextEvent(false)
+	// Add delay for rtmgt HTTP handling so that HTTP response is received before notify on XAPP side
+	waiter := rtmgrHttp.AllocNextSleep(50, false)
 	newSubsId := mainCtrl.get_registry_next_subid(t)
 
 	// Req
 	params := xappConn1.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
 	restSubId := xappConn1.SendRESTSubsReq(t, params)
-
+	xappConn1.ExpectRESTNotification(t, restSubId)
 	waiter.WaitResult(t)
 
-	xappConn1.ExpectRESTNotification(t, restSubId)
 	e2SubsId := xappConn1.WaitRESTNotification(t, restSubId)
 	xapp.Logger.Info("TEST: REST notification received e2SubsId=%v", e2SubsId)
 
@@ -2424,7 +2424,7 @@ func TestRESTSubMergeDelAndRouteUpdateNok(t *testing.T) {
 //     |                 |              |
 //
 //-----------------------------------------------------------------------------
-/*
+
 func TestRESTSubReqRetransmission(t *testing.T) {
 	CaseBegin("TestRESTSubReqRetransmission")
 
@@ -2476,19 +2476,18 @@ func TestRESTSubReqRetransmission(t *testing.T) {
 	delreq1, delmsg1 := e2termConn1.RecvSubsDelReq(t)
 	e2termConn1.SendSubsDelResp(t, delreq1, delmsg1)
 
-	// Wait that subs is cleaned
-	mainCtrl.wait_subs_clean(t, e2SubsIdA.E2SubsId, 10)
-
 	// Del2
 	xappConn2.SendRESTSubsDelReq(t, &restSubId2)
 	delreq2, delmsg2 := e2termConn1.RecvSubsDelReq(t)
 	e2termConn1.SendSubsDelResp(t, delreq2, delmsg2)
 
+	mainCtrl.wait_multi_subs_clean(t, []uint32{e2SubsIdA.E2SubsId, e2SubsIdB.E2SubsId}, 10)
+
 	waitSubsCleanup(t, e2SubsIdB.E2SubsId, 10)
 
 	mainCtrl.VerifyCounterValues(t)
 }
-*/
+
 func TestRESTSubDelReqRetransmission(t *testing.T) {
 	CaseBegin("TestRESTSubDelReqRetransmission")
 
@@ -3448,15 +3447,14 @@ func TestRESTSubReqAndSubDelNoAnswerSameActionParallel(t *testing.T) {
 	e2termConn1.RecvSubsReq(t)
 
 	delreq1, delmsg1 := e2termConn1.RecvSubsDelReq(t)
-	xappConn1.ExpectRESTNotification(t, restSubId1) // or restSubId2?
-	//	xappConn2.WaitRESTNotification(t)
+
+	xappConn1.WaitListedRestNotifications(t, []string{restSubId1, restSubId2})
 	e2termConn1.SendSubsDelResp(t, delreq1, delmsg1)
 
-	e2SubsId1 := xappConn1.WaitRESTNotification(t, restSubId1)
-	xapp.Logger.Info("TEST: REST notification received e2SubsId=%v", e2SubsId1)
-
-	//	e2SubsId2 := <-xappConn2.RESTNotification
-	//	xapp.Logger.Info("TEST: REST notification received e2SubsId=%v", e2SubsId2)
+	e2SubsIdA := <-xappConn1.ListedRESTNotifications
+	xapp.Logger.Info("TEST: 1.st XAPP notification received e2SubsId=%v", e2SubsIdA)
+	e2SubsIdB := <-xappConn1.ListedRESTNotifications
+	xapp.Logger.Info("TEST: 2.nd XAPP notification received e2SubsId=%v", e2SubsIdB)
 
 	// Del1
 	xappConn1.SendRESTSubsDelReq(t, &restSubId1)
@@ -3464,8 +3462,10 @@ func TestRESTSubReqAndSubDelNoAnswerSameActionParallel(t *testing.T) {
 	// Del2
 	xappConn2.SendRESTSubsDelReq(t, &restSubId2)
 
+	mainCtrl.wait_multi_subs_clean(t, []uint32{e2SubsIdA.E2SubsId, e2SubsIdB.E2SubsId}, 10)
+
 	//Wait that subs is cleaned
-	waitSubsCleanup(t, e2SubsId1, 10)
+	waitSubsCleanup(t, e2SubsIdA.E2SubsId, 10)
 
 	mainCtrl.VerifyCounterValues(t)
 }
@@ -4336,7 +4336,6 @@ func RESTPolicySubReqAndSubDelOk(t *testing.T, subReqCount int, actionDefinition
 	mainCtrl.wait_registry_empty(t, 10)
 }
 
-/*
 func TestRESTTwoPolicySubReqAndSubDelOk(t *testing.T) {
 
 	subReqCount := 2
@@ -4369,8 +4368,6 @@ func TestRESTTwoPolicySubReqAndSubDelOk(t *testing.T) {
 
 	mainCtrl.VerifyCounterValues(t)
 }
-*/
-/*
 func TestRESTPolicySubReqAndSubDelOkFullAmount(t *testing.T) {
 
 	subReqCount := 19
@@ -4402,8 +4399,6 @@ func TestRESTPolicySubReqAndSubDelOkFullAmount(t *testing.T) {
 
 	mainCtrl.VerifyCounterValues(t)
 }
-*/
-/*
 func TestRESTTwoReportSubReqAndSubDelOk(t *testing.T) {
 
 	subReqCount := 2
@@ -4439,7 +4434,7 @@ func TestRESTTwoReportSubReqAndSubDelOk(t *testing.T) {
 
 	mainCtrl.VerifyCounterValues(t)
 }
-*/
+
 /*
 func TestRESTTwoReportSubReqAndSubDelOkNoActParams(t *testing.T) {
 
