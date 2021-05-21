@@ -803,6 +803,7 @@ func (c *Control) sendE2TSubscriptionRequest(subs *Subscription, trans *Transact
 
 	// Write uncompleted subscrition in db. If no response for subscrition it need to be re-processed (deleted) after restart
 	c.WriteSubscriptionToDb(subs)
+
 	for retries := uint64(0); retries < e2tMaxSubReqTryCount; retries++ {
 		desc := fmt.Sprintf("(retry %d)", retries)
 		if retries == 0 {

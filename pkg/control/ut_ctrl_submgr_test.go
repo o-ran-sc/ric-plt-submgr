@@ -171,27 +171,23 @@ func (mc *testingSubmgrControl) wait_subs_clean(t *testing.T, e2SubsId uint32, s
 }
 
 func (mc *testingSubmgrControl) wait_multi_subs_clean(t *testing.T, e2SubsIds []uint32, secs int) bool {
-	var subs *Subscription
-	var purgedSubscriptions int
-	i := 1
-	k := 0
-	for ; i <= secs*2; i++ {
+
+	purgedSubscriptions := 0
+
+	for i := 1; i <= secs*2; i++ {
 		purgedSubscriptions = 0
-		for k = 0; k <= len(e2SubsIds); i++ {
-			subs = mc.c.registry.GetSubscription(e2SubsIds[k])
+		for k := 0; k <= len(e2SubsIds); i++ {
+			subs := mc.c.registry.GetSubscription(e2SubsIds[k])
 			if subs == nil {
 				mc.TestLog(t, "(submgr) subscriber purged for esSubsId %v", e2SubsIds[k])
 				purgedSubscriptions += 1
 				if purgedSubscriptions == len(e2SubsIds) {
 					return true
-				} else {
-					continue
 				}
-			} else {
-				mc.TestLog(t, "(submgr) subscriber %s no clean within %d secs: subs(N/A) - purged subscriptions %v", subs.String(), secs, purgedSubscriptions)
-				time.Sleep(500 * time.Millisecond)
 			}
 		}
+		mc.TestLog(t, "(submgr) subscriptions pending purging %v/%v after %d msecs", purgedSubscriptions, len(e2SubsIds), i+500)
+		time.Sleep(500 * time.Millisecond)
 	}
 
 	mc.TestError(t, "(submgr) no clean within %d secs: subs(N/A) - %v/%v subscriptions found still", secs, purgedSubscriptions, len(e2SubsIds))
