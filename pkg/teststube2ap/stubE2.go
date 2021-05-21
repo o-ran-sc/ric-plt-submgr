@@ -908,6 +908,58 @@ func (p *RESTSubsReqParams) SetSubActionTypes(actionType string) {
 	}
 }
 
+func (p *RESTSubsReqParams) SetSubActionIDs(actionId int64) {
+
+	for _, subDetail := range p.SubsReqParams.SubscriptionDetails {
+		for _, action := range subDetail.ActionToBeSetupList {
+			if action != nil {
+				action.ActionID = &actionId
+			}
+		}
+	}
+}
+
+func (p *RESTSubsReqParams) SetSubActionDefinition(actionDefinition string) {
+
+	for _, subDetail := range p.SubsReqParams.SubscriptionDetails {
+		for _, action := range subDetail.ActionToBeSetupList {
+			if action != nil {
+				action.ActionDefinition.OctetString = actionDefinition
+			}
+		}
+	}
+}
+
+func (p *RESTSubsReqParams) SetSubEventTriggerDefinition(eventTriggerDefinition string) {
+
+	for _, subDetail := range p.SubsReqParams.SubscriptionDetails {
+		if subDetail != nil {
+			subDetail.EventTriggers.OctetString = eventTriggerDefinition
+		}
+	}
+}
+
+func (p *RESTSubsReqParams) AppendActionToActionToBeSetupList(actionId int64, actionType string, actionDefinition string, subsequentActionType string, timeToWait string) {
+
+	actionToBeSetup := &clientmodel.ActionToBeSetup{
+		ActionID:   &actionId,
+		ActionType: &actionType,
+		ActionDefinition: &clientmodel.ActionDefinition{
+			OctetString: actionDefinition,
+		},
+		SubsequentAction: &clientmodel.SubsequentAction{
+			SubsequentActionType: &subsequentActionType,
+			TimeToWait:           &timeToWait,
+		},
+	}
+
+	for _, subDetail := range p.SubsReqParams.SubscriptionDetails {
+		if subDetail != nil {
+			subDetail.ActionToBeSetupList = append(subDetail.ActionToBeSetupList, actionToBeSetup)
+		}
+	}
+}
+
 func (p *RESTSubsReqParams) SetRMREndpoint(RMR_port int64, host string) {
 
 	p.SubsReqParams.ClientEndpoint.RMRPort = &RMR_port

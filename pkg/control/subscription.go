@@ -79,10 +79,7 @@ func (s *Subscription) GetReqId() *RequestId {
 func (s *Subscription) GetMeid() *xapp.RMRMeid {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	if s.Meid != nil {
-		return s.Meid
-	}
-	return nil
+	return s.Meid
 }
 
 func (s *Subscription) GetTransaction() TransactionIf {

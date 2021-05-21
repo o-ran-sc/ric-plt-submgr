@@ -4509,6 +4509,373 @@ func TestRESTFullAmountReportSubReqAndSubDelOk(t *testing.T) {
 	mainCtrl.VerifyCounterValues(t)
 }
 */
+
+func TestRESTSubReqReportSameActionDiffEventTriggerDefinitionLen(t *testing.T) {
+	CaseBegin("TestRESTSubReqReportSameActionDiffEventTriggerDefinitionLen")
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cSubReqFromXapp, 2},
+		Counter{cSubReqToE2, 2},
+		Counter{cSubRespFromE2, 2},
+		Counter{cSubRespToXapp, 2},
+		Counter{cSubDelReqFromXapp, 2},
+		Counter{cSubDelReqToE2, 2},
+		Counter{cSubDelRespFromE2, 2},
+		Counter{cSubDelRespToXapp, 2},
+	})
+
+	// Req1
+	var params *teststube2ap.RESTSubsReqParams = nil
+
+	//Subs Create
+	restSubId1, e2SubsId1 := createSubscription(t, xappConn1, e2termConn1, params)
+	xapp.Logger.Info("Send REST subscriber request for subscriberId : %v", restSubId1)
+
+	queryXappSubscription(t, int64(e2SubsId1), "RAN_NAME_1", []string{"localhost:13560"})
+
+	// Req2
+	params = xappConn2.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params.SetMeid("RAN_NAME_1")
+	eventTriggerDefinition := "1234"
+	params.SetSubEventTriggerDefinition(eventTriggerDefinition)
+
+	restSubId2 := xappConn2.SendRESTSubsReq(t, params)
+	xapp.Logger.Info("Send REST subscriber request for subscriberId : %v", restSubId2)
+	crereq, cremsg := e2termConn1.RecvSubsReq(t)
+	xappConn2.ExpectRESTNotification(t, restSubId2)
+	e2termConn1.SendSubsResp(t, crereq, cremsg)
+	e2SubsId2 := xappConn2.WaitRESTNotification(t, restSubId2)
+
+	deleteXapp1Subscription(t, &restSubId1)
+	deleteXapp2Subscription(t, &restSubId2)
+
+	waitSubsCleanup(t, e2SubsId1, 10)
+	waitSubsCleanup(t, e2SubsId2, 10)
+
+	mainCtrl.VerifyCounterValues(t)
+
+}
+
+func TestRESTSubReqReportSameActionDiffActionListLen(t *testing.T) {
+	CaseBegin("TestRESTSubReqReportSameActionDiffActionListLen")
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cSubReqFromXapp, 2},
+		Counter{cSubReqToE2, 2},
+		Counter{cSubRespFromE2, 2},
+		Counter{cSubRespToXapp, 2},
+		Counter{cSubDelReqFromXapp, 2},
+		Counter{cSubDelReqToE2, 2},
+		Counter{cSubDelRespFromE2, 2},
+		Counter{cSubDelRespToXapp, 2},
+	})
+
+	// Req1
+	var params *teststube2ap.RESTSubsReqParams = nil
+
+	//Subs Create
+	restSubId1, e2SubsId1 := createSubscription(t, xappConn1, e2termConn1, params)
+	xapp.Logger.Info("Send REST subscriber request for subscriberId : %v", restSubId1)
+
+	queryXappSubscription(t, int64(e2SubsId1), "RAN_NAME_1", []string{"localhost:13560"})
+
+	// Req2
+	params = xappConn2.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params.SetMeid("RAN_NAME_1")
+
+	actionId := int64(1)
+	actionType := "report"
+	actionDefinition := "56781"
+	subsequestActionType := "continue"
+	timeToWait := "w10ms"
+	params.AppendActionToActionToBeSetupList(actionId, actionType, actionDefinition, subsequestActionType, timeToWait)
+
+	restSubId2 := xappConn2.SendRESTSubsReq(t, params)
+	xapp.Logger.Info("Send REST subscriber request for subscriberId : %v", restSubId2)
+	crereq, cremsg := e2termConn1.RecvSubsReq(t)
+	xappConn2.ExpectRESTNotification(t, restSubId2)
+	e2termConn1.SendSubsResp(t, crereq, cremsg)
+	e2SubsId2 := xappConn2.WaitRESTNotification(t, restSubId2)
+
+	deleteXapp1Subscription(t, &restSubId1)
+	deleteXapp2Subscription(t, &restSubId2)
+
+	waitSubsCleanup(t, e2SubsId1, 10)
+	waitSubsCleanup(t, e2SubsId2, 10)
+
+	mainCtrl.VerifyCounterValues(t)
+
+}
+
+func TestRESTSubReqReportSameActionDiffActionID(t *testing.T) {
+	CaseBegin("TestRESTSubReqReportSameActionDiffActionID")
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cSubReqFromXapp, 2},
+		Counter{cSubReqToE2, 2},
+		Counter{cSubRespFromE2, 2},
+		Counter{cSubRespToXapp, 2},
+		Counter{cSubDelReqFromXapp, 2},
+		Counter{cSubDelReqToE2, 2},
+		Counter{cSubDelRespFromE2, 2},
+		Counter{cSubDelRespToXapp, 2},
+	})
+
+	// Req1
+	var params *teststube2ap.RESTSubsReqParams = nil
+
+	//Subs Create
+	restSubId1, e2SubsId1 := createSubscription(t, xappConn1, e2termConn1, params)
+	xapp.Logger.Info("Send REST subscriber request for subscriberId : %v", restSubId1)
+
+	queryXappSubscription(t, int64(e2SubsId1), "RAN_NAME_1", []string{"localhost:13560"})
+
+	// Req2
+	params = xappConn2.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params.SetMeid("RAN_NAME_1")
+	params.SetSubActionIDs(int64(2))
+
+	restSubId2 := xappConn2.SendRESTSubsReq(t, params)
+	xapp.Logger.Info("Send REST subscriber request for subscriberId : %v", restSubId2)
+	crereq, cremsg := e2termConn1.RecvSubsReq(t)
+	xappConn2.ExpectRESTNotification(t, restSubId2)
+	e2termConn1.SendSubsResp(t, crereq, cremsg)
+	e2SubsId2 := xappConn2.WaitRESTNotification(t, restSubId2)
+
+	deleteXapp1Subscription(t, &restSubId1)
+	deleteXapp2Subscription(t, &restSubId2)
+
+	waitSubsCleanup(t, e2SubsId1, 10)
+	waitSubsCleanup(t, e2SubsId2, 10)
+
+	mainCtrl.VerifyCounterValues(t)
+
+}
+
+func TestRESTSubReqDiffActionType(t *testing.T) {
+	CaseBegin("TestRESTSubReqDiffActionType")
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cSubReqFromXapp, 2},
+		Counter{cSubReqToE2, 2},
+		Counter{cSubRespFromE2, 2},
+		Counter{cSubRespToXapp, 2},
+		Counter{cSubDelReqFromXapp, 2},
+		Counter{cSubDelReqToE2, 2},
+		Counter{cSubDelRespFromE2, 2},
+		Counter{cSubDelRespToXapp, 2},
+	})
+
+	// Req1
+	params := xappConn1.GetRESTSubsReqPolicyParams(subReqCount, actionDefinitionPresent, policyParamCount)
+
+	//Subs Create
+	restSubId1, e2SubsId1 := createSubscription(t, xappConn1, e2termConn1, params)
+	xapp.Logger.Info("Send REST subscriber request for subscriberId : %v", restSubId1)
+
+	queryXappSubscription(t, int64(e2SubsId1), "RAN_NAME_1", []string{"localhost:13560"})
+
+	// Req2
+	params = xappConn2.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params.SetMeid("RAN_NAME_1")
+
+	restSubId2 := xappConn2.SendRESTSubsReq(t, params)
+	xapp.Logger.Info("Send REST subscriber request for subscriberId : %v", restSubId2)
+	crereq, cremsg := e2termConn1.RecvSubsReq(t)
+	xappConn2.ExpectRESTNotification(t, restSubId2)
+	e2termConn1.SendSubsResp(t, crereq, cremsg)
+	e2SubsId2 := xappConn2.WaitRESTNotification(t, restSubId2)
+
+	deleteXapp1Subscription(t, &restSubId1)
+	deleteXapp2Subscription(t, &restSubId2)
+
+	waitSubsCleanup(t, e2SubsId1, 10)
+	waitSubsCleanup(t, e2SubsId2, 10)
+
+	mainCtrl.VerifyCounterValues(t)
+
+}
+
+func TestRESTSubReqPolicyAndSubDelOkSameAction(t *testing.T) {
+	CaseBegin("TestRESTSubReqPolicyAndSubDelOkSameAction")
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cSubReqFromXapp, 2},
+		Counter{cSubReqToE2, 2},
+		Counter{cSubRespFromE2, 2},
+		Counter{cSubRespToXapp, 2},
+		Counter{cSubDelReqFromXapp, 2},
+		Counter{cSubDelReqToE2, 2},
+		Counter{cSubDelRespFromE2, 2},
+		Counter{cSubDelRespToXapp, 2},
+	})
+
+	// Req1
+	params := xappConn1.GetRESTSubsReqPolicyParams(subReqCount, actionDefinitionPresent, policyParamCount)
+
+	//Subs Create
+	restSubId1, e2SubsId1 := createSubscription(t, xappConn1, e2termConn1, params)
+	xapp.Logger.Info("Send REST subscriber request for subscriberId : %v", restSubId1)
+
+	queryXappSubscription(t, int64(e2SubsId1), "RAN_NAME_1", []string{"localhost:13560"})
+
+	// Req2
+	params = xappConn2.GetRESTSubsReqPolicyParams(subReqCount, actionDefinitionPresent, policyParamCount)
+	params.SetMeid("RAN_NAME_1")
+
+	restSubId2 := xappConn2.SendRESTSubsReq(t, params)
+	xapp.Logger.Info("Send REST subscriber request for subscriberId : %v", restSubId2)
+	crereq, cremsg := e2termConn1.RecvSubsReq(t)
+	xappConn2.ExpectRESTNotification(t, restSubId2)
+	e2termConn1.SendSubsResp(t, crereq, cremsg)
+	e2SubsId2 := xappConn2.WaitRESTNotification(t, restSubId2)
+
+	deleteXapp1Subscription(t, &restSubId1)
+	deleteXapp2Subscription(t, &restSubId2)
+
+	waitSubsCleanup(t, e2SubsId1, 10)
+	waitSubsCleanup(t, e2SubsId2, 10)
+
+	mainCtrl.VerifyCounterValues(t)
+
+}
+
+func TestRESTSubReqReportSameActionDiffActionDefinitionLen(t *testing.T) {
+	CaseBegin("TestRESTSubReqReportSameActionDiffActionDefinitionLen")
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cSubReqFromXapp, 2},
+		Counter{cSubReqToE2, 2},
+		Counter{cSubRespFromE2, 2},
+		Counter{cSubRespToXapp, 2},
+		Counter{cSubDelReqFromXapp, 2},
+		Counter{cSubDelReqToE2, 2},
+		Counter{cSubDelRespFromE2, 2},
+		Counter{cSubDelRespToXapp, 2},
+	})
+
+	// Req1
+	var params *teststube2ap.RESTSubsReqParams = nil
+
+	//Subs Create
+	restSubId1, e2SubsId1 := createSubscription(t, xappConn1, e2termConn1, params)
+	xapp.Logger.Info("Send REST subscriber request for subscriberId : %v", restSubId1)
+
+	queryXappSubscription(t, int64(e2SubsId1), "RAN_NAME_1", []string{"localhost:13560"})
+
+	// Req2
+	params = xappConn2.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params.SetMeid("RAN_NAME_1")
+	actionDefinition := "5678"
+	params.SetSubActionDefinition(actionDefinition)
+
+	restSubId2 := xappConn2.SendRESTSubsReq(t, params)
+	xapp.Logger.Info("Send REST subscriber request for subscriberId : %v", restSubId2)
+	crereq, cremsg := e2termConn1.RecvSubsReq(t)
+	xappConn2.ExpectRESTNotification(t, restSubId2)
+	e2termConn1.SendSubsResp(t, crereq, cremsg)
+	e2SubsId2 := xappConn2.WaitRESTNotification(t, restSubId2)
+
+	deleteXapp1Subscription(t, &restSubId1)
+	deleteXapp2Subscription(t, &restSubId2)
+
+	waitSubsCleanup(t, e2SubsId1, 10)
+	waitSubsCleanup(t, e2SubsId2, 10)
+
+	mainCtrl.VerifyCounterValues(t)
+
+}
+
+func TestRESTSubReqReportSameActionDiffActionDefinitionContents(t *testing.T) {
+	CaseBegin("TestRESTSubReqReportSameActionDiffActionDefinitionContents")
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cSubReqFromXapp, 2},
+		Counter{cSubReqToE2, 2},
+		Counter{cSubRespFromE2, 2},
+		Counter{cSubRespToXapp, 2},
+		Counter{cSubDelReqFromXapp, 2},
+		Counter{cSubDelReqToE2, 2},
+		Counter{cSubDelRespFromE2, 2},
+		Counter{cSubDelRespToXapp, 2},
+	})
+
+	// Req1
+	var params *teststube2ap.RESTSubsReqParams = nil
+
+	//Subs Create
+	restSubId1, e2SubsId1 := createSubscription(t, xappConn1, e2termConn1, params)
+	xapp.Logger.Info("Send REST subscriber request for subscriberId : %v", restSubId1)
+
+	queryXappSubscription(t, int64(e2SubsId1), "RAN_NAME_1", []string{"localhost:13560"})
+
+	// Req2
+	params = xappConn2.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params.SetMeid("RAN_NAME_1")
+	actionDefinition := "56782"
+	params.SetSubActionDefinition(actionDefinition)
+
+	restSubId2 := xappConn2.SendRESTSubsReq(t, params)
+	xapp.Logger.Info("Send REST subscriber request for subscriberId : %v", restSubId2)
+	crereq, cremsg := e2termConn1.RecvSubsReq(t)
+	xappConn2.ExpectRESTNotification(t, restSubId2)
+	e2termConn1.SendSubsResp(t, crereq, cremsg)
+	e2SubsId2 := xappConn2.WaitRESTNotification(t, restSubId2)
+
+	deleteXapp1Subscription(t, &restSubId1)
+	deleteXapp2Subscription(t, &restSubId2)
+
+	waitSubsCleanup(t, e2SubsId1, 10)
+	waitSubsCleanup(t, e2SubsId2, 10)
+
+	mainCtrl.VerifyCounterValues(t)
+
+}
+
+func TestRESTSubReqReportSameActionDiffSubsAction(t *testing.T) {
+	CaseBegin("TestRESTSubReqReportSameActionDiffSubsAction")
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cSubReqFromXapp, 2},
+		Counter{cSubReqToE2, 2},
+		Counter{cSubRespFromE2, 2},
+		Counter{cSubRespToXapp, 2},
+		Counter{cSubDelReqFromXapp, 2},
+		Counter{cSubDelReqToE2, 2},
+		Counter{cSubDelRespFromE2, 2},
+		Counter{cSubDelRespToXapp, 2},
+	})
+
+	// Req1
+	var params *teststube2ap.RESTSubsReqParams = nil
+
+	//Subs Create
+	restSubId1, e2SubsId1 := createSubscription(t, xappConn1, e2termConn1, params)
+	xapp.Logger.Info("Send REST subscriber request for subscriberId : %v", restSubId1)
+
+	queryXappSubscription(t, int64(e2SubsId1), "RAN_NAME_1", []string{"localhost:13560"})
+
+	// Req2
+	params = xappConn2.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params.SetMeid("RAN_NAME_1")
+	params.SetTimeToWait("w200ms")
+	restSubId2 := xappConn2.SendRESTSubsReq(t, params)
+	xapp.Logger.Info("Send REST subscriber request for subscriberId : %v", restSubId2)
+	crereq, cremsg := e2termConn1.RecvSubsReq(t)
+	xappConn2.ExpectRESTNotification(t, restSubId2)
+	e2termConn1.SendSubsResp(t, crereq, cremsg)
+	e2SubsId2 := xappConn2.WaitRESTNotification(t, restSubId2)
+
+	deleteXapp1Subscription(t, &restSubId1)
+	deleteXapp2Subscription(t, &restSubId2)
+
+	waitSubsCleanup(t, e2SubsId1, 10)
+	waitSubsCleanup(t, e2SubsId2, 10)
+
+	mainCtrl.VerifyCounterValues(t)
+
+}
+
 ////////////////////////////////////////////////////////////////////////////////////
 //   Services for UT cases
 ////////////////////////////////////////////////////////////////////////////////////
