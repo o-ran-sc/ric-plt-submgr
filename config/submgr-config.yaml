@@ -20,6 +20,7 @@
   "e2tSubReqTimeout_ms": 2000
   "e2tSubDelReqTime_ms": 2000
   "e2tRecvMsgTimeout_ms": 2000
+  "waitRouteCleanup_ms": 5000
   "e2tMaxSubReqTryCount": 2
   "e2tMaxSubDelReqTryCount": 2
   "readSubsFromDb": "true"

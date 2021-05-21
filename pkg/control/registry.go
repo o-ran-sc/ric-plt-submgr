@@ -336,6 +336,7 @@ func (r *Registry) RemoveFromSubscription(subs *Subscription, trans *Transaction
 
 	go func() {
 		if waitRouteClean > 0 {
+			xapp.Logger.Debug("########################### timeout: %v : %v", waitRouteClean, 5*time.Second)
 			time.Sleep(waitRouteClean)
 		}
 

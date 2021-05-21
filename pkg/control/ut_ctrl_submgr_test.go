@@ -120,12 +120,12 @@ func PringSubscriptionQueryResult(resp models.SubscriptionList) {
 func (mc *testingSubmgrControl) wait_registry_empty(t *testing.T, secs int) bool {
 	cnt := int(0)
 	i := 1
-	for ; i <= secs*2; i++ {
+	for ; i <= secs*10; i++ {
 		cnt = len(mc.c.registry.register)
 		if cnt == 0 {
 			return true
 		}
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 	}
 	mc.TestError(t, "(submgr) no registry empty within %d secs: %d", secs, cnt)
 	return false
@@ -139,14 +139,14 @@ func (mc *testingSubmgrControl) get_registry_next_subid(t *testing.T) uint32 {
 
 func (mc *testingSubmgrControl) wait_registry_next_subid_change(t *testing.T, origSubId uint32, secs int) (uint32, bool) {
 	i := 1
-	for ; i <= secs*2; i++ {
+	for ; i <= secs*10; i++ {
 		mc.c.registry.mutex.Lock()
 		currSubId := mc.c.registry.subIds[0]
 		mc.c.registry.mutex.Unlock()
 		if currSubId != origSubId {
 			return currSubId, true
 		}
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 	}
 	mc.TestError(t, "(submgr) no subId change within %d secs", secs)
 	return 0, false
@@ -155,12 +155,12 @@ func (mc *testingSubmgrControl) wait_registry_next_subid_change(t *testing.T, or
 func (mc *testingSubmgrControl) wait_subs_clean(t *testing.T, e2SubsId uint32, secs int) bool {
 	var subs *Subscription
 	i := 1
-	for ; i <= secs*2; i++ {
+	for ; i <= secs*10; i++ {
 		subs = mc.c.registry.GetSubscription(e2SubsId)
 		if subs == nil {
 			return true
 		}
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 	}
 	if subs != nil {
 		mc.TestError(t, "(submgr) no clean within %d secs: %s", secs, subs.String())
@@ -174,7 +174,7 @@ func (mc *testingSubmgrControl) wait_multi_subs_clean(t *testing.T, e2SubsIds []
 
 	purgedSubscriptions := 0
 
-	for i := 1; i <= secs*2; i++ {
+	for i := 1; i <= secs*10; i++ {
 		purgedSubscriptions = 0
 		for k := 0; k <= len(e2SubsIds); i++ {
 			subs := mc.c.registry.GetSubscription(e2SubsIds[k])
@@ -187,7 +187,7 @@ func (mc *testingSubmgrControl) wait_multi_subs_clean(t *testing.T, e2SubsIds []
 			}
 		}
 		mc.TestLog(t, "(submgr) subscriptions pending purging %v/%v after %d msecs", purgedSubscriptions, len(e2SubsIds), i+500)
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 	}
 
 	mc.TestError(t, "(submgr) no clean within %d secs: subs(N/A) - %v/%v subscriptions found still", secs, purgedSubscriptions, len(e2SubsIds))
@@ -198,7 +198,7 @@ func (mc *testingSubmgrControl) wait_multi_subs_clean(t *testing.T, e2SubsIds []
 func (mc *testingSubmgrControl) wait_subs_trans_clean(t *testing.T, e2SubsId uint32, secs int) bool {
 	var trans TransactionIf
 	i := 1
-	for ; i <= secs*2; i++ {
+	for ; i <= secs*10; i++ {
 		subs := mc.c.registry.GetSubscription(e2SubsId)
 		if subs == nil {
 			return true
@@ -207,7 +207,7 @@ func (mc *testingSubmgrControl) wait_subs_trans_clean(t *testing.T, e2SubsId uin
 		if trans == nil {
 			return true
 		}
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 	}
 	if trans != nil {
 		mc.TestError(t, "(submgr) no clean within %d secs: %s", secs, trans.String())
@@ -235,12 +235,12 @@ func (mc *testingSubmgrControl) wait_subs_entrypoint_cnt_change(t *testing.T, or
 	}
 
 	i := 1
-	for ; i <= secs*2; i++ {
+	for ; i <= secs*10; i++ {
 		curr := subs.EpList.Size()
 		if curr != orig {
 			return curr, true
 		}
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 	}
 	mc.TestError(t, "(submgr) no subs %d entrypoint cnt change within %d secs", origSubId, secs)
 	return 0, false
@@ -255,12 +255,12 @@ func (mc *testingSubmgrControl) get_msgcounter(t *testing.T) uint64 {
 
 func (mc *testingSubmgrControl) wait_msgcounter_change(t *testing.T, orig uint64, secs int) (uint64, bool) {
 	i := 1
-	for ; i <= secs*2; i++ {
+	for ; i <= secs*10; i++ {
 		curr := mc.c.CntRecvMsg
 		if curr != orig {
 			return curr, true
 		}
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 	}
 	mc.TestError(t, "(submgr) no msg counter change within %d secs", secs)
 	return 0, false
