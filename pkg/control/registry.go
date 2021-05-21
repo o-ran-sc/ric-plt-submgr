@@ -336,6 +336,7 @@ func (r *Registry) RemoveFromSubscription(subs *Subscription, trans *Transaction
 
 	go func() {
 		if waitRouteClean > 0 {
+			xapp.Logger.Debug("Pending %v in order to wait route cleanup", waitRouteClean)
 			time.Sleep(waitRouteClean)
 		}
 

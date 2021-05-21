@@ -22,15 +22,17 @@ package control
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
+	"strconv"
+	"strings"
+	"sync"
+	"testing"
+	"time"
+
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
 	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/teststube2ap"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"github.com/stretchr/testify/assert"
-	"reflect"
-	"strconv"
-	"strings"
-	"testing"
-	"time"
 )
 
 var sdlShouldReturnError bool = false
@@ -48,6 +50,7 @@ type Mock struct {
 	register           map[uint32]*Subscription
 	subIds             []uint32
 	lastAllocatedSubId uint32
+	marshalLock        sync.Mutex
 }
 
 var mock *Mock
@@ -463,6 +466,9 @@ func TestRemoveAllSubscriptionsFromSdlFail(t *testing.T) {
 func (m *Mock) Set(pairs ...interface{}) error {
 	var key string
 	var val string
+
+	m.marshalLock.Lock()
+	defer m.marshalLock.Unlock()
 
 	if sdlShouldReturnError == true {
 		return GetSdlError()

@@ -63,6 +63,7 @@ func idstring(err error, entries ...fmt.Stringer) string {
 var e2tSubReqTimeout time.Duration
 var e2tSubDelReqTime time.Duration
 var e2tRecvMsgTimeout time.Duration
+var waitRouteCleanup_ms time.Duration
 var e2tMaxSubReqTryCount uint64    // Initial try + retry
 var e2tMaxSubDelReqTryCount uint64 // Initial try + retry
 var readSubsFromDb string
@@ -165,11 +166,21 @@ func (c *Control) ReadConfigParameters(f string) {
 		e2tRecvMsgTimeout = 2000 * 1000000
 	}
 	xapp.Logger.Info("e2tRecvMsgTimeout %v", e2tRecvMsgTimeout)
+
+	// Internal cfg parameter, used to define a wait time for RMR route clean-up. None default
+	// value 100ms used currently only in unittests.
+	waitRouteCleanup_ms = viper.GetDuration("controls.waitRouteCleanup_ms") * 1000000
+	if waitRouteCleanup_ms == 0 {
+		waitRouteCleanup_ms = 5000 * 1000000
+	}
+	xapp.Logger.Info("waitRouteCleanup %v", waitRouteCleanup_ms)
+
 	e2tMaxSubReqTryCount = viper.GetUint64("controls.e2tMaxSubReqTryCount")
 	if e2tMaxSubReqTryCount == 0 {
 		e2tMaxSubReqTryCount = 1
 	}
 	xapp.Logger.Info("e2tMaxSubReqTryCount %v", e2tMaxSubReqTryCount)
+
 	e2tMaxSubDelReqTryCount = viper.GetUint64("controls.e2tMaxSubDelReqTryCount")
 	if e2tMaxSubDelReqTryCount == 0 {
 		e2tMaxSubDelReqTryCount = 1
@@ -365,7 +376,7 @@ func (c *Control) handleSubscriptionRequest(trans *TransactionXapp, subReqMsg *e
 	}
 	err = fmt.Errorf("XAPP-SubReq: failed %s", idstring(err, trans, subs))
 	xapp.Logger.Error("%s", err.Error())
-	c.registry.RemoveFromSubscription(subs, trans, 5*time.Second, c)
+	c.registry.RemoveFromSubscription(subs, trans, waitRouteCleanup_ms, c)
 	return nil, err
 }
 
@@ -449,7 +460,7 @@ func (c *Control) SubscriptionDeleteHandler(restSubId *string, endPoint *string,
 
 	xapp.Logger.Debug("XAPP-SubDelReq: Handling event %s ", idstring(nil, trans, subs))
 
-	c.registry.RemoveFromSubscription(subs, trans, 5*time.Second, c)
+	c.registry.RemoveFromSubscription(subs, trans, waitRouteCleanup_ms, c)
 
 	return nil
 }
@@ -748,7 +759,7 @@ func (c *Control) handleSubscriptionCreate(subs *Subscription, parentTrans *Tran
 
 	//Now RemoveFromSubscription in here to avoid race conditions (mostly concerns delete)
 	if valid == false {
-		c.registry.RemoveFromSubscription(subs, parentTrans, 5*time.Second, c)
+		c.registry.RemoveFromSubscription(subs, parentTrans, waitRouteCleanup_ms, c)
 	}
 
 	c.UpdateSubscriptionInDB(subs, removeSubscriptionFromDb)
@@ -780,7 +791,7 @@ func (c *Control) handleSubscriptionDelete(subs *Subscription, parentTrans *Tran
 	//Now RemoveFromSubscription in here to avoid race conditions (mostly concerns delete)
 	//  If parallel deletes ongoing both might pass earlier sendE2TSubscriptionDeleteRequest(...) if
 	//  RemoveFromSubscription locates in caller side (now in handleXAPPSubscriptionDeleteRequest(...))
-	c.registry.RemoveFromSubscription(subs, parentTrans, 5*time.Second, c)
+	c.registry.RemoveFromSubscription(subs, parentTrans, waitRouteCleanup_ms, c)
 	c.registry.UpdateSubscriptionToDb(subs, c)
 	parentTrans.SendEvent(nil, 0)
 }
@@ -803,6 +814,7 @@ func (c *Control) sendE2TSubscriptionRequest(subs *Subscription, trans *Transact
 
 	// Write uncompleted subscrition in db. If no response for subscrition it need to be re-processed (deleted) after restart
 	c.WriteSubscriptionToDb(subs)
+
 	for retries := uint64(0); retries < e2tMaxSubReqTryCount; retries++ {
 		desc := fmt.Sprintf("(retry %d)", retries)
 		if retries == 0 {

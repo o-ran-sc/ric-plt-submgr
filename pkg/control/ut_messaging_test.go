@@ -4167,8 +4167,10 @@ func TestRESTSubReqAndSubDelOkSameActionWithRestartsInMiddle(t *testing.T) {
 	//	mainCtrl.SimulateRestart(t)
 	//	xapp.Logger.Debug("mainCtrl.SimulateRestart done")
 
-	// Delete subscription 1
+	// Delete subscription 1, and wait until it has removed the first endpoint
+	subepcnt := mainCtrl.get_subs_entrypoint_cnt(t, e2SubsId1)
 	xappConn1.SendRESTSubsDelReq(t, &restSubId1)
+	mainCtrl.wait_subs_entrypoint_cnt_change(t, e2SubsId1, subepcnt, 10)
 
 	// When SDL support for the REST Interface is added
 	// the submgr restart statement below should be removed
@@ -4176,7 +4178,6 @@ func TestRESTSubReqAndSubDelOkSameActionWithRestartsInMiddle(t *testing.T) {
 
 	//	mainCtrl.SimulateRestart(t)
 	//	xapp.Logger.Debug("mainCtrl.SimulateRestart done")
-
 	queryXappSubscription(t, int64(e2SubsId1), "RAN_NAME_1", []string{"localhost:13660"})
 
 	// Delete subscription 2
@@ -4435,7 +4436,6 @@ func TestRESTTwoReportSubReqAndSubDelOk(t *testing.T) {
 	mainCtrl.VerifyCounterValues(t)
 }
 
-/*
 func TestRESTTwoReportSubReqAndSubDelOkNoActParams(t *testing.T) {
 
 	subReqCount := 2
@@ -4471,8 +4471,7 @@ func TestRESTTwoReportSubReqAndSubDelOkNoActParams(t *testing.T) {
 
 	mainCtrl.VerifyCounterValues(t)
 }
-*/
-/*
+
 func TestRESTFullAmountReportSubReqAndSubDelOk(t *testing.T) {
 
 	subReqCount := 19
@@ -4508,7 +4507,6 @@ func TestRESTFullAmountReportSubReqAndSubDelOk(t *testing.T) {
 
 	mainCtrl.VerifyCounterValues(t)
 }
-*/
 
 func TestRESTSubReqReportSameActionDiffEventTriggerDefinitionLen(t *testing.T) {
 	CaseBegin("TestRESTSubReqReportSameActionDiffEventTriggerDefinitionLen")
