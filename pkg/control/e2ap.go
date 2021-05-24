@@ -199,6 +199,7 @@ func (c *E2ap) UnpackSubscriptionDeleteFailure(payload []byte) (*e2ap.E2APSubscr
 	return subDelFail, nil
 }
 
+/*
 func (c *E2ap) PackSubscriptionDeleteFailure(req *e2ap.E2APSubscriptionDeleteFailure) (int, *e2ap.PackedData, error) {
 	e2SubDelFail := packerif.NewPackerSubscriptionDeleteFailure()
 	err, packedData := e2SubDelFail.Pack(req)
@@ -207,3 +208,4 @@ func (c *E2ap) PackSubscriptionDeleteFailure(req *e2ap.E2APSubscriptionDeleteFai
 	}
 	return xapp.RIC_SUB_DEL_FAILURE, packedData, nil
 }
+*/
