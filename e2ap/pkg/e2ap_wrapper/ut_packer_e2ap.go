@@ -49,7 +49,6 @@ var allowAction = map[int]bool{
 }
 
 func AllowE2apToProcess(mtype int, actionFail bool) {
-	fmt.Printf("INFO: AllowE2apToProcess setting %d : %t -> %t", mtype, allowAction[mtype], actionFail)
 	allowAction[mtype] = actionFail
 }
 
