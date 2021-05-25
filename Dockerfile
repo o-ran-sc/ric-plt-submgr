@@ -183,7 +183,8 @@ RUN sed -r  "s/^(::1.*)/#\1/" /etc/hosts  > /etc/hosts.new \
     && cat /etc/hosts.new > /etc/hosts \
     && cat /etc/hosts  \
     && go test -failfast -test.coverprofile /tmp/submgr_cover.out -count=1 -v ./pkg/control \
-    && go tool cover -html=/tmp/submgr_cover.out -o /tmp/submgr_cover.html
+    && go tool cover -html=/tmp/submgr_cover.out -o /tmp/submgr_cover.html \
+    && go tool cover -func /tmp/submgr_cover.out
 
 # test formating (not important)
 RUN test -z "$(gofmt -l pkg/control/*.go)"
