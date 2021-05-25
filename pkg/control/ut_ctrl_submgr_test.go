@@ -95,8 +95,15 @@ func (mc *testingSubmgrControl) SimulateRestart(t *testing.T) {
 	go mainCtrl.c.HandleUncompletedSubscriptions(mainCtrl.c.registry.register)
 }
 
+func (mc *testingSubmgrControl) MakeTransactionNil(t *testing.T, subId uint32) {
+
+	mc.TestLog(t, "Makin transaction nil for SubId=%v", subId)
+	subs := mainCtrl.c.registry.GetSubscription(subId)
+	subs.TheTrans = nil
+}
+
 func (mc *testingSubmgrControl) SetResetTestFlag(t *testing.T, status bool) {
-	mc.TestLog(t, "ResetTestFlag set to %v=", status)
+	mc.TestLog(t, "ResetTestFlag set to %v", status)
 	mainCtrl.c.ResetTestFlag = status
 }
 

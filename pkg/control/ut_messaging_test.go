@@ -4891,6 +4891,837 @@ func TestRESTSubReqReportSameActionDiffSubsAction(t *testing.T) {
 
 }
 
+//-----------------------------------------------------------------------------
+// TestRESTUnpackSubscriptionResponseDecodeFail
+//
+//   stub                             stub
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//     |                 |              |
+//     | RestSubReq      |              |
+//     |---------------->|              |
+//     |                 |              |
+//     |     RESTSubResp |              |
+//     |<----------------|              |
+//     |                 |              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |      SubResp | ASN.1 decode fails
+//     |                 |<-------------|
+//     |                 |              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |      SubFail | Duplicated action
+//     |                 |<-------------|
+//     | RESTNotif (fail)|              |
+//     |<----------------|              |
+//     |                 | SubDelReq    |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |   SubDelResp |
+//     |                 |<-------------|
+//
+//-----------------------------------------------------------------------------
+func TestRESTUnpackSubscriptionResponseDecodeFail(t *testing.T) {
+	xapp.Logger.Info("TEST: TestRESTUnpackSubscriptionResponseDecodeFail")
+	subReqCount := 1
+	parameterSet := 1 // E2SM-gNB-X2
+	actionDefinitionPresent := true
+	actionParamCount := 1
+
+	// Req
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	restSubId := xappConn1.SendRESTSubsReq(t, params)
+
+	crereq, cremsg := e2termConn1.RecvSubsReq(t)
+	// Decode of this response fails which will result resending original request
+	e2termConn1.SendInvalidE2Asn1Resp(t, cremsg, xapp.RIC_SUB_RESP)
+
+	_, cremsg = e2termConn1.RecvSubsReq(t)
+
+	xappConn1.ExpectRESTNotification(t, restSubId)
+
+	// Subscription already created in E2 Node.
+	fparams := &teststube2ap.E2StubSubsFailParams{}
+	fparams.Set(crereq)
+	fparams.SetCauseVal(0, 1, 3) // CauseRIC / duplicate-action
+	e2termConn1.SendSubsFail(t, fparams, cremsg)
+
+	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
+
+	instanceId := xappConn1.WaitRESTNotification(t, restSubId)
+	xapp.Logger.Info("TEST: REST notification received e2SubsId=%v", instanceId)
+
+	// Wait that subs is cleaned
+	mainCtrl.wait_subs_clean(t, crereq.RequestId.InstanceId, 10)
+
+	xappConn1.TestMsgChanEmpty(t)
+	e2termConn1.TestMsgChanEmpty(t)
+	mainCtrl.wait_registry_empty(t, 10)
+}
+
+//-----------------------------------------------------------------------------
+// TestRESTUnpackSubscriptionResponseUnknownInstanceId
+//
+//   stub                             stub
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//     |                 |              |
+//     | RestSubReq      |              |
+//     |---------------->|              |
+//     |                 |              |
+//     |     RESTSubResp |              |
+//     |<----------------|              |
+//     |                 |              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |      SubResp | Unknown instanceId
+//     |                 |<-------------|
+//     |                 |              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |      SubFail | Duplicated action
+//     |                 |<-------------|
+//     | RESTNotif (fail)|              |
+//     |<----------------|              |
+//     |                 | SubDelReq    |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |   SubDelResp |
+//     |                 |<-------------|
+//
+//-----------------------------------------------------------------------------
+func TestRESTUnpackSubscriptionResponseUnknownInstanceId(t *testing.T) {
+	xapp.Logger.Info("TEST: TestRESTUnpackSubscriptionResponseUnknownInstanceId")
+	subReqCount := 1
+	parameterSet := 1 // E2SM-gNB-X2
+	actionDefinitionPresent := true
+	actionParamCount := 1
+
+	// Req
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	restSubId := xappConn1.SendRESTSubsReq(t, params)
+
+	crereq, cremsg := e2termConn1.RecvSubsReq(t)
+
+	// Unknown instanceId in this response which will result resending original request
+	orgInstanceId := crereq.RequestId.InstanceId
+	crereq.RequestId.InstanceId = 0
+	e2termConn1.SendSubsResp(t, crereq, cremsg)
+
+	_, cremsg = e2termConn1.RecvSubsReq(t)
+
+	xappConn1.ExpectRESTNotification(t, restSubId)
+
+	// Subscription already created in E2 Node.
+	fparams := &teststube2ap.E2StubSubsFailParams{}
+	fparams.Set(crereq)
+	fparams.SetCauseVal(0, 1, 3) // CauseRIC / duplicate-action
+	e2termConn1.SendSubsFail(t, fparams, cremsg)
+
+	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
+
+	instanceId := xappConn1.WaitRESTNotification(t, restSubId)
+	xapp.Logger.Info("TEST: REST notification received e2SubsId=%v", instanceId)
+
+	// Wait that subs is cleaned
+	mainCtrl.wait_subs_clean(t, orgInstanceId, 10)
+
+	xappConn1.TestMsgChanEmpty(t)
+	e2termConn1.TestMsgChanEmpty(t)
+	mainCtrl.wait_registry_empty(t, 10)
+}
+
+//-----------------------------------------------------------------------------
+// TestRESTUnpackSubscriptionResponseNoTransaction
+//
+//   stub                             stub
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//     |                 |              |
+//     | RestSubReq      |              |
+//     |---------------->|              |
+//     |                 |              |
+//     |     RESTSubResp |              |
+//     |<----------------|              |
+//     |                 |              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |      SubResp | No transaction for the response
+//     |                 |<-------------|
+//     |                 |              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |      SubFail | Duplicated action
+//     |                 |<-------------|
+//     | RESTNotif (fail)|              |
+//     |<----------------|              |
+//     |                 | SubDelReq    |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |   SubDelResp |
+//     |                 |<-------------|
+//     |                 |              |
+//     |                 | SubDelReq    |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |   SubDelResp |
+//     |                 |<-------------|
+//
+//-----------------------------------------------------------------------------
+func TestRESTUnpackSubscriptionResponseNoTransaction(t *testing.T) {
+	xapp.Logger.Info("TEST: TestRESTUnpackSubscriptionResponseNoTransaction")
+	subReqCount := 1
+	parameterSet := 1 // E2SM-gNB-X2
+	actionDefinitionPresent := true
+	actionParamCount := 1
+
+	// Req
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	restSubId := xappConn1.SendRESTSubsReq(t, params)
+
+	crereq, cremsg := e2termConn1.RecvSubsReq(t)
+
+	mainCtrl.MakeTransactionNil(t, crereq.RequestId.InstanceId)
+	// No transaction exist for this response which will result resending original request
+	e2termConn1.SendSubsResp(t, crereq, cremsg)
+
+	_, cremsg = e2termConn1.RecvSubsReq(t)
+
+	xappConn1.ExpectRESTNotification(t, restSubId)
+
+	// Subscription already created in E2 Node.
+	fparams := &teststube2ap.E2StubSubsFailParams{}
+	fparams.Set(crereq)
+	fparams.SetCauseVal(0, 1, 3) // CauseRIC / duplicate-action
+	e2termConn1.SendSubsFail(t, fparams, cremsg)
+
+	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
+
+	// Resending happens because there no transaction
+	delreq, delmsg = e2termConn1.RecvSubsDelReq(t)
+	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
+
+	instanceId := xappConn1.WaitRESTNotification(t, restSubId)
+	xapp.Logger.Info("TEST: REST notification received e2SubsId=%v", instanceId)
+
+	// Wait that subs is cleaned
+	mainCtrl.wait_subs_clean(t, crereq.RequestId.InstanceId, 10)
+
+	xappConn1.TestMsgChanEmpty(t)
+	e2termConn1.TestMsgChanEmpty(t)
+	mainCtrl.wait_registry_empty(t, 10)
+
+}
+
+//-----------------------------------------------------------------------------
+// TestRESTUnpackSubscriptionFailureDecodeFail
+//
+//   stub                             stub
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//     |                 |              |
+//     | RestSubReq      |              |
+//     |---------------->|              |
+//     |                 |              |
+//     |     RESTSubResp |              |
+//     |<----------------|              |
+//     |                 |              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |      SubFail | ASN.1 decode fails
+//     |                 |<-------------|
+//     |                 |              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |      SubFail | Duplicated action
+//     |                 |<-------------|
+//     | RESTNotif (fail)|              |
+//     |<----------------|              |
+//     |                 | SubDelReq    |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |   SubDelResp |
+//     |                 |<-------------|
+//
+//-----------------------------------------------------------------------------
+func TestRESTUnpackSubscriptionFailureDecodeFail(t *testing.T) {
+	xapp.Logger.Info("TEST: TestRESTUnpackSubscriptionFailureDecodeFail")
+	subReqCount := 1
+	parameterSet := 1 // E2SM-gNB-X2
+	actionDefinitionPresent := true
+	actionParamCount := 1
+
+	// Req
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	restSubId := xappConn1.SendRESTSubsReq(t, params)
+
+	crereq, cremsg := e2termConn1.RecvSubsReq(t)
+
+	// Decode of this response fails which will result resending original request
+	e2termConn1.SendInvalidE2Asn1Resp(t, cremsg, xapp.RIC_SUB_FAILURE)
+
+	_, cremsg = e2termConn1.RecvSubsReq(t)
+
+	xappConn1.ExpectRESTNotification(t, restSubId)
+
+	// Subscription already created in E2 Node.
+	fparams := &teststube2ap.E2StubSubsFailParams{}
+	fparams.Set(crereq)
+	fparams.SetCauseVal(0, 1, 3) // CauseRIC / duplicate-action
+	e2termConn1.SendSubsFail(t, fparams, cremsg)
+
+	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
+
+	instanceId := xappConn1.WaitRESTNotification(t, restSubId)
+	xapp.Logger.Info("TEST: REST notification received e2SubsId=%v", instanceId)
+
+	// Wait that subs is cleaned
+	mainCtrl.wait_subs_clean(t, crereq.RequestId.InstanceId, 10)
+
+	xappConn1.TestMsgChanEmpty(t)
+	e2termConn1.TestMsgChanEmpty(t)
+	mainCtrl.wait_registry_empty(t, 10)
+}
+
+//-----------------------------------------------------------------------------
+// TestRESTUnpackSubscriptionResponseUnknownInstanceId
+//
+//   stub                             stub
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//     |                 |              |
+//     | RestSubReq      |              |
+//     |---------------->|              |
+//     |                 |              |
+//     |     RESTSubResp |              |
+//     |<----------------|              |
+//     |                 |              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |      SubFail | Unknown instanceId
+//     |                 |<-------------|
+//     |                 |              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |      SubFail | Duplicated action
+//     |                 |<-------------|
+//     | RESTNotif (fail)|              |
+//     |<----------------|              |
+//     |                 | SubDelReq    |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |   SubDelResp |
+//     |                 |<-------------|
+//
+//-----------------------------------------------------------------------------
+func TestRESTUnpackSubscriptionFailureUnknownInstanceId(t *testing.T) {
+	xapp.Logger.Info("TEST: TestRESTUnpackSubscriptionFailureUnknownInstanceId")
+	subReqCount := 1
+	parameterSet := 1 // E2SM-gNB-X2
+	actionDefinitionPresent := true
+	actionParamCount := 1
+
+	// Req
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	restSubId := xappConn1.SendRESTSubsReq(t, params)
+
+	crereq, cremsg := e2termConn1.RecvSubsReq(t)
+
+	// Unknown instanceId in this response which will result resending original request
+	fparams := &teststube2ap.E2StubSubsFailParams{}
+	fparams.Set(crereq)
+	fparams.Fail.RequestId.InstanceId = 0
+	e2termConn1.SendSubsFail(t, fparams, cremsg)
+
+	_, cremsg = e2termConn1.RecvSubsReq(t)
+
+	xappConn1.ExpectRESTNotification(t, restSubId)
+
+	// Subscription already created in E2 Node.
+	fparams.SetCauseVal(0, 1, 3) // CauseRIC / duplicate-action
+	e2termConn1.SendSubsFail(t, fparams, cremsg)
+
+	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
+
+	instanceId := xappConn1.WaitRESTNotification(t, restSubId)
+	xapp.Logger.Info("TEST: REST notification received e2SubsId=%v", instanceId)
+
+	// Wait that subs is cleaned
+	mainCtrl.wait_subs_clean(t, crereq.RequestId.InstanceId, 10)
+
+	xappConn1.TestMsgChanEmpty(t)
+	e2termConn1.TestMsgChanEmpty(t)
+	mainCtrl.wait_registry_empty(t, 10)
+}
+
+//-----------------------------------------------------------------------------
+// TestRESTUnpackSubscriptionFailureNoTransaction
+//
+//   stub                             stub
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//     |                 |              |
+//     | RestSubReq      |              |
+//     |---------------->|              |
+//     |                 |              |
+//     |     RESTSubResp |              |
+//     |<----------------|              |
+//     |                 |              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |      SubFail | No transaction for the response
+//     |                 |<-------------|
+//     |                 |              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |      SubFail | Duplicated action
+//     |                 |<-------------|
+//     | RESTNotif (fail)|              |
+//     |<----------------|              |
+//     |                 | SubDelReq    |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |   SubDelResp |
+//     |                 |<-------------|
+//
+//-----------------------------------------------------------------------------
+func TestRESTUnpackSubscriptionFailureNoTransaction(t *testing.T) {
+	xapp.Logger.Info("TEST: TestRESTUnpackSubscriptionFailureNoTransaction")
+	subReqCount := 1
+	parameterSet := 1 // E2SM-gNB-X2
+	actionDefinitionPresent := true
+	actionParamCount := 1
+
+	// Req
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	restSubId := xappConn1.SendRESTSubsReq(t, params)
+
+	crereq, cremsg := e2termConn1.RecvSubsReq(t)
+
+	mainCtrl.MakeTransactionNil(t, crereq.RequestId.InstanceId)
+
+	// No transaction exist for this response which will result resending original request
+	fparams := &teststube2ap.E2StubSubsFailParams{}
+	fparams.Set(crereq)
+	e2termConn1.SendSubsFail(t, fparams, cremsg)
+
+	_, cremsg = e2termConn1.RecvSubsReq(t)
+
+	xappConn1.ExpectRESTNotification(t, restSubId)
+
+	// Subscription already created in E2 Node.
+	fparams.SetCauseVal(0, 1, 3) // CauseRIC / duplicate-action
+	e2termConn1.SendSubsFail(t, fparams, cremsg)
+
+	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
+
+	// Resending happens because there no transaction
+	delreq, delmsg = e2termConn1.RecvSubsDelReq(t)
+	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
+
+	instanceId := xappConn1.WaitRESTNotification(t, restSubId)
+	xapp.Logger.Info("TEST: REST notification received e2SubsId=%v", instanceId)
+
+	// Wait that subs is cleaned
+	mainCtrl.wait_subs_clean(t, crereq.RequestId.InstanceId, 10)
+
+	xappConn1.TestMsgChanEmpty(t)
+	e2termConn1.TestMsgChanEmpty(t)
+	mainCtrl.wait_registry_empty(t, 10)
+}
+
+//-----------------------------------------------------------------------------
+// TestRESTUnpackSubscriptionDeleteResponseDecodeFail
+//
+//   stub                             stub
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//     |                 |              |
+//     |            [SUBS CREATE]       |
+//     |                 |              |
+//     |                 |              |
+//     | RESTSubDelReq   |              |
+//     |---------------->|              |
+//     |                 |              |
+//     |  RESTSubDelResp |              |
+//     |<----------------|              |
+//     |                 |              |
+//     |                 | SubDelReq    |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |   SubDelResp | ASN.1 decode fails
+//     |                 |<-------------|
+//     |                 |              |
+//     |                 | SubDelReq    |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |   SubDelFail | Subscription does exist any more
+//     |                 |<-------------|
+//     |                 |              |
+//
+//-----------------------------------------------------------------------------
+func TestRESTUnpackSubscriptionDeleteResponseDecodeFail(t *testing.T) {
+	xapp.Logger.Info("TEST: TestRESTUnpackSubscriptionDeleteResponseDecodeFail")
+
+	// Req
+	var params *teststube2ap.RESTSubsReqParams = nil
+	restSubId, e2SubsId := createSubscription(t, xappConn1, e2termConn1, params)
+
+	// Del
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+
+	// E2t: Receive 1st SubsDelReq
+	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+
+	// Decode of this response fails which will result resending original request
+	e2termConn1.SendInvalidE2Asn1Resp(t, delmsg, xapp.RIC_SUB_DEL_REQ)
+
+	// E2t: Receive 2nd SubsDelReq and send SubsDelResp
+	delreq, delmsg = e2termConn1.RecvSubsDelReq(t)
+
+	// Subscription does not exist in in E2 Node.
+	e2termConn1.SendSubsDelFail(t, delreq, delmsg)
+
+	// Wait that subs is cleaned
+	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
+
+	xappConn1.TestMsgChanEmpty(t)
+	e2termConn1.TestMsgChanEmpty(t)
+	mainCtrl.wait_registry_empty(t, 10)
+}
+
+//-----------------------------------------------------------------------------
+// TestRESTUnpackSubscriptionDeleteResponseUnknownInstanceId
+//
+//   stub                             stub
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//     |                 |              |
+//     |            [SUBS CREATE]       |
+//     |                 |              |
+//     |                 |              |
+//     | RESTSubDelReq   |              |
+//     |---------------->|              |
+//     |                 |              |
+//     |  RESTSubDelResp |              |
+//     |<----------------|              |
+//     |                 |              |
+//     |                 | SubDelReq    |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |   SubDelResp | Unknown instanceId
+//     |                 |<-------------|
+//     |                 |              |
+//     |                 | SubDelReq    |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |   SubDelFail | Subscription does exist any more
+//     |                 |<-------------|
+//
+//-----------------------------------------------------------------------------
+func TestRESTUnpackSubscriptionDeleteResponseUnknownInstanceId(t *testing.T) {
+	xapp.Logger.Info("TEST: TestRESTUnpackSubscriptionDeleteResponseUnknownInstanceId")
+
+	// Req
+	var params *teststube2ap.RESTSubsReqParams = nil
+	restSubId, e2SubsId := createSubscription(t, xappConn1, e2termConn1, params)
+
+	// Del
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+
+	// E2t: Receive 1st SubsDelReq
+	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+
+	// Unknown instanceId in this response which will result resending original request
+	delreq.RequestId.InstanceId = 0
+	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
+
+	// E2t: Receive 2nd SubsDelReq
+	delreq, delmsg = e2termConn1.RecvSubsDelReq(t)
+
+	// Subscription does not exist in in E2 Node.
+	e2termConn1.SendSubsDelFail(t, delreq, delmsg)
+
+	// Wait that subs is cleaned
+	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
+
+	xappConn1.TestMsgChanEmpty(t)
+	e2termConn1.TestMsgChanEmpty(t)
+	mainCtrl.wait_registry_empty(t, 10)
+}
+
+//-----------------------------------------------------------------------------
+// TestRESTUnpackSubscriptionDeleteResponseNoTransaction
+//
+//   stub                             stub
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//     |                 |              |
+//     |            [SUBS CREATE]       |
+//     |                 |              |
+//     |                 |              |
+//     | RESTSubDelReq   |              |
+//     |---------------->|              |
+//     |                 |              |
+//     |  RESTSubDelResp |              |
+//     |<----------------|              |
+//     |                 |              |
+//     |                 | SubDelReq    |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |   SubDelResp | No transaction for the response
+//     |                 |<-------------|
+//     |                 |              |
+//     |                 | SubDelReq    |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |   SubDelFail | Subscription does exist any more
+//     |                 |<-------------|
+//
+//-----------------------------------------------------------------------------
+func TestRESTUnpackSubscriptionDeleteResponseNoTransaction(t *testing.T) {
+	xapp.Logger.Info("TEST: TestRESTUnpackSubscriptionDeleteResponseNoTransaction")
+
+	// Req
+	var params *teststube2ap.RESTSubsReqParams = nil
+	restSubId, e2SubsId := createSubscription(t, xappConn1, e2termConn1, params)
+
+	// Del
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+
+	// E2t: Receive 1st SubsDelReq
+	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+
+	mainCtrl.MakeTransactionNil(t, e2SubsId)
+
+	// No transaction exist for this response which will result resending original request
+	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
+
+	// E2t: Receive 2nd SubsDelReq
+	delreq, delmsg = e2termConn1.RecvSubsDelReq(t)
+
+	// Subscription does not exist in in E2 Node.
+	e2termConn1.SendSubsDelFail(t, delreq, delmsg)
+
+	// Wait that subs is cleaned
+	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
+
+	xappConn1.TestMsgChanEmpty(t)
+	e2termConn1.TestMsgChanEmpty(t)
+	mainCtrl.wait_registry_empty(t, 10)
+}
+
+//-----------------------------------------------------------------------------
+// TestRESTUnpackSubscriptionDeleteFailureDecodeFail
+//
+//   stub                             stub
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//     |                 |              |
+//     |            [SUBS CREATE]       |
+//     |                 |              |
+//     |                 |              |
+//     | RESTSubDelReq   |              |
+//     |---------------->|              |
+//     |                 |              |
+//     |  RESTSubDelResp |              |
+//     |<----------------|              |
+//     |                 |              |
+//     |                 | SubDelReq    |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |   SubDelFail | ASN.1 decode fails
+//     |                 |<-------------|
+//     |                 |              |
+//     |                 | SubDelReq    |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |   SubDelFail | Subscription does exist any more
+//     |                 |<-------------|
+//
+//-----------------------------------------------------------------------------
+func TestRESTUnpackSubscriptionDeleteFailureDecodeFail(t *testing.T) {
+	xapp.Logger.Info("TEST: TestRESTUnpackSubscriptionDeleteFailureDecodeFail")
+
+	// Req
+	var params *teststube2ap.RESTSubsReqParams = nil
+	restSubId, e2SubsId := createSubscription(t, xappConn1, e2termConn1, params)
+
+	// Del
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+
+	// E2t: Receive 1st SubsDelReq
+	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+
+	// Decode of this response fails which will result resending original request
+	e2termConn1.SendInvalidE2Asn1Resp(t, delmsg, xapp.RIC_SUB_DEL_FAILURE)
+
+	// E2t: Receive 2nd SubsDelReq and send SubsDelResp
+	delreq, delmsg = e2termConn1.RecvSubsDelReq(t)
+
+	// Subscription does not exist in in E2 Node.
+	e2termConn1.SendSubsDelFail(t, delreq, delmsg)
+
+	// Wait that subs is cleaned
+	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
+
+	xappConn1.TestMsgChanEmpty(t)
+	e2termConn1.TestMsgChanEmpty(t)
+	mainCtrl.wait_registry_empty(t, 10)
+}
+
+//-----------------------------------------------------------------------------
+// TestRESTUnpackSubscriptionDeleteailureUnknownInstanceId
+//
+//   stub                             stub
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//     |                 |              |
+//     |            [SUBS CREATE]       |
+//     |                 |              |
+//     |                 |              |
+//     | RESTSubDelReq   |              |
+//     |---------------->|              |
+//     |                 |              |
+//     |  RESTSubDelResp |              |
+//     |<----------------|              |
+//     |                 |              |
+//     |                 | SubDelReq    |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |   SubDelFail | Unknown instanceId
+//     |                 |<-------------|
+//     |                 |              |
+//     |                 | SubDelReq    |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |   SubDelFail | Subscription does exist any more
+//     |                 |<-------------|
+//
+//-----------------------------------------------------------------------------
+func TestRESTUnpackSubscriptionDeleteailureUnknownInstanceId(t *testing.T) {
+	xapp.Logger.Info("TEST: TestRESTUnpackSubscriptionDeleteailureUnknownInstanceId")
+
+	// Req
+	var params *teststube2ap.RESTSubsReqParams = nil
+	restSubId, e2SubsId := createSubscription(t, xappConn1, e2termConn1, params)
+
+	// Del
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+
+	// E2t: Receive 1st SubsDelReq
+	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+
+	// Unknown instanceId in this response which will result resending original request
+	delreq.RequestId.InstanceId = 0
+	e2termConn1.SendSubsDelFail(t, delreq, delmsg)
+
+	// E2t: Receive 2nd SubsDelReq
+	delreq, delmsg = e2termConn1.RecvSubsDelReq(t)
+
+	// Subscription does not exist in in E2 Node.
+	e2termConn1.SendSubsDelFail(t, delreq, delmsg)
+
+	// Wait that subs is cleaned
+	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
+
+	xappConn1.TestMsgChanEmpty(t)
+	e2termConn1.TestMsgChanEmpty(t)
+	mainCtrl.wait_registry_empty(t, 10)
+}
+
+//-----------------------------------------------------------------------------
+// TestRESTUnpackSubscriptionDeleteFailureNoTransaction
+//
+//   stub                             stub
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//     |                 |              |
+//     |            [SUBS CREATE]       |
+//     |                 |              |
+//     |                 |              |
+//     | RESTSubDelReq   |              |
+//     |---------------->|              |
+//     |                 |              |
+//     |  RESTSubDelResp |              |
+//     |<----------------|              |
+//     |                 |              |
+//     |                 | SubDelReq    |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |   SubDelFail | No transaction for the response
+//     |                 |<-------------|
+//     |                 |              |
+//     |                 | SubDelReq    |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |   SubDelFail | Subscription does exist any more
+//     |                 |<-------------|
+//
+//-----------------------------------------------------------------------------
+func TestRESTUnpackSubscriptionDeleteFailureNoTransaction(t *testing.T) {
+	xapp.Logger.Info("TEST: TestRESTUnpackSubscriptionDeleteFailureNoTransaction")
+
+	// Req
+	var params *teststube2ap.RESTSubsReqParams = nil
+	restSubId, e2SubsId := createSubscription(t, xappConn1, e2termConn1, params)
+
+	// Del
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+
+	// E2t: Receive 1st SubsDelReq
+	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+
+	mainCtrl.MakeTransactionNil(t, e2SubsId)
+
+	// No transaction exist for this response which will result resending original request
+	e2termConn1.SendSubsDelFail(t, delreq, delmsg)
+
+	// E2t: Receive 2nd SubsDelReq
+	delreq, delmsg = e2termConn1.RecvSubsDelReq(t)
+
+	// Subscription does not exist in in E2 Node.
+	e2termConn1.SendSubsDelFail(t, delreq, delmsg)
+
+	// Wait that subs is cleaned
+	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
+
+	xappConn1.TestMsgChanEmpty(t)
+	e2termConn1.TestMsgChanEmpty(t)
+	mainCtrl.wait_registry_empty(t, 10)
+}
+
 ////////////////////////////////////////////////////////////////////////////////////
 //   Services for UT cases
 ////////////////////////////////////////////////////////////////////////////////////

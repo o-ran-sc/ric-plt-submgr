@@ -882,6 +882,7 @@ func (c *Control) sendE2TSubscriptionDeleteRequest(subs *Subscription, trans *Tr
 func (c *Control) handleE2TSubscriptionResponse(params *xapp.RMRParams) {
 	xapp.Logger.Info("MSG from E2T: %s", params.String())
 	c.UpdateCounter(cSubRespFromE2)
+
 	subRespMsg, err := c.e2ap.UnpackSubscriptionResponse(params.Payload)
 	if err != nil {
 		xapp.Logger.Error("MSG-SubResp %s", idstring(err, params))
@@ -1004,14 +1005,14 @@ func typeofSubsMessage(v interface{}) string {
 		return "NIL"
 	}
 	switch v.(type) {
-	case *e2ap.E2APSubscriptionRequest:
-		return "SubReq"
+	//case *e2ap.E2APSubscriptionRequest:
+	//	return "SubReq"
 	case *e2ap.E2APSubscriptionResponse:
 		return "SubResp"
 	case *e2ap.E2APSubscriptionFailure:
 		return "SubFail"
-	case *e2ap.E2APSubscriptionDeleteRequest:
-		return "SubDelReq"
+	//case *e2ap.E2APSubscriptionDeleteRequest:
+	//	return "SubDelReq"
 	case *e2ap.E2APSubscriptionDeleteResponse:
 		return "SubDelResp"
 	case *e2ap.E2APSubscriptionDeleteFailure:
