@@ -327,6 +327,38 @@ func (tc *E2Stub) SendSubsResp(t *testing.T, req *e2ap.E2APSubscriptionRequest, 
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
+func (tc *E2Stub) SendInvalidE2Asn1Resp(t *testing.T, msg *xapp.RMRParams, msgType int) {
+
+	params := &xapp.RMRParams{}
+	params.Mtype = msgType
+	params.SubId = -1
+	params.Payload = []byte{1, 2, 3, 4, 5}
+	params.PayloadLen = 5
+	params.Meid = msg.Meid
+	params.Xid = ""
+	params.Mbuf = nil
+
+	if params.Mtype == xapp.RIC_SUB_RESP {
+		tc.Info("SEND INVALID ASN.1 SUB RESP")
+
+	} else if params.Mtype == xapp.RIC_SUB_FAILURE {
+		tc.Info("SEND INVALID ASN.1 SUB FAILURE")
+
+	} else if params.Mtype == xapp.RIC_SUB_DEL_RESP {
+		tc.Info("SEND INVALID ASN.1 SUB DEL RESP")
+
+	} else if params.Mtype == xapp.RIC_SUB_DEL_FAILURE {
+		tc.Info("SEND INVALID ASN.1 SUB DEL FAILURE")
+	}
+	snderr := tc.SendWithRetry(params, false, 5)
+	if snderr != nil {
+		tc.TestError(t, "RMR SEND FAILED: %s", snderr.Error())
+	}
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
 func (tc *E2Stub) RecvSubsResp(t *testing.T, trans *RmrTransactionId) uint32 {
 	tc.Info("RecvSubsResp")
 	e2SubsResp := e2asnpacker.NewPackerSubscriptionResponse()
@@ -597,7 +629,7 @@ func (tc *E2Stub) SendSubsDelFail(t *testing.T, req *e2ap.E2APSubscriptionDelete
 	resp.RequestId.Id = req.RequestId.Id
 	resp.RequestId.InstanceId = req.RequestId.InstanceId
 	resp.FunctionId = req.FunctionId
-	resp.Cause.Content = 4 // CauseMisc
+	resp.Cause.Content = 5 // CauseMisc
 	resp.Cause.Value = 3   // unspecified
 
 	packerr, packedMsg := e2SubsDelFail.Pack(resp)
