@@ -27,6 +27,7 @@ import "C"
 import (
 	"encoding/hex"
 	"fmt"
+
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap_wrapper"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/models"
@@ -34,6 +35,14 @@ import (
 )
 
 var packerif e2ap.E2APPackerIf = e2ap_wrapper.NewAsn1E2Packer()
+
+func GetPackerIf() e2ap.E2APPackerIf {
+	return packerif
+}
+
+func SetPackerIf(iface e2ap.E2APPackerIf) {
+	packerif = iface
+}
 
 type E2ap struct {
 }

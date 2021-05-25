@@ -24,10 +24,27 @@ import (
 	"time"
 
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
+	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap_wrapper"
 	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/teststube2ap"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestRESTSubReqAndDeleteOkWithE2apUtWrapper(t *testing.T) {
+
+	// The effect of this call shall endure thgough the UT suite!
+	// If this causes any issues, the previout interface can be restored
+	// like this:
+	// SetPackerIf(e2ap_wrapper.NewAsn1E2APPacker())
+
+	SetPackerIf(e2ap_wrapper.NewUtAsn1E2APPacker())
+
+	restSubId, e2SubsId := createSubscription(t, xappConn1, e2termConn1, nil)
+
+	deleteSubscription(t, xappConn1, e2termConn1, &restSubId)
+
+	waitSubsCleanup(t, e2SubsId, 10)
+}
 
 //-----------------------------------------------------------------------------
 // TestSubReqAndRouteNok
