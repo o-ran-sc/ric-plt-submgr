@@ -5722,6 +5722,74 @@ func TestRESTUnpackSubscriptionDeleteFailureNoTransaction(t *testing.T) {
 	mainCtrl.wait_registry_empty(t, 10)
 }
 
+//-----------------------------------------------------------------------------
+// TestRESTSubReqFailAsn1PackSubReqError
+//
+//   stub                             stub
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//     |                 |              |
+//     | RESTSubReq      |              |
+//     |---------------->|              |
+//     |                 |              |
+//     |     RESTSubResp |              |
+//     |<----------------|              |
+//     |                 |              |
+//     |        ASN.1 encode fails      |
+//     |                 |              |
+//     |                 | SubDelReq    |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |  SubDelFail  |
+//     |                 |<-------------|
+//     |                 |              |
+//     |       RESTNotif |              |
+//     |       unsuccess |              |
+//     |<----------------|              |
+//     |                 |              |
+//     |            [SUBS DELETE]       |
+//     |                 |              |
+//
+//-----------------------------------------------------------------------------
+func TestRESTSubReqFailAsn1PackSubReqError(t *testing.T) {
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cSubReqFromXapp, 1},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelFailFromE2, 1},
+		Counter{cSubRespToXapp, 1},
+	})
+
+	subReqCount := 1
+	parameterSet := 1 // E2SM-gNB-X2
+	actionDefinitionPresent := true
+	actionParamCount := 1
+
+	var params *teststube2ap.RESTSubsReqParams = nil
+	params = xappConn1.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	e2ap_wrapper.AllowE2apToProcess(e2ap_wrapper.SUB_REQ, false)
+
+	// Req
+	restSubId := xappConn1.SendRESTSubsReq(t, params)
+	xapp.Logger.Info("Send REST subscriber request for subscriberId : %v", restSubId)
+
+	// E2t: Receive SubsDelReq
+	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+	xappConn1.ExpectRESTNotification(t, restSubId)
+
+	// Subscription does not exist in in E2 Node.
+	e2termConn1.SendSubsDelFail(t, delreq, delmsg)
+
+	e2SubsId := xappConn1.WaitRESTNotification(t, restSubId)
+	xapp.Logger.Info("TEST: REST notification received e2SubsId=%v", e2SubsId)
+
+	e2ap_wrapper.AllowE2apToProcess(e2ap_wrapper.SUB_REQ, false)
+	// Wait that subs is cleaned
+	waitSubsCleanup(t, e2SubsId, 10)
+	mainCtrl.VerifyCounterValues(t)
+}
+
 ////////////////////////////////////////////////////////////////////////////////////
 //   Services for UT cases
 ////////////////////////////////////////////////////////////////////////////////////
