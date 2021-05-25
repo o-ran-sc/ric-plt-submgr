@@ -30,18 +30,160 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestRESTSubReqAndDeleteOkWithE2apUtWrapper(t *testing.T) {
-
+func TestSuiteSetup(t *testing.T) {
 	// The effect of this call shall endure thgough the UT suite!
 	// If this causes any issues, the previout interface can be restored
-	// like this:
+	// like this:git log
 	// SetPackerIf(e2ap_wrapper.NewAsn1E2APPacker())
 
 	SetPackerIf(e2ap_wrapper.NewUtAsn1E2APPacker())
+}
+
+//-----------------------------------------------------------------------------
+// TestRESTSubReqAndDeleteOkWithE2apUtWrapper
+//
+//   stub                             stub          stub
+// +-------+        +---------+    +---------+   +---------+
+// | xapp  |        | submgr  |    | e2term  |   |  rtmgr  |
+// +-------+        +---------+    +---------+   +---------+
+//     |                 |              |             |
+//     | RESTSubReq      |              |             |
+//     |---------------->|              |             |
+//     |                 | RouteCreate  |             |
+//     |                 |--------------------------->|  // The order of these events may vary
+//     |                 |              |             |
+//     |     RESTSubResp |              |             |  // The order of these events may vary
+//     |<----------------|              |             |
+//     |                 | RouteResponse|             |
+//     |                 |<---------------------------|  // The order of these events may vary
+//     |                 |              |             |
+//     |                 | SubReq       |             |
+//     |                 |------------->|             |  // The order of these events may vary
+//     |                 |              |             |
+//     |                 |      SubResp |             |
+//     |                 |<-------------|             |
+//     |      RESTNotif1 |              |             |
+//     |<----------------|              |             |
+//     |                 |              |             |
+//     | RESTSubDelReq   |              |             |
+//     |---------------->|              |             |
+//     |                 | SubDelReq    |             |
+//     |                 |------------->|             |
+//     |                 |              |             |
+//     |   RESTSubDelResp|              |             |
+//     |<----------------|              |             |
+//     |                 |              |             |
+//     |                 |   SubDelResp |             |
+//     |                 |<-------------|             |
+//     |                 |              |             |
+//     |                 |              |             |
+//
+//-----------------------------------------------------------------------------
+func TestRESTSubReqAndDeleteOkWithE2apUtWrapper(t *testing.T) {
 
 	restSubId, e2SubsId := createSubscription(t, xappConn1, e2termConn1, nil)
 
 	deleteSubscription(t, xappConn1, e2termConn1, &restSubId)
+
+	waitSubsCleanup(t, e2SubsId, 10)
+}
+
+//-----------------------------------------------------------------------------
+// TestRESTSubReqAndE1apDeleteReqPackingError
+//
+//   stub                             stub          stub
+// +-------+        +---------+    +---------+   +---------+
+// | xapp  |        | submgr  |    | e2term  |   |  rtmgr  |
+// +-------+        +---------+    +---------+   +---------+
+//     |                 |              |             |
+//     | RESTSubReq      |              |             |
+//     |---------------->|              |             |
+//     |                 | RouteCreate  |             |
+//     |                 |--------------------------->|  // The order of these events may vary
+//     |                 |              |             |
+//     |     RESTSubResp |              |             |  // The order of these events may vary
+//     |<----------------|              |             |
+//     |                 | RouteResponse|             |
+//     |                 |<---------------------------|  // The order of these events may vary
+//     |                 |              |             |
+//     |                 | SubReq       |             |
+//     |                 |------------->|             |  // The order of these events may vary
+//     |                 |              |             |
+//     |                 |      SubResp |             |
+//     |                 |<-------------|             |
+//     |      RESTNotif1 |              |             |
+//     |<----------------|              |             |
+//     |                 |              |             |
+//     | RESTSubDelReq   |              |             |
+//     |---------------->|              |             |
+//     |                 |              |             |
+//     |   RESTSubDelResp|              |             |
+//     |<----------------|              |             |
+//     |                 |              |             |
+//     |                 |              |             |
+//
+//-----------------------------------------------------------------------------
+func TestRESTSubReqAndE1apDeleteReqPackingError(t *testing.T) {
+
+	restSubId, e2SubsId := createSubscription(t, xappConn1, e2termConn1, nil)
+
+	e2ap_wrapper.AllowE2apToProcess(e2ap_wrapper.SUB_DEL_REQ, false)
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+	e2ap_wrapper.AllowE2apToProcess(e2ap_wrapper.SUB_DEL_REQ, true)
+
+	waitSubsCleanup(t, e2SubsId, 10)
+}
+
+//-----------------------------------------------------------------------------
+// TestRESTSubReqAndE1apDeleteRespUnpackingError
+//
+//   stub                             stub          stub
+// +-------+        +---------+    +---------+   +---------+
+// | xapp  |        | submgr  |    | e2term  |   |  rtmgr  |
+// +-------+        +---------+    +---------+   +---------+
+//     |                 |              |             |
+//     | RESTSubReq      |              |             |
+//     |---------------->|              |             |
+//     |                 | RouteCreate  |             |
+//     |                 |--------------------------->|  // The order of these events may vary
+//     |                 |              |             |
+//     |     RESTSubResp |              |             |  // The order of these events may vary
+//     |<----------------|              |             |
+//     |                 | RouteResponse|             |
+//     |                 |<---------------------------|  // The order of these events may vary
+//     |                 |              |             |
+//     |                 | SubReq       |             |
+//     |                 |------------->|             |  // The order of these events may vary
+//     |                 |              |             |
+//     |                 |      SubResp |             |
+//     |                 |<-------------|             |
+//     |      RESTNotif1 |              |             |
+//     |<----------------|              |             |
+//     |                 |              |             |
+//     | RESTSubDelReq   |              |             |
+//     |---------------->|              |             |
+//     |                 | SubDelReq    |             |
+//     |                 |------------->|             |
+//     |                 |              |             |
+//     |   RESTSubDelResp|              |             |
+//     |<----------------|              |             | // The order of these events may vary
+//     |                 |              |             |
+//     |                 |   SubDelResp |             |
+//     |                 |<-------------|             | // The order of these events may vary
+//     |                 |              |             |
+//     |                 |              |             |
+//
+//-----------------------------------------------------------------------------
+
+func TestRESTSubReqAndE1apDeleteRespUnpackingError(t *testing.T) {
+
+	restSubId, e2SubsId := createSubscription(t, xappConn1, e2termConn1, nil)
+
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+	e2ap_wrapper.AllowE2apToProcess(e2ap_wrapper.SUB_DEL_RESP, false)
+	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
+	e2ap_wrapper.AllowE2apToProcess(e2ap_wrapper.SUB_DEL_RESP, true)
 
 	waitSubsCleanup(t, e2SubsId, 10)
 }
