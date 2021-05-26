@@ -824,27 +824,10 @@ func (tc *E2Stub) SendRESTSubsReq(t *testing.T, params *RESTSubsReqParams) strin
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-func (tc *E2Stub) GetRESTSubsReqReportParams(subReqCount int, parameterSet int, actionDefinitionPresent bool, actionParamCount int) *RESTSubsReqParams {
+func (tc *E2Stub) GetRESTSubsReqReportParams(subReqCount int) *RESTSubsReqParams {
 
 	reportParams := RESTSubsReqParams{}
-	if parameterSet == 1 {
-		reportParams.GetRESTSubsReqReportParams1(subReqCount, actionDefinitionPresent, actionParamCount, &tc.clientEndpoint, &tc.meid)
-	} else if parameterSet == 2 {
-
-	} else {
-		tc.Error("Invalid parameterSet=%v", parameterSet)
-	}
-	tc.requestCount = subReqCount
-	return &reportParams
-}
-
-//-----------------------------------------------------------------------------
-//
-//-----------------------------------------------------------------------------
-func (tc *E2Stub) GetRESTSubsReqReportParams1(subReqCount int, actionDefinitionPresent bool, actionParamCount int) *RESTSubsReqParams {
-
-	reportParams := RESTSubsReqParams{}
-	reportParams.GetRESTSubsReqReportParams1(subReqCount, actionDefinitionPresent, actionParamCount, &tc.clientEndpoint, &tc.meid)
+	reportParams.GetRESTSubsReqReportParams(subReqCount, &tc.clientEndpoint, &tc.meid)
 	tc.requestCount = subReqCount
 	return &reportParams
 }
@@ -856,7 +839,7 @@ type RESTSubsReqParams struct {
 	SubsReqParams clientmodel.SubscriptionParams
 }
 
-func (p *RESTSubsReqParams) GetRESTSubsReqReportParams1(subReqCount int, actionDefinitionPresent bool, actionParamCount int, clientEndpoint *clientmodel.SubscriptionParamsClientEndpoint, meid *string) {
+func (p *RESTSubsReqParams) GetRESTSubsReqReportParams(subReqCount int, clientEndpoint *clientmodel.SubscriptionParamsClientEndpoint, meid *string) {
 
 	// E2SM-gNB-X2
 	p.SubsReqParams.ClientEndpoint = clientEndpoint
@@ -1041,10 +1024,10 @@ func (tc *E2Stub) SendRESTSubsDelReq(t *testing.T, subscriptionID *string) {
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-func (tc *E2Stub) GetRESTSubsReqPolicyParams(subReqCount int, actionDefinitionPresent bool, policyParamCount int) *RESTSubsReqParams {
+func (tc *E2Stub) GetRESTSubsReqPolicyParams(subReqCount int) *RESTSubsReqParams {
 
 	policyParams := RESTSubsReqParams{}
-	policyParams.GetRESTSubsReqPolicyParams(subReqCount, actionDefinitionPresent, policyParamCount, &tc.clientEndpoint, &tc.meid)
+	policyParams.GetRESTSubsReqPolicyParams(subReqCount, &tc.clientEndpoint, &tc.meid)
 	tc.requestCount = subReqCount
 	return &policyParams
 }
@@ -1052,7 +1035,7 @@ func (tc *E2Stub) GetRESTSubsReqPolicyParams(subReqCount int, actionDefinitionPr
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-func (p *RESTSubsReqParams) GetRESTSubsReqPolicyParams(subReqCount int, actionDefinitionPresent bool, policyParamCount int, clientEndpoint *clientmodel.SubscriptionParamsClientEndpoint, meid *string) {
+func (p *RESTSubsReqParams) GetRESTSubsReqPolicyParams(subReqCount int, clientEndpoint *clientmodel.SubscriptionParamsClientEndpoint, meid *string) {
 
 	p.SubsReqParams.ClientEndpoint = clientEndpoint
 	p.SubsReqParams.Meid = meid

@@ -2259,15 +2259,12 @@ func TestRESTSubReqAndRouteNok(t *testing.T) {
 	})
 
 	const subReqCount int = 1
-	const parameterSet = 1
-	const actionDefinitionPresent bool = true
-	const actionParamCount int = 1
 	// Add delay for rtmgt HTTP handling so that HTTP response is received before notify on XAPP side
 	waiter := rtmgrHttp.AllocNextSleep(50, false)
 	newSubsId := mainCtrl.get_registry_next_subid(t)
 
 	// Req
-	params := xappConn1.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
 	restSubId := xappConn1.SendRESTSubsReq(t, params)
 	xappConn1.ExpectRESTNotification(t, restSubId)
 	waiter.WaitResult(t)
@@ -2310,7 +2307,7 @@ func TestRESTSubReqAndRouteUpdateNok(t *testing.T) {
 	// xapp2 ROUTE creation shall fail with  400 from rtmgr -> submgr
 	waiter := rtmgrHttp.AllocNextEvent(false)
 	newSubsId := mainCtrl.get_registry_next_subid(t)
-	params = xappConn2.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params = xappConn2.GetRESTSubsReqReportParams(subReqCount)
 	params.SetMeid("RAN_NAME_1")
 	restSubId2 := xappConn2.SendRESTSubsReq(t, params)
 	xapp.Logger.Info("Send REST subscriber request for second subscriber : %v", restSubId2)
@@ -2461,14 +2458,11 @@ func TestRESTSubReqRetransmission(t *testing.T) {
 
 	// Subs Create
 	const subReqCount int = 1
-	const parameterSet = 1
-	const actionDefinitionPresent bool = true
-	const actionParamCount int = 1
 
 	// In order to force both XAPP's to create their own subscriptions, force rtmgr to block a while so that 2nd create
 	// gets into execution before the rtmgrg responds for the first one.
 	waiter := rtmgrHttp.AllocNextSleep(10, true)
-	params := xappConn1.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
 	restSubId1 := xappConn1.SendRESTSubsReq(t, params)
 	restSubId2 := xappConn2.SendRESTSubsReq(t, params)
 
@@ -2585,12 +2579,9 @@ func TestRESTSubReqDelReq(t *testing.T) {
 	})
 
 	const subReqCount int = 1
-	const parameterSet = 1
-	const actionDefinitionPresent bool = true
-	const actionParamCount int = 1
 
 	// Req
-	params := xappConn1.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
 	restSubId := xappConn1.SendRESTSubsReq(t, params)
 
 	// Del. This will fail as processing of the subscription
@@ -2633,12 +2624,12 @@ func TestRESTSubReqAndSubDelOkTwoParallel(t *testing.T) {
 	})
 
 	//Req1
-	params := xappConn1.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
 	restSubId1 := xappConn1.SendRESTSubsReq(t, params)
 	xapp.Logger.Info("Send 1st REST subscriber request for subscriberId : %v", restSubId1)
 
 	//Req2
-	params = xappConn2.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params = xappConn2.GetRESTSubsReqReportParams(subReqCount)
 	restSubId2 := xappConn2.SendRESTSubsReq(t, params)
 	xapp.Logger.Info("Send 2nd REST subscriber request for subscriberId : %v", restSubId2)
 
@@ -2685,11 +2676,11 @@ func TestRESTSameSubsDiffRan(t *testing.T) {
 		Counter{cSubDelRespToXapp, 2},
 	})
 
-	params := xappConn1.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
 	restSubId1, e2SubsId1 := createSubscription(t, xappConn1, e2termConn1, params)
 	xapp.Logger.Info("Send 1st REST subscriber request for subscriberId : %v", restSubId1)
 
-	params = xappConn1.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params = xappConn1.GetRESTSubsReqReportParams(subReqCount)
 	params.SetMeid("RAN_NAME_2")
 	restSubId2, e2SubsId2 := createSubscription(t, xappConn1, e2termConn1, params)
 	xapp.Logger.Info("Send 2nd REST subscriber request for subscriberId : %v", restSubId2)
@@ -2723,7 +2714,7 @@ func TestRESTSubReqRetryInSubmgr(t *testing.T) {
 		Counter{cSubDelRespToXapp, 1},
 	})
 
-	params := xappConn1.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
 	restSubId := xappConn1.SendRESTSubsReq(t, params)
 
 	xapp.Logger.Info("Send REST subscriber request for subscriber : %v", restSubId)
@@ -2801,7 +2792,7 @@ func TestRESTSubReqRetryNoRespSubDelRespInSubmgr(t *testing.T) {
 		Counter{cSubDelRespFromE2, 1},
 	})
 
-	params := xappConn1.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
 	restSubId := xappConn1.SendRESTSubsReq(t, params)
 	xapp.Logger.Info("Send REST subscriber request for subscriber : %v", restSubId)
 
@@ -2836,7 +2827,7 @@ func TestREST2eTermNotRespondingToSubReq(t *testing.T) {
 		Counter{cSubDelReqTimerExpiry, 2},
 	})
 
-	params := xappConn1.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
 	restSubId := xappConn1.SendRESTSubsReq(t, params)
 	xapp.Logger.Info("Send REST subscriber request for subscriber : %v", restSubId)
 
@@ -2913,7 +2904,7 @@ func TestRESTSubReqTwoRetriesNoRespAtAllInSubmgr(t *testing.T) {
 		Counter{cSubDelReqTimerExpiry, 2},
 	})
 
-	params := xappConn1.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
 	restSubId := xappConn1.SendRESTSubsReq(t, params)
 	xapp.Logger.Info("Send REST subscriber request for subscriber : %v", restSubId)
 
@@ -2982,11 +2973,8 @@ func TestRESTSubReqSubFailRespInSubmgr(t *testing.T) {
 	})
 
 	const subReqCount int = 1
-	const parameterSet = 1
-	const actionDefinitionPresent bool = true
-	const actionParamCount int = 1
 
-	params := xappConn1.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
 	restSubId := xappConn1.SendRESTSubsReq(t, params)
 
 	crereq1, cremsg1 := e2termConn1.RecvSubsReq(t)
@@ -3260,7 +3248,7 @@ func TestRESTSubReqAndSubDelOkSameAction(t *testing.T) {
 	queryXappSubscription(t, int64(e2SubsId1), "RAN_NAME_1", []string{"localhost:13560"})
 
 	// Req2
-	params = xappConn2.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params = xappConn2.GetRESTSubsReqReportParams(subReqCount)
 	params.SetMeid("RAN_NAME_1")
 
 	xapp.Subscription.SetResponseCB(xappConn2.SubscriptionRespHandler)
@@ -3347,11 +3335,11 @@ func TestRESTSubReqAndSubDelOkSameActionParallel(t *testing.T) {
 		Counter{cSubDelRespToXapp, 2},
 	})
 
-	params := xappConn1.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
 	restSubId1 := xappConn1.SendRESTSubsReq(t, params)
 	crereq1, cremsg1 := e2termConn1.RecvSubsReq(t)
 
-	params2 := xappConn2.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params2 := xappConn2.GetRESTSubsReqReportParams(subReqCount)
 	restSubId2 := xappConn2.SendRESTSubsReq(t, params2)
 
 	xappConn1.ExpectRESTNotification(t, restSubId1)
@@ -3444,18 +3432,15 @@ func TestRESTSubReqAndSubDelNoAnswerSameActionParallel(t *testing.T) {
 	})
 
 	const subReqCount int = 1
-	const parameterSet = 1
-	const actionDefinitionPresent bool = true
-	const actionParamCount int = 1
 
 	// Req1
-	params1 := xappConn1.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params1 := xappConn1.GetRESTSubsReqReportParams(subReqCount)
 	restSubId1 := xappConn1.SendRESTSubsReq(t, params1)
 	crereq1, _ := e2termConn1.RecvSubsReq(t)
 
 	// Req2
 	subepcnt2 := mainCtrl.get_subs_entrypoint_cnt(t, crereq1.RequestId.InstanceId)
-	params2 := xappConn2.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params2 := xappConn2.GetRESTSubsReqReportParams(subReqCount)
 	params2.SetMeid("RAN_NAME_1")
 	restSubId2 := xappConn2.SendRESTSubsReq(t, params2)
 	mainCtrl.wait_subs_entrypoint_cnt_change(t, crereq1.RequestId.InstanceId, subepcnt2, 10)
@@ -3551,18 +3536,15 @@ func TestRESTSubReqAndSubDelNokSameActionParallel(t *testing.T) {
 	})
 
 	const subReqCount int = 1
-	const parameterSet = 1
-	const actionDefinitionPresent bool = true
-	const actionParamCount int = 1
 
 	// Req1
-	params := xappConn1.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
 	restSubId1 := xappConn1.SendRESTSubsReq(t, params)
 	crereq1, cremsg1 := e2termConn1.RecvSubsReq(t)
 
 	// Req2
 	subepcnt2 := mainCtrl.get_subs_entrypoint_cnt(t, crereq1.RequestId.InstanceId)
-	params2 := xappConn2.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params2 := xappConn2.GetRESTSubsReqReportParams(subReqCount)
 	params2.SetMeid("RAN_NAME_1")
 	restSubId2 := xappConn2.SendRESTSubsReq(t, params2)
 	mainCtrl.wait_subs_entrypoint_cnt_change(t, crereq1.RequestId.InstanceId, subepcnt2, 10)
@@ -3611,11 +3593,8 @@ func TestRESTSubReqPolicyAndSubDelOk(t *testing.T) {
 	})
 
 	const subReqCount int = 1
-	const parameterSet = 1
-	const actionDefinitionPresent bool = true
-	const actionParamCount int = 1
 
-	params := xappConn1.GetRESTSubsReqPolicyParams(subReqCount, actionDefinitionPresent, policyParamCount)
+	params := xappConn1.GetRESTSubsReqPolicyParams(subReqCount)
 	restSubId := xappConn1.SendRESTSubsReq(t, params)
 	xapp.Logger.Info("Send REST Policy subscriber request for subscriberId : %v", restSubId)
 
@@ -3698,18 +3677,15 @@ func TestRESTSubReqPolicyChangeAndSubDelOk(t *testing.T) {
 	})
 
 	const subReqCount int = 1
-	const parameterSet = 1
-	const actionDefinitionPresent bool = true
-	const policyParamCount int = 1
 
 	// Req
-	params := xappConn1.GetRESTSubsReqPolicyParams(subReqCount, actionDefinitionPresent, policyParamCount)
+	params := xappConn1.GetRESTSubsReqPolicyParams(subReqCount)
 	restSubId, e2SubsId := createSubscription(t, xappConn1, e2termConn1, params)
 
 	// Policy change
 	instanceId := int64(e2SubsId)
 	// GetRESTSubsReqPolicyParams sets some coutners on tc side.
-	params = xappConn1.GetRESTSubsReqPolicyParams(subReqCount, actionDefinitionPresent, policyParamCount)
+	params = xappConn1.GetRESTSubsReqPolicyParams(subReqCount)
 	params.SubsReqParams.SubscriptionDetails[0].InstanceID = &instanceId
 	params.SetTimeToWait("w200ms")
 	restSubId, e2SubsId = createSubscription(t, xappConn1, e2termConn1, params)
@@ -3782,17 +3758,14 @@ func TestRESTSubReqAndSubDelOkTwoE2termParallel(t *testing.T) {
 	})
 
 	const subReqCount int = 1
-	const parameterSet = 1
-	const actionDefinitionPresent bool = true
-	const actionParamCount int = 1
 
 	// Req1
-	params := xappConn1.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
 	restSubId1 := xappConn1.SendRESTSubsReq(t, params)
 	crereq1, cremsg1 := e2termConn1.RecvSubsReq(t)
 
 	// Req2
-	params = xappConn2.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params = xappConn2.GetRESTSubsReqReportParams(subReqCount)
 	params.SetMeid("RAN_NAME_11")
 	// Here we use xappConn2 to simulate sending second request from same xapp as doing it from xappConn1
 	// would not work as notification would not be received
@@ -3910,11 +3883,8 @@ func TestRESTSubReqInsertAndSubDelOk(t *testing.T) {
 	})
 
 	const subReqCount int = 1
-	const parameterSet int = 1
-	const actionDefinitionPresent bool = true
-	const actionParamCount int = 1
 
-	params := xappConn1.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
 	params.SetSubActionTypes("insert")
 
 	// Req
@@ -3971,14 +3941,11 @@ func TestRESTSubReqNokAndSubDelOkWithRestartInMiddle(t *testing.T) {
 	})
 
 	const subReqCount int = 1
-	const parameterSet = 1
-	const actionDefinitionPresent bool = true
-	const actionParamCount int = 1
 
 	// Remove possible existing subscription
 	mainCtrl.removeExistingSubscriptions(t)
 
-	params := xappConn1.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
 
 	//Req
 	mainCtrl.SetResetTestFlag(t, true) // subs.DoNotWaitSubResp will be set TRUE for the subscription
@@ -4166,7 +4133,7 @@ func TestRESTSubReqAndSubDelOkSameActionWithRestartsInMiddle(t *testing.T) {
 	xapp.Logger.Info("Send REST subscriber request for subscriber 1 : %v", restSubId1)
 
 	// Create subscription 2 with same action
-	params = xappConn2.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params = xappConn2.GetRESTSubsReqReportParams(subReqCount)
 	params.SetMeid("RAN_NAME_1")
 	xapp.Subscription.SetResponseCB(xappConn2.SubscriptionRespHandler)
 	xappConn2.WaitRESTNotificationForAnySubscriptionId(t)
@@ -4253,18 +4220,15 @@ func TestRESTSubReqAndSubDelOkSameActionWithRestartsInMiddle(t *testing.T) {
 func TestRESTReportSubReqAndSubDelOk(t *testing.T) {
 	CaseBegin("TestRESTReportSubReqAndSubDelOk")
 	subReqCount := 1
-	parameterSet := 1 // E2SM-gNB-X2
-	actionDefinitionPresent := true
-	actionParamCount := 1
 	testIndex := 1
-	RESTReportSubReqAndSubDelOk(t, subReqCount, parameterSet, actionDefinitionPresent, actionParamCount, testIndex)
+	RESTReportSubReqAndSubDelOk(t, subReqCount, testIndex)
 }
 
-func RESTReportSubReqAndSubDelOk(t *testing.T, subReqCount int, parameterSet int, actionDefinitionPresent bool, actionParamCount int, testIndex int) {
-	xapp.Logger.Info("TEST: TestRESTReportSubReqAndSubDelOk with parameter set %v", testIndex)
+func RESTReportSubReqAndSubDelOk(t *testing.T, subReqCount int, testIndex int) {
+	xapp.Logger.Info("TEST: TestRESTReportSubReqAndSubDelOk with testIndex %v", testIndex)
 
 	// Req
-	params := xappConn1.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
 	restSubId := xappConn1.SendRESTSubsReq(t, params)
 
 	var e2SubsId []uint32
@@ -4306,25 +4270,21 @@ func TestRESTPolicySubReqAndSubDelOk(t *testing.T) {
 	CaseBegin("TestRESTPolicySubReqAndSubDelOk")
 
 	subReqCount := 2
-	actionDefinitionPresent := true
-	policyParamCount := 1
 	testIndex := 1
-	RESTPolicySubReqAndSubDelOk(t, subReqCount, actionDefinitionPresent, policyParamCount, testIndex)
+	RESTPolicySubReqAndSubDelOk(t, subReqCount, testIndex)
 
 	subReqCount = 19
-	actionDefinitionPresent = false
-	policyParamCount = 0
 	testIndex = 2
-	RESTPolicySubReqAndSubDelOk(t, subReqCount, actionDefinitionPresent, policyParamCount, testIndex)
+	RESTPolicySubReqAndSubDelOk(t, subReqCount, testIndex)
 }
 */
-func RESTPolicySubReqAndSubDelOk(t *testing.T, subReqCount int, actionDefinitionPresent bool, policyParamCount int, testIndex int) {
-	xapp.Logger.Info("TEST: TestRESTPolicySubReqAndSubDelOk with parameter set %v", testIndex)
+func RESTPolicySubReqAndSubDelOk(t *testing.T, subReqCount int, testIndex int) {
+	xapp.Logger.Info("TEST: TestRESTPolicySubReqAndSubDelOk with testIndex %v", testIndex)
 
 	// Req
-	params := xappConn1.GetRESTSubsReqPolicyParams(subReqCount, actionDefinitionPresent, policyParamCount)
+	params := xappConn1.GetRESTSubsReqPolicyParams(subReqCount)
 	restSubId := xappConn1.SendRESTSubsReq(t, params)
-	//params := xappConn1.GetRESTSubsReqPolicyParams1(subReqCount, actionDefinitionPresent, policyParamCount)
+	//params := xappConn1.GetRESTSubsReqPolicyParams1(subReqCount)
 	//restSubId := xappConn1.SendRESTPolicySubsReq(t, params)
 
 	var e2SubsId []uint32
@@ -4370,7 +4330,7 @@ func TestRESTTwoPolicySubReqAndSubDelOk(t *testing.T) {
 	})
 
 	// Req
-	params := xappConn1.GetRESTSubsReqPolicyParams(subReqCount, actionDefinitionPresent, policyParamCount)
+	params := xappConn1.GetRESTSubsReqPolicyParams(subReqCount)
 	restSubId := xappConn1.SendRESTSubsReq(t, params)
 	e2SubsIds := sendAndReceiveMultipleE2SubReqs(t, subReqCount, xappConn1, e2termConn1, restSubId)
 
@@ -4402,7 +4362,7 @@ func TestRESTPolicySubReqAndSubDelOkFullAmount(t *testing.T) {
 	})
 
 	// Req
-	params := xappConn1.GetRESTSubsReqPolicyParams(subReqCount, actionDefinitionPresent, policyParamCount)
+	params := xappConn1.GetRESTSubsReqPolicyParams(subReqCount)
 	restSubId := xappConn1.SendRESTSubsReq(t, params)
 	e2SubsIds := sendAndReceiveMultipleE2SubReqs(t, subReqCount, xappConn1, e2termConn1, restSubId)
 
@@ -4420,9 +4380,6 @@ func TestRESTPolicySubReqAndSubDelOkFullAmount(t *testing.T) {
 func TestRESTTwoReportSubReqAndSubDelOk(t *testing.T) {
 
 	subReqCount := 2
-	parameterSet := 1
-	actionDefinitionPresent := true
-	actionParamCount := 1
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cSubReqFromXapp, 1},
@@ -4436,7 +4393,7 @@ func TestRESTTwoReportSubReqAndSubDelOk(t *testing.T) {
 	})
 
 	// Req
-	params := xappConn1.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
 	restSubId := xappConn1.SendRESTSubsReq(t, params)
 	e2SubsIds := sendAndReceiveMultipleE2SubReqs(t, subReqCount, xappConn1, e2termConn1, restSubId)
 
@@ -4456,9 +4413,6 @@ func TestRESTTwoReportSubReqAndSubDelOk(t *testing.T) {
 func TestRESTTwoReportSubReqAndSubDelOkNoActParams(t *testing.T) {
 
 	subReqCount := 2
-	parameterSet := 1
-	actionDefinitionPresent := false
-	actionParamCount := 0
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cSubReqFromXapp, 1},
@@ -4472,7 +4426,7 @@ func TestRESTTwoReportSubReqAndSubDelOkNoActParams(t *testing.T) {
 	})
 
 	// Req
-	params := xappConn1.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
 	restSubId := xappConn1.SendRESTSubsReq(t, params)
 	e2SubsIds := sendAndReceiveMultipleE2SubReqs(t, subReqCount, xappConn1, e2termConn1, restSubId)
 
@@ -4492,9 +4446,6 @@ func TestRESTTwoReportSubReqAndSubDelOkNoActParams(t *testing.T) {
 func TestRESTFullAmountReportSubReqAndSubDelOk(t *testing.T) {
 
 	subReqCount := 19
-	parameterSet := 1
-	actionDefinitionPresent := false
-	actionParamCount := 0
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cSubReqFromXapp, 1},
@@ -4508,7 +4459,7 @@ func TestRESTFullAmountReportSubReqAndSubDelOk(t *testing.T) {
 	})
 
 	// Req
-	params := xappConn1.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
 	restSubId := xappConn1.SendRESTSubsReq(t, params)
 	e2SubsIds := sendAndReceiveMultipleE2SubReqs(t, subReqCount, xappConn1, e2termConn1, restSubId)
 
@@ -4549,7 +4500,7 @@ func TestRESTSubReqReportSameActionDiffEventTriggerDefinitionLen(t *testing.T) {
 	queryXappSubscription(t, int64(e2SubsId1), "RAN_NAME_1", []string{"localhost:13560"})
 
 	// Req2
-	params = xappConn2.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params = xappConn2.GetRESTSubsReqReportParams(subReqCount)
 	params.SetMeid("RAN_NAME_1")
 	eventTriggerDefinition := "1234"
 	params.SetSubEventTriggerDefinition(eventTriggerDefinition)
@@ -4595,7 +4546,7 @@ func TestRESTSubReqReportSameActionDiffActionListLen(t *testing.T) {
 	queryXappSubscription(t, int64(e2SubsId1), "RAN_NAME_1", []string{"localhost:13560"})
 
 	// Req2
-	params = xappConn2.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params = xappConn2.GetRESTSubsReqReportParams(subReqCount)
 	params.SetMeid("RAN_NAME_1")
 
 	actionId := int64(1)
@@ -4646,7 +4597,7 @@ func TestRESTSubReqReportSameActionDiffActionID(t *testing.T) {
 	queryXappSubscription(t, int64(e2SubsId1), "RAN_NAME_1", []string{"localhost:13560"})
 
 	// Req2
-	params = xappConn2.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params = xappConn2.GetRESTSubsReqReportParams(subReqCount)
 	params.SetMeid("RAN_NAME_1")
 	params.SetSubActionIDs(int64(2))
 
@@ -4682,7 +4633,7 @@ func TestRESTSubReqDiffActionType(t *testing.T) {
 	})
 
 	// Req1
-	params := xappConn1.GetRESTSubsReqPolicyParams(subReqCount, actionDefinitionPresent, policyParamCount)
+	params := xappConn1.GetRESTSubsReqPolicyParams(subReqCount)
 
 	//Subs Create
 	restSubId1, e2SubsId1 := createSubscription(t, xappConn1, e2termConn1, params)
@@ -4691,7 +4642,7 @@ func TestRESTSubReqDiffActionType(t *testing.T) {
 	queryXappSubscription(t, int64(e2SubsId1), "RAN_NAME_1", []string{"localhost:13560"})
 
 	// Req2
-	params = xappConn2.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params = xappConn2.GetRESTSubsReqReportParams(subReqCount)
 	params.SetMeid("RAN_NAME_1")
 
 	restSubId2 := xappConn2.SendRESTSubsReq(t, params)
@@ -4726,7 +4677,7 @@ func TestRESTSubReqPolicyAndSubDelOkSameAction(t *testing.T) {
 	})
 
 	// Req1
-	params := xappConn1.GetRESTSubsReqPolicyParams(subReqCount, actionDefinitionPresent, policyParamCount)
+	params := xappConn1.GetRESTSubsReqPolicyParams(subReqCount)
 
 	//Subs Create
 	restSubId1, e2SubsId1 := createSubscription(t, xappConn1, e2termConn1, params)
@@ -4735,7 +4686,7 @@ func TestRESTSubReqPolicyAndSubDelOkSameAction(t *testing.T) {
 	queryXappSubscription(t, int64(e2SubsId1), "RAN_NAME_1", []string{"localhost:13560"})
 
 	// Req2
-	params = xappConn2.GetRESTSubsReqPolicyParams(subReqCount, actionDefinitionPresent, policyParamCount)
+	params = xappConn2.GetRESTSubsReqPolicyParams(subReqCount)
 	params.SetMeid("RAN_NAME_1")
 
 	restSubId2 := xappConn2.SendRESTSubsReq(t, params)
@@ -4779,7 +4730,7 @@ func TestRESTSubReqReportSameActionDiffActionDefinitionLen(t *testing.T) {
 	queryXappSubscription(t, int64(e2SubsId1), "RAN_NAME_1", []string{"localhost:13560"})
 
 	// Req2
-	params = xappConn2.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params = xappConn2.GetRESTSubsReqReportParams(subReqCount)
 	params.SetMeid("RAN_NAME_1")
 	actionDefinition := "5678"
 	params.SetSubActionDefinition(actionDefinition)
@@ -4825,7 +4776,7 @@ func TestRESTSubReqReportSameActionDiffActionDefinitionContents(t *testing.T) {
 	queryXappSubscription(t, int64(e2SubsId1), "RAN_NAME_1", []string{"localhost:13560"})
 
 	// Req2
-	params = xappConn2.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params = xappConn2.GetRESTSubsReqReportParams(subReqCount)
 	params.SetMeid("RAN_NAME_1")
 	actionDefinition := "56782"
 	params.SetSubActionDefinition(actionDefinition)
@@ -4871,7 +4822,7 @@ func TestRESTSubReqReportSameActionDiffSubsAction(t *testing.T) {
 	queryXappSubscription(t, int64(e2SubsId1), "RAN_NAME_1", []string{"localhost:13560"})
 
 	// Req2
-	params = xappConn2.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params = xappConn2.GetRESTSubsReqReportParams(subReqCount)
 	params.SetMeid("RAN_NAME_1")
 	params.SetTimeToWait("w200ms")
 	restSubId2 := xappConn2.SendRESTSubsReq(t, params)
@@ -4928,12 +4879,9 @@ func TestRESTSubReqReportSameActionDiffSubsAction(t *testing.T) {
 func TestRESTUnpackSubscriptionResponseDecodeFail(t *testing.T) {
 	xapp.Logger.Info("TEST: TestRESTUnpackSubscriptionResponseDecodeFail")
 	subReqCount := 1
-	parameterSet := 1 // E2SM-gNB-X2
-	actionDefinitionPresent := true
-	actionParamCount := 1
 
 	// Req
-	params := xappConn1.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
 	restSubId := xappConn1.SendRESTSubsReq(t, params)
 
 	crereq, cremsg := e2termConn1.RecvSubsReq(t)
@@ -5001,12 +4949,9 @@ func TestRESTUnpackSubscriptionResponseDecodeFail(t *testing.T) {
 func TestRESTUnpackSubscriptionResponseUnknownInstanceId(t *testing.T) {
 	xapp.Logger.Info("TEST: TestRESTUnpackSubscriptionResponseUnknownInstanceId")
 	subReqCount := 1
-	parameterSet := 1 // E2SM-gNB-X2
-	actionDefinitionPresent := true
-	actionParamCount := 1
 
 	// Req
-	params := xappConn1.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
 	restSubId := xappConn1.SendRESTSubsReq(t, params)
 
 	crereq, cremsg := e2termConn1.RecvSubsReq(t)
@@ -5083,12 +5028,9 @@ func TestRESTUnpackSubscriptionResponseUnknownInstanceId(t *testing.T) {
 func TestRESTUnpackSubscriptionResponseNoTransaction(t *testing.T) {
 	xapp.Logger.Info("TEST: TestRESTUnpackSubscriptionResponseNoTransaction")
 	subReqCount := 1
-	parameterSet := 1 // E2SM-gNB-X2
-	actionDefinitionPresent := true
-	actionParamCount := 1
 
 	// Req
-	params := xappConn1.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
 	restSubId := xappConn1.SendRESTSubsReq(t, params)
 
 	crereq, cremsg := e2termConn1.RecvSubsReq(t)
@@ -5163,12 +5105,9 @@ func TestRESTUnpackSubscriptionResponseNoTransaction(t *testing.T) {
 func TestRESTUnpackSubscriptionFailureDecodeFail(t *testing.T) {
 	xapp.Logger.Info("TEST: TestRESTUnpackSubscriptionFailureDecodeFail")
 	subReqCount := 1
-	parameterSet := 1 // E2SM-gNB-X2
-	actionDefinitionPresent := true
-	actionParamCount := 1
 
 	// Req
-	params := xappConn1.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
 	restSubId := xappConn1.SendRESTSubsReq(t, params)
 
 	crereq, cremsg := e2termConn1.RecvSubsReq(t)
@@ -5237,12 +5176,9 @@ func TestRESTUnpackSubscriptionFailureDecodeFail(t *testing.T) {
 func TestRESTUnpackSubscriptionFailureUnknownInstanceId(t *testing.T) {
 	xapp.Logger.Info("TEST: TestRESTUnpackSubscriptionFailureUnknownInstanceId")
 	subReqCount := 1
-	parameterSet := 1 // E2SM-gNB-X2
-	actionDefinitionPresent := true
-	actionParamCount := 1
 
 	// Req
-	params := xappConn1.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
 	restSubId := xappConn1.SendRESTSubsReq(t, params)
 
 	crereq, cremsg := e2termConn1.RecvSubsReq(t)
@@ -5312,12 +5248,9 @@ func TestRESTUnpackSubscriptionFailureUnknownInstanceId(t *testing.T) {
 func TestRESTUnpackSubscriptionFailureNoTransaction(t *testing.T) {
 	xapp.Logger.Info("TEST: TestRESTUnpackSubscriptionFailureNoTransaction")
 	subReqCount := 1
-	parameterSet := 1 // E2SM-gNB-X2
-	actionDefinitionPresent := true
-	actionParamCount := 1
 
 	// Req
-	params := xappConn1.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
 	restSubId := xappConn1.SendRESTSubsReq(t, params)
 
 	crereq, cremsg := e2termConn1.RecvSubsReq(t)
@@ -5762,12 +5695,9 @@ func TestRESTSubReqFailAsn1PackSubReqError(t *testing.T) {
 	})
 
 	subReqCount := 1
-	parameterSet := 1 // E2SM-gNB-X2
-	actionDefinitionPresent := true
-	actionParamCount := 1
 
 	var params *teststube2ap.RESTSubsReqParams = nil
-	params = xappConn1.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params = xappConn1.GetRESTSubsReqReportParams(subReqCount)
 	e2ap_wrapper.AllowE2apToProcess(e2ap_wrapper.SUB_REQ, false)
 
 	// Req
@@ -5794,15 +5724,11 @@ func TestRESTSubReqFailAsn1PackSubReqError(t *testing.T) {
 //   Services for UT cases
 ////////////////////////////////////////////////////////////////////////////////////
 const subReqCount int = 1
-const parameterSet = 1
-const actionDefinitionPresent bool = true
-const actionParamCount int = 1
-const policyParamCount int = 1
 const host string = "localhost"
 
 func createSubscription(t *testing.T, fromXappConn *teststube2ap.E2Stub, toE2termConn *teststube2ap.E2Stub, params *teststube2ap.RESTSubsReqParams) (string, uint32) {
 	if params == nil {
-		params = fromXappConn.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+		params = fromXappConn.GetRESTSubsReqReportParams(subReqCount)
 	}
 	restSubId := fromXappConn.SendRESTSubsReq(t, params)
 	xapp.Logger.Info("Send REST subscriber request for subscriberId : %v", restSubId)
@@ -5818,7 +5744,7 @@ func createSubscription(t *testing.T, fromXappConn *teststube2ap.E2Stub, toE2ter
 
 func createXapp2MergedSubscription(t *testing.T, meid string) (string, uint32) {
 
-	params := xappConn2.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params := xappConn2.GetRESTSubsReqReportParams(subReqCount)
 	if meid != "" {
 		params.SetMeid(meid)
 	}
@@ -5833,7 +5759,7 @@ func createXapp2MergedSubscription(t *testing.T, meid string) (string, uint32) {
 }
 
 func createXapp1PolicySubscription(t *testing.T) (string, uint32) {
-	params := xappConn1.GetRESTSubsReqPolicyParams(subReqCount, actionDefinitionPresent, policyParamCount)
+	params := xappConn1.GetRESTSubsReqPolicyParams(subReqCount)
 	restSubId := xappConn1.SendRESTSubsReq(t, params)
 	xapp.Logger.Info("Send REST Policy subscriber request for subscriberId : %v", restSubId)
 
@@ -5847,7 +5773,7 @@ func createXapp1PolicySubscription(t *testing.T) (string, uint32) {
 }
 
 func createXapp1ReportSubscriptionE2Fail(t *testing.T) (string, uint32) {
-	params := xappConn1.GetRESTSubsReqReportParams(subReqCount, parameterSet, actionDefinitionPresent, actionParamCount)
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
 	restSubId := xappConn1.SendRESTSubsReq(t, params)
 
 	crereq1, cremsg1 := e2termConn1.RecvSubsReq(t)
