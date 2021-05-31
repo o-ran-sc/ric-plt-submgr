@@ -2403,7 +2403,7 @@ func TestRESTSubReqAndRouteNok(t *testing.T) {
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 1},
 		Counter{cRouteCreateFail, 1},
-		Counter{cRestSubRespToXapp, 1},
+		Counter{cRestSubFailToXapp, 1},
 		Counter{cRestSubDelReqFromXapp, 1},
 		Counter{cRestSubDelRespToXapp, 1},
 	})
@@ -2439,7 +2439,8 @@ func TestRESTSubReqAndRouteUpdateNok(t *testing.T) {
 		Counter{cRestSubReqFromXapp, 2},
 		Counter{cSubReqToE2, 1},
 		Counter{cSubRespFromE2, 1},
-		Counter{cRestSubRespToXapp, 2},
+		Counter{cRestSubRespToXapp, 1},
+		Counter{cRestSubFailToXapp, 1},
 		Counter{cRouteCreateUpdateFail, 1},
 		Counter{cRestSubDelReqFromXapp, 1},
 		Counter{cSubDelReqToE2, 1},
@@ -3118,7 +3119,7 @@ func TestRESTSubReqSubFailRespInSubmgr(t *testing.T) {
 		Counter{cRestSubReqFromXapp, 1},
 		Counter{cSubReqToE2, 1},
 		Counter{cSubFailFromE2, 1},
-		Counter{cRestSubRespToXapp, 1},
+		Counter{cRestSubFailToXapp, 1},
 		Counter{cRestSubDelReqFromXapp, 1},
 	})
 
@@ -3574,7 +3575,7 @@ func TestRESTSubReqAndSubDelNoAnswerSameActionParallel(t *testing.T) {
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 2},
 		Counter{cSubReqToE2, 1},
-		Counter{cRestSubRespToXapp, 2},
+		Counter{cRestSubFailToXapp, 2},
 		Counter{cRestSubDelReqFromXapp, 2},
 		Counter{cSubDelReqToE2, 1},
 		Counter{cSubDelRespFromE2, 1},
@@ -3678,7 +3679,7 @@ func TestRESTSubReqAndSubDelNokSameActionParallel(t *testing.T) {
 		Counter{cRestSubReqFromXapp, 2},
 		Counter{cSubReqToE2, 1},
 		Counter{cSubFailFromE2, 1},
-		Counter{cRestSubRespToXapp, 2},
+		Counter{cRestSubFailToXapp, 2},
 		Counter{cRestSubDelReqFromXapp, 2},
 		Counter{cSubDelReqToE2, 1},
 		Counter{cSubDelRespFromE2, 1},
@@ -5841,7 +5842,7 @@ func TestRESTSubReqFailAsn1PackSubReqError(t *testing.T) {
 		Counter{cRestSubReqFromXapp, 1},
 		Counter{cSubDelReqToE2, 1},
 		Counter{cSubDelFailFromE2, 1},
-		Counter{cRestSubRespToXapp, 1},
+		Counter{cRestSubFailToXapp, 1},
 	})
 
 	subReqCount := 1

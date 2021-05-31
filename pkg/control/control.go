@@ -311,6 +311,7 @@ func (c *Control) processSubscriptionRequests(restSubscription *RESTSubscription
 			restSubscription.SetProcessed()
 			xapp.Logger.Info("Sending unsuccessful REST notification to endpoint=%v:%v, InstanceId=%v, %s", clientEndpoint.Host, clientEndpoint.HTTPPort, instanceId, idstring(nil, trans))
 			xapp.Subscription.Notify(resp, *clientEndpoint)
+			c.UpdateCounter(cRestSubFailToXapp)
 		} else {
 			xapp.Logger.Info("SubscriptionRequest index=%v processed successfully. endpoint=%v, InstanceId=%v, %s", index, *clientEndpoint, instanceId, idstring(nil, trans))
 
@@ -330,9 +331,9 @@ func (c *Control) processSubscriptionRequests(restSubscription *RESTSubscription
 			restSubscription.SetProcessed()
 			xapp.Logger.Info("Sending successful REST notification to endpoint=%v, InstanceId=%v, %s", *clientEndpoint, instanceId, idstring(nil, trans))
 			xapp.Subscription.Notify(resp, *clientEndpoint)
+			c.UpdateCounter(cRestSubRespToXapp)
 
 		}
-		c.UpdateCounter(cRestSubRespToXapp)
 	}
 }
 
