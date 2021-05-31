@@ -233,7 +233,7 @@ func (c *Control) SubscriptionHandler(params interface{}) (*models.SubscriptionR
 
 	c.CntRecvMsg++
 
-	c.UpdateCounter(cSubReqFromXapp)
+	c.UpdateCounter(cRestSubReqFromXapp)
 
 	if p.ClientEndpoint == nil {
 		xapp.Logger.Error("ClientEndpoint == nil")
@@ -330,8 +330,9 @@ func (c *Control) processSubscriptionRequests(restSubscription *RESTSubscription
 			restSubscription.SetProcessed()
 			xapp.Logger.Info("Sending successful REST notification to endpoint=%v, InstanceId=%v, %s", *clientEndpoint, instanceId, idstring(nil, trans))
 			xapp.Subscription.Notify(resp, *clientEndpoint)
+
 		}
-		c.UpdateCounter(cSubRespToXapp)
+		c.UpdateCounter(cRestSubRespToXapp)
 	}
 }
 
@@ -386,7 +387,7 @@ func (c *Control) handleSubscriptionRequest(trans *TransactionXapp, subReqMsg *e
 func (c *Control) SubscriptionDeleteHandlerCB(restSubId string) error {
 
 	c.CntRecvMsg++
-	c.UpdateCounter(cSubDelReqFromXapp)
+	c.UpdateCounter(cRestSubDelReqFromXapp)
 
 	xapp.Logger.Info("SubscriptionDeleteRequest from XAPP")
 
@@ -422,7 +423,7 @@ func (c *Control) SubscriptionDeleteHandlerCB(restSubId string) error {
 		c.registry.DeleteRESTSubscription(&restSubId)
 	}()
 
-	c.UpdateCounter(cSubDelRespToXapp)
+	c.UpdateCounter(cRestSubDelRespToXapp)
 
 	return nil
 }
