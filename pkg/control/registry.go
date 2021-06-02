@@ -272,6 +272,8 @@ func (r *Registry) RouteCreate(subs *Subscription, c *Control) error {
 	err := r.rtmgrClient.SubscriptionRequestCreate(subRouteAction)
 	if err != nil {
 		c.UpdateCounter(cRouteCreateFail)
+		xapp.Logger.Error("%s", err.Error())
+		err = fmt.Errorf("RTMGR route create failure")
 	}
 	return err
 }
@@ -281,6 +283,8 @@ func (r *Registry) RouteCreateUpdate(subs *Subscription, c *Control) error {
 	err := r.rtmgrClient.SubscriptionRequestUpdate(subRouteAction)
 	if err != nil {
 		c.UpdateCounter(cRouteCreateUpdateFail)
+		xapp.Logger.Error("%s", err.Error())
+		err = fmt.Errorf("RTMGR route update failure")
 		return err
 	}
 	c.UpdateCounter(cMergedSubscriptions)
