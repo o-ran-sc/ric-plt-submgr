@@ -5,35 +5,38 @@ import (
 )
 
 const (
-	cSubReqFromXapp        string = "SubReqFromXapp"
-	cRestSubReqFromXapp    string = "RestSubReqFromXapp"
-	cSubRespToXapp         string = "SubRespToXapp"
-	cRestSubRespToXapp     string = "RestSubRespToXapp"
-	cSubFailToXapp         string = "SubFailToXapp"
-	cRestSubFailToXapp     string = "RestSubFailToXapp"
-	cSubReqToE2            string = "SubReqToE2"
-	cSubReReqToE2          string = "SubReReqToE2"
-	cSubRespFromE2         string = "SubRespFromE2"
-	cSubFailFromE2         string = "SubFailFromE2"
-	cSubReqTimerExpiry     string = "SubReqTimerExpiry"
-	cRouteCreateFail       string = "RouteCreateFail"
-	cRouteCreateUpdateFail string = "RouteCreateUpdateFail"
-	cMergedSubscriptions   string = "MergedSubscriptions"
-	cSubDelReqFromXapp     string = "SubDelReqFromXapp"
-	cRestSubDelReqFromXapp string = "RestSubDelReqFromXapp"
-	cSubDelRespToXapp      string = "SubDelRespToXapp"
-	cRestSubDelRespToXapp  string = "RestSubDelRespToXapp"
-	cSubDelReqToE2         string = "SubDelReqToE2"
-	cSubDelReReqToE2       string = "SubDelReReqToE2"
-	cSubDelRespFromE2      string = "SubDelRespFromE2"
-	cSubDelFailFromE2      string = "SubDelFailFromE2"
-	cSubDelReqTimerExpiry  string = "SubDelReqTimerExpiry"
-	cRouteDeleteFail       string = "RouteDeleteFail"
-	cRouteDeleteUpdateFail string = "RouteDeleteUpdateFail"
-	cUnmergedSubscriptions string = "UnmergedSubscriptions"
-	cSDLWriteFailure       string = "SDLWriteFailure"
-	cSDLReadFailure        string = "SDLReadFailure"
-	cSDLRemoveFailure      string = "SDLRemoveFailure"
+	cSubReqFromXapp         string = "SubReqFromXapp"
+	cRestSubReqFromXapp     string = "RestSubReqFromXapp"
+	cSubFailToXapp          string = "SubFailToXapp"
+	cSubRespToXapp          string = "SubRespToXapp"
+	cRestSubRespToXapp      string = "RestSubRespToXapp"
+	cRestSubFailToXapp      string = "RestSubFailToXapp"
+	cRestSubNotifToXapp     string = "RestSubNotifToXapp"
+	cRestSubFailNotifToXapp string = "RestSubFailNotifToXapp"
+	cSubReqToE2             string = "SubReqToE2"
+	cSubReReqToE2           string = "SubReReqToE2"
+	cSubRespFromE2          string = "SubRespFromE2"
+	cSubFailFromE2          string = "SubFailFromE2"
+	cSubReqTimerExpiry      string = "SubReqTimerExpiry"
+	cRouteCreateFail        string = "RouteCreateFail"
+	cRouteCreateUpdateFail  string = "RouteCreateUpdateFail"
+	cMergedSubscriptions    string = "MergedSubscriptions"
+	cDuplicateE2SubReq      string = "DuplicateE2SubReq"
+	cSubDelReqFromXapp      string = "SubDelReqFromXapp"
+	cSubDelRespToXapp       string = "SubDelRespToXapp"
+	cRestSubDelReqFromXapp  string = "RestSubDelReqFromXapp"
+	cRestSubDelRespToXapp   string = "RestSubDelRespToXapp"
+	cSubDelReqToE2          string = "SubDelReqToE2"
+	cSubDelReReqToE2        string = "SubDelReReqToE2"
+	cSubDelRespFromE2       string = "SubDelRespFromE2"
+	cSubDelFailFromE2       string = "SubDelFailFromE2"
+	cSubDelReqTimerExpiry   string = "SubDelReqTimerExpiry"
+	cRouteDeleteFail        string = "RouteDeleteFail"
+	cRouteDeleteUpdateFail  string = "RouteDeleteUpdateFail"
+	cUnmergedSubscriptions  string = "UnmergedSubscriptions"
+	cSDLWriteFailure        string = "SDLWriteFailure"
+	cSDLReadFailure         string = "SDLReadFailure"
+	cSDLRemoveFailure       string = "SDLRemoveFailure"
 )
 
 func GetMetricsOpts() []xapp.CounterOpts {
@@ -41,11 +44,13 @@ func GetMetricsOpts() []xapp.CounterOpts {
 
 		// Subscrition create counters
 		{Name: cSubReqFromXapp, Help: "The total number of SubscriptionRequest messages received from xApp"},
-		{Name: cRestSubReqFromXapp, Help: "The total number of Rest SubscriptionRequest messages received from xApp"},
 		{Name: cSubRespToXapp, Help: "The total number of SubscriptionResponse messages sent to xApp"},
-		{Name: cRestSubRespToXapp, Help: "The total number of Rest SubscriptionResponse messages sent to xApp"},
 		{Name: cSubFailToXapp, Help: "The total number of SubscriptionFailure messages sent to xApp"},
+		{Name: cRestSubReqFromXapp, Help: "The total number of Rest SubscriptionRequest messages received from xApp"},
+		{Name: cRestSubRespToXapp, Help: "The total number of Rest SubscriptionResponse messages sent to xApp"},
 		{Name: cRestSubFailToXapp, Help: "The total number of Rest SubscriptionFailure messages sent to xApp"},
+		{Name: cRestSubNotifToXapp, Help: "The total number of successful Rest SubscriptionNotification messages sent to xApp"},
+		{Name: cRestSubFailNotifToXapp, Help: "The total number of failure Rest SubscriptionNotification messages sent to xApp"},
 		{Name: cSubReqToE2, Help: "The total number of SubscriptionRequest messages sent to E2Term"},
 		{Name: cSubReReqToE2, Help: "The total number of SubscriptionRequest messages resent to E2Term"},
 		{Name: cSubRespFromE2, Help: "The total number of SubscriptionResponse messages from E2Term"},
@@ -54,11 +59,12 @@ func GetMetricsOpts() []xapp.CounterOpts {
 		{Name: cRouteCreateFail, Help: "The total number of subscription route create failure"},
 		{Name: cRouteCreateUpdateFail, Help: "The total number of subscription route create update failure"},
 		{Name: cMergedSubscriptions, Help: "The total number of merged Subscriptions"},
+		{Name: cDuplicateE2SubReq, Help: "The total number of same E2 SubscriptionRequest messages from same xApp"},
 
 		// Subscrition delete counters
-		{Name: cSubDelReqFromXapp, Help: "The total number of SubscriptionDeleteResponse messages received from xApp"},
-		{Name: cRestSubDelReqFromXapp, Help: "The total number of Rest SubscriptionDeleteResponse messages received from xApp"},
+		{Name: cSubDelReqFromXapp, Help: "The total number of SubscriptionDeleteRequest messages received from xApp"},
 		{Name: cSubDelRespToXapp, Help: "The total number of SubscriptionDeleteResponse messages sent to xApp"},
+		{Name: cRestSubDelReqFromXapp, Help: "The total number of Rest SubscriptionDeleteRequest messages received from xApp"},
 		{Name: cRestSubDelRespToXapp, Help: "The total number of Rest SubscriptionDeleteResponse messages sent to xApp"},
 		{Name: cSubDelReqToE2, Help: "The total number of SubscriptionDeleteRequest messages sent to E2Term"},
 		{Name: cSubDelReReqToE2, Help: "The total number of SubscriptionDeleteRequest messages resent to E2Term"},

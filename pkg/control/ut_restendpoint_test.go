@@ -48,10 +48,10 @@ func TestRestEndpointOk(t *testing.T) {
 		t.Errorf("Mismatching return value: %s - ecpected NIL", err)
 	}
 	if httpEndPoint != expectedHttpEndpoint {
-		t.Errorf("Mismatching httpEndpoint: %s - ecpected %s", httpEndPoint, expectedHttpEndpoint)
+		t.Errorf("Mismatching httpEndpoint: %s - expected %s", httpEndPoint, expectedHttpEndpoint)
 	}
 	if rmrEndPoint != expectedRmrEndpoint {
-		t.Errorf("Mismatching httpEndpoint: %s - ecpected %s", httpEndPoint, expectedHttpEndpoint)
+		t.Errorf("Mismatching httpEndpoint: %s - expected %s", httpEndPoint, expectedHttpEndpoint)
 	}
 }
 

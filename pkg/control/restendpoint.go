@@ -31,6 +31,7 @@ import (
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
+
 func ConstructEndpointAddresses(clientEndpoint models.SubscriptionParamsClientEndpoint) (string, string, error) {
 
 	var HTTP_port int64 = *clientEndpoint.HTTPPort
