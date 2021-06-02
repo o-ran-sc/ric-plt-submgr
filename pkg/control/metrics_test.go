@@ -28,11 +28,13 @@ func TestAddAllCountersOnce(t *testing.T) {
 	// Check that all counters can be added correctly
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cSubReqFromXapp, 1},
-		Counter{cRestSubReqFromXapp, 1},
 		Counter{cSubRespToXapp, 1},
-		Counter{cRestSubRespToXapp, 1},
 		Counter{cSubFailToXapp, 1},
+		Counter{cRestSubReqFromXapp, 1},
+		Counter{cRestSubRespToXapp, 1},
 		Counter{cRestSubFailToXapp, 1},
+		Counter{cRestSubNotifToXapp, 1},
+		Counter{cRestSubFailNotifToXapp, 1},
 		Counter{cSubReqToE2, 1},
 		Counter{cSubReReqToE2, 1},
 		Counter{cSubRespFromE2, 1},
@@ -41,9 +43,10 @@ func TestAddAllCountersOnce(t *testing.T) {
 		Counter{cRouteCreateFail, 1},
 		Counter{cRouteCreateUpdateFail, 1},
 		Counter{cMergedSubscriptions, 1},
+		Counter{cDuplicateE2SubReq, 1},
 		Counter{cSubDelReqFromXapp, 1},
-		Counter{cRestSubDelReqFromXapp, 1},
 		Counter{cSubDelRespToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
 		Counter{cRestSubDelRespToXapp, 1},
 		Counter{cSubDelReqToE2, 1},
 		Counter{cSubDelReReqToE2, 1},
@@ -59,11 +62,13 @@ func TestAddAllCountersOnce(t *testing.T) {
 	})
 
 	mainCtrl.c.UpdateCounter(cSubReqFromXapp)
-	mainCtrl.c.UpdateCounter(cRestSubReqFromXapp)
 	mainCtrl.c.UpdateCounter(cSubRespToXapp)
-	mainCtrl.c.UpdateCounter(cRestSubRespToXapp)
 	mainCtrl.c.UpdateCounter(cSubFailToXapp)
+	mainCtrl.c.UpdateCounter(cRestSubReqFromXapp)
+	mainCtrl.c.UpdateCounter(cRestSubRespToXapp)
 	mainCtrl.c.UpdateCounter(cRestSubFailToXapp)
+	mainCtrl.c.UpdateCounter(cRestSubNotifToXapp)
+	mainCtrl.c.UpdateCounter(cRestSubFailNotifToXapp)
 	mainCtrl.c.UpdateCounter(cSubReqToE2)
 	mainCtrl.c.UpdateCounter(cSubReReqToE2)
 	mainCtrl.c.UpdateCounter(cSubRespFromE2)
@@ -72,9 +77,10 @@ func TestAddAllCountersOnce(t *testing.T) {
 	mainCtrl.c.UpdateCounter(cRouteCreateFail)
 	mainCtrl.c.UpdateCounter(cRouteCreateUpdateFail)
 	mainCtrl.c.UpdateCounter(cMergedSubscriptions)
+	mainCtrl.c.UpdateCounter(cDuplicateE2SubReq)
 	mainCtrl.c.UpdateCounter(cSubDelReqFromXapp)
-	mainCtrl.c.UpdateCounter(cRestSubDelReqFromXapp)
 	mainCtrl.c.UpdateCounter(cSubDelRespToXapp)
+	mainCtrl.c.UpdateCounter(cRestSubDelReqFromXapp)
 	mainCtrl.c.UpdateCounter(cRestSubDelRespToXapp)
 	mainCtrl.c.UpdateCounter(cSubDelReqToE2)
 	mainCtrl.c.UpdateCounter(cSubDelReReqToE2)

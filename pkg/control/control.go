@@ -226,29 +226,31 @@ func (c *Control) Run() {
 //-------------------------------------------------------------------
 func (c *Control) SubscriptionHandler(params interface{}) (*models.SubscriptionResponse, error) {
 
+	c.CntRecvMsg++
+	c.UpdateCounter(cRestSubReqFromXapp)
+
 	restSubId := ksuid.New().String()
 	subResp := models.SubscriptionResponse{}
 	subResp.SubscriptionID = &restSubId
 	p := params.(*models.SubscriptionParams)
 
-	c.CntRecvMsg++
-
-	c.UpdateCounter(cRestSubReqFromXapp)
-
 	if p.ClientEndpoint == nil {
 		xapp.Logger.Error("ClientEndpoint == nil")
+		c.UpdateCounter(cRestSubFailToXapp)
 		return nil, fmt.Errorf("")
 	}
 
 	_, xAppRmrEndpoint, err := ConstructEndpointAddresses(*p.ClientEndpoint)
 	if err != nil {
 		xapp.Logger.Error("%s", err.Error())
+		c.UpdateCounter(cRestSubFailToXapp)
 		return nil, err
 	}
 
 	restSubscription, err := c.registry.CreateRESTSubscription(&restSubId, &xAppRmrEndpoint, p.Meid)
 	if err != nil {
 		xapp.Logger.Error("%s", err.Error())
+		c.UpdateCounter(cRestSubFailToXapp)
 		return nil, err
 	}
 
@@ -257,13 +259,14 @@ func (c *Control) SubscriptionHandler(params interface{}) (*models.SubscriptionR
 	if err != nil {
 		xapp.Logger.Error("%s", err.Error())
 		c.registry.DeleteRESTSubscription(&restSubId)
+		c.UpdateCounter(cRestSubFailToXapp)
 		return nil, err
 	}
 
 	go c.processSubscriptionRequests(restSubscription, &subReqList, p.ClientEndpoint, p.Meid, &restSubId)
 
+	c.UpdateCounter(cRestSubRespToXapp)
 	return &subResp, nil
-
 }
 
 //-------------------------------------------------------------------
@@ -286,7 +289,9 @@ func (c *Control) processSubscriptionRequests(restSubscription *RESTSubscription
 	for index := 0; index < len(subReqList.E2APSubscriptionRequests); index++ {
 		subReqMsg := subReqList.E2APSubscriptionRequests[index]
 
-		trans := c.tracker.NewXappTransaction(xapp.NewRmrEndpoint(xAppRmrEndpoint), *restSubId, subReqMsg.RequestId, &xapp.RMRMeid{RanName: *meid})
+		xid := *restSubId + "_" + strconv.FormatUint(uint64(subReqMsg.RequestId.InstanceId), 10)
+		trans := c.tracker.NewXappTransaction(xapp.NewRmrEndpoint(xAppRmrEndpoint), xid, subReqMsg.RequestId, &xapp.RMRMeid{RanName: *meid})
+		//trans := c.tracker.NewXappTransaction(xapp.NewRmrEndpoint(xAppRmrEndpoint), *restSubId, subReqMsg.RequestId, &xapp.RMRMeid{RanName: *meid})
 		if trans == nil {
 			c.registry.DeleteRESTSubscription(restSubId)
 			xapp.Logger.Error("XAPP-SubReq transaction not created. RESTSubId=%s, EndPoint=%s, Meid=%s", *restSubId, xAppRmrEndpoint, *meid)
@@ -311,7 +316,7 @@ func (c *Control) processSubscriptionRequests(restSubscription *RESTSubscription
 			restSubscription.SetProcessed()
 			xapp.Logger.Info("Sending unsuccessful REST notification to endpoint=%v:%v, InstanceId=%v, %s", clientEndpoint.Host, clientEndpoint.HTTPPort, instanceId, idstring(nil, trans))
 			xapp.Subscription.Notify(resp, *clientEndpoint)
-			c.UpdateCounter(cRestSubFailToXapp)
+			c.UpdateCounter(cRestSubFailNotifToXapp)
 		} else {
 			xapp.Logger.Info("SubscriptionRequest index=%v processed successfully. endpoint=%v, InstanceId=%v, %s", index, *clientEndpoint, instanceId, idstring(nil, trans))
 
@@ -331,7 +336,7 @@ func (c *Control) processSubscriptionRequests(restSubscription *RESTSubscription
 			restSubscription.SetProcessed()
 			xapp.Logger.Info("Sending successful REST notification to endpoint=%v, InstanceId=%v, %s", *clientEndpoint, instanceId, idstring(nil, trans))
 			xapp.Subscription.Notify(resp, *clientEndpoint)
-			c.UpdateCounter(cRestSubRespToXapp)
+			c.UpdateCounter(cRestSubNotifToXapp)
 
 		}
 	}
@@ -434,7 +439,9 @@ func (c *Control) SubscriptionDeleteHandlerCB(restSubId string) error {
 //-------------------------------------------------------------------
 func (c *Control) SubscriptionDeleteHandler(restSubId *string, endPoint *string, meid *string, instanceId uint32) error {
 
-	trans := c.tracker.NewXappTransaction(xapp.NewRmrEndpoint(*endPoint), *restSubId, e2ap.RequestId{0, 0}, &xapp.RMRMeid{RanName: *meid})
+	xid := *restSubId + "_" + strconv.FormatUint(uint64(instanceId), 10)
+	trans := c.tracker.NewXappTransaction(xapp.NewRmrEndpoint(*endPoint), xid, e2ap.RequestId{0, 0}, &xapp.RMRMeid{RanName: *meid})
+	//trans := c.tracker.NewXappTransaction(xapp.NewRmrEndpoint(*endPoint), *restSubId, e2ap.RequestId{0, 0}, &xapp.RMRMeid{RanName: *meid})
 	if trans == nil {
 		err := fmt.Errorf("XAPP-SubDelReq transaction not created. restSubId %s, endPoint %s, meid %s, instanceId %v", *restSubId, *endPoint, *meid, instanceId)
 		xapp.Logger.Error("%s", err.Error())
