@@ -80,7 +80,7 @@ func (r *Registry) CreateRESTSubscription(restSubId *string, xAppRmrEndPoint *st
 	newRestSubscription.SubReqOngoing = true
 	newRestSubscription.SubDelReqOngoing = false
 	r.restSubscriptions[*restSubId] = &newRestSubscription
-	xapp.Logger.Info("Registry: Created REST subscription successfully. restSubId=%v, subscriptionCount=%v, e2apCubscriptionCount=%v", *restSubId, len(r.restSubscriptions), len(r.register))
+	xapp.Logger.Info("Registry: Created REST subscription successfully. restSubId=%v, subscriptionCount=%v, e2apSubscriptionCount=%v", *restSubId, len(r.restSubscriptions), len(r.register))
 	return &newRestSubscription, nil
 }
 
@@ -226,7 +226,8 @@ func (r *Registry) AssignToSubscription(trans *TransactionXapp, subReqMsg *e2ap.
 	} else if endPointFound == true {
 		// Requesting endpoint is already present in existing subscription. This can happen if xApp is restarted.
 		subs.RetryFromXapp = true
-		xapp.Logger.Debug("CREATE: subscription already exists. %s", subs.String())
+		xapp.Logger.Debug("CREATE subReqMsg.InstanceId=%v. Same subscription %s already exists.", subReqMsg.InstanceId, subs.String())
+		c.UpdateCounter(cDuplicateE2SubReq)
 		return subs, nil
 	}
 
@@ -237,7 +238,7 @@ func (r *Registry) AssignToSubscription(trans *TransactionXapp, subReqMsg *e2ap.
 	defer subs.mutex.Unlock()
 
 	epamount := subs.EpList.Size()
-	xapp.Logger.Info("AssignToSubscription subs.EpList.Size() = %v", subs.EpList.Size())
+	xapp.Logger.Info("AssignToSubscription subs.EpList.Size()=%v", subs.EpList.Size())
 
 	r.mutex.Unlock()
 	//

@@ -31,6 +31,7 @@ import (
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
+/*
 func ConstructEndpointAddresses(clientEndpoint models.SubscriptionParamsClientEndpoint) (string, string, error) {
 
 	var HTTP_port int64 = *clientEndpoint.HTTPPort
@@ -41,6 +42,41 @@ func ConstructEndpointAddresses(clientEndpoint models.SubscriptionParamsClientEn
 
 	if host == "" || (HTTP_port == 0 && RMR_port == 0) {
 		err := fmt.Errorf("ClientEndpoint aprovided no PORT numbers")
+		return "INVALID_HTTP_ADDRESS:" + host + (string)(*clientEndpoint.HTTPPort),
+			"INVALID_RMR_ADDRESS:" + host + (string)(*clientEndpoint.RMRPort),
+			err
+	}
+
+	if *clientEndpoint.HTTPPort > 0 {
+		xAppHTTPEndPoint = host + ":" + strconv.FormatInt(*clientEndpoint.HTTPPort, 10)
+	}
+	if *clientEndpoint.RMRPort > 0 {
+		if i := strings.Index(host, "http"); i != -1 {
+			host = strings.Replace(host, "http", "rmr", -1)
+		}
+		xAppRMREndPoint = host + ":" + strconv.FormatInt(*clientEndpoint.RMRPort, 10)
+	}
+
+	xapp.Logger.Info("xAppHttpEndPoint=%v, xAppRrmEndPoint=%v", xAppHTTPEndPoint, xAppRMREndPoint)
+
+	return xAppHTTPEndPoint, xAppRMREndPoint, nil
+}
+*/
+func ConstructEndpointAddresses(clientEndpoint models.SubscriptionParamsClientEndpoint) (string, string, error) {
+
+	var HTTP_port int64 = *clientEndpoint.HTTPPort
+	var RMR_port int64 = *clientEndpoint.RMRPort
+	var host string = clientEndpoint.Host
+	var xAppHTTPEndPoint string
+	var xAppRMREndPoint string
+
+	// xApp's http address need to be in this format: service-ricxapp-xappname-http.ricxapp
+	if i := strings.Index(host, ":"); i != -1 {
+		return "", "", fmt.Errorf("Incorrect clientEndpoint.Host =%v. Port should not be included", clientEndpoint.Host)
+	}
+
+	if host == "" || (HTTP_port == 0 && RMR_port == 0) {
+		err := fmt.Errorf("ClientEndpoint provided no PORT numbers")
 		return "INVALID_HTTP_ADDRESS:" + host + (string)(*clientEndpoint.HTTPPort),
 			"INVALID_RMR_ADDRESS:" + host + (string)(*clientEndpoint.RMRPort),
 			err
