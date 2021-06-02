@@ -70,14 +70,14 @@ var readSubsFromDb string
 
 type Control struct {
 	*xapp.RMRClient
-	e2ap     *E2ap
-	registry *Registry
-	tracker  *Tracker
-	db       Sdlnterface
-	//subscriber *xapp.Subscriber
+	e2ap          *E2ap
+	registry      *Registry
+	tracker       *Tracker
+	db            Sdlnterface
 	CntRecvMsg    uint64
 	ResetTestFlag bool
 	Counters      map[string]xapp.Counter
+	LoggerLevel   uint32
 }
 
 type RMRMeid struct {
@@ -109,11 +109,11 @@ func NewControl() *Control {
 	tracker.Init()
 
 	c := &Control{e2ap: new(E2ap),
-		registry: registry,
-		tracker:  tracker,
-		db:       CreateSdl(),
-		//subscriber: subscriber,
-		Counters: xapp.Metric.RegisterCounterGroup(GetMetricsOpts(), "SUBMGR"),
+		registry:    registry,
+		tracker:     tracker,
+		db:          CreateSdl(),
+		Counters:    xapp.Metric.RegisterCounterGroup(GetMetricsOpts(), "SUBMGR"),
+		LoggerLevel: 3,
 	}
 	c.ReadConfigParameters("")
 
@@ -192,6 +192,10 @@ func (c *Control) ReadConfigParameters(f string) {
 		readSubsFromDb = "true"
 	}
 	xapp.Logger.Info("readSubsFromDb %v", readSubsFromDb)
+	c.LoggerLevel = viper.GetUint32("logger.level")
+	if c.LoggerLevel == 0 {
+		c.LoggerLevel = 3
+	}
 }
 
 //-------------------------------------------------------------------
@@ -233,6 +237,10 @@ func (c *Control) SubscriptionHandler(params interface{}) (*models.SubscriptionR
 	subResp := models.SubscriptionResponse{}
 	subResp.SubscriptionID = &restSubId
 	p := params.(*models.SubscriptionParams)
+
+	if c.LoggerLevel > 2 {
+		c.PrintRESTSubscriptionRequest(p)
+	}
 
 	if p.ClientEndpoint == nil {
 		xapp.Logger.Error("ClientEndpoint == nil")
@@ -1095,5 +1103,57 @@ func (c *Control) SendSubscriptionDeleteReq(subs *Subscription) {
 		params.Mbuf = nil
 		subs.DeleteFromDb = true
 		c.handleXAPPSubscriptionDeleteRequest(params)
+	}
+}
+
+func (c *Control) PrintRESTSubscriptionRequest(p *models.SubscriptionParams) {
+
+	fmt.Println("CRESTSubscriptionRequest")
+	fmt.Printf("  ClientEndpoint.Host = %s\n", p.ClientEndpoint.Host)
+
+	if p.ClientEndpoint.HTTPPort != nil {
+		fmt.Printf("  ClientEndpoint.HTTPPort = %v\n", *p.ClientEndpoint.HTTPPort)
+	} else {
+		fmt.Println("  ClientEndpoint.HTTPPort = nil")
+	}
+
+	if p.ClientEndpoint.RMRPort != nil {
+		fmt.Printf("  ClientEndpoint.RMRPort = %v\n", *p.ClientEndpoint.RMRPort)
+	} else {
+		fmt.Println("  ClientEndpoint.RMRPort = nil")
+	}
+
+	if p.Meid != nil {
+		fmt.Printf("  Meid = %s\n", *p.Meid)
+	} else {
+		fmt.Println("  Meid = nil")
+	}
+
+	for _, subscriptionDetail := range p.SubscriptionDetails {
+		if p.RANFunctionID != nil {
+			fmt.Printf("  RANFunctionID = %v\n", *p.RANFunctionID)
+		} else {
+			fmt.Println("  RANFunctionID = nil")
+		}
+		fmt.Printf("  SubscriptionDetail.RequestorID = %v\n", *subscriptionDetail.RequestorID)
+		fmt.Printf("  SubscriptionDetail.InstanceID = %v\n", *subscriptionDetail.InstanceID)
+		fmt.Printf("  SubscriptionDetail.EventTriggers.OctetString = %X\n", subscriptionDetail.EventTriggers.OctetString)
+
+		for _, actionToBeSetup := range subscriptionDetail.ActionToBeSetupList {
+			fmt.Printf("  SubscriptionDetail.ActionToBeSetup.ActionID = %v\n", *actionToBeSetup.ActionID)
+			fmt.Printf("  SubscriptionDetail.ActionToBeSetup.ActionType = %s\n", *actionToBeSetup.ActionType)
+			if actionToBeSetup.ActionDefinition != nil {
+				fmt.Printf("  SubscriptionDetail.ActionToBeSetup.ActionDefinition.OctetString = %X\n", actionToBeSetup.ActionDefinition.OctetString)
+			} else {
+				fmt.Println("  SubscriptionDetail.ActionToBeSetup.ActionDefinition = nil")
+
+			}
+			if actionToBeSetup.SubsequentAction != nil {
+				fmt.Printf("  SubscriptionDetail.ActionToBeSetup.SubsequentAction.SubsequentActionType = %s\n", *actionToBeSetup.SubsequentAction.SubsequentActionType)
+				fmt.Printf("  SubscriptionDetail.ActionToBeSetup..SubsequentAction.TimeToWait = %s\n", *actionToBeSetup.SubsequentAction.TimeToWait)
+			} else {
+				fmt.Println("  SubscriptionDetail.ActionToBeSetup.SubsequentAction = nil")
+			}
+		}
 	}
 }
