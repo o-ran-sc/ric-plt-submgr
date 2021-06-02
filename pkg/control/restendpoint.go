@@ -40,7 +40,7 @@ func ConstructEndpointAddresses(clientEndpoint models.SubscriptionParamsClientEn
 	var xAppRMREndPoint string
 
 	if host == "" || (HTTP_port == 0 && RMR_port == 0) {
-		err := fmt.Errorf("ClientEndpoint aprovided no PORT numbers")
+		err := fmt.Errorf("ClientEndpoint provided without PORT numbers")
 		return "INVALID_HTTP_ADDRESS:" + host + (string)(*clientEndpoint.HTTPPort),
 			"INVALID_RMR_ADDRESS:" + host + (string)(*clientEndpoint.RMRPort),
 			err

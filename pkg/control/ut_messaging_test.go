@@ -2416,7 +2416,7 @@ func TestRESTSubReqAndRouteNok(t *testing.T) {
 	// Req
 	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
 	restSubId := xappConn1.SendRESTSubsReq(t, params)
-	xappConn1.ExpectRESTNotification(t, restSubId)
+	xappConn1.ExpectRESTNotificationNok(t, restSubId, "failAll")
 	waiter.WaitResult(t)
 
 	e2SubsId := xappConn1.WaitRESTNotification(t, restSubId)
@@ -2462,7 +2462,7 @@ func TestRESTSubReqAndRouteUpdateNok(t *testing.T) {
 	params.SetMeid("RAN_NAME_1")
 	restSubId2 := xappConn2.SendRESTSubsReq(t, params)
 	xapp.Logger.Info("Send REST subscriber request for second subscriber : %v", restSubId2)
-	xappConn2.ExpectRESTNotification(t, restSubId2)
+	xappConn2.ExpectRESTNotificationNok(t, restSubId2, "allFail")
 	waiter.WaitResult(t)
 	// e2SubsId2 := xappConn2.WaitRESTNotification(t, restSubId2) - TOD: missing delete
 	xappConn2.WaitRESTNotification(t, restSubId2)
@@ -2930,6 +2930,7 @@ func TestRESTSubReqRetryInSubmgr(t *testing.T) {
 //     |                 |              |
 //
 //-----------------------------------------------------------------------------
+
 func TestRESTSubReqRetryNoRespSubDelRespInSubmgr(t *testing.T) {
 	CaseBegin("TestRESTSubReqTwoRetriesNoRespSubDelRespInSubmgr start")
 
@@ -2954,9 +2955,8 @@ func TestRESTSubReqRetryNoRespSubDelRespInSubmgr(t *testing.T) {
 	xapp.Logger.Info("Ignore 2nd REST subscriber request for subscriber : %v", restSubId)
 
 	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
-	xappConn1.ExpectRESTNotification(t, restSubId)
+	xappConn1.ExpectRESTNotificationNok(t, restSubId, "allFail")
 	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
-	// e2SubsId := xappConn1.WaitRESTNotification(t, restSubId)	- TODO:  Should we delete this?
 	xappConn1.WaitRESTNotification(t, restSubId)
 
 	// Wait that subs is cleaned
@@ -2991,7 +2991,7 @@ func TestREST2eTermNotRespondingToSubReq(t *testing.T) {
 	e2termConn1.RecvSubsDelReq(t)
 	xapp.Logger.Info("Ignore 1st INTERNAL delete request for subscriber : %v", restSubId)
 
-	xappConn1.ExpectRESTNotification(t, restSubId)
+	xappConn1.ExpectRESTNotificationNok(t, restSubId, "allFail")
 	e2termConn1.RecvSubsDelReq(t)
 	xapp.Logger.Info("Ignore 2nd INTERNAL delete request for subscriber : %v", restSubId)
 
@@ -3068,7 +3068,7 @@ func TestRESTSubReqTwoRetriesNoRespAtAllInSubmgr(t *testing.T) {
 	e2termConn1.RecvSubsDelReq(t)
 	xapp.Logger.Info("Ignore 1st INTERNAL delete request for subscriber : %v", restSubId)
 
-	xappConn1.ExpectRESTNotification(t, restSubId)
+	xappConn1.ExpectRESTNotificationNok(t, restSubId, "allFail")
 	e2termConn1.RecvSubsDelReq(t)
 	xapp.Logger.Info("Ignore 2nd INTERNAL delete request for subscriber : %v", restSubId)
 
@@ -3134,7 +3134,7 @@ func TestRESTSubReqSubFailRespInSubmgr(t *testing.T) {
 	e2termConn1.SendSubsFail(t, fparams1, cremsg1)
 
 	delreq1, delmsg1 := e2termConn1.RecvSubsDelReq(t)
-	xappConn1.ExpectRESTNotification(t, restSubId)
+	xappConn1.ExpectRESTNotificationNok(t, restSubId, "allFail")
 	e2termConn1.SendSubsDelResp(t, delreq1, delmsg1)
 	e2SubsId := xappConn1.WaitRESTNotification(t, restSubId)
 	xapp.Logger.Info("TEST: REST notification received e2SubsId=%v", e2SubsId)
@@ -5041,7 +5041,7 @@ func TestRESTUnpackSubscriptionResponseDecodeFail(t *testing.T) {
 
 	_, cremsg = e2termConn1.RecvSubsReq(t)
 
-	xappConn1.ExpectRESTNotification(t, restSubId)
+	xappConn1.ExpectRESTNotificationNok(t, restSubId, "allFail")
 
 	// Subscription already created in E2 Node.
 	fparams := &teststube2ap.E2StubSubsFailParams{}
@@ -5114,7 +5114,7 @@ func TestRESTUnpackSubscriptionResponseUnknownInstanceId(t *testing.T) {
 
 	_, cremsg = e2termConn1.RecvSubsReq(t)
 
-	xappConn1.ExpectRESTNotification(t, restSubId)
+	xappConn1.ExpectRESTNotificationNok(t, restSubId, "allFail")
 
 	// Subscription already created in E2 Node.
 	fparams := &teststube2ap.E2StubSubsFailParams{}
@@ -5192,7 +5192,7 @@ func TestRESTUnpackSubscriptionResponseNoTransaction(t *testing.T) {
 
 	_, cremsg = e2termConn1.RecvSubsReq(t)
 
-	xappConn1.ExpectRESTNotification(t, restSubId)
+	xappConn1.ExpectRESTNotificationNok(t, restSubId, "allFail")
 
 	// Subscription already created in E2 Node.
 	fparams := &teststube2ap.E2StubSubsFailParams{}
@@ -5268,7 +5268,7 @@ func TestRESTUnpackSubscriptionFailureDecodeFail(t *testing.T) {
 
 	_, cremsg = e2termConn1.RecvSubsReq(t)
 
-	xappConn1.ExpectRESTNotification(t, restSubId)
+	xappConn1.ExpectRESTNotificationNok(t, restSubId, "allFail")
 
 	// Subscription already created in E2 Node.
 	fparams := &teststube2ap.E2StubSubsFailParams{}
@@ -5342,7 +5342,7 @@ func TestRESTUnpackSubscriptionFailureUnknownInstanceId(t *testing.T) {
 
 	_, cremsg = e2termConn1.RecvSubsReq(t)
 
-	xappConn1.ExpectRESTNotification(t, restSubId)
+	xappConn1.ExpectRESTNotificationNok(t, restSubId, "allFail")
 
 	// Subscription already created in E2 Node.
 	fparams.SetCauseVal(0, 1, 3) // CauseRIC / duplicate-action
@@ -5415,7 +5415,7 @@ func TestRESTUnpackSubscriptionFailureNoTransaction(t *testing.T) {
 
 	_, cremsg = e2termConn1.RecvSubsReq(t)
 
-	xappConn1.ExpectRESTNotification(t, restSubId)
+	xappConn1.ExpectRESTNotificationNok(t, restSubId, "allFail")
 
 	// Subscription already created in E2 Node.
 	fparams.SetCauseVal(0, 1, 3) // CauseRIC / duplicate-action
@@ -5857,7 +5857,7 @@ func TestRESTSubReqFailAsn1PackSubReqError(t *testing.T) {
 
 	// E2t: Receive SubsDelReq
 	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
-	xappConn1.ExpectRESTNotification(t, restSubId)
+	xappConn1.ExpectRESTNotificationNok(t, restSubId, "allFail")
 
 	// Subscription does not exist in in E2 Node.
 	e2termConn1.SendSubsDelFail(t, delreq, delmsg)
