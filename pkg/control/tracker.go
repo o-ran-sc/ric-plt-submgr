@@ -63,7 +63,7 @@ func (t *Tracker) NewXappTransaction(
 	meid *xapp.RMRMeid) *TransactionXapp {
 
 	trans := &TransactionXapp{}
-	trans.XappKey = &TransactionXappKey{*endpoint, xid}
+	trans.XappKey = &TransactionXappKey{requestId.Id, *endpoint, xid}
 	trans.Meid = meid
 	trans.RequestId = requestId
 	t.initTransaction(&trans.Transaction)
@@ -104,5 +104,5 @@ func (t *Tracker) UnTrackTransaction(xappKey TransactionXappKey) (*TransactionXa
 		//xapp.Logger.Debug("Tracker: transtable=%v", t.transactionXappTable)
 		return trans, nil
 	}
-	return nil, fmt.Errorf("Tracker: No record %s", xappKey)
+	return nil, fmt.Errorf("Tracker: No record %v", xappKey)
 }

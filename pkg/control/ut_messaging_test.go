@@ -3857,10 +3857,10 @@ func TestRESTSubReqPolicyChangeAndSubDelOk(t *testing.T) {
 	restSubId, e2SubsId := createSubscription(t, xappConn1, e2termConn1, params)
 
 	// Policy change
-	instanceId := int64(e2SubsId)
 	// GetRESTSubsReqPolicyParams sets some coutners on tc side.
+
 	params = xappConn1.GetRESTSubsReqPolicyParams(subReqCount)
-	params.SubsReqParams.SubscriptionDetails[0].InstanceID = &instanceId
+	params.SetSubscriptionID(&restSubId)
 	params.SetTimeToWait("w200ms")
 	restSubId, e2SubsId = createSubscription(t, xappConn1, e2termConn1, params)
 

@@ -61,7 +61,8 @@ func (c *E2ap) FillSubscriptionReqMsgs(params interface{}, subreqList *e2ap.Subs
 		if p.RANFunctionID != nil {
 			subReqMsg.FunctionId = (e2ap.FunctionId)(*p.RANFunctionID)
 		}
-		subReqMsg.RequestId = e2ap.RequestId{uint32(*subscriptionDetail.RequestorID), uint32(*subscriptionDetail.InstanceID)}
+		e2EventInstanceID := restSubscription.GetE2IdFromXappIdToE2Id(*subscriptionDetail.XappEventInstanceID)
+		subReqMsg.RequestId = e2ap.RequestId{uint32(*subscriptionDetail.XappEventInstanceID), uint32(e2EventInstanceID)}
 
 		subReqMsg.EventTriggerDefinition.Data.Data = []byte(subscriptionDetail.EventTriggers.OctetString)
 		subReqMsg.EventTriggerDefinition.Data.Length = uint64(len(subscriptionDetail.EventTriggers.OctetString))
