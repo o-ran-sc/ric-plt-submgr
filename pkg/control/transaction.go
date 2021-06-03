@@ -131,6 +131,7 @@ func (t *TransactionSubs) Release() {
 //
 //-----------------------------------------------------------------------------
 type TransactionXappKey struct {
+	InstanceID uint32
 	xapp.RmrEndpoint
 	Xid string // xapp xid in req
 }

@@ -37,20 +37,33 @@ type RESTSubscription struct {
 	xAppRmrEndPoint  string
 	Meid             string
 	InstanceIds      []uint32
+	xAppIdToE2Id     map[int64]int64
 	SubReqOngoing    bool
 	SubDelReqOngoing bool
 }
 
-func (r *RESTSubscription) AddInstanceId(instanceId uint32) {
+func (r *RESTSubscription) AddE2InstanceId(instanceId uint32) {
 	r.InstanceIds = append(r.InstanceIds, instanceId)
+}
+
+func (r *RESTSubscription) DeleteE2InstanceId(instanceId uint32) {
+	r.InstanceIds = r.InstanceIds[1:]
+}
+
+func (r *RESTSubscription) AddXappIdToE2Id(xAppEventInstanceID int64, e2EventInstanceID int64) {
+	r.xAppIdToE2Id[xAppEventInstanceID] = e2EventInstanceID
+}
+
+func (r *RESTSubscription) GetE2IdFromXappIdToE2Id(xAppEventInstanceID int64) int64 {
+	return r.xAppIdToE2Id[xAppEventInstanceID]
+}
+
+func (r *RESTSubscription) DeleteXappIdToE2Id(xAppEventInstanceID int64) {
+	delete(r.xAppIdToE2Id, xAppEventInstanceID)
 }
 
 func (r *RESTSubscription) SetProcessed() {
 	r.SubReqOngoing = false
-}
-
-func (r *RESTSubscription) DeleteInstanceId(instanceId uint32) {
-	r.InstanceIds = r.InstanceIds[1:]
 }
 
 type Registry struct {
@@ -80,6 +93,7 @@ func (r *Registry) CreateRESTSubscription(restSubId *string, xAppRmrEndPoint *st
 	newRestSubscription.SubReqOngoing = true
 	newRestSubscription.SubDelReqOngoing = false
 	r.restSubscriptions[*restSubId] = &newRestSubscription
+	newRestSubscription.xAppIdToE2Id = make(map[int64]int64)
 	xapp.Logger.Info("Registry: Created REST subscription successfully. restSubId=%v, subscriptionCount=%v, e2apSubscriptionCount=%v", *restSubId, len(r.restSubscriptions), len(r.register))
 	return &newRestSubscription, nil
 }
@@ -91,13 +105,15 @@ func (r *Registry) DeleteRESTSubscription(restSubId *string) {
 	xapp.Logger.Info("Registry: Deleted REST subscription successfully. restSubId=%v, subscriptionCount=%v", *restSubId, len(r.restSubscriptions))
 }
 
-func (r *Registry) GetRESTSubscription(restSubId string) (*RESTSubscription, error) {
+func (r *Registry) GetRESTSubscription(restSubId string, IsDelReqOngoing bool) (*RESTSubscription, error) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 	if restSubscription, ok := r.restSubscriptions[restSubId]; ok {
 		// Subscription deletion is not allowed if prosessing subscription request in not ready
 		if restSubscription.SubDelReqOngoing == false && restSubscription.SubReqOngoing == false {
-			restSubscription.SubDelReqOngoing = true
+			if IsDelReqOngoing == true {
+				restSubscription.SubDelReqOngoing = true
+			}
 			r.restSubscriptions[restSubId] = restSubscription
 			return restSubscription, nil
 		} else {
@@ -140,7 +156,7 @@ func (r *Registry) allocateSubs(trans *TransactionXapp, subReqMsg *e2ap.E2APSubs
 			NoRespToXapp:     false,
 			DoNotWaitSubResp: false,
 		}
-		subs.ReqId.Id = 123
+		subs.ReqId.Id = subReqMsg.RequestId.Id
 		subs.ReqId.InstanceId = subId
 		if resetTestFlag == true {
 			subs.DoNotWaitSubResp = true

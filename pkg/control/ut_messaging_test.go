@@ -20,6 +20,7 @@
 package control
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -3857,12 +3858,96 @@ func TestRESTSubReqPolicyChangeAndSubDelOk(t *testing.T) {
 	restSubId, e2SubsId := createSubscription(t, xappConn1, e2termConn1, params)
 
 	// Policy change
-	instanceId := int64(e2SubsId)
 	// GetRESTSubsReqPolicyParams sets some coutners on tc side.
+
 	params = xappConn1.GetRESTSubsReqPolicyParams(subReqCount)
-	params.SubsReqParams.SubscriptionDetails[0].InstanceID = &instanceId
+	params.SetSubscriptionID(&restSubId)
 	params.SetTimeToWait("w200ms")
 	restSubId, e2SubsId = createSubscription(t, xappConn1, e2termConn1, params)
+
+	// Del
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+
+	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
+
+	// Wait that subs is cleaned
+	waitSubsCleanup(t, e2SubsId, 10)
+	mainCtrl.VerifyCounterValues(t)
+}
+
+//-----------------------------------------------------------------------------
+// TestRESTSubReqPolicyChangeNOk
+//
+//   stub                             stub
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//     |                 |              |
+//     | RESTSubReq      |              |
+//     |---------------->|              |
+//     |                 |              |
+//     |     RESTSubResp |              |
+//     |<----------------|              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |      SubResp |
+//     |                 |<-------------|
+//     |                 |              |
+//     |       RESTNotif |              |
+//     |<----------------|              |
+//     |                 |              |
+//     | RESTSubReq      |              |
+//     |---------------->|              |
+//     |                 |              |
+//     |         RESTSubUpdateFail      |
+//     |                 |              |
+//     | RESTSubDelReq   |              |
+//     |---------------->|              |
+//     |                 |              |
+//     |                 | SubDelReq    |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |   SubDelResp |
+//     |                 |<-------------|
+//     |                 |              |
+//     |  RESTSubDelResp |              |
+//     |<----------------|              |
+//
+//-----------------------------------------------------------------------------
+func TestRESTSubReqPolicyChangeNOk(t *testing.T) {
+	CaseBegin("TestRESTSubReqPolicyChangeNOk")
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 2},
+		Counter{cRestSubRespToXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cSubRespFromE2, 1},
+		Counter{cRestSubNotifToXapp, 1},
+		Counter{cRestSubFailToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelRespFromE2, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+	})
+
+	const subReqCount int = 1
+
+	// Req
+	params := xappConn1.GetRESTSubsReqPolicyParams(subReqCount)
+	restSubId, e2SubsId := createSubscription(t, xappConn1, e2termConn1, params)
+
+	// Policy change
+
+	params = xappConn1.GetRESTSubsReqPolicyParams(subReqCount)
+
+	restSubIdUpd := strings.ToUpper(restSubId)
+	params.SetSubscriptionID(&restSubIdUpd)
+	params.SetTimeToWait("w200ms")
+
+	restSubId2 := xappConn1.SendRESTSubsReq(t, params)
+	assert.Equal(t, restSubId2, "")
 
 	// Del
 	xappConn1.SendRESTSubsDelReq(t, &restSubId)
