@@ -216,7 +216,8 @@ func (r *Registry) AssignToSubscription(trans *TransactionXapp, subReqMsg *e2ap.
 	//
 	actionType, err := r.CheckActionTypes(subReqMsg)
 	if err != nil {
-		xapp.Logger.Debug("CREATE %s", err)
+		xapp.Logger.Info("CREATE %s", err)
+		err = fmt.Errorf("E2 content validation failed")
 		return nil, err
 	}
 
@@ -236,6 +237,8 @@ func (r *Registry) AssignToSubscription(trans *TransactionXapp, subReqMsg *e2ap.
 	subs, endPointFound := r.findExistingSubs(trans, subReqMsg)
 	if subs == nil {
 		if subs, err = r.allocateSubs(trans, subReqMsg, resetTestFlag); err != nil {
+			xapp.Logger.Error("%s", err.Error())
+			err = fmt.Errorf("subscription not allocated")
 			return nil, err
 		}
 		newAlloc = true
@@ -289,6 +292,8 @@ func (r *Registry) RouteCreate(subs *Subscription, c *Control) error {
 	err := r.rtmgrClient.SubscriptionRequestCreate(subRouteAction)
 	if err != nil {
 		c.UpdateCounter(cRouteCreateFail)
+		xapp.Logger.Error("%s", err.Error())
+		err = fmt.Errorf("RTMGR route create failure")
 	}
 	return err
 }
@@ -298,6 +303,8 @@ func (r *Registry) RouteCreateUpdate(subs *Subscription, c *Control) error {
 	err := r.rtmgrClient.SubscriptionRequestUpdate(subRouteAction)
 	if err != nil {
 		c.UpdateCounter(cRouteCreateUpdateFail)
+		xapp.Logger.Error("%s", err.Error())
+		err = fmt.Errorf("RTMGR route update failure")
 		return err
 	}
 	c.UpdateCounter(cMergedSubscriptions)

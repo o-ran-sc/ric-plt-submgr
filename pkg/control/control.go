@@ -300,12 +300,14 @@ func (c *Control) processSubscriptionRequests(restSubscription *RESTSubscription
 
 	_, xAppRmrEndpoint, err := ConstructEndpointAddresses(*clientEndpoint)
 	if err != nil {
-		xapp.Logger.Error("%s", err.Error())
+		c.registry.DeleteRESTSubscription(restSubId)
+		xapp.Logger.Error("XAPP-SubReq transaction not created, endpoint createtion failed for RESTSubId=%s, Meid=%s", *restSubId, *meid)
 		return
 	}
 
 	var xAppEventInstanceID int64
 	var e2EventInstanceID int64
+	var errorCause string
 	for index := 0; index < len(subReqList.E2APSubscriptionRequests); index++ {
 		subReqMsg := subReqList.E2APSubscriptionRequests[index]
 
@@ -323,18 +325,19 @@ func (c *Control) processSubscriptionRequests(restSubscription *RESTSubscription
 		if err != nil {
 			// Send notification to xApp that prosessing of a Subscription Request has failed.
 			e2EventInstanceID = (int64)(0)
+			errorCause = err.Error()
 			resp := &models.SubscriptionResponse{
 				SubscriptionID: restSubId,
 				SubscriptionInstances: []*models.SubscriptionInstance{
 					&models.SubscriptionInstance{E2EventInstanceID: &e2EventInstanceID,
-						ErrorCause:          nil, //TODO: Suitable Error cause.
+						ErrorCause:          &errorCause,
 						XappEventInstanceID: &xAppEventInstanceID},
 				},
 			}
 			// Mark REST subscription request processed.
 			restSubscription.SetProcessed()
-			xapp.Logger.Info("Sending unsuccessful REST notification to endpoint=%v:%v, XappEventInstanceID=%v, E2EventInstanceID=%v, %s",
-				clientEndpoint.Host, *clientEndpoint.HTTPPort, xAppEventInstanceID, e2EventInstanceID, idstring(nil, trans))
+			xapp.Logger.Info("Sending unsuccessful REST notification (cause %s) to endpoint=%v:%v, XappEventInstanceID=%v, E2EventInstanceID=%v, %s",
+				errorCause, clientEndpoint.Host, *clientEndpoint.HTTPPort, xAppEventInstanceID, e2EventInstanceID, idstring(nil, trans))
 			xapp.Subscription.Notify(resp, *clientEndpoint)
 			c.UpdateCounter(cRestSubFailNotifToXapp)
 		} else {
@@ -375,15 +378,14 @@ func (c *Control) handleSubscriptionRequest(trans *TransactionXapp, subReqMsg *e
 
 	err := c.tracker.Track(trans)
 	if err != nil {
-		err = fmt.Errorf("XAPP-SubReq: %s", idstring(err, trans))
-		xapp.Logger.Error("%s", err.Error())
+		xapp.Logger.Error("XAPP-SubReq Tracking error: %s", idstring(err, trans))
+		err = fmt.Errorf("Tracking failure")
 		return nil, err
 	}
 
 	subs, err := c.registry.AssignToSubscription(trans, subReqMsg, c.ResetTestFlag, c)
 	if err != nil {
-		err = fmt.Errorf("XAPP-SubReq: %s", idstring(err, trans))
-		xapp.Logger.Error("%s", err.Error())
+		xapp.Logger.Error("XAPP-SubReq Assign error: %s", idstring(err, trans))
 		return nil, err
 	}
 
@@ -400,14 +402,17 @@ func (c *Control) handleSubscriptionRequest(trans *TransactionXapp, subReqMsg *e
 			trans.Release()
 			return themsg, nil
 		case *e2ap.E2APSubscriptionFailure:
-			err = fmt.Errorf("SubscriptionFailure received")
+			err = fmt.Errorf("E2 SubscriptionFailure received")
 			return nil, err
 		default:
+			err = fmt.Errorf("unexpected E2 subscription response received")
 			break
 		}
+	} else {
+		err = fmt.Errorf("E2 subscription response timeout")
 	}
-	err = fmt.Errorf("XAPP-SubReq: failed %s", idstring(err, trans, subs))
-	xapp.Logger.Error("%s", err.Error())
+
+	xapp.Logger.Error("XAPP-SubReq E2 subscription failed %s", idstring(err, trans, subs))
 	c.registry.RemoveFromSubscription(subs, trans, waitRouteCleanup_ms, c)
 	return nil, err
 }
