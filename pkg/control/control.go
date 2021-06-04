@@ -317,11 +317,11 @@ func (c *Control) processSubscriptionRequests(restSubscription *RESTSubscription
 		}
 
 		defer trans.Release()
+		xAppEventInstanceID = (int64)(subReqMsg.RequestId.Id)
 		xapp.Logger.Info("Handle SubscriptionRequest index=%v, %s", index, idstring(nil, trans))
 		subRespMsg, err := c.handleSubscriptionRequest(trans, &subReqMsg, meid, restSubId)
 		if err != nil {
 			// Send notification to xApp that prosessing of a Subscription Request has failed.
-			xAppEventInstanceID = (int64)(subReqMsg.RequestId.Id)
 			e2EventInstanceID = (int64)(0)
 			resp := &models.SubscriptionResponse{
 				SubscriptionID: restSubId,
@@ -338,7 +338,6 @@ func (c *Control) processSubscriptionRequests(restSubscription *RESTSubscription
 			xapp.Subscription.Notify(resp, *clientEndpoint)
 			c.UpdateCounter(cRestSubFailNotifToXapp)
 		} else {
-			xAppEventInstanceID = (int64)(subRespMsg.RequestId.Id)
 			e2EventInstanceID = (int64)(subRespMsg.RequestId.InstanceId)
 
 			xapp.Logger.Info("SubscriptionRequest index=%v processed successfully. endpoint=%v:%v, XappEventInstanceID=%v, E2EventInstanceID=%v, %s",
@@ -840,9 +839,11 @@ func (c *Control) sendE2TSubscriptionRequest(subs *Subscription, trans *Transact
 	var err error
 	var event interface{} = nil
 	var timedOut bool = false
+	const ricRequestorId = 123
 
 	subReqMsg := subs.SubReqMsg
 	subReqMsg.RequestId = subs.GetReqId().RequestId
+	subReqMsg.RequestId.Id = ricRequestorId
 	trans.Mtype, trans.Payload, err = c.e2ap.PackSubscriptionRequest(subReqMsg)
 	if err != nil {
 		xapp.Logger.Error("SUBS-SubReq: %s", idstring(err, trans, subs, parentTrans))
@@ -884,9 +885,11 @@ func (c *Control) sendE2TSubscriptionDeleteRequest(subs *Subscription, trans *Tr
 	var err error
 	var event interface{}
 	var timedOut bool
+	const ricRequestorId = 123
 
 	subDelReqMsg := &e2ap.E2APSubscriptionDeleteRequest{}
 	subDelReqMsg.RequestId = subs.GetReqId().RequestId
+	subDelReqMsg.RequestId.Id = ricRequestorId
 	subDelReqMsg.FunctionId = subs.SubReqMsg.FunctionId
 	trans.Mtype, trans.Payload, err = c.e2ap.PackSubscriptionDeleteRequest(subDelReqMsg)
 	if err != nil {
@@ -1100,11 +1103,13 @@ func (c *Control) RemoveSubscriptionFromDb(subs *Subscription) {
 
 func (c *Control) SendSubscriptionDeleteReq(subs *Subscription) {
 
+	const ricRequestorId = 123
 	xapp.Logger.Debug("Sending subscription delete due to restart. subId = %v", subs.ReqId.InstanceId)
 
 	// Send delete for every endpoint in the subscription
 	subDelReqMsg := &e2ap.E2APSubscriptionDeleteRequest{}
 	subDelReqMsg.RequestId = subs.GetReqId().RequestId
+	subDelReqMsg.RequestId.Id = ricRequestorId
 	subDelReqMsg.FunctionId = subs.SubReqMsg.FunctionId
 	mType, payload, err := c.e2ap.PackSubscriptionDeleteRequest(subDelReqMsg)
 	if err != nil {
