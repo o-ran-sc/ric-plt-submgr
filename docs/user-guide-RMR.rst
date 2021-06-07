@@ -16,8 +16,8 @@
 ..  limitations under the License.
 ..
 
-User-Guide
-==========
+User-Guide (old)
+================
 
 .. contents::
    :depth: 3
