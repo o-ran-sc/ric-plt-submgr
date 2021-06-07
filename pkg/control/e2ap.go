@@ -64,9 +64,12 @@ func (c *E2ap) FillSubscriptionReqMsgs(params interface{}, subreqList *e2ap.Subs
 		e2EventInstanceID := restSubscription.GetE2IdFromXappIdToE2Id(*subscriptionDetail.XappEventInstanceID)
 		subReqMsg.RequestId = e2ap.RequestId{uint32(*subscriptionDetail.XappEventInstanceID), uint32(e2EventInstanceID)}
 
-		subReqMsg.EventTriggerDefinition.Data.Data = []byte(subscriptionDetail.EventTriggers.OctetString)
-		subReqMsg.EventTriggerDefinition.Data.Length = uint64(len(subscriptionDetail.EventTriggers.OctetString))
-
+		if len(subscriptionDetail.EventTriggers) > 0 {
+			for _, val := range subscriptionDetail.EventTriggers {
+				subReqMsg.EventTriggerDefinition.Data.Data = append(subReqMsg.EventTriggerDefinition.Data.Data, byte(val))
+			}
+			subReqMsg.EventTriggerDefinition.Data.Length = uint64(len(subscriptionDetail.EventTriggers))
+		}
 		for _, actionToBeSetup := range subscriptionDetail.ActionToBeSetupList {
 			actionToBeSetupItem := e2ap.ActionToBeSetupItem{}
 			actionToBeSetupItem.ActionType = e2ap.E2AP_ActionTypeInvalid
@@ -75,9 +78,11 @@ func (c *E2ap) FillSubscriptionReqMsgs(params interface{}, subreqList *e2ap.Subs
 			actionToBeSetupItem.ActionType = e2ap.E2AP_ActionTypeStrMap[*actionToBeSetup.ActionType]
 			actionToBeSetupItem.RicActionDefinitionPresent = true
 
-			if actionToBeSetup.ActionDefinition != nil {
-				actionToBeSetupItem.ActionDefinitionChoice.Data.Data = []byte(actionToBeSetup.ActionDefinition.OctetString)
-				actionToBeSetupItem.ActionDefinitionChoice.Data.Length = uint64(len(actionToBeSetup.ActionDefinition.OctetString))
+			if len(actionToBeSetup.ActionDefinition) > 0 {
+				for _, val := range actionToBeSetup.ActionDefinition {
+					actionToBeSetupItem.ActionDefinitionChoice.Data.Data = append(actionToBeSetupItem.ActionDefinitionChoice.Data.Data, byte(val))
+				}
+				actionToBeSetupItem.ActionDefinitionChoice.Data.Length = uint64(len(actionToBeSetup.ActionDefinition))
 
 			}
 			if actionToBeSetup.SubsequentAction != nil {
