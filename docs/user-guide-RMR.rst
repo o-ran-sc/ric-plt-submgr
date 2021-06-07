@@ -23,8 +23,9 @@ User-Guide
    :depth: 3
    :local:
 
-``RMR based interface between xApp and Subscription Manager which is explained in this User-Guide is deprecated and will be removed in the future.
-See second User-Guide which explains new REST based interface.``
+``RMR based interface between xApp and Subscription Manager which is explained in this User-Guide``
+``is deprecated and will be removed in the future. See second User-Guide which explains new REST``
+``based interface.``
 
 Overview
 --------
