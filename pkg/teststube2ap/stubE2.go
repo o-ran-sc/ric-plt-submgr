@@ -858,15 +858,15 @@ func (p *RESTSubsReqParams) GetRESTSubsReqReportParams(subReqCount int, clientEn
 		reqId := int64(requestCount) + 1
 		subscriptionDetail := &clientmodel.SubscriptionDetail{
 			XappEventInstanceID: &reqId,
-			EventTriggers: &clientmodel.EventTriggerDefinition{
-				OctetString: "1234" + strconv.Itoa(requestCount),
+			EventTriggers: clientmodel.EventTriggerDefinition{
+				int64(1234 + requestCount),
 			},
 			ActionToBeSetupList: clientmodel.ActionsToBeSetup{
 				&clientmodel.ActionToBeSetup{
 					ActionID:   &actionId,
 					ActionType: &actionType,
-					ActionDefinition: &clientmodel.ActionDefinition{
-						OctetString: "5678" + strconv.Itoa(requestCount),
+					ActionDefinition: clientmodel.ActionDefinition{
+						int64(5678 + requestCount),
 					},
 					SubsequentAction: &clientmodel.SubsequentAction{
 						SubsequentActionType: &subsequestActioType,
@@ -938,34 +938,32 @@ func (p *RESTSubsReqParams) SetSubActionIDs(actionId int64) {
 	}
 }
 
-func (p *RESTSubsReqParams) SetSubActionDefinition(actionDefinition string) {
+func (p *RESTSubsReqParams) SetSubActionDefinition(actionDefinition []int64) {
 
 	for _, subDetail := range p.SubsReqParams.SubscriptionDetails {
 		for _, action := range subDetail.ActionToBeSetupList {
 			if action != nil {
-				action.ActionDefinition.OctetString = actionDefinition
+				action.ActionDefinition = actionDefinition
 			}
 		}
 	}
 }
 
-func (p *RESTSubsReqParams) SetSubEventTriggerDefinition(eventTriggerDefinition string) {
+func (p *RESTSubsReqParams) SetSubEventTriggerDefinition(eventTriggerDefinition []int64) {
 
 	for _, subDetail := range p.SubsReqParams.SubscriptionDetails {
 		if subDetail != nil {
-			subDetail.EventTriggers.OctetString = eventTriggerDefinition
+			subDetail.EventTriggers = eventTriggerDefinition
 		}
 	}
 }
 
-func (p *RESTSubsReqParams) AppendActionToActionToBeSetupList(actionId int64, actionType string, actionDefinition string, subsequentActionType string, timeToWait string) {
+func (p *RESTSubsReqParams) AppendActionToActionToBeSetupList(actionId int64, actionType string, actionDefinition []int64, subsequentActionType string, timeToWait string) {
 
 	actionToBeSetup := &clientmodel.ActionToBeSetup{
-		ActionID:   &actionId,
-		ActionType: &actionType,
-		ActionDefinition: &clientmodel.ActionDefinition{
-			OctetString: actionDefinition,
-		},
+		ActionID:         &actionId,
+		ActionType:       &actionType,
+		ActionDefinition: clientmodel.ActionDefinition(actionDefinition),
 		SubsequentAction: &clientmodel.SubsequentAction{
 			SubsequentActionType: &subsequentActionType,
 			TimeToWait:           &timeToWait,
@@ -1059,15 +1057,15 @@ func (p *RESTSubsReqParams) GetRESTSubsReqPolicyParams(subReqCount int, clientEn
 		reqId := int64(requestCount) + 1
 		subscriptionDetail := &clientmodel.SubscriptionDetail{
 			XappEventInstanceID: &reqId,
-			EventTriggers: &clientmodel.EventTriggerDefinition{
-				OctetString: "1234" + strconv.Itoa(requestCount),
+			EventTriggers: clientmodel.EventTriggerDefinition{
+				int64(1234 + requestCount),
 			},
 			ActionToBeSetupList: clientmodel.ActionsToBeSetup{
 				&clientmodel.ActionToBeSetup{
 					ActionID:   &actionId,
 					ActionType: &actionType,
-					ActionDefinition: &clientmodel.ActionDefinition{
-						OctetString: "5678" + strconv.Itoa(requestCount),
+					ActionDefinition: clientmodel.ActionDefinition{
+						int64(5678 + requestCount),
 					},
 					SubsequentAction: &clientmodel.SubsequentAction{
 						SubsequentActionType: &subsequestActioType,

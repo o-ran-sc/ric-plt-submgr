@@ -1161,17 +1161,13 @@ func (c *Control) PrintRESTSubscriptionRequest(p *models.SubscriptionParams) {
 			fmt.Println("  RANFunctionID = nil")
 		}
 		fmt.Printf("  SubscriptionDetail.XappEventInstanceID = %v\n", *subscriptionDetail.XappEventInstanceID)
-		fmt.Printf("  SubscriptionDetail.EventTriggers.OctetString = %X\n", subscriptionDetail.EventTriggers.OctetString)
+		fmt.Printf("  SubscriptionDetail.EventTriggers = %v\n", subscriptionDetail.EventTriggers)
 
 		for _, actionToBeSetup := range subscriptionDetail.ActionToBeSetupList {
 			fmt.Printf("  SubscriptionDetail.ActionToBeSetup.ActionID = %v\n", *actionToBeSetup.ActionID)
 			fmt.Printf("  SubscriptionDetail.ActionToBeSetup.ActionType = %s\n", *actionToBeSetup.ActionType)
-			if actionToBeSetup.ActionDefinition != nil {
-				fmt.Printf("  SubscriptionDetail.ActionToBeSetup.ActionDefinition.OctetString = %X\n", actionToBeSetup.ActionDefinition.OctetString)
-			} else {
-				fmt.Println("  SubscriptionDetail.ActionToBeSetup.ActionDefinition = nil")
+			fmt.Printf("  SubscriptionDetail.ActionToBeSetup.ActionDefinition = %v\n", actionToBeSetup.ActionDefinition)
 
-			}
 			if actionToBeSetup.SubsequentAction != nil {
 				fmt.Printf("  SubscriptionDetail.ActionToBeSetup.SubsequentAction.SubsequentActionType = %s\n", *actionToBeSetup.SubsequentAction.SubsequentActionType)
 				fmt.Printf("  SubscriptionDetail.ActionToBeSetup..SubsequentAction.TimeToWait = %s\n", *actionToBeSetup.SubsequentAction.TimeToWait)

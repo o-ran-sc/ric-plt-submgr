@@ -4772,7 +4772,7 @@ func TestRESTSubReqReportSameActionDiffEventTriggerDefinitionLen(t *testing.T) {
 	// Req2
 	params = xappConn2.GetRESTSubsReqReportParams(subReqCount)
 	params.SetMeid("RAN_NAME_1")
-	eventTriggerDefinition := "1234"
+	eventTriggerDefinition := []int64{1234, 1}
 	params.SetSubEventTriggerDefinition(eventTriggerDefinition)
 
 	restSubId2 := xappConn2.SendRESTSubsReq(t, params)
@@ -4822,7 +4822,7 @@ func TestRESTSubReqReportSameActionDiffActionListLen(t *testing.T) {
 
 	actionId := int64(1)
 	actionType := "report"
-	actionDefinition := "56781"
+	actionDefinition := []int64{5678, 1}
 	subsequestActionType := "continue"
 	timeToWait := "w10ms"
 	params.AppendActionToActionToBeSetupList(actionId, actionType, actionDefinition, subsequestActionType, timeToWait)
@@ -5007,7 +5007,7 @@ func TestRESTSubReqReportSameActionDiffActionDefinitionLen(t *testing.T) {
 	// Req2
 	params = xappConn2.GetRESTSubsReqReportParams(subReqCount)
 	params.SetMeid("RAN_NAME_1")
-	actionDefinition := "5678"
+	actionDefinition := []int64{5678, 1}
 	params.SetSubActionDefinition(actionDefinition)
 
 	restSubId2 := xappConn2.SendRESTSubsReq(t, params)
@@ -5054,7 +5054,7 @@ func TestRESTSubReqReportSameActionDiffActionDefinitionContents(t *testing.T) {
 	// Req2
 	params = xappConn2.GetRESTSubsReqReportParams(subReqCount)
 	params.SetMeid("RAN_NAME_1")
-	actionDefinition := "56782"
+	actionDefinition := []int64{56782}
 	params.SetSubActionDefinition(actionDefinition)
 
 	restSubId2 := xappConn2.SendRESTSubsReq(t, params)
