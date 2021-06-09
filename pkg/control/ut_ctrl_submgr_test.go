@@ -69,6 +69,7 @@ func (mc *testingSubmgrControl) SimulateRestart(t *testing.T) {
 	mainCtrl.c.registry.subIds = nil
 	// Initialize subIds slice and subscription map
 	mainCtrl.c.registry.Initialize()
+	restDuplicateCtrl.Init()
 	// Read subIds and subscriptions from database
 	subIds, register, err := mainCtrl.c.ReadAllSubscriptionsFromSdl()
 	if err != nil {

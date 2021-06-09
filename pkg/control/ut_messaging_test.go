@@ -38,6 +38,9 @@ func TestSuiteSetup(t *testing.T) {
 	// SetPackerIf(e2ap_wrapper.NewAsn1E2APPacker())
 
 	SetPackerIf(e2ap_wrapper.NewUtAsn1E2APPacker())
+
+	restDuplicateCtrl.Init()
+
 }
 
 //-----------------------------------------------------------------------------
@@ -2576,18 +2579,12 @@ func TestRESTSubMergeDelAndRouteUpdateNok(t *testing.T) {
 //     | RESTSubReq2     |              |
 //     | (retrans)       |              |
 //     |---------------->|              |
-//     |                 |              |
-//     |                 | SubReq2      |
-//     |                 |------------->|
-//     |    RESTSubResp2 |              |
+//     | RESTSubResp(201)|              |
 //     |<----------------|              |
+//     |                 |              |
 //     |                 |     SubResp1 |
 //     |                 |<-------------|
 //     |      RESTNotif1 |              |
-//     |<----------------|              |
-//     |                 |     SubResp1 |
-//     |                 |<-------------|
-//     |      RESTNotif2 |              |
 //     |<----------------|              |
 //     |                 |              |
 //     |            [SUBS DELETE]       |
@@ -2601,13 +2598,13 @@ func TestRESTSubReqRetransmission(t *testing.T) {
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 2},
 		Counter{cRestSubRespToXapp, 2},
-		Counter{cSubReqToE2, 2},
-		Counter{cSubRespFromE2, 2},
-		Counter{cRestSubNotifToXapp, 2},
-		Counter{cRestSubDelReqFromXapp, 2},
-		Counter{cSubDelReqToE2, 2},
-		Counter{cSubDelRespFromE2, 2},
-		Counter{cRestSubDelRespToXapp, 2},
+		Counter{cSubReqToE2, 1},
+		Counter{cSubRespFromE2, 1},
+		Counter{cRestSubNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelRespFromE2, 1},
+		Counter{cRestSubDelRespToXapp, 1},
 	})
 	// Retry/duplicate will get the same way as the first request.  Submgr cannot detect duplicate RESTRequests
 	// Contianed duplicate messages from same xapp will not be merged. Here we use xappConn2 to simulate sending
@@ -2621,37 +2618,26 @@ func TestRESTSubReqRetransmission(t *testing.T) {
 	waiter := rtmgrHttp.AllocNextSleep(10, true)
 	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
 	restSubId1 := xappConn1.SendRESTSubsReq(t, params)
-	restSubId2 := xappConn2.SendRESTSubsReq(t, params)
+	xappConn2.SendRESTSubsReq(t, params)
 
 	waiter.WaitResult(t)
 
-	xappConn1.WaitListedRestNotifications(t, []string{restSubId1, restSubId2})
+	xappConn1.WaitListedRestNotifications(t, []string{restSubId1})
 
 	// Depending one goroutine scheduling order, we cannot say for sure which xapp reaches e2term first. Thus
 	// the order is not significant he6re.
 	crereq, cremsg := e2termConn1.RecvSubsReq(t)
 	e2termConn1.SendSubsResp(t, crereq, cremsg)
-	crereq, cremsg = e2termConn1.RecvSubsReq(t)
-	e2termConn1.SendSubsResp(t, crereq, cremsg)
 
 	e2SubsIdA := <-xappConn1.ListedRESTNotifications
 	xapp.Logger.Info("TEST: 1.st XAPP notification received e2SubsId=%v", e2SubsIdA)
-	e2SubsIdB := <-xappConn1.ListedRESTNotifications
-	xapp.Logger.Info("TEST: 2.nd XAPP notification received e2SubsId=%v", e2SubsIdB)
 
 	// Del1
 	xappConn1.SendRESTSubsDelReq(t, &restSubId1)
 	delreq1, delmsg1 := e2termConn1.RecvSubsDelReq(t)
 	e2termConn1.SendSubsDelResp(t, delreq1, delmsg1)
 
-	// Del2
-	xappConn2.SendRESTSubsDelReq(t, &restSubId2)
-	delreq2, delmsg2 := e2termConn1.RecvSubsDelReq(t)
-	e2termConn1.SendSubsDelResp(t, delreq2, delmsg2)
-
-	mainCtrl.wait_multi_subs_clean(t, []uint32{e2SubsIdA.E2SubsId, e2SubsIdB.E2SubsId}, 10)
-
-	waitSubsCleanup(t, e2SubsIdB.E2SubsId, 10)
+	mainCtrl.wait_multi_subs_clean(t, []uint32{e2SubsIdA.E2SubsId}, 10)
 
 	mainCtrl.VerifyCounterValues(t)
 }
@@ -4271,6 +4257,7 @@ func TestRESTSubReqNokAndSubDelOkWithRestartInMiddle(t *testing.T) {
 //     |<----------------|              |
 //
 //-----------------------------------------------------------------------------
+
 func TestRESTSubReqAndSubDelOkWithRestartInMiddle(t *testing.T) {
 	CaseBegin("TestRESTSubReqAndSubDelOkWithRestartInMiddle")
 
@@ -4370,6 +4357,7 @@ func TestRESTSubReqAndSubDelOkWithRestartInMiddle(t *testing.T) {
 //     |             |                 |              |
 //
 //-----------------------------------------------------------------------------
+
 func TestRESTSubReqAndSubDelOkSameActionWithRestartsInMiddle(t *testing.T) {
 	CaseBegin("TestRESTSubReqAndSubDelOkSameActionWithRestartsInMiddle")
 
@@ -4481,6 +4469,7 @@ func TestRESTSubReqAndSubDelOkSameActionWithRestartsInMiddle(t *testing.T) {
 //     |<----------------|              |
 //
 //-----------------------------------------------------------------------------
+
 func TestRESTReportSubReqAndSubDelOk(t *testing.T) {
 	CaseBegin("TestRESTReportSubReqAndSubDelOk")
 	subReqCount := 1
@@ -5153,6 +5142,7 @@ func TestRESTSubReqReportSameActionDiffSubsAction(t *testing.T) {
 //     |                 |<-------------|
 //
 //-----------------------------------------------------------------------------
+
 func TestRESTUnpackSubscriptionResponseDecodeFail(t *testing.T) {
 	xapp.Logger.Info("TEST: TestRESTUnpackSubscriptionResponseDecodeFail")
 	subReqCount := 1
@@ -5223,6 +5213,7 @@ func TestRESTUnpackSubscriptionResponseDecodeFail(t *testing.T) {
 //     |                 |<-------------|
 //
 //-----------------------------------------------------------------------------
+
 func TestRESTUnpackSubscriptionResponseUnknownInstanceId(t *testing.T) {
 	xapp.Logger.Info("TEST: TestRESTUnpackSubscriptionResponseUnknownInstanceId")
 	subReqCount := 1
