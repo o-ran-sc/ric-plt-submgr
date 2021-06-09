@@ -67,6 +67,7 @@ var waitRouteCleanup_ms time.Duration
 var e2tMaxSubReqTryCount uint64    // Initial try + retry
 var e2tMaxSubDelReqTryCount uint64 // Initial try + retry
 var readSubsFromDb string
+var restDuplicateCtrl duplicateCtrl
 
 type Control struct {
 	*xapp.RMRClient
@@ -126,6 +127,8 @@ func NewControl() *Control {
 	if readSubsFromDb == "false" {
 		return c
 	}
+
+	restDuplicateCtrl.Init()
 
 	// Read subscriptions from db
 	xapp.Logger.Info("Reading subscriptions from db")
@@ -283,6 +286,22 @@ func (c *Control) SubscriptionHandler(params interface{}) (*models.SubscriptionR
 		return nil, err
 	}
 
+	err, duplicate, md5sum := restDuplicateCtrl.HasRetransmissionOngoing(restSubId, params)
+
+	if err != nil {
+		// We were unable to detect whether this request was duplicate or not, proceed
+		xapp.Logger.Info("%s - proceeding with the request", err.Error())
+	} else {
+		if duplicate {
+			if *p.SubscriptionDetails[0].ActionToBeSetupList[0].ActionType == "report" {
+				xapp.Logger.Info("Retransmission blocker dropped for report typer of request")
+				c.UpdateCounter(cRestSubRespToXapp)
+				return &subResp, nil
+			}
+		}
+		restSubscription.Md5sumOngoing = md5sum
+	}
+
 	go c.processSubscriptionRequests(restSubscription, &subReqList, p.ClientEndpoint, p.Meid, &restSubId)
 
 	c.UpdateCounter(cRestSubRespToXapp)
@@ -300,6 +319,7 @@ func (c *Control) processSubscriptionRequests(restSubscription *RESTSubscription
 
 	_, xAppRmrEndpoint, err := ConstructEndpointAddresses(*clientEndpoint)
 	if err != nil {
+		restDuplicateCtrl.RetransmissionComplete(restSubscription.Md5sumOngoing)
 		c.registry.DeleteRESTSubscription(restSubId)
 		xapp.Logger.Error("XAPP-SubReq transaction not created, endpoint createtion failed for RESTSubId=%s, Meid=%s", *restSubId, *meid)
 		return
@@ -313,6 +333,7 @@ func (c *Control) processSubscriptionRequests(restSubscription *RESTSubscription
 
 		trans := c.tracker.NewXappTransaction(xapp.NewRmrEndpoint(xAppRmrEndpoint), *restSubId, subReqMsg.RequestId, &xapp.RMRMeid{RanName: *meid})
 		if trans == nil {
+			restDuplicateCtrl.RetransmissionComplete(restSubscription.Md5sumOngoing)
 			c.registry.DeleteRESTSubscription(restSubId)
 			xapp.Logger.Error("XAPP-SubReq transaction not created. RESTSubId=%s, EndPoint=%s, Meid=%s", *restSubId, xAppRmrEndpoint, *meid)
 			return
@@ -335,6 +356,7 @@ func (c *Control) processSubscriptionRequests(restSubscription *RESTSubscription
 				},
 			}
 			// Mark REST subscription request processed.
+			restDuplicateCtrl.RetransmissionComplete(restSubscription.Md5sumOngoing)
 			restSubscription.SetProcessed()
 			xapp.Logger.Info("Sending unsuccessful REST notification (cause %s) to endpoint=%v:%v, XappEventInstanceID=%v, E2EventInstanceID=%v, %s",
 				errorCause, clientEndpoint.Host, *clientEndpoint.HTTPPort, xAppEventInstanceID, e2EventInstanceID, idstring(nil, trans))
@@ -360,6 +382,7 @@ func (c *Control) processSubscriptionRequests(restSubscription *RESTSubscription
 				},
 			}
 			// Mark REST subscription request processesd.
+			restDuplicateCtrl.RetransmissionComplete(restSubscription.Md5sumOngoing)
 			restSubscription.SetProcessed()
 			xapp.Logger.Info("Sending successful REST notification to endpoint=%v:%v, XappEventInstanceID=%v, E2EventInstanceID=%v, %s",
 				clientEndpoint.Host, *clientEndpoint.HTTPPort, xAppEventInstanceID, e2EventInstanceID, idstring(nil, trans))
