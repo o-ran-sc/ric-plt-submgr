@@ -331,8 +331,9 @@ func (c *Control) sendUnsuccesfullResponseNotification(restSubId *string, restSu
 		xapp.Logger.Info("Sending unsuccessful REST notification (cause %s) to endpoint=%v:%v, XappEventInstanceID=%v, E2EventInstanceID=%v",
 			errorCause, clientEndpoint.Host, *clientEndpoint.HTTPPort, xAppEventInstanceID, e2EventInstanceID)
 	}
-	xapp.Subscription.Notify(resp, *clientEndpoint)
+
 	c.UpdateCounter(cRestSubFailNotifToXapp)
+	xapp.Subscription.Notify(resp, *clientEndpoint)
 }
 
 func (c *Control) sendSuccesfullResponseNotification(restSubId *string, restSubscription *RESTSubscription, xAppEventInstanceID int64, e2EventInstanceID int64,
@@ -355,8 +356,9 @@ func (c *Control) sendSuccesfullResponseNotification(restSubId *string, restSubs
 	restSubscription.SetProcessed()
 	xapp.Logger.Info("Sending successful REST notification to endpoint=%v:%v, XappEventInstanceID=%v, E2EventInstanceID=%v, %s",
 		clientEndpoint.Host, *clientEndpoint.HTTPPort, xAppEventInstanceID, e2EventInstanceID, idstring(nil, trans))
-	xapp.Subscription.Notify(resp, *clientEndpoint)
+
 	c.UpdateCounter(cRestSubNotifToXapp)
+	xapp.Subscription.Notify(resp, *clientEndpoint)
 }
 
 //-------------------------------------------------------------------
@@ -1169,6 +1171,13 @@ func (c *Control) SendSubscriptionDeleteReq(subs *Subscription) {
 func (c *Control) PrintRESTSubscriptionRequest(p *models.SubscriptionParams) {
 
 	fmt.Println("CRESTSubscriptionRequest")
+
+	if p.SubscriptionID != "" {
+		fmt.Println("  SubscriptionID = ", p.SubscriptionID)
+	} else {
+		fmt.Println("  SubscriptionID = ''")
+	}
+
 	fmt.Printf("  ClientEndpoint.Host = %s\n", p.ClientEndpoint.Host)
 
 	if p.ClientEndpoint.HTTPPort != nil {
