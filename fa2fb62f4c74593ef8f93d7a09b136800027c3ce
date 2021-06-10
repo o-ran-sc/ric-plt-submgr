@@ -1,0 +1,44 @@
+{
+  "comments": [
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "fff69d75_811df628",
+        "filename": "pkg/control/duplicate.go",
+        "patchSetId": 4
+      },
+      "lineNbr": 50,
+      "author": {
+        "id": 1000033
+      },
+      "writtenOn": "2021-06-10T06:47:57Z",
+      "side": 1,
+      "message": "Could this be d? The first letter of dublicateCtrl. Same comment for below functions.",
+      "range": {
+        "startLine": 50,
+        "startChar": 6,
+        "endLine": 50,
+        "endChar": 7
+      },
+      "revId": "fa2fb62f4c74593ef8f93d7a09b136800027c3ce",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "85217165_198ca635",
+        "filename": "pkg/control/duplicate.go",
+        "patchSetId": 4
+      },
+      "lineNbr": 83,
+      "author": {
+        "id": 1000033
+      },
+      "writtenOn": "2021-06-10T06:47:57Z",
+      "side": 1,
+      "message": "Key to the retransmap should be md5sum + xapp\u0027s clientEndpoint (string). That would prevent blocking of request coming from another xapp.",
+      "revId": "fa2fb62f4c74593ef8f93d7a09b136800027c3ce",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
+    }
+  ]
+}
