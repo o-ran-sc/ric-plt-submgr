@@ -26,6 +26,30 @@
     {
       "unresolved": true,
       "key": {
+        "uuid": "fefb7ca0_34349133",
+        "filename": "pkg/control/duplicate.go",
+        "patchSetId": 4
+      },
+      "lineNbr": 50,
+      "author": {
+        "id": 1001275
+      },
+      "writtenOn": "2021-06-10T06:56:08Z",
+      "side": 1,
+      "message": "Shall be done",
+      "parentUuid": "fff69d75_811df628",
+      "range": {
+        "startLine": 50,
+        "startChar": 6,
+        "endLine": 50,
+        "endChar": 7
+      },
+      "revId": "fa2fb62f4c74593ef8f93d7a09b136800027c3ce",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
+    },
+    {
+      "unresolved": true,
+      "key": {
         "uuid": "85217165_198ca635",
         "filename": "pkg/control/duplicate.go",
         "patchSetId": 4
@@ -37,6 +61,24 @@
       "writtenOn": "2021-06-10T06:47:57Z",
       "side": 1,
       "message": "Key to the retransmap should be md5sum + xapp\u0027s clientEndpoint (string). That would prevent blocking of request coming from another xapp.",
+      "revId": "fa2fb62f4c74593ef8f93d7a09b136800027c3ce",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "8a539b4f_61093591",
+        "filename": "pkg/control/duplicate.go",
+        "patchSetId": 4
+      },
+      "lineNbr": 83,
+      "author": {
+        "id": 1001275
+      },
+      "writtenOn": "2021-06-10T06:56:08Z",
+      "side": 1,
+      "message": "The md5sum is calculated from models.SubscriptionParams, which includes also ClientEnpoint structure having the host name + port number for xapp, so it should technically satisfy that requirement already. It\u0027s true that hostname is not in \"converted\" host + port format at this stage, but do we still need to append it to the hexstring?",
+      "parentUuid": "85217165_198ca635",
       "revId": "fa2fb62f4c74593ef8f93d7a09b136800027c3ce",
       "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
     }
