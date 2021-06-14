@@ -46,7 +46,7 @@ const (
 )
 
 type Mock struct {
-	subsDB             map[string]string // Store information as a string like real db does.
+	e2SubsDb           map[string]string // Store information as a string like real db does.
 	register           map[uint32]*Subscription
 	subIds             []uint32
 	lastAllocatedSubId uint32
@@ -63,7 +63,7 @@ func CreateMock() *Mock {
 }
 
 func (m *Mock) ResetTestSettings() {
-	m.subsDB = make(map[string]string)
+	m.e2SubsDb = make(map[string]string)
 	m.register = make(map[uint32]*Subscription)
 	var i uint32
 	for i = 1; i < 65535; i++ {
@@ -490,7 +490,7 @@ func (m *Mock) Set(pairs ...interface{}) error {
 	}
 
 	if key != "" {
-		m.subsDB[key] = val
+		m.e2SubsDb[key] = val
 		subId := m.subIds[0]
 		subscriptionInfo := &SubscriptionInfo{}
 		err := json.Unmarshal([]byte(val), subscriptionInfo)
@@ -519,7 +519,7 @@ func (m *Mock) Get(keys []string) (map[string]interface{}, error) {
 
 	for _, key := range keys {
 		if key != "" {
-			retMap[key] = m.subsDB[key]
+			retMap[key] = m.e2SubsDb[key]
 		} else {
 			return nil, fmt.Errorf("Get() error: key == ''\n")
 		}
@@ -534,7 +534,7 @@ func (m *Mock) GetAll() ([]string, error) {
 	}
 
 	keys := []string{}
-	for key, _ := range m.subsDB {
+	for key, _ := range m.e2SubsDb {
 		keys = append(keys, key)
 	}
 	return keys, nil
@@ -554,7 +554,7 @@ func (m *Mock) Remove(keys []string) error {
 	}
 
 	subId := uint32(subId64)
-	delete(m.subsDB, keys[0])
+	delete(m.e2SubsDb, keys[0])
 	delete(m.register, subId)
 	m.subIds = append(m.subIds, subId)
 	return nil
@@ -562,14 +562,14 @@ func (m *Mock) Remove(keys []string) error {
 
 func (m *Mock) RemoveAll() error {
 
-	for key := range m.subsDB {
+	for key := range m.e2SubsDb {
 		subId64, err := strconv.ParseUint(key, 10, 64)
 		if err != nil {
 			return fmt.Errorf("RemoveAll() ParseUint() error: %s\n", err.Error())
 		}
 
 		subId := uint32(subId64)
-		delete(m.subsDB, key)
+		delete(m.e2SubsDb, key)
 		delete(m.register, subId)
 		m.subIds = append(m.subIds, subId)
 	}
