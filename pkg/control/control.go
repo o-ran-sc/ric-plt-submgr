@@ -74,7 +74,8 @@ type Control struct {
 	e2ap          *E2ap
 	registry      *Registry
 	tracker       *Tracker
-	db            Sdlnterface
+	e2SubsDb      Sdlnterface
+	restSubsDb    Sdlnterface
 	CntRecvMsg    uint64
 	ResetTestFlag bool
 	Counters      map[string]xapp.Counter
@@ -112,7 +113,8 @@ func NewControl() *Control {
 	c := &Control{e2ap: new(E2ap),
 		registry:    registry,
 		tracker:     tracker,
-		db:          CreateSdl(),
+		e2SubsDb:    CreateSdl(),
+		restSubsDb:  CreateRESTSdl(),
 		Counters:    xapp.Metric.RegisterCounterGroup(GetMetricsOpts(), "SUBMGR"),
 		LoggerLevel: 3,
 	}
@@ -139,6 +141,13 @@ func NewControl() *Control {
 		c.registry.subIds = subIds
 		c.registry.register = register
 		c.HandleUncompletedSubscriptions(register)
+	}
+
+	restSubscriptions, err := c.ReadAllRESTSubscriptionsFromSdl()
+	if err != nil {
+		xapp.Logger.Error("%v", err)
+	} else {
+		c.registry.restSubscriptions = restSubscriptions
 	}
 	return c
 }
@@ -299,8 +308,10 @@ func (c *Control) SubscriptionHandler(params interface{}) (*models.SubscriptionR
 				return &subResp, nil
 			}
 		}
-		restSubscription.Md5sumOngoing = md5sum
+		restSubscription.Md5sum = md5sum
 	}
+
+	c.WriteRESTSubscriptionToDb(restSubId, restSubscription)
 
 	go c.processSubscriptionRequests(restSubscription, &subReqList, p.ClientEndpoint, p.Meid, &restSubId, xAppRmrEndpoint)
 
@@ -324,6 +335,7 @@ func (c *Control) sendUnsuccesfullResponseNotification(restSubId *string, restSu
 	}
 	// Mark REST subscription request processed.
 	restSubscription.SetProcessed()
+	c.UpdateRESTSubscriptionInDB(*restSubId, restSubscription, false)
 	if trans != nil {
 		xapp.Logger.Info("Sending unsuccessful REST notification (cause %s) to endpoint=%v:%v, XappEventInstanceID=%v, E2EventInstanceID=%v, %s",
 			errorCause, clientEndpoint.Host, *clientEndpoint.HTTPPort, xAppEventInstanceID, e2EventInstanceID, idstring(nil, trans))
@@ -354,6 +366,7 @@ func (c *Control) sendSuccesfullResponseNotification(restSubId *string, restSubs
 	}
 	// Mark REST subscription request processesd.
 	restSubscription.SetProcessed()
+	c.UpdateRESTSubscriptionInDB(*restSubId, restSubscription, false)
 	xapp.Logger.Info("Sending successful REST notification to endpoint=%v:%v, XappEventInstanceID=%v, E2EventInstanceID=%v, %s",
 		clientEndpoint.Host, *clientEndpoint.HTTPPort, xAppEventInstanceID, e2EventInstanceID, idstring(nil, trans))
 
@@ -373,7 +386,7 @@ func (c *Control) processSubscriptionRequests(restSubscription *RESTSubscription
 	var xAppEventInstanceID int64
 	var e2EventInstanceID int64
 
-	defer restDuplicateCtrl.TransactionComplete(restSubscription.Md5sumOngoing)
+	defer restDuplicateCtrl.TransactionComplete(restSubscription.Md5sum)
 
 	for index := 0; index < len(subReqList.E2APSubscriptionRequests); index++ {
 		subReqMsg := subReqList.E2APSubscriptionRequests[index]
@@ -491,6 +504,7 @@ func (c *Control) SubscriptionDeleteHandlerCB(restSubId string) error {
 			restSubscription.DeleteE2InstanceId(instanceId)
 		}
 		c.registry.DeleteRESTSubscription(&restSubId)
+		c.RemoveRESTSubscriptionFromDb(restSubId)
 	}()
 
 	c.UpdateCounter(cRestSubDelRespToXapp)
@@ -569,6 +583,7 @@ func (c *Control) TestRestHandler(w http.ResponseWriter, r *http.Request) {
 	if s == "emptydb" {
 		xapp.Logger.Info("RemoveAllSubscriptionsFromSdl() called")
 		c.RemoveAllSubscriptionsFromSdl()
+		c.RemoveAllRESTSubscriptionsFromSdl()
 		return
 	}
 
@@ -1133,6 +1148,41 @@ func (c *Control) UpdateSubscriptionInDB(subs *Subscription, removeSubscriptionF
 func (c *Control) RemoveSubscriptionFromDb(subs *Subscription) {
 	xapp.Logger.Debug("RemoveSubscriptionFromDb() subId = %v", subs.ReqId.InstanceId)
 	err := c.RemoveSubscriptionFromSdl(subs.ReqId.InstanceId)
+	if err != nil {
+		xapp.Logger.Error("%v", err)
+	}
+}
+
+//-------------------------------------------------------------------
+//
+//-------------------------------------------------------------------
+func (c *Control) WriteRESTSubscriptionToDb(restSubId string, restSubs *RESTSubscription) {
+	xapp.Logger.Debug("WriteRESTSubscriptionToDb() restSubId = %s", restSubId)
+	err := c.WriteRESTSubscriptionToSdl(restSubId, restSubs)
+	if err != nil {
+		xapp.Logger.Error("%v", err)
+	}
+}
+
+//-------------------------------------------------------------------
+//
+//-------------------------------------------------------------------
+func (c *Control) UpdateRESTSubscriptionInDB(restSubId string, restSubs *RESTSubscription, removeRestSubscriptionFromDb bool) {
+
+	if removeRestSubscriptionFromDb == true {
+		// Subscription was written in db already when subscription request was sent to BTS, except for merged request
+		c.RemoveRESTSubscriptionFromDb(restSubId)
+	} else {
+		c.WriteRESTSubscriptionToDb(restSubId, restSubs)
+	}
+}
+
+//-------------------------------------------------------------------
+//
+//-------------------------------------------------------------------
+func (c *Control) RemoveRESTSubscriptionFromDb(restSubId string) {
+	xapp.Logger.Debug("RemoveRESTSubscriptionFromDb() restSubId = %s", restSubId)
+	err := c.RemoveRESTSubscriptionFromSdl(restSubId)
 	if err != nil {
 		xapp.Logger.Error("%v", err)
 	}

@@ -40,7 +40,7 @@ type RESTSubscription struct {
 	xAppIdToE2Id     map[int64]int64
 	SubReqOngoing    bool
 	SubDelReqOngoing bool
-	Md5sumOngoing    string
+	Md5sum           string
 }
 
 func (r *RESTSubscription) AddE2InstanceId(instanceId uint32) {
@@ -65,7 +65,7 @@ func (r *RESTSubscription) DeleteXappIdToE2Id(xAppEventInstanceID int64) {
 
 func (r *RESTSubscription) SetProcessed() {
 	r.SubReqOngoing = false
-	r.Md5sumOngoing = ""
+	r.Md5sum = ""
 }
 
 type Registry struct {
