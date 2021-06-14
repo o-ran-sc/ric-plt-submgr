@@ -22,10 +22,11 @@ package control
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
+
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
 	sdl "gerrit.o-ran-sc.org/r/ric-plt/sdlgo"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
-	"strconv"
 )
 
 type SubscriptionInfo struct {
@@ -39,7 +40,7 @@ type SubscriptionInfo struct {
 }
 
 func CreateSdl() Sdlnterface {
-	return sdl.NewSdlInstance("submgr", sdl.NewDatabase())
+	return sdl.NewSdlInstance("submgr_e2SubsDb", sdl.NewDatabase())
 }
 
 func (c *Control) WriteSubscriptionToSdl(subId uint32, subs *Subscription) error {
@@ -63,11 +64,11 @@ func (c *Control) WriteSubscriptionToSdl(subId uint32, subs *Subscription) error
 		return fmt.Errorf("SDL: WriteSubscriptionToSdl() json.Marshal error: %s", err.Error())
 	}
 
-	if err = c.db.Set(strconv.FormatUint(uint64(subId), 10), jsonData); err != nil {
+	if err = c.e2SubsDb.Set(strconv.FormatUint(uint64(subId), 10), jsonData); err != nil {
 		c.UpdateCounter(cSDLWriteFailure)
 		return fmt.Errorf("SDL: WriteSubscriptionToSdl(): %s", err.Error())
 	} else {
-		xapp.Logger.Debug("SDL: Subscription written in db. subId = %v", subId)
+		xapp.Logger.Debug("SDL: Subscription written in e2SubsDb. subId = %v", subId)
 	}
 	return nil
 }
@@ -76,12 +77,12 @@ func (c *Control) ReadSubscriptionFromSdl(subId uint32) (*Subscription, error) {
 
 	// This function is now just for testing purpose
 	key := strconv.FormatUint(uint64(subId), 10)
-	retMap, err := c.db.Get([]string{key})
+	retMap, err := c.e2SubsDb.Get([]string{key})
 	if err != nil {
 		c.UpdateCounter(cSDLReadFailure)
 		return nil, fmt.Errorf("SDL: ReadSubscriptionFromSdl(): %s", err.Error())
 	} else {
-		xapp.Logger.Debug("SDL: Subscription read from db.  subId = %v", subId)
+		xapp.Logger.Debug("SDL: Subscription read from e2SubsDb.  subId = %v", subId)
 	}
 
 	subs := &Subscription{}
@@ -134,10 +135,10 @@ func (c *Control) CreateSubscription(subscriptionInfo *SubscriptionInfo, jsonSub
 func (c *Control) RemoveSubscriptionFromSdl(subId uint32) error {
 
 	key := strconv.FormatUint(uint64(subId), 10)
-	if err := c.db.Remove([]string{key}); err != nil {
+	if err := c.e2SubsDb.Remove([]string{key}); err != nil {
 		return fmt.Errorf("SDL: RemoveSubscriptionfromSdl(): %s\n", err.Error())
 	} else {
-		xapp.Logger.Debug("SDL: Subscription removed from db. subId = %v", subId)
+		xapp.Logger.Debug("SDL: Subscription removed from e2SubsDb. subId = %v", subId)
 	}
 	return nil
 }
@@ -153,10 +154,10 @@ func (c *Control) ReadAllSubscriptionsFromSdl() ([]uint32, map[uint32]*Subscript
 
 	retMap := make(map[uint32]*Subscription)
 	// Get all keys
-	keys, err := c.db.GetAll()
+	keys, err := c.e2SubsDb.GetAll()
 	if err != nil {
 		c.UpdateCounter(cSDLReadFailure)
-		return nil, nil, fmt.Errorf("SDL: ReadAllSubscriptionsFromSdl(), GetAll(). Error while reading keys from DBAAS %s\n", err.Error())
+		return nil, nil, fmt.Errorf("SDL: ReadAllSubscriptionsFromSdl(), GetAll(). Error while reading E2 subscriptions  keys from DBAAS %s\n", err.Error())
 	}
 
 	if len(keys) == 0 {
@@ -164,10 +165,10 @@ func (c *Control) ReadAllSubscriptionsFromSdl() ([]uint32, map[uint32]*Subscript
 	}
 
 	// Get all subscriptionInfos
-	iSubscriptionMap, err := c.db.Get(keys)
+	iSubscriptionMap, err := c.e2SubsDb.Get(keys)
 	if err != nil {
 		c.UpdateCounter(cSDLReadFailure)
-		return nil, nil, fmt.Errorf("SDL: ReadAllSubscriptionsFromSdl(), Get():  Error while reading subscriptions from DBAAS %s\n", err.Error())
+		return nil, nil, fmt.Errorf("SDL: ReadAllSubscriptionsFromSdl(), Get():  Error while reading E2 subscriptions from DBAAS %s\n", err.Error())
 	}
 
 	for _, iSubscriptionInfo := range iSubscriptionMap {
@@ -209,11 +210,11 @@ func removeNumber(s []uint32, removedNum uint32) ([]uint32, error) {
 }
 func (c *Control) RemoveAllSubscriptionsFromSdl() error {
 
-	if err := c.db.RemoveAll(); err != nil {
+	if err := c.e2SubsDb.RemoveAll(); err != nil {
 		c.UpdateCounter(cSDLRemoveFailure)
 		return fmt.Errorf("SDL: RemoveAllSubscriptionsFromSdl(): %s\n", err.Error())
 	} else {
-		xapp.Logger.Debug("SDL: All subscriptions removed from db")
+		xapp.Logger.Debug("SDL: All subscriptions removed from e2SubsDb")
 	}
 	return nil
 }
