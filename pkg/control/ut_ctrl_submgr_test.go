@@ -56,7 +56,8 @@ func createSubmgrControl(srcId teststub.RmrSrcId, rtgSvc teststub.RmrRtgSvc) *te
 	mainCtrl.RmrControl.Init("SUBMGRCTL", srcId, rtgSvc)
 	mainCtrl.c = NewControl()
 	xapp.Logger.Debug("Replacing real db with test db")
-	mainCtrl.c.db = CreateMock() // This overrides real database for testing
+	mainCtrl.c.e2SubsDb = CreateMock()             // This overrides real E2 Subscription database for testing
+	mainCtrl.c.restSubsDb = CreateRestSubsDbMock() // This overrides real REST Subscription database for testing
 	xapp.SetReadyCB(mainCtrl.ReadyCB, nil)
 	go xapp.RunWithParams(mainCtrl.c, false)
 	mainCtrl.WaitCB()
