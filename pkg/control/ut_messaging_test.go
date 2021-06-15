@@ -2606,7 +2606,7 @@ func TestRESTSubReqRetransmission(t *testing.T) {
 		Counter{cSubDelRespFromE2, 1},
 		Counter{cRestSubDelRespToXapp, 1},
 	})
-	// Retry/duplicate will get the same way as the first request.  Submgr cannot detect duplicate RESTRequests
+	// Retry/duplicate will get the same way as the first request.
 	// Contianed duplicate messages from same xapp will not be merged. Here we use xappConn2 to simulate sending
 	// second request from same xapp as doing it from xappConn1 would not work as notification would not be received
 
@@ -2639,6 +2639,536 @@ func TestRESTSubReqRetransmission(t *testing.T) {
 
 	mainCtrl.wait_multi_subs_clean(t, []uint32{e2SubsIdA.E2SubsId}, 10)
 
+	mainCtrl.VerifyCounterValues(t)
+}
+
+//-----------------------------------------------------------------------------
+//   stub                             stub          stub
+// +-------+        +---------+    +---------+   +---------+
+// | xapp  |        | submgr  |    | e2term  |   |  rtmgr  |
+// +-------+        +---------+    +---------+   +---------+
+//     |                 |              |             |
+//     | RESTSubReq      |              |             |
+//     |---------------->|              |             |
+//     |     RESTSubResp |              |             |
+//     |<----------------|              |             |
+//     |                 | RouteCreate  |             |
+//     |                 |--------------------------->|
+//     |                 | RouteResponse|             |
+//     |                 |<---------------------------|  // The order of these events may vary
+//     |                 | SubReq       |             |
+//     |                 |------------->|             |  // The order of these events may vary
+//     |                 |      SubResp |             |
+//     |                 |<-------------|             |
+//     |      RESTNotif1 |              |             |
+//     |<----------------|              |             |
+//     | RESTSubReq      |              |             |
+//     | [RETRANS1]      |              |             |
+//     |---------------->|              |             |
+//     |      RESTNotif1 |              |             |
+//     |<----------------|              |             |
+//     | RESTSubReq      |              |             |
+//     | [RETRANS2]      |              |             |
+//     |---------------->|              |             |
+//     |      RESTNotif1 |              |             |
+//     |<----------------|              |             |
+//     | RESTSubDelReq   |              |             |
+//     |---------------->|              |             |
+//     |                 | SubDelReq    |             |
+//     |                 |------------->|             |
+//     |   RESTSubDelResp|              |             |
+//     |<----------------|              |             |
+//     |                 |   SubDelResp |             |
+//     |                 |<-------------|             |
+//     |                 |              |             |
+//
+//-----------------------------------------------------------------------------
+
+func TestRESTSubReqRetransmissionV2(t *testing.T) {
+	CaseBegin("TestRESTSubReqRetransmissionV2")
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 3},
+		Counter{cRestSubRespToXapp, 3},
+		Counter{cSubReqToE2, 1},
+		Counter{cSubRespFromE2, 1},
+		Counter{cRestSubNotifToXapp, 3},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelRespFromE2, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+	})
+
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
+
+	restSubId, e2SubsId := createSubscription(t, xappConn1, e2termConn1, params)
+
+	queryXappSubscription(t, int64(e2SubsId), "RAN_NAME_1", []string{"localhost:13560"})
+
+	//1.st resend
+	restSubId_resend := xappConn1.SendRESTSubsReq(t, params)
+
+	assert.Equal(t, restSubId_resend, restSubId)
+
+	<-time.After(100 * time.Millisecond)
+
+	//2.nd resend
+	restSubId_resend2 := xappConn1.SendRESTSubsReq(t, params)
+
+	assert.Equal(t, restSubId_resend2, restSubId)
+
+	<-time.After(100 * time.Millisecond)
+
+	deleteSubscription(t, xappConn1, e2termConn1, &restSubId)
+
+	waitSubsCleanup(t, e2SubsId, 10)
+
+	//Wait that subs is cleaned
+	mainCtrl.VerifyCounterValues(t)
+}
+
+//-----------------------------------------------------------------------------
+//   stub                             stub          stub
+// +-------+        +---------+    +---------+   +---------+
+// | xapp  |        | submgr  |    | e2term  |   |  rtmgr  |
+// +-------+        +---------+    +---------+   +---------+
+//     |                 |              |             |
+//     | RESTSubReq      |              |             |
+//     |---------------->|              |             |
+//     |     RESTSubResp |              |             |
+//     |<----------------|              |             |
+//     |                 | RouteCreate  |             |
+//     |                 |--------------------------->|
+//     |                 | RouteResponse|             |
+//     |                 |<---------------------------|  // The order of these events may vary
+//     |                 | SubReq       |             |
+//     |                 |------------->|             |  // The order of these events may vary
+//     |                 |      SubResp |             |
+//     |                 |<-------------|             |
+//     |      RESTNotif1 |              |             |
+//     |<----------------|              |             |
+//     | RESTSubReq      |              |             |
+//     | [RETRANS, with RESTsubsId]     |             |
+//     |---------------->|              |             |
+//     |      RESTNotif1 |              |             |
+//     |<----------------|              |             |
+//     | RESTSubReq      |              |             |
+//     | [RETRANS, without RESTsubsId]  |             |
+//     |---------------->|              |             |
+//     |      RESTNotif1 |              |             |
+//     |<----------------|              |             |
+//     | RESTSubDelReq   |              |             |
+//     |---------------->|              |             |
+//     |                 | SubDelReq    |             |
+//     |                 |------------->|             |
+//     |   RESTSubDelResp|              |             |
+//     |<----------------|              |             |
+//     |                 |   SubDelResp |             |
+//     |                 |<-------------|             |
+//     |                 |              |             |
+//
+//-----------------------------------------------------------------------------
+func TestRESTSubReqRetransmissionV3(t *testing.T) {
+	CaseBegin("TestRESTSubReqRetransmissionV3")
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 3},
+		Counter{cRestSubRespToXapp, 3},
+		Counter{cSubReqToE2, 1},
+		Counter{cSubRespFromE2, 1},
+		Counter{cRestSubNotifToXapp, 3},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelRespFromE2, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+	})
+
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
+
+	restSubId, e2SubsId := createSubscription(t, xappConn1, e2termConn1, params)
+
+	queryXappSubscription(t, int64(e2SubsId), "RAN_NAME_1", []string{"localhost:13560"})
+
+	<-time.After(100 * time.Millisecond)
+
+	//1.st resend with subscription ID
+	params.SetSubscriptionID(&restSubId)
+	restSubId_resend := xappConn1.SendRESTSubsReq(t, params)
+
+	assert.Equal(t, restSubId_resend, restSubId)
+
+	<-time.After(100 * time.Millisecond)
+
+	//2.nd resend without subscription ID (faking app restart)
+	params = xappConn1.GetRESTSubsReqReportParams(subReqCount)
+	restSubId_resend2 := xappConn1.SendRESTSubsReq(t, params)
+
+	assert.Equal(t, restSubId_resend2, restSubId)
+
+	<-time.After(100 * time.Millisecond)
+
+	deleteSubscription(t, xappConn1, e2termConn1, &restSubId)
+
+	waitSubsCleanup(t, e2SubsId, 10)
+
+	//Wait that subs is cleaned
+	mainCtrl.VerifyCounterValues(t)
+}
+
+//-----------------------------------------------------------------------------
+//   stub                             stub          stub
+// +-------+        +---------+    +---------+   +---------+
+// | xapp  |        | submgr  |    | e2term  |   |  rtmgr  |
+// +-------+        +---------+    +---------+   +---------+
+//     |                 |              |             |
+//     | RESTSubReq      |              |             |
+//     |---------------->|              |             |
+//     |     RESTSubResp |              |             |
+//     |<----------------|              |             |
+//     |                 | RouteCreate  |             |
+//     |                 |--------------------------->|
+//     |                 | RouteResponse|             |
+//     |                 |<---------------------------|
+//     |                 | SubReq       |             |
+//     |                 |------------->|             |
+//     |                 |      SubResp |             |
+//     |                 |<-------------|             |
+//     |      RESTNotif1 |              |             |
+//     |<----------------|              |             |
+//     | RESTSubReq      |              |             |
+//     | [with RestSUbsId + one additional e2 subDetail]
+//     |---------------->|              |             |
+//     |      RESTNotif1 |              |             |
+//     | [for initial e2 subDetail]     |             |
+//     |<----------------|              |             |
+//     |                 | RouteCreate  |             |
+//     |                 |--------------------------->|
+//     |                 | RouteResponse|             |
+//     |                 |<---------------------------|
+//     |                 | SubReq       |             |
+//     |                 |------------->|             |
+//     |                 |      SubResp |             |
+//     |                 |<-------------|             |
+//     |      RESTNotif1 |              |             |
+//     |<----------------|              |             |
+//     | RESTSubReq      |              |             |
+//     | [with RESTsubsId initial request]            |
+//     |---------------->|              |             |
+//     |      RESTNotif1 |              |             |
+//     |<----------------|              |             |
+//     | RESTSubDelReq   |              |             |
+//     |---------------->|              |             |
+//     |   RESTSubDelResp|              |             |
+//     |<----------------|              |             |
+//     |                 | SubDelReq    |             |
+//     |                 |------------->|             |
+//     |                 |   SubDelResp |             |
+//     |                 |<-------------|             |
+//     |                 | SubDelReq    |             |
+//     |                 |------------->|             |
+//     |                 |   SubDelResp |             |
+//     |                 |<-------------|             |
+//     |                 |              |             |
+//
+//-----------------------------------------------------------------------------
+
+func TestRESTSubReqRetransmissionV4(t *testing.T) {
+	CaseBegin("TestRESTSubReqRetransmissionV4")
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 3},
+		Counter{cRestSubRespToXapp, 3},
+		Counter{cSubReqToE2, 2},
+		Counter{cSubRespFromE2, 2},
+		Counter{cRestSubNotifToXapp, 4},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cSubDelReqToE2, 2},
+		Counter{cSubDelRespFromE2, 2},
+		Counter{cRestSubDelRespToXapp, 1},
+	})
+
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
+
+	restSubId, e2SubsId := createSubscription(t, xappConn1, e2termConn1, params)
+
+	<-time.After(100 * time.Millisecond)
+
+	// Send modified  requst, this time with e2 subscriptions.
+	params2 := xappConn1.GetRESTSubsReqReportParams(subReqCount + 1)
+	params2.SetSubscriptionID(&restSubId)
+
+	xapp.Subscription.SetResponseCB(xappConn1.SubscriptionRespHandler)
+	xappConn1.WaitRESTNotificationForAnySubscriptionId(t)
+	// Resend the original request with an additional e2 subscription (detail), this time with restsubsid
+	restSubId_resend := xappConn1.SendRESTSubsReq(t, params2)
+
+	crereq2, cremsg2 := e2termConn1.RecvSubsReq(t)
+
+	xappConn1.ExpectRESTNotification(t, restSubId_resend)
+	e2termConn1.SendSubsResp(t, crereq2, cremsg2)
+	e2SubsId2 := xappConn1.WaitRESTNotification(t, restSubId_resend)
+	assert.NotEqual(t, e2SubsId2, 0)
+
+	<-time.After(100 * time.Millisecond)
+
+	xapp.Subscription.SetResponseCB(xappConn1.SubscriptionRespHandler)
+	params = xappConn1.GetRESTSubsReqReportParams(subReqCount)
+	params.SetSubscriptionID(&restSubId)
+	xappConn1.WaitRESTNotificationForAnySubscriptionId(t)
+	// Resend the original request again with only one e2 subscription (detail), this time with restsubsid
+	restSubId_resend2 := xappConn1.SendRESTSubsReq(t, params)
+	assert.Equal(t, restSubId_resend, restSubId_resend2)
+
+	// Delete both e2 subscriptions
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+	e2SubsIds := []uint32{e2SubsId, e2SubsId2}
+	sendAndReceiveMultipleE2DelReqs(t, e2SubsIds, e2termConn1)
+
+	waitSubsCleanup(t, e2SubsId, 10)
+
+	//Wait that subs is cleaned
+	mainCtrl.VerifyCounterValues(t)
+}
+
+//-----------------------------------------------------------------------------
+//   stub                             stub          stub
+// +-------+        +---------+    +---------+   +---------+
+// | xapp  |        | submgr  |    | e2term  |   |  rtmgr  |
+// +-------+        +---------+    +---------+   +---------+
+//     |                 |              |             |
+//     | RESTSubReq      |              |             |
+//     |---------------->|              |             |
+//     |     RESTSubResp |              |             |
+//     |<----------------|              |             |
+//     |                 | RouteCreate  |             |
+//     |                 |--------------------------->|
+//     |                 | RouteResponse|             |
+//     |                 |<---------------------------|
+//     |                 | SubReq       |             |
+//     |                 |------------->|             |
+//     |                 |      SubResp |             |
+//     |                 |<-------------|             |
+//     |      RESTNotif1 |              |             |
+//     |<----------------|              |             |
+//     | RESTSubReq      |              |             |
+//     | [with RestSUbsId + one additional e2 subDetail]
+//     |---------------->|              |             |
+//     |      RESTNotif1 |              |             |
+//     | [for initial e2 subDetail]     |             |
+//     |<----------------|              |             |
+//     |                 | RouteCreate  |             |
+//     |                 |--------------------------->|
+//     |                 | RouteResponse|             |
+//     |                 |<---------------------------|
+//     |                 | SubReq       |             |
+//     |                 |------------->|             |
+//     |                 |      SubResp |             |
+//     |                 |<-------------|             |
+//     |      RESTNotif1 |              |             |
+//     |<----------------|              |             |
+//     | RESTSubReq      |              |             |
+//     | [without RESTsubsId initial request]         |
+//     |---------------->|              |             |
+//     |      RESTNotif1 |              |             |
+//     |<----------------|              |             |
+//     | RESTSubDelReq   |              |             |
+//     |---------------->|              |             |
+//     |   RESTSubDelResp|              |             |
+//     |<----------------|              |             |
+//     |                 | SubDelReq    |             |
+//     |                 |------------->|             |
+//     |                 |   SubDelResp |             |
+//     |                 |<-------------|             |
+//     |                 | SubDelReq    |             |
+//     |                 |------------->|             |
+//     |                 |   SubDelResp |             |
+//     |                 |<-------------|             |
+//     |                 |              |             |
+//
+//-----------------------------------------------------------------------------
+
+func TestRESTSubReqRetransmissionV5(t *testing.T) {
+	CaseBegin("TestRESTSubReqRetransmissionV5")
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 3},
+		Counter{cRestSubRespToXapp, 3},
+		Counter{cSubReqToE2, 2},
+		Counter{cSubRespFromE2, 2},
+		Counter{cRestSubNotifToXapp, 4},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cSubDelReqToE2, 2},
+		Counter{cSubDelRespFromE2, 2},
+		Counter{cRestSubDelRespToXapp, 1},
+	})
+
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
+
+	restSubId, e2SubsId := createSubscription(t, xappConn1, e2termConn1, params)
+
+	<-time.After(100 * time.Millisecond)
+
+	// Send modified  requst, this time with e2 subscriptions.
+	params2 := xappConn1.GetRESTSubsReqReportParams(subReqCount + 1)
+	params2.SetSubscriptionID(&restSubId)
+
+	xapp.Subscription.SetResponseCB(xappConn1.SubscriptionRespHandler)
+	xappConn1.WaitRESTNotificationForAnySubscriptionId(t)
+	// Resend the original request with an additional e2 subscription (detail), this time with restsubsid
+	restSubId_resend := xappConn1.SendRESTSubsReq(t, params2)
+
+	crereq2, cremsg2 := e2termConn1.RecvSubsReq(t)
+
+	xappConn1.ExpectRESTNotification(t, restSubId_resend)
+	e2termConn1.SendSubsResp(t, crereq2, cremsg2)
+	e2SubsId2 := xappConn1.WaitRESTNotification(t, restSubId_resend)
+	assert.NotEqual(t, e2SubsId2, 0)
+
+	<-time.After(100 * time.Millisecond)
+
+	xapp.Subscription.SetResponseCB(xappConn1.SubscriptionRespHandler)
+	params = xappConn1.GetRESTSubsReqReportParams(subReqCount)
+	xappConn1.WaitRESTNotificationForAnySubscriptionId(t)
+	// Resend the original request again with only one e2 subscription (detail), WITHOUT restsubsid
+	// md5sum shall find the original request
+	restSubId_resend2 := xappConn1.SendRESTSubsReq(t, params)
+	assert.Equal(t, restSubId_resend, restSubId_resend2)
+
+	// Delete both e2 subscriptions
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+	e2SubsIds := []uint32{e2SubsId, e2SubsId2}
+	sendAndReceiveMultipleE2DelReqs(t, e2SubsIds, e2termConn1)
+
+	waitSubsCleanup(t, e2SubsId, 10)
+
+	//Wait that subs is cleaned
+	mainCtrl.VerifyCounterValues(t)
+}
+
+//-----------------------------------------------------------------------------
+//   stub                             stub          stub
+// +-------+        +---------+    +---------+   +---------+
+// | xapp  |        | submgr  |    | e2term  |   |  rtmgr  |
+// +-------+        +---------+    +---------+   +---------+
+//     |                 |              |             |
+//     | RESTSubReq      |              |             |
+//     |---------------->|              |             |
+//     |     RESTSubResp |              |             |
+//     |<----------------|              |             |
+//     |                 | RouteCreate  |             |
+//     |                 |--------------------------->|
+//     |                 | RouteResponse|             |
+//     |                 |<---------------------------|
+//     |                 | SubReq       |             |
+//     |                 |------------->|             |
+//     |                 |      SubResp |             |
+//     |                 |<-------------|             |
+//     |      RESTNotif1 |              |             |
+//     |<----------------|              |             |
+//     | RESTSubReq      |              |             |
+//     | [with RestSUbsId + one additional e2 subDetail]
+//     |---------------->|              |             |
+//     |      RESTNotif1 |              |             |
+//     | [for initial e2 subDetail]     |             |
+//     |<----------------|              |             |
+//     |                 | RouteCreate  |             |
+//     |                 |--------------------------->|
+//     |                 | RouteResponse|             |
+//     |                 |<---------------------------|
+//     |                 | SubReq       |             |
+//     |                 |------------->|             |
+//     |                 |      SubResp |             |
+//     |                 |<-------------|             |
+//     |      RESTNotif1 |              |             |
+//     |<----------------|              |             |
+//     | RESTSubDelReq   |              |             |
+//     |---------------->|              |             |
+//     |   RESTSubDelResp|              |             |
+//     |<----------------|              |             |
+//     |                 | SubDelReq    |             |
+//     |                 |------------->|             |
+//     |                 |   SubDelResp |             |
+//     |                 |<-------------|             |
+//     |                 | SubDelReq    |             |
+//     |                 |------------->|             |
+//     |                 |   SubDelResp |             |
+//     |                 |<-------------|             |
+//     | RESTSubReq      |              |             |
+//     | [with RESTsubsId initial request]            |
+//     |---------------->|              |             |
+//     |     RESTSubResp |              |             |
+//     |<----------------|              |             |
+//     |                 | RouteCreate  |             |
+//     |                 |--------------------------->|
+//     |                 | RouteResponse|             |
+//     |                 |<---------------------------|
+//     |                 | SubReq       |             |
+//     |                 |------------->|             |
+//     |                 |      SubResp |             |
+//     |                 |<-------------|             |
+//     |      RESTNotif1 |              |             |
+//     |<----------------|              |             |
+//     |                 |              |             |
+//
+//-----------------------------------------------------------------------------
+func TestRESTSubReqRetransmissionV6(t *testing.T) {
+	CaseBegin("TestRESTSubReqRetransmissionV6")
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 3},
+		Counter{cRestSubRespToXapp, 3},
+		Counter{cSubReqToE2, 3},
+		Counter{cSubRespFromE2, 3},
+		Counter{cRestSubNotifToXapp, 4},
+		Counter{cRestSubDelReqFromXapp, 2},
+		Counter{cSubDelReqToE2, 3},
+		Counter{cSubDelRespFromE2, 3},
+		Counter{cRestSubDelRespToXapp, 2},
+	})
+
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
+
+	restSubId, e2SubsId := createSubscription(t, xappConn1, e2termConn1, params)
+
+	<-time.After(100 * time.Millisecond)
+
+	// Send modified  requst, this time with e2 subscriptions.
+	params2 := xappConn1.GetRESTSubsReqReportParams(subReqCount + 1)
+	params2.SetSubscriptionID(&restSubId)
+
+	xapp.Subscription.SetResponseCB(xappConn1.SubscriptionRespHandler)
+	xappConn1.WaitRESTNotificationForAnySubscriptionId(t)
+	// Resend the original request with an additional e2 subscription (detail), this time with restsubsid
+	restSubId_resend := xappConn1.SendRESTSubsReq(t, params2)
+
+	crereq2, cremsg2 := e2termConn1.RecvSubsReq(t)
+
+	xappConn1.ExpectRESTNotification(t, restSubId_resend)
+	e2termConn1.SendSubsResp(t, crereq2, cremsg2)
+	e2SubsId2 := xappConn1.WaitRESTNotification(t, restSubId_resend)
+	assert.NotEqual(t, e2SubsId2, 0)
+
+	<-time.After(100 * time.Millisecond)
+
+	// Delete both e2 subscriptions
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+	e2SubsIds := []uint32{e2SubsId, e2SubsId2}
+	sendAndReceiveMultipleE2DelReqs(t, e2SubsIds, e2termConn1)
+
+	waitSubsCleanup(t, e2SubsId, 10)
+
+	// Resend the original request, we shall find it's previous md5sum/restsubs
+	// but the restsubscription has been already removed. This shall trigger a
+	// fresh create.
+	restSubId, e2SubsId = createSubscription(t, xappConn1, e2termConn1, params)
+
+	<-time.After(100 * time.Millisecond)
+
+	deleteSubscription(t, xappConn1, e2termConn1, &restSubId)
+
+	waitSubsCleanup(t, e2SubsId, 10)
+
+	//Wait that subs is cleaned
 	mainCtrl.VerifyCounterValues(t)
 }
 

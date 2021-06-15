@@ -44,14 +44,17 @@ func TestDefaultUseCase(t *testing.T) {
 
 	retransCtrl.Init()
 
-	_, duplicate, md5sum := retransCtrl.IsDuplicateToOngoingTransaction(restSubdId, data)
+	md5sum, err := CalculateRequestMd5sum(data)
+	assert.Empty(t, err)
 
-	assert.Equal(t, 1, len(retransCtrl.retransMap))
+	duplicate := retransCtrl.IsDuplicateToOngoingTransaction(restSubdId, md5sum)
+
+	assert.Equal(t, 1, len(retransCtrl.ongoingRequestMap))
 	assert.Equal(t, false, duplicate)
 
 	retransCtrl.TransactionComplete(md5sum)
 
-	assert.Equal(t, 0, len(retransCtrl.retransMap))
+	assert.Equal(t, 0, len(retransCtrl.ongoingRequestMap))
 }
 
 func TestDuplicate(t *testing.T) {
@@ -75,17 +78,23 @@ func TestDuplicate(t *testing.T) {
 
 	retransCtrl.Init()
 
-	_, duplicate, md5sum := retransCtrl.IsDuplicateToOngoingTransaction(restSubdId, data)
-	assert.Equal(t, 1, len(retransCtrl.retransMap))
+	md5sum, err := CalculateRequestMd5sum(data)
+	assert.Empty(t, err)
+
+	duplicate := retransCtrl.IsDuplicateToOngoingTransaction(restSubdId, md5sum)
+	assert.Equal(t, 1, len(retransCtrl.ongoingRequestMap))
 	assert.Equal(t, false, duplicate)
 
-	_, duplicate, md5sum = retransCtrl.IsDuplicateToOngoingTransaction(restSubdId, data2)
-	assert.Equal(t, 1, len(retransCtrl.retransMap))
+	md5sum, err = CalculateRequestMd5sum(data2)
+	assert.Empty(t, err)
+
+	duplicate = retransCtrl.IsDuplicateToOngoingTransaction(restSubdId, md5sum)
+	assert.Equal(t, 1, len(retransCtrl.ongoingRequestMap))
 	assert.Equal(t, true, duplicate)
 
 	retransCtrl.TransactionComplete(md5sum)
 
-	assert.Equal(t, 0, len(retransCtrl.retransMap))
+	assert.Equal(t, 0, len(retransCtrl.ongoingRequestMap))
 }
 
 func TestNoneDuplicate(t *testing.T) {
@@ -109,18 +118,24 @@ func TestNoneDuplicate(t *testing.T) {
 
 	retransCtrl.Init()
 
-	_, duplicate, md5sum := retransCtrl.IsDuplicateToOngoingTransaction(restSubdId, data)
-	assert.Equal(t, 1, len(retransCtrl.retransMap))
+	md5sum, err := CalculateRequestMd5sum(data)
+	assert.Empty(t, err)
+
+	duplicate := retransCtrl.IsDuplicateToOngoingTransaction(restSubdId, md5sum)
+	assert.Equal(t, 1, len(retransCtrl.ongoingRequestMap))
 	assert.Equal(t, false, duplicate)
 
-	_, duplicate2, md5sum2 := retransCtrl.IsDuplicateToOngoingTransaction(restSubdId, data2)
-	assert.Equal(t, 2, len(retransCtrl.retransMap))
+	md5sum2, err := CalculateRequestMd5sum(data2)
+	assert.Empty(t, err)
+
+	duplicate2 := retransCtrl.IsDuplicateToOngoingTransaction(restSubdId, md5sum2)
+	assert.Equal(t, 2, len(retransCtrl.ongoingRequestMap))
 	assert.Equal(t, false, duplicate2)
 
 	retransCtrl.TransactionComplete(md5sum)
 	retransCtrl.TransactionComplete(md5sum2)
 
-	assert.Equal(t, 0, len(retransCtrl.retransMap))
+	assert.Equal(t, 0, len(retransCtrl.ongoingRequestMap))
 }
 
 func TestEncodingError(t *testing.T) {
@@ -128,15 +143,12 @@ func TestEncodingError(t *testing.T) {
 	fmt.Println("#####################  TestEncodingError  #####################")
 
 	var retransCtrl duplicateCtrl
-	restSubdId := "898dfkjashntgkjasgho4"
 	var data interface{}
 
 	retransCtrl.Init()
 
-	err, duplicate, _ := retransCtrl.IsDuplicateToOngoingTransaction(restSubdId, data)
+	_, err := CalculateRequestMd5sum(data)
 	assert.NotEqual(t, err, nil)
-	assert.Equal(t, 0, len(retransCtrl.retransMap))
-	assert.Equal(t, false, duplicate)
 }
 
 func TestRemovalError(t *testing.T) {
@@ -149,8 +161,11 @@ func TestRemovalError(t *testing.T) {
 
 	retransCtrl.Init()
 
-	err, duplicate, md5sum := retransCtrl.IsDuplicateToOngoingTransaction(restSubdId, data)
-	assert.Equal(t, 1, len(retransCtrl.retransMap))
+	md5sum, err := CalculateRequestMd5sum(data)
+	assert.Empty(t, err)
+
+	duplicate := retransCtrl.IsDuplicateToOngoingTransaction(restSubdId, md5sum)
+	assert.Equal(t, 1, len(retransCtrl.ongoingRequestMap))
 	assert.Equal(t, false, duplicate)
 
 	err = retransCtrl.TransactionComplete(md5sum)
@@ -171,15 +186,21 @@ func TestXappRestReqDuplicate(t *testing.T) {
 
 	retransCtrl.Init()
 
-	_, duplicate, md5sum := retransCtrl.IsDuplicateToOngoingTransaction("foobar", msg1)
-	assert.Equal(t, 1, len(retransCtrl.retransMap))
+	md5sum, err := CalculateRequestMd5sum(msg1)
+	assert.Empty(t, err)
+
+	duplicate := retransCtrl.IsDuplicateToOngoingTransaction("foobar", md5sum)
+	assert.Equal(t, 1, len(retransCtrl.ongoingRequestMap))
 	assert.Equal(t, false, duplicate)
 
-	_, duplicate, md5sum = retransCtrl.IsDuplicateToOngoingTransaction("foobar", msg2)
-	assert.Equal(t, 1, len(retransCtrl.retransMap))
+	md5sum2, err := CalculateRequestMd5sum(msg2)
+	assert.Empty(t, err)
+
+	duplicate = retransCtrl.IsDuplicateToOngoingTransaction("foobar", md5sum2)
+	assert.Equal(t, 1, len(retransCtrl.ongoingRequestMap))
 	assert.Equal(t, true, duplicate)
 
 	retransCtrl.TransactionComplete(md5sum)
 
-	assert.Equal(t, 0, len(retransCtrl.retransMap))
+	assert.Equal(t, 0, len(retransCtrl.ongoingRequestMap))
 }
