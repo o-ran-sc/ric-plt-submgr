@@ -50,7 +50,7 @@ func (c *Control) WriteRESTSubscriptionToSdl(restSubId string, restSubs *RESTSub
 	restSubscriptionInfo.xAppIdToE2Id = restSubs.xAppIdToE2Id
 	restSubscriptionInfo.SubReqOngoing = restSubs.SubReqOngoing
 	restSubscriptionInfo.SubDelReqOngoing = restSubs.SubDelReqOngoing
-	restSubscriptionInfo.Md5sum = restSubs.Md5sum
+	restSubscriptionInfo.Md5sum = restSubs.lastReqMd5sum
 
 	jsonData, err := json.Marshal(restSubscriptionInfo)
 	if err != nil {
@@ -93,6 +93,8 @@ func (c *Control) ReadRESTSubscriptionFromSdl(restSubId string) (*RESTSubscripti
 		}
 
 		restSubs = c.CreateRESTSubscription(restSubscriptionInfo, &jsonSubscriptionInfo)
+
+		restDuplicateCtrl.SetMd5sumFromLastOkRequest(restSubId, restSubs.lastReqMd5sum)
 	}
 	return restSubs, nil
 }
@@ -106,7 +108,7 @@ func (c *Control) CreateRESTSubscription(restSubscriptionInfo *RESTSubscriptionI
 	restSubs.xAppIdToE2Id = restSubscriptionInfo.xAppIdToE2Id
 	restSubs.SubReqOngoing = restSubscriptionInfo.SubReqOngoing
 	restSubs.SubDelReqOngoing = restSubscriptionInfo.SubDelReqOngoing
-	restSubs.Md5sum = restSubscriptionInfo.Md5sum
+	restSubs.lastReqMd5sum = restSubscriptionInfo.Md5sum
 
 	return restSubs
 }
