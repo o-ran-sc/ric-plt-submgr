@@ -40,11 +40,27 @@ type RESTSubscription struct {
 	xAppIdToE2Id     map[int64]int64
 	SubReqOngoing    bool
 	SubDelReqOngoing bool
-	Md5sum           string
+	lastReqMd5sum    string
 }
 
 func (r *RESTSubscription) AddE2InstanceId(instanceId uint32) {
+
+	for _, v := range r.InstanceIds {
+		if v == instanceId {
+			return
+		}
+
+	}
+
 	r.InstanceIds = append(r.InstanceIds, instanceId)
+}
+
+func (r *RESTSubscription) AddMd5Sum(md5sum string) {
+	if md5sum != "" {
+		r.lastReqMd5sum = md5sum
+	} else {
+		xapp.Logger.Error("EMPTY md5sum attempted to be add to subscrition")
+	}
 }
 
 func (r *RESTSubscription) DeleteE2InstanceId(instanceId uint32) {
@@ -63,9 +79,11 @@ func (r *RESTSubscription) DeleteXappIdToE2Id(xAppEventInstanceID int64) {
 	delete(r.xAppIdToE2Id, xAppEventInstanceID)
 }
 
-func (r *RESTSubscription) SetProcessed() {
+func (r *RESTSubscription) SetProcessed(err error) {
 	r.SubReqOngoing = false
-	r.Md5sum = ""
+	if err != nil {
+		r.lastReqMd5sum = ""
+	}
 }
 
 type Registry struct {

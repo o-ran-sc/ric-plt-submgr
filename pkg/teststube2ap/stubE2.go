@@ -664,6 +664,7 @@ func (tc *E2Stub) SendSubsDelFail(t *testing.T, req *e2ap.E2APSubscriptionDelete
 // Callback handler for subscription response notifications
 //-----------------------------------------------------------------------------
 func (tc *E2Stub) SubscriptionRespHandler(resp *clientmodel.SubscriptionResponse) {
+
 	if tc.subscriptionId == "SUBSCRIPTIONID NOT SET" {
 		tc.Info("REST notification received for %v while no SubscriptionID was not set for E2EventInstanceID=%v, XappEventInstanceID=%v (%v)",
 			*resp.SubscriptionID, *resp.SubscriptionInstances[0].E2EventInstanceID, *resp.SubscriptionInstances[0].XappEventInstanceID, tc)
@@ -832,7 +833,7 @@ func (tc *E2Stub) SendRESTSubsReq(t *testing.T, params *RESTSubsReqParams) strin
 		return ""
 	}
 
-	tc.subscriptionId = "SUBSCIPTIONID NOT SET"
+	tc.subscriptionId = "SUBSCRIPTIONID NOT SET"
 
 	resp, err := xapp.Subscription.Subscribe(&params.SubsReqParams)
 	if err != nil {
