@@ -93,8 +93,7 @@ func CreateRESTSubscription(t *testing.T) *RESTSubscription {
 	restSubscription.Meid = "RAN_NAME_1"
 	restSubscription.SubReqOngoing = true
 	restSubscription.SubDelReqOngoing = false
-	restSubscription.xAppIdToE2Id = make(map[int64]int64)
-	restSubscription.Md5sum = "856e9546f6f7b65a13a86996f2d1686a"
+	restSubscription.lastReqMd5sum = "856e9546f6f7b65b13a86956f2e16f6a"
 	return restSubscription
 }
 
