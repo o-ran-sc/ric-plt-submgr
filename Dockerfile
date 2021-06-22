@@ -201,8 +201,9 @@ RUN apt update && apt install -y iputils-ping net-tools curl tcpdump
 
 COPY --from=submgrbuild /manifests /manifests
 COPY --from=submgrbuild /opt/bin/submgr /
-COPY --from=submgrbuild /usr/local/include /usr/local/include
-COPY --from=submgrbuild /usr/local/lib /usr/local/lib
+COPY --from=submgrbuild /usr/local/include/rmr /usr/local/include/
+COPY --from=submgrbuild /usr/local/lib/librmr* /usr/local/lib/
+COPY --from=submgrbuild /usr/local/lib/libe2ap* /usr/local/lib/
 RUN ldconfig
 
 COPY run_submgr.sh /
