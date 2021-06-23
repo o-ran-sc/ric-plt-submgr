@@ -431,6 +431,8 @@ func (c *Control) SubscriptionHandler(params interface{}) (*models.SubscriptionR
 		return &subResp, nil
 	}
 
+	c.WriteRESTSubscriptionToDb(restSubId, restSubscription)
+
 	go c.processSubscriptionRequests(restSubscription, &subReqList, p.ClientEndpoint, p.Meid, &restSubId, xAppRmrEndpoint, md5sum)
 
 	c.UpdateCounter(cRestSubRespToXapp)
