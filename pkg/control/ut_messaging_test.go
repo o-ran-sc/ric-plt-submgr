@@ -2901,6 +2901,9 @@ func TestRESTSubReqRetransmissionV4(t *testing.T) {
 	xappConn1.WaitRESTNotificationForAnySubscriptionId(t)
 	// Resend the original request with an additional e2 subscription (detail), this time with restsubsid
 	restSubId_resend := xappConn1.SendRESTSubsReq(t, params2)
+	e2SubsId1 := <-xappConn1.RESTNotification
+	assert.Equal(t, e2SubsId, e2SubsId1)
+	xappConn1.DecrementRequestCount()
 
 	crereq2, cremsg2 := e2termConn1.RecvSubsReq(t)
 
@@ -2928,6 +2931,8 @@ func TestRESTSubReqRetransmissionV4(t *testing.T) {
 
 	//Wait that subs is cleaned
 	mainCtrl.VerifyCounterValues(t)
+
+	<-xappConn1.RESTNotification
 }
 
 //-----------------------------------------------------------------------------
@@ -3016,6 +3021,12 @@ func TestRESTSubReqRetransmissionV5(t *testing.T) {
 	xappConn1.WaitRESTNotificationForAnySubscriptionId(t)
 	// Resend the original request with an additional e2 subscription (detail), this time with restsubsid
 	restSubId_resend := xappConn1.SendRESTSubsReq(t, params2)
+
+	// Block until the first response is received, pairs with WaitRESTNotificationForAnySubscriptionId
+	e2SubsId1 := <-xappConn1.RESTNotification
+	assert.Equal(t, e2SubsId, e2SubsId1)
+	// The first E2 subscription returns immediately, manually decrement expected request count for the remaining request handling
+	xappConn1.DecrementRequestCount()
 
 	crereq2, cremsg2 := e2termConn1.RecvSubsReq(t)
 
