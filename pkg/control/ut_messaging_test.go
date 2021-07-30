@@ -2898,12 +2898,15 @@ func TestRESTSubReqRetransmissionV4(t *testing.T) {
 	params2.SetSubscriptionID(&restSubId)
 
 	xapp.Subscription.SetResponseCB(xappConn1.SubscriptionRespHandler)
-	xappConn1.WaitRESTNotificationForAnySubscriptionId(t)
+	xappConn1.ExpectAnyNotification(t)
 	// Resend the original request with an additional e2 subscription (detail), this time with restsubsid
 	restSubId_resend := xappConn1.SendRESTSubsReq(t, params2)
+	e2SubsId1 := xappConn1.WaitAnyRESTNotification(t)
+	assert.Equal(t, e2SubsId, e2SubsId1)
 
 	crereq2, cremsg2 := e2termConn1.RecvSubsReq(t)
 
+	xappConn1.DecrementRequestCount()
 	xappConn1.ExpectRESTNotification(t, restSubId_resend)
 	e2termConn1.SendSubsResp(t, crereq2, cremsg2)
 	e2SubsId2 := xappConn1.WaitRESTNotification(t, restSubId_resend)
@@ -2914,10 +2917,13 @@ func TestRESTSubReqRetransmissionV4(t *testing.T) {
 	xapp.Subscription.SetResponseCB(xappConn1.SubscriptionRespHandler)
 	params = xappConn1.GetRESTSubsReqReportParams(subReqCount)
 	params.SetSubscriptionID(&restSubId)
-	xappConn1.WaitRESTNotificationForAnySubscriptionId(t)
+	xappConn1.ExpectAnyNotification(t)
 	// Resend the original request again with only one e2 subscription (detail), this time with restsubsid
 	restSubId_resend2 := xappConn1.SendRESTSubsReq(t, params)
 	assert.Equal(t, restSubId_resend, restSubId_resend2)
+
+	e2SubsId1 = xappConn1.WaitAnyRESTNotification(t)
+	assert.Equal(t, e2SubsId, e2SubsId1)
 
 	// Delete both e2 subscriptions
 	xappConn1.SendRESTSubsDelReq(t, &restSubId)
@@ -3013,9 +3019,14 @@ func TestRESTSubReqRetransmissionV5(t *testing.T) {
 	params2.SetSubscriptionID(&restSubId)
 
 	xapp.Subscription.SetResponseCB(xappConn1.SubscriptionRespHandler)
-	xappConn1.WaitRESTNotificationForAnySubscriptionId(t)
+	xappConn1.ExpectAnyNotification(t)
 	// Resend the original request with an additional e2 subscription (detail), this time with restsubsid
 	restSubId_resend := xappConn1.SendRESTSubsReq(t, params2)
+
+	e2SubsId1 := xappConn1.WaitAnyRESTNotification(t)
+	assert.Equal(t, e2SubsId, e2SubsId1)
+	// The first E2 subscription returns immediately, manually decrement expected request count for the remaining request handling
+	xappConn1.DecrementRequestCount()
 
 	crereq2, cremsg2 := e2termConn1.RecvSubsReq(t)
 
@@ -3028,11 +3039,14 @@ func TestRESTSubReqRetransmissionV5(t *testing.T) {
 
 	xapp.Subscription.SetResponseCB(xappConn1.SubscriptionRespHandler)
 	params = xappConn1.GetRESTSubsReqReportParams(subReqCount)
-	xappConn1.WaitRESTNotificationForAnySubscriptionId(t)
+	xappConn1.ExpectAnyNotification(t)
 	// Resend the original request again with only one e2 subscription (detail), WITHOUT restsubsid
 	// md5sum shall find the original request
 	restSubId_resend2 := xappConn1.SendRESTSubsReq(t, params)
 	assert.Equal(t, restSubId_resend, restSubId_resend2)
+
+	e2SubsId1 = xappConn1.WaitAnyRESTNotification(t)
+	assert.Equal(t, e2SubsId, e2SubsId1)
 
 	// Delete both e2 subscriptions
 	xappConn1.SendRESTSubsDelReq(t, &restSubId)
@@ -3137,9 +3151,12 @@ func TestRESTSubReqRetransmissionV6(t *testing.T) {
 	params2.SetSubscriptionID(&restSubId)
 
 	xapp.Subscription.SetResponseCB(xappConn1.SubscriptionRespHandler)
-	xappConn1.WaitRESTNotificationForAnySubscriptionId(t)
+	xappConn1.ExpectAnyNotification(t)
 	// Resend the original request with an additional e2 subscription (detail), this time with restsubsid
 	restSubId_resend := xappConn1.SendRESTSubsReq(t, params2)
+
+	e2SubsId1 := xappConn1.WaitAnyRESTNotification(t)
+	assert.Equal(t, e2SubsId, e2SubsId1)
 
 	crereq2, cremsg2 := e2termConn1.RecvSubsReq(t)
 
@@ -3938,12 +3955,12 @@ func TestRESTSubReqAndSubDelOkSameAction(t *testing.T) {
 	params.SetMeid("RAN_NAME_1")
 
 	xapp.Subscription.SetResponseCB(xappConn2.SubscriptionRespHandler)
-	xappConn2.WaitRESTNotificationForAnySubscriptionId(t)
+	xappConn2.ExpectAnyNotification(t)
 	waiter := rtmgrHttp.AllocNextSleep(10, true)
 	restSubId2 := xappConn2.SendRESTSubsReq(t, params)
 	waiter.WaitResult(t)
 	xapp.Logger.Info("Send REST subscriber request for subscriberId : %v", restSubId2)
-	e2SubsId2 := <-xappConn2.RESTNotification
+	e2SubsId2 := xappConn2.WaitAnyRESTNotification(t)
 	xapp.Logger.Info("REST notification received e2SubsId=%v", e2SubsId2)
 
 	queryXappSubscription(t, int64(e2SubsId1), "RAN_NAME_1", []string{"localhost:13560", "localhost:13660"})
@@ -4918,10 +4935,10 @@ func TestRESTSubReqAndSubDelOkSameActionWithRestartsInMiddle(t *testing.T) {
 	params = xappConn2.GetRESTSubsReqReportParams(subReqCount)
 	params.SetMeid("RAN_NAME_1")
 	xapp.Subscription.SetResponseCB(xappConn2.SubscriptionRespHandler)
-	xappConn2.WaitRESTNotificationForAnySubscriptionId(t)
+	xappConn2.ExpectAnyNotification(t)
 	restSubId2 := xappConn2.SendRESTSubsReq(t, params)
 	xapp.Logger.Info("Send REST subscriber request for subscriberId : %v", restSubId2)
-	e2SubsId2 := <-xappConn2.RESTNotification
+	e2SubsId2 := xappConn2.WaitAnyRESTNotification(t)
 	xapp.Logger.Info("REST notification received e2SubsId=%v", e2SubsId2)
 
 	queryXappSubscription(t, int64(e2SubsId1), "RAN_NAME_1", []string{"localhost:13560", "localhost:13660"})
