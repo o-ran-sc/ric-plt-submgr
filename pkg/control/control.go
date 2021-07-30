@@ -544,7 +544,7 @@ func (c *Control) SubscriptionDeleteHandlerCB(restSubId string) error {
 
 	xAppRmrEndPoint := restSubscription.xAppRmrEndPoint
 	go func() {
-		xapp.Logger.Info("Deleteting instances = %v", restSubscription.InstanceIds)
+		xapp.Logger.Info("Deleteting handler: processing instances = %v", restSubscription.InstanceIds)
 		for _, instanceId := range restSubscription.InstanceIds {
 			xAppEventInstanceID, err := c.SubscriptionDeleteHandler(&restSubId, &xAppRmrEndPoint, &restSubscription.Meid, instanceId)
 
@@ -1275,6 +1275,10 @@ func (c *Control) SendSubscriptionDeleteReq(subs *Subscription) {
 func (c *Control) PrintRESTSubscriptionRequest(p *models.SubscriptionParams) {
 
 	fmt.Println("CRESTSubscriptionRequest")
+
+	if p == nil {
+		return
+	}
 
 	if p.SubscriptionID != "" {
 		fmt.Println("  SubscriptionID = ", p.SubscriptionID)

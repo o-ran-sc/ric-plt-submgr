@@ -21,6 +21,7 @@ package teststube2ap
 
 import (
 	"fmt"
+	"runtime/debug"
 	"strconv"
 	"testing"
 	"time"
@@ -709,7 +710,7 @@ func (tc *E2Stub) expectNotification(t *testing.T, restSubsId string, expectErro
 			if tc.requestCount == 0 {
 				tc.TestError(t, "### REST notification count unexpectedly ZERO for %s (%v)", restSubsId, tc)
 			} else if e2Ids.RestSubsId != restSubsId {
-				tc.TestError(t, "### Unexpected REST notifications received |%s:%s| (%v)", e2Ids.RestSubsId, restSubsId, tc)
+				tc.TestError(t, "### Unexpected REST notifications received, expected %s bunt got %s instead| (%v)", e2Ids.RestSubsId, restSubsId, tc)
 			} else if e2Ids.ErrorCause == "" && expectError == "allFail" {
 				tc.TestError(t, "### Unexpected ok cause received from REST notifications |%s:%s| (%v)", e2Ids.RestSubsId, restSubsId, tc)
 			} else if e2Ids.ErrorCause != "" && expectError == "allOk" {
@@ -726,6 +727,9 @@ func (tc *E2Stub) expectNotification(t *testing.T, restSubsId string, expectErro
 				}
 				tc.Info("### REST Notification received Notif for %s : %v", e2Ids.RestSubsId, e2Ids.E2SubsId)
 				tc.ListedRESTNotifications <- e2Ids
+				if len(tc.ListedRESTNotifications) > 1 {
+					panic("expectNotification - ListedRESTNotifications stacking up")
+				}
 			}
 		case <-time.After(15 * time.Second):
 			err := fmt.Errorf("### Timeout 15s expired while expecting REST notification for subsId: %v", restSubsId)
@@ -735,36 +739,55 @@ func (tc *E2Stub) expectNotification(t *testing.T, restSubsId string, expectErro
 }
 
 func (tc *E2Stub) WaitRESTNotification(t *testing.T, restSubsId string) uint32 {
+
+	stack := string(debug.Stack())
+
 	select {
 	case e2SubsId := <-tc.ListedRESTNotifications:
 		if e2SubsId.RestSubsId == restSubsId {
 			tc.Info("### Expected REST notifications received %s, e2SubsId %v for endpoint=%s, (%v)", e2SubsId.RestSubsId, e2SubsId.E2SubsId, tc.clientEndpoint, tc)
 			return e2SubsId.E2SubsId
 		} else {
-			tc.TestError(t, "### Unexpected REST notifications received %s, expected %s for endpoint=%s, (%v)", e2SubsId.RestSubsId, restSubsId, tc.clientEndpoint, tc)
+			tc.TestError(t, "### Unexpected REST notification %s received, expected %s for endpoint=%s, (%v)", e2SubsId.RestSubsId, restSubsId, tc.clientEndpoint, tc)
+			xapp.Logger.Info("CALL STACK:\n %s", stack)
 			return 0
 		}
 	case <-time.After(15 * time.Second):
 		err := fmt.Errorf("### Timeout 15s expired while waiting REST notification for subsId: %v", restSubsId)
 		tc.TestError(t, "%s", err.Error())
+		xapp.Logger.Info("CALL STACK:\n %s", stack)
 		panic("WaitRESTNotification - timeout error")
 	}
-	return 0
 }
 
-func (tc *E2Stub) WaitRESTNotificationForAnySubscriptionId(t *testing.T) {
+// Note, this function should be followed by a handling of <-xappConn1.RESTNotification.
+func (tc *E2Stub) ExpectAnyNotification(t *testing.T) {
 	go func() {
-		tc.Info("### REST notifications received for endpoint=%s, (%v)", tc.clientEndpoint, tc)
+		tc.Info("### Started waiting ANY REST notifications received for endpoint=%s, (%v)", tc.clientEndpoint, tc)
 		select {
 		case e2SubsId := <-tc.CallBackNotification:
-			tc.Info("### REST notifications received e2SubsId %v for endpoint=%s, (%v)", e2SubsId, tc.clientEndpoint, tc)
+			tc.Info("### ANY REST notifications received e2SubsId %v for endpoint=%s, (%v) via CallBackNotification", e2SubsId, tc.clientEndpoint, tc)
 			tc.RESTNotification <- (uint32)(e2SubsId)
 		case <-time.After(15 * time.Second):
-			err := fmt.Errorf("### Timeout 15s expired while waiting REST notification")
+			err := fmt.Errorf("### Timeout 15s expired while waiting ANY REST notification")
 			tc.TestError(t, "%s", err.Error())
 			tc.RESTNotification <- 0
 		}
 	}()
+}
+
+func (tc *E2Stub) WaitAnyRESTNotification(t *testing.T) uint32 {
+
+	select {
+	case e2SubsId := <-tc.RESTNotification:
+		tc.Info("### Expected ANY REST notification received - e2SubsId %v for endpoint=%s, (%v)", e2SubsId, tc.clientEndpoint, tc)
+		return e2SubsId
+
+	case <-time.After(15 * time.Second):
+		err := fmt.Errorf("### Timeout 15s expired while waiting ANY REST notification")
+		tc.TestError(t, "%s", err.Error())
+		panic("WaitRESTNotification - timeout error")
+	}
 }
 
 func (tc *E2Stub) ListedRestNotifHandler(resp *clientmodel.SubscriptionResponse) {
@@ -787,7 +810,7 @@ func (tc *E2Stub) ListedRestNotifHandler(resp *clientmodel.SubscriptionResponse)
 				}
 
 				if len(tc.restSubsIdList) == 0 {
-					//tc.Info("All listed REST notifications received for endpoint=%s", tc.clientEndpoint)
+					tc.Info("All listed REST notifications received for endpoint=%s", tc.clientEndpoint)
 				}
 
 				return
@@ -1039,6 +1062,8 @@ func (p *RESTSubsReqParams) SetSubscriptionID(SubscriptionID *string) {
 //-----------------------------------------------------------------------------
 func (tc *E2Stub) SendRESTSubsDelReq(t *testing.T, subscriptionID *string) {
 
+	tc.Info("======== Posting REST DELETE subscription(s) to Submgr ======")
+
 	if *subscriptionID == "" {
 		tc.Error("REST error in deleting subscriptions. Empty SubscriptionID = %s", *subscriptionID)
 	}
@@ -1060,6 +1085,17 @@ func (tc *E2Stub) GetRESTSubsReqPolicyParams(subReqCount int) *RESTSubsReqParams
 	policyParams.GetRESTSubsReqPolicyParams(subReqCount, &tc.clientEndpoint, &tc.meid)
 	tc.requestCount = subReqCount
 	return &policyParams
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+func (tc *E2Stub) DecrementRequestCount() {
+	if tc.requestCount > 0 {
+		tc.requestCount -= 1
+	} else {
+		tc.Error("FAILED to decrement request count, count already ZERO")
+	}
 }
 
 //-----------------------------------------------------------------------------
