@@ -28,8 +28,10 @@
       "e2tRecvMsgTimeout_ms": 2000,
       "e2tMaxSubReqTryCount": 2,
       "e2tMaxSubDelReqTryCount": 2,
-      "waitRouteCleanup_ms": 100,
       "readSubsFromDb": "true",
+      "dbTryCount": 2,
+      "dbRetryForever": "false",
+      "waitRouteCleanup_ms": 100,
       "subscription": {
           "host": "localhost:8088",
           "timeout": 2

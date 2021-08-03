@@ -20,6 +20,7 @@
 package control
 
 import (
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -102,6 +103,16 @@ func (r *Registry) Initialize() {
 	for i = 1; i < 65535; i++ {
 		r.subIds = append(r.subIds, i)
 	}
+}
+
+func (r *Registry) GetAllRestSubscriptions() []byte {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	restSubscriptionsJson, err := json.Marshal(r.restSubscriptions)
+	if err != nil {
+		xapp.Logger.Error("GetAllRestSubscriptions(): %v", err)
+	}
+	return restSubscriptionsJson
 }
 
 func (r *Registry) CreateRESTSubscription(restSubId *string, xAppRmrEndPoint *string, maid *string) (*RESTSubscription, error) {
