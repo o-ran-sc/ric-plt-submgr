@@ -72,6 +72,8 @@ var e2tMaxSubReqTryCount uint64    // Initial try + retry
 var e2tMaxSubDelReqTryCount uint64 // Initial try + retry
 var readSubsFromDb string
 var restDuplicateCtrl duplicateCtrl
+var dbRetryForever string
+var dbTryCount int
 
 type Control struct {
 	*xapp.RMRClient
@@ -126,6 +128,7 @@ func NewControl() *Control {
 
 	// Register REST handler for testing support
 	xapp.Resource.InjectRoute("/ric/v1/test/{testId}", c.TestRestHandler, "POST")
+	xapp.Resource.InjectRoute("/ric/v1/restsubscriptions", c.GetAllRestSubscriptions, "GET")
 	xapp.Resource.InjectRoute("/ric/v1/symptomdata", c.SymptomDataHandler, "GET")
 
 	go xapp.Subscription.Listen(c.SubscriptionHandler, c.QueryHandler, c.SubscriptionDeleteHandlerCB)
@@ -137,28 +140,87 @@ func NewControl() *Control {
 	restDuplicateCtrl.Init()
 
 	// Read subscriptions from db
-	xapp.Logger.Info("Reading subscriptions from db")
-	subIds, register, err := c.ReadAllSubscriptionsFromSdl()
-	if err != nil {
-		xapp.Logger.Error("%v", err)
-	} else {
-		c.registry.subIds = subIds
-		c.registry.register = register
-		c.HandleUncompletedSubscriptions(register)
-	}
+	c.ReadE2Subscriptions()
+	c.ReadRESTSubscriptions()
 
-	restSubscriptions, err := c.ReadAllRESTSubscriptionsFromSdl()
-	if err != nil {
-		xapp.Logger.Error("%v", err)
-	} else {
-		c.registry.restSubscriptions = restSubscriptions
-	}
+	/*
+		xapp.Logger.Info("Reading subscriptions from db")
+		subIds, register, err := c.ReadAllSubscriptionsFromSdl()
+		if err != nil {
+			xapp.Logger.Error("%v", err)
+		} else {
+			c.registry.subIds = subIds
+			c.registry.register = register
+			c.HandleUncompletedSubscriptions(register)
+		}
+
+		restSubscriptions, err := c.ReadAllRESTSubscriptionsFromSdl()
+		if err != nil {
+			xapp.Logger.Error("%v", err)
+		} else {
+			c.registry.restSubscriptions = restSubscriptions
+		}
+	*/
 	return c
 }
 
 func (c *Control) SymptomDataHandler(w http.ResponseWriter, r *http.Request) {
 	subscriptions, _ := c.registry.QueryHandler()
 	xapp.Resource.SendSymptomDataJson(w, r, subscriptions, "platform/subscriptions.json")
+}
+
+//-------------------------------------------------------------------
+//
+//-------------------------------------------------------------------
+func (c *Control) GetAllRestSubscriptions(w http.ResponseWriter, r *http.Request) {
+	xapp.Logger.Info("GetAllRestSubscriptions() called")
+	response := c.registry.GetAllRestSubscriptions()
+	w.Write(response)
+}
+
+//-------------------------------------------------------------------
+//
+//-------------------------------------------------------------------
+func (c *Control) ReadE2Subscriptions() error {
+	var err error
+	var subIds []uint32
+	var register map[uint32]*Subscription
+	for i := 0; dbRetryForever == "true" || i < dbTryCount; i++ {
+		xapp.Logger.Info("Reading E2 subscriptions from db")
+		subIds, register, err = c.ReadAllSubscriptionsFromSdl()
+		if err != nil {
+			xapp.Logger.Error("%v", err)
+			<-time.After(1 * time.Second)
+		} else {
+			c.registry.subIds = subIds
+			c.registry.register = register
+			c.HandleUncompletedSubscriptions(register)
+			return nil
+		}
+	}
+	xapp.Logger.Info("Continuing without retring")
+	return err
+}
+
+//-------------------------------------------------------------------
+//
+//-------------------------------------------------------------------
+func (c *Control) ReadRESTSubscriptions() error {
+	var err error
+	var restSubscriptions map[string]*RESTSubscription
+	for i := 0; dbRetryForever == "true" || i < dbTryCount; i++ {
+		xapp.Logger.Info("Reading REST subscriptions from db")
+		restSubscriptions, err = c.ReadAllRESTSubscriptionsFromSdl()
+		if err != nil {
+			xapp.Logger.Error("%v", err)
+			<-time.After(1 * time.Second)
+		} else {
+			c.registry.restSubscriptions = restSubscriptions
+			return nil
+		}
+	}
+	xapp.Logger.Info("Continuing without retring")
+	return err
 }
 
 //-------------------------------------------------------------------
@@ -183,14 +245,6 @@ func (c *Control) ReadConfigParameters(f string) {
 	}
 	xapp.Logger.Info("e2tRecvMsgTimeout %v", e2tRecvMsgTimeout)
 
-	// Internal cfg parameter, used to define a wait time for RMR route clean-up. None default
-	// value 100ms used currently only in unittests.
-	waitRouteCleanup_ms = viper.GetDuration("controls.waitRouteCleanup_ms") * 1000000
-	if waitRouteCleanup_ms == 0 {
-		waitRouteCleanup_ms = 5000 * 1000000
-	}
-	xapp.Logger.Info("waitRouteCleanup %v", waitRouteCleanup_ms)
-
 	e2tMaxSubReqTryCount = viper.GetUint64("controls.e2tMaxSubReqTryCount")
 	if e2tMaxSubReqTryCount == 0 {
 		e2tMaxSubReqTryCount = 1
@@ -208,10 +262,32 @@ func (c *Control) ReadConfigParameters(f string) {
 		readSubsFromDb = "true"
 	}
 	xapp.Logger.Info("readSubsFromDb %v", readSubsFromDb)
+
+	dbTryCount = viper.GetInt("controls.dbTryCount")
+	if dbTryCount == 0 {
+		dbTryCount = 200
+	}
+	xapp.Logger.Info("dbTryCount %v", dbTryCount)
+
+	dbRetryForever = viper.GetString("controls.dbRetryForever")
+	if dbRetryForever == "" {
+		dbRetryForever = "true"
+	}
+	xapp.Logger.Info("dbRetryForever %v", dbRetryForever)
+
 	c.LoggerLevel = viper.GetUint32("logger.level")
 	if c.LoggerLevel == 0 {
 		c.LoggerLevel = 3
 	}
+	xapp.Logger.Info("LoggerLevel %v", c.LoggerLevel)
+
+	// Internal cfg parameter, used to define a wait time for RMR route clean-up. None default
+	// value 100ms used currently only in unittests.
+	waitRouteCleanup_ms = viper.GetDuration("controls.waitRouteCleanup_ms") * 1000000
+	if waitRouteCleanup_ms == 0 {
+		waitRouteCleanup_ms = 5000 * 1000000
+	}
+	xapp.Logger.Info("waitRouteCleanup %v", waitRouteCleanup_ms)
 }
 
 //-------------------------------------------------------------------
