@@ -23,3 +23,5 @@
   "e2tMaxSubReqTryCount": 2
   "e2tMaxSubDelReqTryCount": 2
   "readSubsFromDb": "true"
+  "dbTryCount": 200
+  "dbRetryForever": "true"

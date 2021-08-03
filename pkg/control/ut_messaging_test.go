@@ -2370,6 +2370,11 @@ func TestPostEmptyDb(t *testing.T) {
 	mainCtrl.sendPostRequest(t, "localhost:8080", "/ric/v1/test/emptydb")
 }
 
+func TestGetRestSubscriptions(t *testing.T) {
+
+	mainCtrl.sendGetRequest(t, "localhost:8080", "/ric/v1/restsubscriptions")
+}
+
 //-----------------------------------------------------------------------------
 // TestRESTSubReqAndRouteNok
 //
