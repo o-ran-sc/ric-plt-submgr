@@ -142,25 +142,6 @@ func NewControl() *Control {
 	// Read subscriptions from db
 	c.ReadE2Subscriptions()
 	c.ReadRESTSubscriptions()
-
-	/*
-		xapp.Logger.Info("Reading subscriptions from db")
-		subIds, register, err := c.ReadAllSubscriptionsFromSdl()
-		if err != nil {
-			xapp.Logger.Error("%v", err)
-		} else {
-			c.registry.subIds = subIds
-			c.registry.register = register
-			c.HandleUncompletedSubscriptions(register)
-		}
-
-		restSubscriptions, err := c.ReadAllRESTSubscriptionsFromSdl()
-		if err != nil {
-			xapp.Logger.Error("%v", err)
-		} else {
-			c.registry.restSubscriptions = restSubscriptions
-		}
-	*/
 	return c
 }
 

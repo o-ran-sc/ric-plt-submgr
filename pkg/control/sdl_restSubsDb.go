@@ -28,10 +28,10 @@ import (
 )
 
 type RESTSubscriptionInfo struct {
-	xAppRmrEndPoint  string
+	XAppRmrEndPoint  string
 	Meid             string
 	InstanceIds      []uint32
-	xAppIdToE2Id     map[int64]int64
+	XAppIdToE2Id     map[int64]int64
 	SubReqOngoing    bool
 	SubDelReqOngoing bool
 	Md5sum           string
@@ -44,10 +44,10 @@ func CreateRESTSdl() Sdlnterface {
 func (c *Control) WriteRESTSubscriptionToSdl(restSubId string, restSubs *RESTSubscription) error {
 
 	var restSubscriptionInfo RESTSubscriptionInfo
-	restSubscriptionInfo.xAppRmrEndPoint = restSubs.xAppRmrEndPoint
+	restSubscriptionInfo.XAppRmrEndPoint = restSubs.xAppRmrEndPoint
 	restSubscriptionInfo.Meid = restSubs.Meid
 	restSubscriptionInfo.InstanceIds = restSubs.InstanceIds
-	restSubscriptionInfo.xAppIdToE2Id = restSubs.xAppIdToE2Id
+	restSubscriptionInfo.XAppIdToE2Id = restSubs.xAppIdToE2Id
 	restSubscriptionInfo.SubReqOngoing = restSubs.SubReqOngoing
 	restSubscriptionInfo.SubDelReqOngoing = restSubs.SubDelReqOngoing
 	restSubscriptionInfo.Md5sum = restSubs.lastReqMd5sum
@@ -102,10 +102,10 @@ func (c *Control) ReadRESTSubscriptionFromSdl(restSubId string) (*RESTSubscripti
 func (c *Control) CreateRESTSubscription(restSubscriptionInfo *RESTSubscriptionInfo, jsonSubscriptionInfo *string) *RESTSubscription {
 
 	restSubs := &RESTSubscription{}
-	restSubs.xAppRmrEndPoint = restSubscriptionInfo.xAppRmrEndPoint
+	restSubs.xAppRmrEndPoint = restSubscriptionInfo.XAppRmrEndPoint
 	restSubs.Meid = restSubscriptionInfo.Meid
 	restSubs.InstanceIds = restSubscriptionInfo.InstanceIds
-	restSubs.xAppIdToE2Id = restSubscriptionInfo.xAppIdToE2Id
+	restSubs.xAppIdToE2Id = restSubscriptionInfo.XAppIdToE2Id
 	restSubs.SubReqOngoing = restSubscriptionInfo.SubReqOngoing
 	restSubs.SubDelReqOngoing = restSubscriptionInfo.SubDelReqOngoing
 	restSubs.lastReqMd5sum = restSubscriptionInfo.Md5sum
