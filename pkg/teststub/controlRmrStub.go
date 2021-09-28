@@ -101,17 +101,17 @@ func (tc *RmrStubControl) Consume(msg *xapp.RMRParams) (err error) {
 	msg.PayloadLen = len(cPay)
 
 	if msg.Mtype == tc.InitMsg {
-		tc.Info("Testing message ignore %s", msg.String())
+		tc.Debug("Testing message ignore %s", msg.String())
 		tc.SetActive()
 		return
 	}
 
 	if tc.IsCheckXid() == true && strings.Contains(msg.Xid, tc.GetDesc()) == false {
-		tc.Info("Ignore %s", msg.String())
+		tc.Debug("Ignore %s", msg.String())
 		return
 	}
 
-	tc.Info("Consume %s", msg.String())
+	tc.Debug("Consume %s", msg.String())
 	tc.PushMsg(msg)
 	return
 }
@@ -161,14 +161,14 @@ func RmrStubControlWaitAlive(seconds int, mtype int, rmr *xapp.RMRClient, tent *
 	params.Mbuf = nil
 
 	if len(allRmrStubs) == 0 {
-		tent.Info("No rmr stubs so no need to wait those to be alive")
+		tent.Debug("No rmr stubs so no need to wait those to be alive")
 		return true
 	}
 	status := false
 	i := 1
 	for ; i <= seconds*2 && status == false; i++ {
 
-		tent.Info("SEND TESTPING: %s", params.String())
+		tent.Debug("SEND TESTPING: %s", params.String())
 		rmr.SendWithRetry(params, false, 0)
 
 		status = true
@@ -181,7 +181,7 @@ func RmrStubControlWaitAlive(seconds int, mtype int, rmr *xapp.RMRClient, tent *
 		if status == true {
 			break
 		}
-		tent.Info("Sleep 0.5 secs and try routes again")
+		tent.Debug("Sleep 0.5 secs and try routes again")
 		time.Sleep(500 * time.Millisecond)
 	}
 

@@ -30,6 +30,7 @@ import (
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap_wrapper"
 	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/teststub"
 	clientmodel "gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/clientmodel"
+	//"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/models"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 )
 
@@ -47,9 +48,11 @@ type RmrTransactionId struct {
 }
 
 type E2RestIds struct {
-	RestSubsId string
-	E2SubsId   uint32
-	ErrorCause string
+	RestSubsId  string
+	E2SubsId    uint32
+	ErrorCause  string
+	ErrorSource string
+	TimeoutType string
 }
 
 func (trans *RmrTransactionId) String() string {
@@ -118,7 +121,7 @@ func (tc *E2Stub) NewRmrTransactionId(xid string, ranname string) *RmrTransactio
 		trans.xid = xid
 	}
 	trans.meid = &xapp.RMRMeid{RanName: ranname}
-	tc.Info("New test %s", trans.String())
+	tc.Debug("New test %s", trans.String())
 	return trans
 }
 
@@ -205,7 +208,7 @@ func (tc *E2Stub) SendSubsReq(t *testing.T, rparams *E2StubSubsReqParams, oldTra
 		trans = tc.NewRmrTransactionId("", "RAN_NAME_1")
 	}
 
-	tc.Info("SendSubsReq %s", trans.String())
+	tc.Debug("SendSubsReq %s", trans.String())
 	e2SubsReq := e2asnpacker.NewPackerSubscriptionRequest()
 
 	//---------------------------------
@@ -234,7 +237,7 @@ func (tc *E2Stub) SendSubsReq(t *testing.T, rparams *E2StubSubsReqParams, oldTra
 	params.Xid = trans.xid
 	params.Mbuf = nil
 
-	tc.Info("SEND SUB REQ: %s", params.String())
+	tc.Debug("SEND SUB REQ: %s", params.String())
 	snderr := tc.SendWithRetry(params, false, 5)
 	if snderr != nil {
 		tc.TestError(t, "RMR SEND FAILED: %s %s", trans.String(), snderr.Error())
@@ -247,7 +250,7 @@ func (tc *E2Stub) SendSubsReq(t *testing.T, rparams *E2StubSubsReqParams, oldTra
 //
 //-----------------------------------------------------------------------------
 func (tc *E2Stub) RecvSubsReq(t *testing.T) (*e2ap.E2APSubscriptionRequest, *xapp.RMRParams) {
-	tc.Info("RecvSubsReq")
+	tc.Debug("RecvSubsReq")
 	e2SubsReq := e2asnpacker.NewPackerSubscriptionRequest()
 
 	//---------------------------------
@@ -258,7 +261,7 @@ func (tc *E2Stub) RecvSubsReq(t *testing.T) (*e2ap.E2APSubscriptionRequest, *xap
 		if msg.Mtype != xapp.RICMessageTypes["RIC_SUB_REQ"] {
 			tc.TestError(t, "Received wrong mtype expected %s got %s, error", "RIC_SUB_REQ", xapp.RicMessageTypeToName[msg.Mtype])
 		} else {
-			tc.Info("Recv Subs Req")
+			tc.Debug("Recv Subs Req")
 			packedData := &e2ap.PackedData{}
 			packedData.Buf = msg.Payload
 			unpackerr, req := e2SubsReq.UnPack(packedData)
@@ -278,7 +281,7 @@ func (tc *E2Stub) RecvSubsReq(t *testing.T) (*e2ap.E2APSubscriptionRequest, *xap
 //
 //-----------------------------------------------------------------------------
 func (tc *E2Stub) SendSubsResp(t *testing.T, req *e2ap.E2APSubscriptionRequest, msg *xapp.RMRParams) {
-	tc.Info("SendSubsResp")
+	tc.Debug("SendSubsResp")
 	e2SubsResp := e2asnpacker.NewPackerSubscriptionResponse()
 
 	//---------------------------------
@@ -319,7 +322,7 @@ func (tc *E2Stub) SendSubsResp(t *testing.T, req *e2ap.E2APSubscriptionRequest, 
 	//params.Xid = msg.Xid
 	params.Mbuf = nil
 
-	tc.Info("SEND SUB RESP: %s", params.String())
+	tc.Debug("SEND SUB RESP: %s", params.String())
 	snderr := tc.SendWithRetry(params, false, 5)
 	if snderr != nil {
 		tc.TestError(t, "RMR SEND FAILED: %s", snderr.Error())
@@ -341,16 +344,16 @@ func (tc *E2Stub) SendInvalidE2Asn1Resp(t *testing.T, msg *xapp.RMRParams, msgTy
 	params.Mbuf = nil
 
 	if params.Mtype == xapp.RIC_SUB_RESP {
-		tc.Info("SEND INVALID ASN.1 SUB RESP")
+		tc.Debug("SEND INVALID ASN.1 SUB RESP")
 
 	} else if params.Mtype == xapp.RIC_SUB_FAILURE {
-		tc.Info("SEND INVALID ASN.1 SUB FAILURE")
+		tc.Debug("SEND INVALID ASN.1 SUB FAILURE")
 
 	} else if params.Mtype == xapp.RIC_SUB_DEL_RESP {
-		tc.Info("SEND INVALID ASN.1 SUB DEL RESP")
+		tc.Debug("SEND INVALID ASN.1 SUB DEL RESP")
 
 	} else if params.Mtype == xapp.RIC_SUB_DEL_FAILURE {
-		tc.Info("SEND INVALID ASN.1 SUB DEL FAILURE")
+		tc.Debug("SEND INVALID ASN.1 SUB DEL FAILURE")
 	}
 	snderr := tc.SendWithRetry(params, false, 5)
 	if snderr != nil {
@@ -362,7 +365,7 @@ func (tc *E2Stub) SendInvalidE2Asn1Resp(t *testing.T, msg *xapp.RMRParams, msgTy
 //
 //-----------------------------------------------------------------------------
 func (tc *E2Stub) RecvSubsResp(t *testing.T, trans *RmrTransactionId) uint32 {
-	tc.Info("RecvSubsResp")
+	tc.Debug("RecvSubsResp")
 	e2SubsResp := e2asnpacker.NewPackerSubscriptionResponse()
 	var e2SubsId uint32
 
@@ -389,7 +392,7 @@ func (tc *E2Stub) RecvSubsResp(t *testing.T, trans *RmrTransactionId) uint32 {
 			if unpackerr != nil {
 				tc.TestError(t, "RIC_SUB_RESP unpack failed err: %s", unpackerr.Error())
 			}
-			tc.Info("Recv Subs Resp rmr: xid=%s subid=%d, asn: instanceid=%d", msg.Xid, msg.SubId, resp.RequestId.InstanceId)
+			tc.Debug("Recv Subs Resp rmr: xid=%s subid=%d, asn: instanceid=%d", msg.Xid, msg.SubId, resp.RequestId.InstanceId)
 			return e2SubsId
 		}
 	} else {
@@ -403,7 +406,7 @@ func (tc *E2Stub) RecvSubsResp(t *testing.T, trans *RmrTransactionId) uint32 {
 //-----------------------------------------------------------------------------
 
 func (tc *E2Stub) SendSubsFail(t *testing.T, fparams *E2StubSubsFailParams, msg *xapp.RMRParams) {
-	tc.Info("SendSubsFail")
+	tc.Debug("SendSubsFail")
 	e2SubsFail := e2asnpacker.NewPackerSubscriptionFailure()
 
 	//---------------------------------
@@ -424,7 +427,7 @@ func (tc *E2Stub) SendSubsFail(t *testing.T, fparams *E2StubSubsFailParams, msg 
 	params.Xid = msg.Xid
 	params.Mbuf = nil
 
-	tc.Info("SEND SUB FAIL: %s", params.String())
+	tc.Debug("SEND SUB FAIL: %s", params.String())
 	snderr := tc.SendWithRetry(params, false, 5)
 	if snderr != nil {
 		tc.TestError(t, "RMR SEND FAILED: %s", snderr.Error())
@@ -435,7 +438,7 @@ func (tc *E2Stub) SendSubsFail(t *testing.T, fparams *E2StubSubsFailParams, msg 
 //
 //-----------------------------------------------------------------------------
 func (tc *E2Stub) RecvSubsFail(t *testing.T, trans *RmrTransactionId) uint32 {
-	tc.Info("RecvSubsFail")
+	tc.Debug("RecvSubsFail")
 	e2SubsFail := e2asnpacker.NewPackerSubscriptionFailure()
 	var e2SubsId uint32
 
@@ -462,7 +465,7 @@ func (tc *E2Stub) RecvSubsFail(t *testing.T, trans *RmrTransactionId) uint32 {
 			if unpackerr != nil {
 				tc.TestError(t, "RIC_SUB_FAILURE unpack failed err: %s", unpackerr.Error())
 			}
-			tc.Info("Recv Subs Fail rmr: xid=%s subid=%d, asn: instanceid=%d", msg.Xid, msg.SubId, resp.RequestId.InstanceId)
+			tc.Debug("Recv Subs Fail rmr: xid=%s subid=%d, asn: instanceid=%d", msg.Xid, msg.SubId, resp.RequestId.InstanceId)
 			return e2SubsId
 		}
 	} else {
@@ -481,7 +484,7 @@ func (tc *E2Stub) SendSubsDelReq(t *testing.T, oldTrans *RmrTransactionId, e2Sub
 		trans = tc.NewRmrTransactionId("", "RAN_NAME_1")
 	}
 
-	tc.Info("SendSubsDelReq %s", trans.String())
+	tc.Debug("SendSubsDelReq %s", trans.String())
 	e2SubsDelReq := e2asnpacker.NewPackerSubscriptionDeleteRequest()
 	//---------------------------------
 	// xapp activity: Send Subs Del Req
@@ -507,7 +510,7 @@ func (tc *E2Stub) SendSubsDelReq(t *testing.T, oldTrans *RmrTransactionId, e2Sub
 	params.Xid = trans.xid
 	params.Mbuf = nil
 
-	tc.Info("SEND SUB DEL REQ: %s", params.String())
+	tc.Debug("SEND SUB DEL REQ: %s", params.String())
 	snderr := tc.SendWithRetry(params, false, 5)
 	if snderr != nil {
 		tc.TestError(t, "RMR SEND FAILED: %s %s", trans.String(), snderr.Error())
@@ -520,7 +523,7 @@ func (tc *E2Stub) SendSubsDelReq(t *testing.T, oldTrans *RmrTransactionId, e2Sub
 //
 //-----------------------------------------------------------------------------
 func (tc *E2Stub) RecvSubsDelReq(t *testing.T) (*e2ap.E2APSubscriptionDeleteRequest, *xapp.RMRParams) {
-	tc.Info("RecvSubsDelReq")
+	tc.Debug("RecvSubsDelReq")
 	e2SubsDelReq := e2asnpacker.NewPackerSubscriptionDeleteRequest()
 
 	//---------------------------------
@@ -531,7 +534,7 @@ func (tc *E2Stub) RecvSubsDelReq(t *testing.T) (*e2ap.E2APSubscriptionDeleteRequ
 		if msg.Mtype != xapp.RICMessageTypes["RIC_SUB_DEL_REQ"] {
 			tc.TestError(t, "Received wrong mtype expected %s got %s, error", "RIC_SUB_DEL_REQ", xapp.RicMessageTypeToName[msg.Mtype])
 		} else {
-			tc.Info("Recv Subs Del Req")
+			tc.Debug("Recv Subs Del Req")
 
 			packedData := &e2ap.PackedData{}
 			packedData.Buf = msg.Payload
@@ -551,7 +554,7 @@ func (tc *E2Stub) RecvSubsDelReq(t *testing.T) (*e2ap.E2APSubscriptionDeleteRequ
 //
 //-----------------------------------------------------------------------------
 func (tc *E2Stub) SendSubsDelResp(t *testing.T, req *e2ap.E2APSubscriptionDeleteRequest, msg *xapp.RMRParams) {
-	tc.Info("SendSubsDelResp")
+	tc.Debug("SendSubsDelResp")
 	e2SubsDelResp := e2asnpacker.NewPackerSubscriptionDeleteResponse()
 
 	//---------------------------------
@@ -577,7 +580,7 @@ func (tc *E2Stub) SendSubsDelResp(t *testing.T, req *e2ap.E2APSubscriptionDelete
 	params.Xid = msg.Xid
 	params.Mbuf = nil
 
-	tc.Info("SEND SUB DEL RESP: %s", params.String())
+	tc.Debug("SEND SUB DEL RESP: %s", params.String())
 	snderr := tc.SendWithRetry(params, false, 5)
 	if snderr != nil {
 		tc.TestError(t, "RMR SEND FAILED: %s", snderr.Error())
@@ -588,7 +591,7 @@ func (tc *E2Stub) SendSubsDelResp(t *testing.T, req *e2ap.E2APSubscriptionDelete
 //
 //-----------------------------------------------------------------------------
 func (tc *E2Stub) RecvSubsDelResp(t *testing.T, trans *RmrTransactionId) {
-	tc.Info("RecvSubsDelResp")
+	tc.Debug("RecvSubsDelResp")
 	e2SubsDelResp := e2asnpacker.NewPackerSubscriptionDeleteResponse()
 
 	//---------------------------------
@@ -609,7 +612,7 @@ func (tc *E2Stub) RecvSubsDelResp(t *testing.T, trans *RmrTransactionId) {
 			if unpackerr != nil {
 				tc.TestError(t, "RIC_SUB_DEL_RESP unpack failed err: %s", unpackerr.Error())
 			}
-			tc.Info("Recv Subs Del Resp rmr: xid=%s subid=%d, asn: instanceid=%d", msg.Xid, msg.SubId, resp.RequestId.InstanceId)
+			tc.Debug("Recv Subs Del Resp rmr: xid=%s subid=%d, asn: instanceid=%d", msg.Xid, msg.SubId, resp.RequestId.InstanceId)
 			return
 		}
 	} else {
@@ -621,7 +624,7 @@ func (tc *E2Stub) RecvSubsDelResp(t *testing.T, trans *RmrTransactionId) {
 //
 //-----------------------------------------------------------------------------
 func (tc *E2Stub) SendSubsDelFail(t *testing.T, req *e2ap.E2APSubscriptionDeleteRequest, msg *xapp.RMRParams) {
-	tc.Info("SendSubsDelFail")
+	tc.Debug("SendSubsDelFail")
 	e2SubsDelFail := e2asnpacker.NewPackerSubscriptionDeleteFailure()
 
 	//---------------------------------
@@ -649,7 +652,7 @@ func (tc *E2Stub) SendSubsDelFail(t *testing.T, req *e2ap.E2APSubscriptionDelete
 	params.Xid = msg.Xid
 	params.Mbuf = nil
 
-	tc.Info("SEND SUB DEL FAIL: %s", params.String())
+	tc.Debug("SEND SUB DEL FAIL: %s", params.String())
 	snderr := tc.SendWithRetry(params, false, 5)
 	if snderr != nil {
 		tc.TestError(t, "RMR SEND FAILED: %s", snderr.Error())
@@ -667,15 +670,15 @@ func (tc *E2Stub) SendSubsDelFail(t *testing.T, req *e2ap.E2APSubscriptionDelete
 func (tc *E2Stub) SubscriptionRespHandler(resp *clientmodel.SubscriptionResponse) {
 
 	if tc.subscriptionId == "SUBSCRIPTIONID NOT SET" {
-		tc.Info("REST notification received for %v while no SubscriptionID was not set for E2EventInstanceID=%v, XappEventInstanceID=%v (%v)",
+		tc.Debug("REST notification received for %v while no SubscriptionID was not set for E2EventInstanceID=%v, XappEventInstanceID=%v (%v)",
 			*resp.SubscriptionID, *resp.SubscriptionInstances[0].E2EventInstanceID, *resp.SubscriptionInstances[0].XappEventInstanceID, tc)
 		tc.CallBackNotification <- *resp.SubscriptionInstances[0].E2EventInstanceID
 	} else if tc.subscriptionId == *resp.SubscriptionID {
-		tc.Info("REST notification received SubscriptionID=%s, E2EventInstanceID=%v, RequestorID=%v (%v)",
+		tc.Debug("REST notification received SubscriptionID=%s, E2EventInstanceID=%v, RequestorID=%v (%v)",
 			*resp.SubscriptionID, *resp.SubscriptionInstances[0].E2EventInstanceID, *resp.SubscriptionInstances[0].XappEventInstanceID, tc)
 		tc.CallBackNotification <- *resp.SubscriptionInstances[0].E2EventInstanceID
 	} else {
-		tc.Info("MISMATCHING REST notification received SubscriptionID=%s<>%s, E2EventInstanceID=%v, XappEventInstanceID=%v (%v)",
+		tc.Debug("MISMATCHING REST notification received SubscriptionID=%s<>%s, E2EventInstanceID=%v, XappEventInstanceID=%v (%v)",
 			tc.subscriptionId, *resp.SubscriptionID, *resp.SubscriptionInstances[0].E2EventInstanceID, *resp.SubscriptionInstances[0].XappEventInstanceID, tc)
 	}
 }
@@ -698,7 +701,7 @@ func (tc *E2Stub) ExpectRESTNotificationNok(t *testing.T, restSubsId string, exp
 
 func (tc *E2Stub) expectNotification(t *testing.T, restSubsId string, expectError string) {
 
-	tc.Info("### Started to wait REST notification for %v on port %v f(RMR port %v), %v responses expected", restSubsId, *tc.clientEndpoint.HTTPPort, *tc.clientEndpoint.RMRPort, tc.requestCount)
+	tc.Debug("### Started to wait REST notification for %v on port %v f(RMR port %v), %v responses expected", restSubsId, *tc.clientEndpoint.HTTPPort, *tc.clientEndpoint.RMRPort, tc.requestCount)
 	tc.restSubsIdList = []string{restSubsId}
 	xapp.Subscription.SetResponseCB(tc.ListedRestNotifHandler)
 	if tc.requestCount == 0 {
@@ -714,18 +717,18 @@ func (tc *E2Stub) expectNotification(t *testing.T, restSubsId string, expectErro
 			} else if e2Ids.ErrorCause == "" && expectError == "allFail" {
 				tc.TestError(t, "### Unexpected ok cause received from REST notifications |%s:%s| (%v)", e2Ids.RestSubsId, restSubsId, tc)
 			} else if e2Ids.ErrorCause != "" && expectError == "allOk" {
-				tc.TestError(t, "### Unexpected error cause (%s) received from REST notifications |%s:%s| (%v)", e2Ids.ErrorCause, e2Ids.RestSubsId, restSubsId, tc)
+				tc.TestError(t, "### Unexpected ErrorCause: (%s), ErrorSource: (%s), TimeoutType: (%s) received from REST notifications |%s:%s| (%v)", e2Ids.ErrorCause, e2Ids.ErrorSource, e2Ids.TimeoutType, e2Ids.RestSubsId, restSubsId, tc)
 			} else {
 				tc.requestCount--
 				if tc.requestCount == 0 {
-					tc.Info("### All expected REST notifications received for %s (%v)", e2Ids.RestSubsId, tc)
+					tc.Debug("### All expected REST notifications received for %s (%v)", e2Ids.RestSubsId, tc)
 				} else {
-					tc.Info("### Expected REST notifications received for %s, (%v)", e2Ids.RestSubsId, tc)
+					tc.Debug("### Expected REST notifications received for %s, (%v)", e2Ids.RestSubsId, tc)
 				}
 				if e2Ids.ErrorCause != "" && expectError == "allFail" {
-					tc.Info("### REST Notification: %s, ErrorCause: %v", e2Ids.RestSubsId, e2Ids.ErrorCause)
+					tc.Debug("### REST Notification: RestSubsId: %s, ErrorCause: %s, ErrorSource: (%s), TimeoutType: (%s)", e2Ids.RestSubsId, e2Ids.ErrorCause, e2Ids.ErrorSource, e2Ids.TimeoutType)
 				}
-				tc.Info("### REST Notification received Notif for %s : %v", e2Ids.RestSubsId, e2Ids.E2SubsId)
+				tc.Debug("### REST Notification received Notif for %s : %v", e2Ids.RestSubsId, e2Ids.E2SubsId)
 				tc.ListedRESTNotifications <- e2Ids
 				if len(tc.ListedRESTNotifications) > 1 {
 					panic("expectNotification - ListedRESTNotifications stacking up")
@@ -745,17 +748,17 @@ func (tc *E2Stub) WaitRESTNotification(t *testing.T, restSubsId string) uint32 {
 	select {
 	case e2SubsId := <-tc.ListedRESTNotifications:
 		if e2SubsId.RestSubsId == restSubsId {
-			tc.Info("### Expected REST notifications received %s, e2SubsId %v for endpoint=%s, (%v)", e2SubsId.RestSubsId, e2SubsId.E2SubsId, tc.clientEndpoint, tc)
+			tc.Debug("### Expected REST notifications received %s, e2SubsId %v for endpoint=%s, (%v)", e2SubsId.RestSubsId, e2SubsId.E2SubsId, tc.clientEndpoint, tc)
 			return e2SubsId.E2SubsId
 		} else {
 			tc.TestError(t, "### Unexpected REST notification %s received, expected %s for endpoint=%s, (%v)", e2SubsId.RestSubsId, restSubsId, tc.clientEndpoint, tc)
-			xapp.Logger.Info("CALL STACK:\n %s", stack)
+			xapp.Logger.Debug("CALL STACK:\n %s", stack)
 			return 0
 		}
 	case <-time.After(15 * time.Second):
 		err := fmt.Errorf("### Timeout 15s expired while waiting REST notification for subsId: %v", restSubsId)
 		tc.TestError(t, "%s", err.Error())
-		xapp.Logger.Info("CALL STACK:\n %s", stack)
+		xapp.Logger.Debug("CALL STACK:\n %s", stack)
 		panic("WaitRESTNotification - timeout error")
 	}
 }
@@ -763,10 +766,10 @@ func (tc *E2Stub) WaitRESTNotification(t *testing.T, restSubsId string) uint32 {
 // Note, this function should be followed by a handling of <-xappConn1.RESTNotification.
 func (tc *E2Stub) ExpectAnyNotification(t *testing.T) {
 	go func() {
-		tc.Info("### Started waiting ANY REST notifications received for endpoint=%s, (%v)", tc.clientEndpoint, tc)
+		tc.Debug("### Started waiting ANY REST notifications received for endpoint=%s, (%v)", tc.clientEndpoint, tc)
 		select {
 		case e2SubsId := <-tc.CallBackNotification:
-			tc.Info("### ANY REST notifications received e2SubsId %v for endpoint=%s, (%v) via CallBackNotification", e2SubsId, tc.clientEndpoint, tc)
+			tc.Debug("### ANY REST notifications received e2SubsId %v for endpoint=%s, (%v) via CallBackNotification", e2SubsId, tc.clientEndpoint, tc)
 			tc.RESTNotification <- (uint32)(e2SubsId)
 		case <-time.After(15 * time.Second):
 			err := fmt.Errorf("### Timeout 15s expired while waiting ANY REST notification")
@@ -780,7 +783,7 @@ func (tc *E2Stub) WaitAnyRESTNotification(t *testing.T) uint32 {
 
 	select {
 	case e2SubsId := <-tc.RESTNotification:
-		tc.Info("### Expected ANY REST notification received - e2SubsId %v for endpoint=%s, (%v)", e2SubsId, tc.clientEndpoint, tc)
+		tc.Debug("### Expected ANY REST notification received - e2SubsId %v for endpoint=%s, (%v)", e2SubsId, tc.clientEndpoint, tc)
 		return e2SubsId
 
 	case <-time.After(15 * time.Second):
@@ -797,20 +800,20 @@ func (tc *E2Stub) ListedRestNotifHandler(resp *clientmodel.SubscriptionResponse)
 	} else {
 		for i, subsId := range tc.restSubsIdList {
 			if *resp.SubscriptionID == subsId {
-				//tc.Info("Listed REST notifications received SubscriptionID=%s, InstanceID=%v, XappEventInstanceID=%v",
+				//tc.Debug("Listed REST notifications received SubscriptionID=%s, InstanceID=%v, XappEventInstanceID=%v",
 				//	*resp.SubscriptionID, *resp.SubscriptionInstances[0].InstanceID, *resp.SubscriptionInstances[0].XappEventInstanceID)
 
 				tc.restSubsIdList = append(tc.restSubsIdList[:i], tc.restSubsIdList[i+1:]...)
-				//tc.Info("Removed %s from Listed REST notifications, %v entries left", *resp.SubscriptionID, len(tc.restSubsIdList))
+				//tc.Debug("Removed %s from Listed REST notifications, %v entries left", *resp.SubscriptionID, len(tc.restSubsIdList))
 
-				if resp.SubscriptionInstances[0].ErrorCause != nil {
-					tc.CallBackListedNotifications <- E2RestIds{*resp.SubscriptionID, uint32(*resp.SubscriptionInstances[0].E2EventInstanceID), *resp.SubscriptionInstances[0].ErrorCause}
-				} else {
-					tc.CallBackListedNotifications <- E2RestIds{*resp.SubscriptionID, uint32(*resp.SubscriptionInstances[0].E2EventInstanceID), ""}
-				}
+				//				if resp.SubscriptionInstances[0].ErrorCause != nil {
+				tc.CallBackListedNotifications <- *tc.GetE2RestIds(resp)
+				//				} else {
+				//					tc.CallBackListedNotifications <- E2RestIds{*resp.SubscriptionID, uint32(*resp.SubscriptionInstances[0].E2EventInstanceID), "", "", ""}
+				//				}
 
 				if len(tc.restSubsIdList) == 0 {
-					tc.Info("All listed REST notifications received for endpoint=%s", tc.clientEndpoint)
+					tc.Debug("All listed REST notifications received for endpoint=%s", tc.clientEndpoint)
 				}
 
 				return
@@ -824,8 +827,42 @@ func (tc *E2Stub) ListedRestNotifHandler(resp *clientmodel.SubscriptionResponse)
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
+func (tc *E2Stub) GetE2RestIds(resp *clientmodel.SubscriptionResponse) *E2RestIds {
+
+	e2RestIds := &E2RestIds{}
+	if resp != nil {
+		if resp.SubscriptionID != nil {
+			e2RestIds.RestSubsId = *resp.SubscriptionID
+		}
+		if resp.SubscriptionInstances != nil {
+			if resp.SubscriptionInstances[0].E2EventInstanceID != nil {
+				e2RestIds.E2SubsId = uint32(*resp.SubscriptionInstances[0].E2EventInstanceID)
+			}
+			if resp.SubscriptionInstances[0].ErrorCause != nil {
+				e2RestIds.ErrorCause = *resp.SubscriptionInstances[0].ErrorCause
+			} else {
+				e2RestIds.ErrorCause = "nil"
+			}
+			if resp.SubscriptionInstances[0].ErrorSource != nil {
+				e2RestIds.ErrorSource = *resp.SubscriptionInstances[0].ErrorSource
+			} else {
+				e2RestIds.ErrorSource = "nil"
+			}
+			if resp.SubscriptionInstances[0].TimeoutType != nil {
+				e2RestIds.TimeoutType = *resp.SubscriptionInstances[0].TimeoutType
+			} else {
+				e2RestIds.TimeoutType = "nil"
+			}
+		}
+	}
+	return e2RestIds
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
 func (tc *E2Stub) WaitListedRestNotifications(t *testing.T, restSubsIds []string) {
-	tc.Info("Started to wait REST notifications %v on port %v f(RMR port %v)", restSubsIds, *tc.clientEndpoint.HTTPPort, *tc.clientEndpoint.RMRPort)
+	tc.Debug("Started to wait REST notifications %v on port %v f(RMR port %v)", restSubsIds, *tc.clientEndpoint.HTTPPort, *tc.clientEndpoint.RMRPort)
 
 	tc.restSubsIdList = restSubsIds
 	xapp.Subscription.SetResponseCB(tc.ListedRestNotifHandler)
@@ -834,7 +871,7 @@ func (tc *E2Stub) WaitListedRestNotifications(t *testing.T, restSubsIds []string
 		go func() {
 			select {
 			case e2Ids := <-tc.CallBackListedNotifications:
-				tc.Info("Listed Notification waiter received Notif for %s : %v", e2Ids.RestSubsId, e2Ids.E2SubsId)
+				tc.Debug("Listed Notification waiter received Notif for %s : %v", e2Ids.RestSubsId, e2Ids.E2SubsId)
 				tc.ListedRESTNotifications <- e2Ids
 			case <-time.After(15 * time.Second):
 				err := fmt.Errorf("Timeout 15s expired while waiting Listed REST notification")
@@ -848,11 +885,11 @@ func (tc *E2Stub) WaitListedRestNotifications(t *testing.T, restSubsIds []string
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-func (tc *E2Stub) SendRESTSubsReq(t *testing.T, params *RESTSubsReqParams) string { // This need to be edited according to new specification
-	tc.Info("======== Posting REST Report subscriptions to Submgr ======")
+func (tc *E2Stub) SendRESTSubsReq(t *testing.T, params *RESTSubsReqParams) string {
+	tc.Debug("======== Posting REST subscriptions to Submgr ======")
 
 	if params == nil {
-		tc.Info("SendRESTReportSubsReq: params == nil")
+		tc.Debug("SendRESTReportSubsReq: params == nil")
 		return ""
 	}
 
@@ -862,12 +899,39 @@ func (tc *E2Stub) SendRESTSubsReq(t *testing.T, params *RESTSubsReqParams) strin
 	if err != nil {
 		// Swagger generated code makes checks for the values that are inserted the subscription function
 		// If error cause is unknown and POST is not done, the problem is in the inserted values
-		tc.Error("======== REST report subscriptions failed %s ========", err.Error())
+		tc.Error("======== REST subscription request failed %s ========", err.Error())
+		if resp != nil {
+			tc.PrintSubscriptionInsctanceErrorInfo(resp)
+		} else {
+			tc.Error("Subscribe resp == nil")
+		}
 		return ""
 	}
 	tc.subscriptionId = *resp.SubscriptionID
-	tc.Info("======== REST report subscriptions posted successfully. SubscriptionID = %s, RequestCount = %v ========", *resp.SubscriptionID, tc.requestCount)
+	tc.Debug("======== REST subscriptions posted successfully. SubscriptionID = %s, RequestCount = %v ========", *resp.SubscriptionID, tc.requestCount)
 	return *resp.SubscriptionID
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+func (tc *E2Stub) PrintSubscriptionInsctanceErrorInfo(resp *clientmodel.SubscriptionResponse) {
+	for _, subscriptionInstance := range resp.SubscriptionInstances {
+		if subscriptionInstance != nil {
+			if subscriptionInstance.RejectCause != nil {
+				tc.Error("subscriptionInstance.RejectCause= %s", *subscriptionInstance.RejectCause)
+			}
+			if subscriptionInstance.ErrorCause != nil {
+				tc.Error("subscriptionInstance.ErrorCause= %s", *subscriptionInstance.ErrorCause)
+			}
+			if subscriptionInstance.ErrorSource != nil {
+				tc.Error("subscriptionInstance.ErrorSource= %s", *subscriptionInstance.ErrorSource)
+			}
+			if subscriptionInstance.TimeoutType != nil {
+				tc.Error("subscriptionInstance.TimeoutType = %s", *subscriptionInstance.TimeoutType)
+			}
+		}
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -896,8 +960,6 @@ func (p *RESTSubsReqParams) GetRESTSubsReqReportParams(subReqCount int, clientEn
 	var rANFunctionID int64 = 33
 	p.SubsReqParams.RANFunctionID = &rANFunctionID
 
-	//	reqId := int64(1)
-	//seqId := int64(1)
 	actionId := int64(1)
 	actionType := "report"
 	subsequestActioType := "continue"
@@ -945,7 +1007,7 @@ func (p *RESTSubsReqParams) SetEndpointHost(host string) {
 
 	if p.SubsReqParams.ClientEndpoint.Host != "" {
 		if p.SubsReqParams.ClientEndpoint.Host != host {
-			// Renaming toto, print something tc.Info("Posting REST subscription request to Submgr")
+			// Renaming toto, print something tc.Debug("Posting REST subscription request to Submgr")
 			err := fmt.Errorf("hostname change attempt: %s -> %s", p.SubsReqParams.ClientEndpoint.Host, host)
 			panic(err)
 		}
@@ -963,6 +1025,20 @@ func (p *RESTSubsReqParams) SetHTTPEndpoint(HTTP_port int64, host string) {
 		var RMR_port int64
 		p.SubsReqParams.ClientEndpoint.RMRPort = &RMR_port
 	}
+}
+
+func (p *RESTSubsReqParams) SetE2SubscriptionDirectives(E2RetryCount int64, E2TimeoutTimerValue int64, RMRRoutingNeeded bool) {
+
+	E2SubscriptionDirectives := &clientmodel.SubscriptionParamsE2SubscriptionDirectives{}
+	p.SubsReqParams.E2SubscriptionDirectives = E2SubscriptionDirectives
+	p.SubsReqParams.E2SubscriptionDirectives.E2RetryCount = &E2RetryCount
+	p.SubsReqParams.E2SubscriptionDirectives.E2TimeoutTimerValue = E2TimeoutTimerValue
+	p.SubsReqParams.E2SubscriptionDirectives.RMRRoutingNeeded = &RMRRoutingNeeded
+}
+
+func (p *RESTSubsReqParams) RemoveE2SubscriptionDirectives() {
+
+	p.SubsReqParams.E2SubscriptionDirectives = nil
 }
 
 func (p *RESTSubsReqParams) SetSubActionTypes(actionType string) {
@@ -1057,23 +1133,32 @@ func (p *RESTSubsReqParams) SetSubscriptionID(SubscriptionID *string) {
 	p.SubsReqParams.SubscriptionID = *SubscriptionID
 }
 
+func (p *RESTSubsReqParams) SetXappEventInstanceID(xappEventInstanceId int64) {
+
+	for _, subDetail := range p.SubsReqParams.SubscriptionDetails {
+		if subDetail != nil {
+			subDetail.XappEventInstanceID = &xappEventInstanceId
+		}
+	}
+}
+
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
 func (tc *E2Stub) SendRESTSubsDelReq(t *testing.T, subscriptionID *string) {
 
-	tc.Info("======== Posting REST DELETE subscription(s) to Submgr ======")
+	tc.Debug("======== Posting REST DELETE subscription(s) to Submgr ======")
 
 	if *subscriptionID == "" {
 		tc.Error("REST error in deleting subscriptions. Empty SubscriptionID = %s", *subscriptionID)
 	}
-	tc.Info("REST deleting E2 subscriptions. SubscriptionID = %s", *subscriptionID)
+	tc.Debug("REST deleting E2 subscriptions. SubscriptionID = %s", *subscriptionID)
 
 	err := xapp.Subscription.Unsubscribe(*subscriptionID)
 	if err != nil {
 		tc.Error("REST Delete subscription failed %s", err.Error())
 	}
-	tc.Info("REST delete subscription pushed to submgr successfully. SubscriptionID = %s", *subscriptionID)
+	tc.Debug("REST delete subscription pushed to submgr successfully. SubscriptionID = %s", *subscriptionID)
 }
 
 //-----------------------------------------------------------------------------
@@ -1107,9 +1192,6 @@ func (p *RESTSubsReqParams) GetRESTSubsReqPolicyParams(subReqCount int, clientEn
 	p.SubsReqParams.Meid = meid
 	var rANFunctionID int64 = 33
 	p.SubsReqParams.RANFunctionID = &rANFunctionID
-
-	//	reqId := int64(1)
-	//seqId := int64(1)
 	actionId := int64(1)
 	actionType := "policy"
 	subsequestActioType := "continue"
@@ -1138,5 +1220,14 @@ func (p *RESTSubsReqParams) GetRESTSubsReqPolicyParams(subReqCount int, clientEn
 		}
 		p.SubsReqParams.SubscriptionDetails = append(p.SubsReqParams.SubscriptionDetails, subscriptionDetail)
 	}
+}
+
+func (p *RESTSubsReqParams) SetSubscriptionDirectives(e2Timeout int64, e2RetryCount int64, routingNeeded bool) {
+
+	e2SubscriptionDirectives := &clientmodel.SubscriptionParamsE2SubscriptionDirectives{}
+	e2SubscriptionDirectives.E2TimeoutTimerValue = e2Timeout
+	e2SubscriptionDirectives.E2RetryCount = &e2RetryCount
+	e2SubscriptionDirectives.RMRRoutingNeeded = &routingNeeded
+	p.SubsReqParams.E2SubscriptionDirectives = e2SubscriptionDirectives
 
 }
