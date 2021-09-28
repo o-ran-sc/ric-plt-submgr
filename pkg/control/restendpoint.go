@@ -62,7 +62,7 @@ func ConstructEndpointAddresses(clientEndpoint models.SubscriptionParamsClientEn
 		xAppRMREndPoint = host + ":" + strconv.FormatInt(*clientEndpoint.RMRPort, 10)
 	}
 
-	xapp.Logger.Info("xAppHttpEndPoint=%v, xAppRrmEndPoint=%v", xAppHTTPEndPoint, xAppRMREndPoint)
+	xapp.Logger.Debug("xAppHttpEndPoint=%v, xAppRrmEndPoint=%v", xAppHTTPEndPoint, xAppRMREndPoint)
 
 	return xAppHTTPEndPoint, xAppRMREndPoint, nil
 }

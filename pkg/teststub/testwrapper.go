@@ -52,7 +52,7 @@ func (tw *TestWrapper) TestError(t *testing.T, pattern string, args ...interface
 //
 //-----------------------------------------------------------------------------
 func (tw *TestWrapper) TestLog(t *testing.T, pattern string, args ...interface{}) {
-	tw.Info(fmt.Sprintf(pattern, args...))
+	tw.Debug(fmt.Sprintf(pattern, args...))
 	t.Logf(fmt.Sprintf(pattern, args...))
 }
 

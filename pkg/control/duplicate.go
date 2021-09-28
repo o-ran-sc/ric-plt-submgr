@@ -97,7 +97,7 @@ func (d *duplicateCtrl) DeleteLastKnownRestSubsIdBasedOnMd5sum(md5sum string) {
 
 	if !exists {
 		if md5sum == "" {
-			xapp.Logger.Info("Attempted to delete a cached md5sum, md5sum not set yet")
+			xapp.Logger.Debug("Attempted to delete a cached md5sum, md5sum not set yet")
 		} else {
 			xapp.Logger.Error("Attempted to delete a cached md5sum %s, but the value was not found", md5sum)
 		}
@@ -133,7 +133,7 @@ func (d *duplicateCtrl) IsDuplicateToOngoingTransaction(restSubsId string, md5su
 	entry, present := d.ongoingRequestMap[md5sum]
 
 	if present {
-		xapp.Logger.Info("Collision detected. REST subs ID %s has ongoing transaction with md5sum : %s started at %s\n", entry.restSubsId, md5sum, entry.startTime.Format(time.ANSIC))
+		xapp.Logger.Debug("Collision detected. REST subs ID %s has ongoing transaction with md5sum : %s started at %s\n", entry.restSubsId, md5sum, entry.startTime.Format(time.ANSIC))
 		d.collCount++
 		return true
 	}

@@ -106,7 +106,7 @@ func (tc *testingHttpRtmgrStub) http_handler(w http.ResponseWriter, r *http.Requ
 		if err != nil {
 			tc.Error("%s", err.Error())
 		}
-		tc.Info("handling SubscriptionID=%d Address=%s Port=%d", *req.SubscriptionID, *req.Address, *req.Port)
+		tc.Debug("handling SubscriptionID=%d Address=%s Port=%d", *req.SubscriptionID, *req.Address, *req.Port)
 		id = *req.SubscriptionID
 	}
 	if r.Method == http.MethodPut {
@@ -115,7 +115,7 @@ func (tc *testingHttpRtmgrStub) http_handler(w http.ResponseWriter, r *http.Requ
 		if err != nil {
 			tc.Error("%s", err.Error())
 		}
-		tc.Info("handling put")
+		tc.Debug("handling put")
 	}
 
 	var code int = 0
@@ -128,7 +128,7 @@ func (tc *testingHttpRtmgrStub) http_handler(w http.ResponseWriter, r *http.Requ
 			}
 			if tc.eventWaiter.sleep != 0 {
 				<-time.After(time.Duration(tc.eventWaiter.sleep) * time.Millisecond)
-				tc.Info("sleeping done, %v", id)
+				tc.Debug("sleeping done, %v", id)
 			}
 		}
 	case http.MethodDelete:
@@ -154,7 +154,7 @@ func (tc *testingHttpRtmgrStub) http_handler(w http.ResponseWriter, r *http.Requ
 	if waiter != nil {
 		waiter.SetResult(true)
 	}
-	tc.Info("Method=%s Reply with code %d", r.Method, code)
+	tc.Debug("Method=%s Reply with code %d", r.Method, code)
 	w.WriteHeader(code)
 
 }
