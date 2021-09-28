@@ -20,6 +20,8 @@
 package control
 
 import (
+	"time"
+
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
 )
 
@@ -40,4 +42,32 @@ type Sdlnterface interface {
 	GetAll() ([]string, error)
 	Remove(keys []string) error
 	RemoveAll() error
+}
+
+type E2SubscriptionDirectives struct {
+	// How many times E2 subscription request is retried
+	// Required: true
+	// Maximum: 10
+	// Minimum: 0
+	E2MaxTryCount int64
+
+	// How long time response is waited from E2 node
+	// Maximum: 10s
+	// Minimum: 1s
+	E2TimeoutTimerValue time.Duration
+
+	// Subscription needs RMR route from E2Term to xApp
+	CreateRMRRoute bool
+}
+
+type ErrorInfo struct {
+	ErrorCause  string
+	ErrorSource string
+	TimeoutType string
+}
+
+func (e *ErrorInfo) SetInfo(errorCause string, errorSource string, timeoutType string) {
+	e.ErrorCause = errorCause
+	e.ErrorSource = errorSource
+	e.TimeoutType = timeoutType
 }

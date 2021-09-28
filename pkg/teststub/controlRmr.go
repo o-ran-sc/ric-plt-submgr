@@ -60,6 +60,6 @@ func (tc *RmrControl) TestError(t *testing.T, pattern string, args ...interface{
 }
 
 func (tc *RmrControl) TestLog(t *testing.T, pattern string, args ...interface{}) {
-	tc.Info(fmt.Sprintf(pattern, args...))
+	tc.Debug(fmt.Sprintf(pattern, args...))
 	t.Logf(fmt.Sprintf(pattern, args...))
 }

@@ -30,13 +30,14 @@ import (
 )
 
 type SubscriptionInfo struct {
-	Valid       bool
-	ReqId       RequestId
-	Meid        xapp.RMRMeid
-	EpList      xapp.RmrEndpointList
-	SubReqMsg   e2ap.E2APSubscriptionRequest
-	SubRespMsg  e2ap.E2APSubscriptionResponse
-	SubRespRcvd string
+	Valid        bool
+	ReqId        RequestId
+	Meid         xapp.RMRMeid
+	EpList       xapp.RmrEndpointList
+	SubReqMsg    e2ap.E2APSubscriptionRequest
+	SubRespMsg   e2ap.E2APSubscriptionResponse
+	SubRespRcvd  string
+	PolicyUpdate bool
 }
 
 func CreateSdl() Sdlnterface {
@@ -51,6 +52,7 @@ func (c *Control) WriteSubscriptionToSdl(subId uint32, subs *Subscription) error
 	subscriptionInfo.Meid = *subs.Meid
 	subscriptionInfo.EpList = subs.EpList
 	subscriptionInfo.SubReqMsg = *subs.SubReqMsg
+	subscriptionInfo.PolicyUpdate = subs.PolicyUpdate
 
 	if typeofSubsMessage(subs.SubRFMsg) == "SubResp" {
 		subscriptionInfo.SubRespRcvd = "SubResp"
@@ -118,6 +120,7 @@ func (c *Control) CreateSubscription(subscriptionInfo *SubscriptionInfo, jsonSub
 	subReq := e2ap.E2APSubscriptionRequest{}
 	subReq = subscriptionInfo.SubReqMsg
 	subs.SubReqMsg = &subReq
+	subs.PolicyUpdate = subscriptionInfo.PolicyUpdate
 
 	if subscriptionInfo.SubRespRcvd == "SubResp" {
 		subs.SubRespRcvd = true

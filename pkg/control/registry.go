@@ -22,6 +22,7 @@ package control
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -115,7 +116,7 @@ func (r *Registry) GetAllRestSubscriptions() []byte {
 	return restSubscriptionsJson
 }
 
-func (r *Registry) CreateRESTSubscription(restSubId *string, xAppRmrEndPoint *string, maid *string) (*RESTSubscription, error) {
+func (r *Registry) CreateRESTSubscription(restSubId *string, xAppRmrEndPoint *string, maid *string) *RESTSubscription {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 	newRestSubscription := RESTSubscription{}
@@ -125,15 +126,15 @@ func (r *Registry) CreateRESTSubscription(restSubId *string, xAppRmrEndPoint *st
 	newRestSubscription.SubDelReqOngoing = false
 	r.restSubscriptions[*restSubId] = &newRestSubscription
 	newRestSubscription.xAppIdToE2Id = make(map[int64]int64)
-	xapp.Logger.Info("Registry: Created REST subscription successfully. restSubId=%v, subscriptionCount=%v, e2apSubscriptionCount=%v", *restSubId, len(r.restSubscriptions), len(r.register))
-	return &newRestSubscription, nil
+	xapp.Logger.Debug("Registry: Created REST subscription successfully. restSubId=%v, subscriptionCount=%v, e2apSubscriptionCount=%v", *restSubId, len(r.restSubscriptions), len(r.register))
+	return &newRestSubscription
 }
 
 func (r *Registry) DeleteRESTSubscription(restSubId *string) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 	delete(r.restSubscriptions, *restSubId)
-	xapp.Logger.Info("Registry: Deleted REST subscription successfully. restSubId=%v, subscriptionCount=%v", *restSubId, len(r.restSubscriptions))
+	xapp.Logger.Debug("Registry: Deleted REST subscription successfully. restSubId=%v, subscriptionCount=%v", *restSubId, len(r.restSubscriptions))
 }
 
 func (r *Registry) GetRESTSubscription(restSubId string, IsDelReqOngoing bool) (*RESTSubscription, error) {
@@ -150,7 +151,6 @@ func (r *Registry) GetRESTSubscription(restSubId string, IsDelReqOngoing bool) (
 		} else {
 			return restSubscription, fmt.Errorf("Registry: REST request is still ongoing for the endpoint=%v, restSubId=%v, SubDelReqOngoing=%v, SubReqOngoing=%v", restSubscription, restSubId, restSubscription.SubDelReqOngoing, restSubscription.SubReqOngoing)
 		}
-		return restSubscription, nil
 	}
 	return nil, fmt.Errorf("Registry: No valid subscription found with restSubId=%v", restSubId)
 }
@@ -168,7 +168,7 @@ func (r *Registry) QueryHandler() (models.SubscriptionList, error) {
 	return resp, nil
 }
 
-func (r *Registry) allocateSubs(trans *TransactionXapp, subReqMsg *e2ap.E2APSubscriptionRequest, resetTestFlag bool) (*Subscription, error) {
+func (r *Registry) allocateSubs(trans *TransactionXapp, subReqMsg *e2ap.E2APSubscriptionRequest, resetTestFlag bool, rmrRoutecreated bool) (*Subscription, error) {
 	if len(r.subIds) > 0 {
 		subId := r.subIds[0]
 		r.subIds = r.subIds[1:]
@@ -179,8 +179,10 @@ func (r *Registry) allocateSubs(trans *TransactionXapp, subReqMsg *e2ap.E2APSubs
 		subs := &Subscription{
 			registry:         r,
 			Meid:             trans.Meid,
+			RMRRouteCreated:  rmrRoutecreated,
 			SubReqMsg:        subReqMsg,
 			valid:            true,
+			PolicyUpdate:     false,
 			RetryFromXapp:    false,
 			SubRespRcvd:      false,
 			DeleteFromDb:     false,
@@ -189,9 +191,7 @@ func (r *Registry) allocateSubs(trans *TransactionXapp, subReqMsg *e2ap.E2APSubs
 		}
 		subs.ReqId.Id = subReqMsg.RequestId.Id
 		subs.ReqId.InstanceId = subId
-		if resetTestFlag == true {
-			subs.DoNotWaitSubResp = true
-		}
+		r.SetResetTestFlag(resetTestFlag, subs)
 
 		if subs.EpList.AddEndpoint(trans.GetEndpoint()) == false {
 			r.subIds = append(r.subIds, subs.ReqId.InstanceId)
@@ -236,9 +236,10 @@ func (r *Registry) findExistingSubs(trans *TransactionXapp, subReqMsg *e2ap.E2AP
 	return nil, false
 }
 
-func (r *Registry) AssignToSubscription(trans *TransactionXapp, subReqMsg *e2ap.E2APSubscriptionRequest, resetTestFlag bool, c *Control) (*Subscription, error) {
+func (r *Registry) AssignToSubscription(trans *TransactionXapp, subReqMsg *e2ap.E2APSubscriptionRequest, resetTestFlag bool, c *Control, createRMRRoute bool) (*Subscription, ErrorInfo, error) {
 	var err error
 	var newAlloc bool
+	errorInfo := ErrorInfo{}
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
@@ -247,9 +248,9 @@ func (r *Registry) AssignToSubscription(trans *TransactionXapp, subReqMsg *e2ap.
 	//
 	actionType, err := r.CheckActionTypes(subReqMsg)
 	if err != nil {
-		xapp.Logger.Info("CREATE %s", err)
+		xapp.Logger.Debug("CREATE %s", err)
 		err = fmt.Errorf("E2 content validation failed")
-		return nil, err
+		return nil, errorInfo, err
 	}
 
 	//
@@ -260,17 +261,19 @@ func (r *Registry) AssignToSubscription(trans *TransactionXapp, subReqMsg *e2ap.
 			xapp.Logger.Debug("CREATE %s. Existing subscription for Policy found.", subs.String())
 			// Update message data to subscription
 			subs.SubReqMsg = subReqMsg
+			subs.PolicyUpdate = true
 			subs.SetCachedResponse(nil, true)
-			return subs, nil
+			r.SetResetTestFlag(resetTestFlag, subs)
+			return subs, errorInfo, nil
 		}
 	}
 
 	subs, endPointFound := r.findExistingSubs(trans, subReqMsg)
 	if subs == nil {
-		if subs, err = r.allocateSubs(trans, subReqMsg, resetTestFlag); err != nil {
+		if subs, err = r.allocateSubs(trans, subReqMsg, resetTestFlag, createRMRRoute); err != nil {
 			xapp.Logger.Error("%s", err.Error())
 			err = fmt.Errorf("subscription not allocated")
-			return nil, err
+			return nil, errorInfo, err
 		}
 		newAlloc = true
 	} else if endPointFound == true {
@@ -278,7 +281,7 @@ func (r *Registry) AssignToSubscription(trans *TransactionXapp, subReqMsg *e2ap.
 		subs.RetryFromXapp = true
 		xapp.Logger.Debug("CREATE subReqMsg.InstanceId=%v. Same subscription %s already exists.", subReqMsg.InstanceId, subs.String())
 		c.UpdateCounter(cDuplicateE2SubReq)
-		return subs, nil
+		return subs, errorInfo, nil
 	}
 
 	//
@@ -288,16 +291,20 @@ func (r *Registry) AssignToSubscription(trans *TransactionXapp, subReqMsg *e2ap.
 	defer subs.mutex.Unlock()
 
 	epamount := subs.EpList.Size()
-	xapp.Logger.Info("AssignToSubscription subs.EpList.Size()=%v", subs.EpList.Size())
+	xapp.Logger.Debug("AssignToSubscription subs.EpList.Size()=%v", subs.EpList.Size())
 
 	r.mutex.Unlock()
 	//
 	// Subscription route updates
 	//
-	if epamount == 1 {
-		err = r.RouteCreate(subs, c)
+	if createRMRRoute == true {
+		if epamount == 1 {
+			errorInfo, err = r.RouteCreate(subs, c)
+		} else {
+			errorInfo, err = r.RouteCreateUpdate(subs, c)
+		}
 	} else {
-		err = r.RouteCreateUpdate(subs, c)
+		xapp.Logger.Debug("RMR route not created: createRMRRoute=%v", createRMRRoute)
 	}
 	r.mutex.Lock()
 
@@ -307,7 +314,7 @@ func (r *Registry) AssignToSubscription(trans *TransactionXapp, subReqMsg *e2ap.
 		}
 		// Delete already added endpoint for the request
 		subs.EpList.DelEndpoint(trans.GetEndpoint())
-		return nil, err
+		return nil, errorInfo, err
 	}
 
 	if newAlloc {
@@ -315,31 +322,45 @@ func (r *Registry) AssignToSubscription(trans *TransactionXapp, subReqMsg *e2ap.
 	}
 	xapp.Logger.Debug("CREATE %s", subs.String())
 	xapp.Logger.Debug("Registry: substable=%v", r.register)
-	return subs, nil
+	return subs, errorInfo, nil
 }
 
-func (r *Registry) RouteCreate(subs *Subscription, c *Control) error {
+func (r *Registry) RouteCreate(subs *Subscription, c *Control) (ErrorInfo, error) {
+	errorInfo := ErrorInfo{}
 	subRouteAction := SubRouteInfo{subs.EpList, uint16(subs.ReqId.InstanceId)}
 	err := r.rtmgrClient.SubscriptionRequestCreate(subRouteAction)
 	if err != nil {
+		if strings.Contains(err.Error(), "status 400") {
+			errorInfo.TimeoutType = models.SubscriptionInstanceTimeoutTypeRTMGRTimeout
+		} else {
+			errorInfo.ErrorSource = models.SubscriptionInstanceErrorSourceRTMGR
+		}
+		errorInfo.ErrorCause = err.Error()
 		c.UpdateCounter(cRouteCreateFail)
 		xapp.Logger.Error("%s", err.Error())
 		err = fmt.Errorf("RTMGR route create failure")
 	}
-	return err
+	return errorInfo, err
 }
 
-func (r *Registry) RouteCreateUpdate(subs *Subscription, c *Control) error {
+func (r *Registry) RouteCreateUpdate(subs *Subscription, c *Control) (ErrorInfo, error) {
+	errorInfo := ErrorInfo{}
 	subRouteAction := SubRouteInfo{subs.EpList, uint16(subs.ReqId.InstanceId)}
 	err := r.rtmgrClient.SubscriptionRequestUpdate(subRouteAction)
 	if err != nil {
+		if strings.Contains(err.Error(), "status 400") {
+			errorInfo.TimeoutType = models.SubscriptionInstanceTimeoutTypeRTMGRTimeout
+		} else {
+			errorInfo.ErrorSource = models.SubscriptionInstanceErrorSourceRTMGR
+		}
+		errorInfo.ErrorCause = err.Error()
 		c.UpdateCounter(cRouteCreateUpdateFail)
 		xapp.Logger.Error("%s", err.Error())
 		err = fmt.Errorf("RTMGR route update failure")
-		return err
+		return errorInfo, err
 	}
 	c.UpdateCounter(cMergedSubscriptions)
-	return err
+	return errorInfo, err
 }
 
 func (r *Registry) CheckActionTypes(subReqMsg *e2ap.E2APSubscriptionRequest) (uint64, error) {
@@ -397,13 +418,15 @@ func (r *Registry) RemoveFromSubscription(subs *Subscription, trans *Transaction
 
 		subs.mutex.Lock()
 		defer subs.mutex.Unlock()
-		xapp.Logger.Info("CLEAN %s", subs.String())
+		xapp.Logger.Debug("CLEAN %s", subs.String())
 
 		if epamount == 0 {
 			//
 			// Subscription route delete
 			//
-			r.RouteDelete(subs, trans, c)
+			if subs.RMRRouteCreated == true {
+				r.RouteDelete(subs, trans, c)
+			}
 
 			//
 			// Subscription release
@@ -421,7 +444,9 @@ func (r *Registry) RemoveFromSubscription(subs *Subscription, trans *Transaction
 			//
 			// Subscription route update
 			//
-			r.RouteDeleteUpdate(subs, c)
+			if subs.RMRRouteCreated == true {
+				r.RouteDeleteUpdate(subs, c)
+			}
 		}
 	}()
 
@@ -482,4 +507,14 @@ func (r *Registry) GetSubscriptionFirstMatch(subIds []uint32) (*Subscription, er
 		}
 	}
 	return nil, fmt.Errorf("No valid subscription found with subIds %v", subIds)
+}
+
+func (r *Registry) SetResetTestFlag(resetTestFlag bool, subs *Subscription) {
+	if resetTestFlag == true {
+		// This is used in submgr restart unit tests
+		xapp.Logger.Debug("resetTestFlag == true")
+		subs.DoNotWaitSubResp = true
+	} else {
+		xapp.Logger.Debug("resetTestFlag == false")
+	}
 }

@@ -55,6 +55,8 @@ func createSubmgrControl(srcId teststub.RmrSrcId, rtgSvc teststub.RmrRtgSvc) *te
 	mainCtrl = &testingSubmgrControl{}
 	mainCtrl.RmrControl.Init("SUBMGRCTL", srcId, rtgSvc)
 	mainCtrl.c = NewControl()
+	mainCtrl.c.LoggerLevel = int(xapp.Logger.GetLevel())
+	xapp.Logger.Debug("Test: LoggerLevel %v", mainCtrl.c.LoggerLevel)
 	xapp.Logger.Debug("Replacing real db with test db")
 	mainCtrl.c.e2SubsDb = CreateMock()             // This overrides real E2 Subscription database for testing
 	mainCtrl.c.restSubsDb = CreateRestSubsDbMock() // This overrides real REST Subscription database for testing
@@ -76,17 +78,8 @@ func (mc *testingSubmgrControl) SimulateRestart(t *testing.T) {
 	if err != nil {
 		mc.TestError(t, "%v", err)
 	} else {
-		mainCtrl.c.registry.register = nil
 		mainCtrl.c.registry.subIds = subIds
 		mainCtrl.c.registry.register = register
-
-		mc.TestLog(t, "register:")
-		for subId, subs := range register {
-			mc.TestLog(t, "  subId=%v", subId)
-			mc.TestLog(t, "  subs.SubRespRcvd=%v", subs.SubRespRcvd)
-			mc.TestLog(t, "  subs=%v\n", subs)
-		}
-
 		mc.TestLog(t, "mainCtrl.c.registry.register:")
 		for subId, subs := range mainCtrl.c.registry.register {
 			mc.TestLog(t, "  subId=%v", subId)
@@ -94,6 +87,18 @@ func (mc *testingSubmgrControl) SimulateRestart(t *testing.T) {
 			mc.TestLog(t, "  subs=%v\n", subs)
 		}
 	}
+	restSubscriptions, err := mainCtrl.c.ReadAllRESTSubscriptionsFromSdl()
+	if err != nil {
+		mc.TestError(t, "%v", err)
+	} else {
+		mainCtrl.c.registry.restSubscriptions = restSubscriptions
+		mc.TestLog(t, "mainCtrl.c.registry.restSubscriptions:")
+		for restSubId, restSubs := range mainCtrl.c.registry.restSubscriptions {
+			mc.TestLog(t, "  restSubId=%v", restSubId)
+			mc.TestLog(t, "  restSubs=%v\n", restSubs)
+		}
+	}
+
 	go mainCtrl.c.HandleUncompletedSubscriptions(mainCtrl.c.registry.register)
 }
 
@@ -136,7 +141,7 @@ func (mc *testingSubmgrControl) wait_registry_empty(t *testing.T, secs int) bool
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
-	mc.TestError(t, "(submgr) no registry empty within %d secs: %d", secs, cnt)
+	mc.TestError(t, "(submgr) no registry empty within %d secs: %d, register: %v", secs, cnt, mc.c.registry.register)
 	return false
 }
 
@@ -311,6 +316,8 @@ func (mc *testingSubmgrControl) GetCounterValuesBefore(t *testing.T) {
 }
 
 func (mc *testingSubmgrControl) VerifyCounterValues(t *testing.T) {
+
+	// Check that expected counters are added ok
 	currentCountersMap := mc.GetCurrentCounterValues(t, toBeAddedCountersMap)
 	for _, toBeAddedCounter := range toBeAddedCountersMap {
 		if currentCounter, ok := currentCountersMap[toBeAddedCounter.Name]; ok == true {
@@ -326,6 +333,22 @@ func (mc *testingSubmgrControl) VerifyCounterValues(t *testing.T) {
 			}
 		} else {
 			mc.TestError(t, "Counter %v not in currentCountersMap", toBeAddedCounter.Name)
+		}
+	}
+
+	// Check that not any unexpected counter are added
+	for _, currentCounter := range currentCountersMap {
+		if _, ok := toBeAddedCountersMap[currentCounter.Name]; ok == false {
+			if beforeCounter, ok := countersBeforeMap[currentCounter.Name]; ok == true {
+				if currentCounter.Value != beforeCounter.Value {
+					mc.TestError(t, "Error: unexpected counter value added: counterName %v, current value %v, expected value %v",
+						currentCounter.Name, beforeCounter.Value, beforeCounter.Value)
+
+					//fmt.Printf("beforeCounter.Value=%v, toBeAddedCounter.Value=%v, \n",beforeCounter.Value, toBeAddedCounter.Value)
+				}
+			} else {
+				mc.TestError(t, "Counter %v not in countersBeforeMap", beforeCounter.Name)
+			}
 		}
 	}
 

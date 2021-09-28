@@ -96,7 +96,7 @@ func (rrt *RmrRouteTable) Enable() {
 	}
 	os.Setenv("RMR_SEED_RT", rrt.tmpfile)
 	os.Setenv("RMR_RTG_SVC", "-1")
-	xapp.Logger.Info("Using rt file %s", os.Getenv("RMR_SEED_RT"))
+	xapp.Logger.Debug("Using rt file %s", os.Getenv("RMR_SEED_RT"))
 }
 
 func (rrt *RmrRouteTable) Disable() {
@@ -105,7 +105,7 @@ func (rrt *RmrRouteTable) Disable() {
 		os.Unsetenv("RMR_SEED_RT")
 		os.Unsetenv("RMR_RTG_SVC")
 		rrt.tmpfile = ""
-		xapp.Logger.Info("Not using rt file ")
+		xapp.Logger.Debug("Not using rt file ")
 	}
 }
 
@@ -120,13 +120,13 @@ type RmrSrcId struct {
 func (rsi *RmrSrcId) Enable() {
 	if rsi.Port > 0 {
 		os.Setenv("RMR_SRC_ID", rsi.String())
-		xapp.Logger.Info("Using src id  %s", os.Getenv("RMR_SRC_ID"))
+		xapp.Logger.Debug("Using src id  %s", os.Getenv("RMR_SRC_ID"))
 	}
 }
 
 func (rsi *RmrSrcId) Disable() {
 	os.Unsetenv("RMR_SRC_ID")
-	xapp.Logger.Info("Not using Using src id")
+	xapp.Logger.Debug("Not using Using src id")
 }
 
 //-----------------------------------------------------------------------------
@@ -139,11 +139,11 @@ type RmrRtgSvc struct {
 func (rrs *RmrRtgSvc) Enable() {
 	if rrs.Port > 0 {
 		os.Setenv("RMR_RTG_SVC", rrs.String())
-		xapp.Logger.Info("Using rtg svc  %s", os.Getenv("RMR_SRC_ID"))
+		xapp.Logger.Debug("Using rtg svc  %s", os.Getenv("RMR_SRC_ID"))
 	}
 }
 
 func (rrs *RmrRtgSvc) Disable() {
 	os.Unsetenv("RMR_RTG_SVC")
-	xapp.Logger.Info("Not using Using rtg svc")
+	xapp.Logger.Debug("Not using Using rtg svc")
 }

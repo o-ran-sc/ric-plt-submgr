@@ -51,7 +51,7 @@ type E2ap struct {
 //
 //-----------------------------------------------------------------------------
 func (c *E2ap) FillSubscriptionReqMsgs(params interface{}, subreqList *e2ap.SubscriptionRequestList, restSubscription *RESTSubscription) error {
-	xapp.Logger.Info("FillSubscriptionReqMsgs")
+	xapp.Logger.Debug("FillSubscriptionReqMsgs")
 
 	p := params.(*models.SubscriptionParams)
 

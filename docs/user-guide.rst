@@ -28,65 +28,78 @@ Overview
 Subscription Manager is a basic platform service in RIC. It is responsible for managing E2 subscriptions from xApps to the
 E2 Node (eNodeB or gNodeB).
 
-xApp can subscribe and unsubscribe messages from E2 Node through Subscription Manager. Subscription Manager manages subscriptions
-and message routing of the subscribed messages between E2 Termination and xApps. If one xApp has already made a subscription
-and then another xApp initiates identical subscription, Subscription Manager does not forward the subscription to E2 Node but merges the
-subscriptions internally. In merge case Subscription Manager just updates the message routing information to Routing Manager and
-sends response to xApp.
+xApp can make subscriptions to E2 Node through Subscription Manager. xApp can subscribe REPORT, INSERT, CONTROL and POLICY type services
+from E2 Node. For some of those subscription types E2 Node sends E2 Indication messages back to xApp. For those messages there need to be
+created route between E2 Termination and xApp. Subscription Manager manages E2 subscriptions and message request routing of the subscribed
+messages from Routing Manager. If one xApp has already made a subscription and then another xApp initiates identical subscription, Subscription
+Manager does not forward the subscription to E2 Node but merges the subscriptions internally and request Routing Manager to create route also
+for the second xApp and sends response to xApp. xApp can indicate in the request should Subscription Manager send request for Routing Manager
+to create route for the E2 subscription in the request.
 
 Interface between xApp and Subscription Manager is HTTP based REST interface. Interface codes are generated with help of Swagger from a
-yaml definition file. REST interface is used also between Subscription Manager and Routing Manager. Subscription Manager and
-E2 Termination interface is based on RMR messages. xApp should use also Swagger generated code when it implements subscription REST
-interface towards Subscription Manager.
+yaml definition file. REST interface is used also between Subscription Manager and Routing Manager. Subscription Manager and E2 Termination
+interface is based on RMR messages. xApp should use also Swagger generated code when it implements subscription REST interface towards Subscription
+Manager.
 
     .. image:: images/PlaceInRICSoftwareArchitecture.png
       :width: 600
       :alt: Place in RIC's software architecture picture
 
 
-One xApp generated REST subscription message can contain multiple E2 subscriptions. For every E2 subscription in the message there is also
-xApp generated xApp instance id. In E2 interface there can be only one ongoing E2 subscription or subscription delete procedure towards
+One xApp generated REST subscription request message can contain multiple E2 subscriptions. For every E2 subscription in the message there must be
+also xApp generated xApp instance id. In E2 interface there can be only one ongoing E2 subscription or subscription delete procedure towards
 E2 Node at any time. That is because Subscription Manager is able to merge new E2 subscriptions only which those it has already received
-successful response from E2 Node. E2 subscriptions and delete subscriptions may be therefore queued in Subscription Manager.
+successful response from E2 Node. E2 subscriptions and delete subscriptions may be therefore queued for a moment in Subscription Manager.
 
 Subscription Manager may need to do reties towards E2 Node during subscribe or subscription delete procedure. Retries will increase completion
 time of the procedure. This needs to be considered in xApp's implementation. Subscription Manager sends REST notification to xApp for every
-completed E2 subscription procedure regardless is the E2 subscription successful or not. Notification is not sent for E2 subscription delete
+completed E2 subscription procedure. That is regardless was the E2 subscription successful or not. Notification is not sent for E2 subscription delete
 procedures. Subscription Manager allocates globally unique REST request id for each new REST subscription request. That is returned to xApp in
 response. When xApp wants to delete REST subscription, xApp need to use the same id in deletion request.
 
-Subscription Manager allocates unique id also for the E2 subscriptions (E2 instance id). The id called 'InstanceId' in E2 specification.
+Subscription Manager allocates also unique id for every E2 subscriptions (E2 instance id). The id called 'InstanceId' in E2 specification.
 In successful case the REST notification contains the id generated for the REST request, xApp instance id and E2 instance id. From xApp point
-of view xApp instance id identifies received REST notification for the E2 subscription in the REST request. REST notification contains also Subscription
+of view xApp instance id identifies response REST notification for the E2 subscription in the REST request. REST notification contains also Subscription
 Manager generated E2 instance id. xApp can use that to map received E2 Indication message to E2 subscription. If E2 subscription procedure is unsuccessful
-then E2 instance id is 0 and the notification contains non-zero error cause string.
+then E2 instance id is 0 and the notification contains non-zero error cause string and source of that error information.
 
 xApp need to be able preserve Subscription Manager allocated REST request id over xApp restart. The id is needed for deletion of the REST
 subscription and if there is need to resend the same REST request.  
 
-Three different type of subscriptions are supported. REPORT, POLICY and INSERT. REPORT and INSERT works the same way from subscription point of view.
-REPORT and INSERT type REST subscription request can contain content for multiple E2 subscriptions. POLICY subscription can also contain content for multiple
-E2 subscriptions but using in that way may not be feasible. REPORT, POLICY and INSERT type subscriptions in the same REST request are not supported supported
-in Subscription Manager.
+Three different type subscriptions are supported. REPORT, POLICY and INSERT. REPORT and INSERT works the same way from subscription point of view.
+REPORT and INSERT type REST subscription request can contain multiple E2 subscriptions. POLICY subscription can also contain multiple E2 subscriptions but
+using it in that way may not be feasible. REPORT, POLICY and INSERT type subscriptions in the same REST request are not supported supported in Subscription Manager.
 
-REPORT and INSERT type subscription can contain content for multiple E2 subscriptions. If there is need to resend the same REST request, the request must
-contain Subscription Manager allocated id for the REST request, which was returned to xApp when the request was sent first time. The request must also
-contain the same content as first time. Reason for xApp to resend the same request could be timeout or some failure which is not permanent in E2 Node or
-xApp restart. In retry cases Subscription Manager retries the E2 subscriptions which does not exist in its records. For others Subscription Manager
-returns successful REST notification without sending any messages to E2 Node. One REST Subscription request can contain E2 subscriptions to only one E2 Node.
+REPORT and INSERT type subscription can contain multiple E2 subscriptions. If xApp needs to resend the same REST request, the request must contain Subscription
+Manager allocated id for the REST request, which was returned to xApp when the request was sent first time. The request must also contain the same content as
+first time. Reason for xApp to resend the same request could be timeout or some failure which is not permanent like E2 interface connection break or xApp restart.
+In retry case Subscription Manager retries the E2 subscriptions towards to E2 Node in the request message which it does not have record. For subscriptions
+which record is found Subscription Manager returns successful REST notification to xApp without forwarding request to E2 Node. One REST Subscription request can
+contain E2 subscriptions only for one E2 Node.
+
+Subscription Manager indicates to xApp in response notification if there has happened any error or timeout. xApp can send retry based on that information but
+resending should happen after Subscription Manager has processed the previous request completely otherwise the request is rejected. If timeout happens response
+notification contains information where it happened. Timeout can happen in E2, Routing Manager and SDL interface.
 
 If there is need to change REPORT or INSERT type subscription then previously made subscription need to be deleted first. If there are any REPORT or INSERT
 type E2 subscription which need to change frequently, it is not good idea to bundle them with other REPORT or INSERT type E2 subscriptions in the same REST
 subscription request.
 
-POLICY type subscription can contain content for multiple E2 subscriptions but it may not be feasible as POLICY subscription may change. Idea in POLICY
-subscription is that xApp can send changed contend to E2 Node without making new subscription but just send update. In such case it is not good idea to bundle
-the POLICY type E2 subscription with any other POLICY type E2 subscriptions in the same REST subscription request.
+POLICY type subscription can contain multiple E2 subscriptions but it may not be feasible as POLICY subscription may change. Idea in POLICY subscription is that
+xApp can send changed contend to E2 Node without making new subscription but just send update. Message contend can be changed frequently. In such case it may not
+be good idea to bundle the POLICY type E2 subscription with any other POLICY type E2 subscriptions in the same REST subscription request.
 
-In xApp restart case only mandatory thing what is required xApp to be able preserve is the Subscription Manager allocated REST requests ids. That is if xApp
-can generate the equal requests otherwise as were done first time before restart. xApp can resent the same REST requests to Subscription Manager as first time
-before restart. REST request id must be placed in the REST request. That is the only way for Subscription Manager to identify already made subscriptions in it
-records and work as expected, i.e.  not run into problems and return successful REST notifications to xApp without sending any messages to E2 Node.
+xApp must be able to preserve is the Subscription Manager allocated REST requests ids over restart or send the same request as was sent restart. If xApp is able
+to send exactly the same requests then Subscription manager can identify the request and send same responses back to xApp. This way xApp can restore the identifies
+related to existing subscriptions. Another alternative is store needed information in database. Subscription manager calculates md5 sum over the REST Subscription
+request message. That is how it can detect identical request coming from a specific xApp.
+
+xApp can set in the request how many times Subscription Manager will retry subscription in E2 interface if there is timeout. xApp can also set time Subscription
+Manager Will wait response from E2 Node. xApp may need to update POLICY type subscription frequently. In such case it is not necessary feasible that
+Subscription Manager retries outdated subscription. By default Subscription Manager retries twice and response waiting time is two seconds.
+
+In error case REST notification contains source of error. Source of error can be Subscription Manager, Routing Manager, E2 Node, ASN1 encoding/decoding and DBAAS/SDL.
+The error information received from these sources is directly copied in the response.
 
 Architecture
 ------------
@@ -111,6 +124,41 @@ Architecture
       Subscription Manager allocates RIC Requestor Id for E2 interface communication. Currently the id value is always 123. E2 Node gets the Request
       of the xApp who makes the first subscription. E2 Node uses Subscription Manager allocated RIC Requestor ID in all RIC Indication messages it sends
       to RIC for the subscription. In merge case subscription in E2 Node is created only for the first requestor.
+
+      More information about Routing manager and how routes are created can be found from here (Note that there is still RMR based interface between
+      xApp and Subscription Manager in the pictures on those pages):
+      
+      `<https://wiki.o-ran-sc.org/display/RICP/Routing+Manager+Architecture>`_
+      
+      `<https://wiki.o-ran-sc.org/display/RICP/Routing+Manager+and+Subscription+Manager>`_
+
+
+  * Subscription Request message
+  
+    .. image:: images/REST_Subscription_Request.png
+      :width: 600
+      :alt: Subscription Request message
+
+
+  * Subscription RESTRequest Response message
+  
+    .. image:: images/REST_Subscription_Response.png
+      :width: 600
+      :alt: REST Subscription Request Response message
+
+
+  * Subscription Request Notification message
+  
+    .. image:: images/REST_Subscription_Notification.png
+      :width: 600
+      :alt: REST Subscription Notification message
+
+  * Routing Manager REST interface messages
+  
+    .. image:: images/Routing_Manager_REST_interface_messages.png
+      :width: 600
+      :alt: Routing Manager REST interface messages
+
 
   * Subscription procedure
       
@@ -393,13 +441,19 @@ REST interface for debugging and testing
 
   Example: curl -s GET "http://10.244.0.181:8080/ric/v1/metrics"
 
- Get subscriptions
+ Get REST subscriptions
+
+ .. code-block:: none
+
+  Example: curl -X GET "http://10.244.0.181:8080/ric/v1/restsubscriptions"
+
+ Get E2 subscriptions
 
  .. code-block:: none
 
   Example: curl -X GET "http://10.244.0.181:8088/ric/v1/subscriptions"
 
- Delete single subscription from db
+ Delete single E2 subscription from db
 
  .. code-block:: none
 

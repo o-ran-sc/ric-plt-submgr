@@ -235,19 +235,19 @@ const (
 	E2AP_TimeToWaitW2ms   uint64 = 2
 	E2AP_TimeToWaitW5ms   uint64 = 3
 	E2AP_TimeToWaitW10ms  uint64 = 4
-	E2AP_TimeToWaitW20ms  uint64 = 4
-	E2AP_TimeToWaitW30ms  uint64 = 5
-	E2AP_TimeToWaitW40ms  uint64 = 6
-	E2AP_TimeToWaitW50ms  uint64 = 7
-	E2AP_TimeToWaitW100ms uint64 = 8
-	E2AP_TimeToWaitW200ms uint64 = 9
-	E2AP_TimeToWaitW500ms uint64 = 10
-	E2AP_TimeToWaitW1s    uint64 = 11
-	E2AP_TimeToWaitW2s    uint64 = 12
-	E2AP_TimeToWaitW5s    uint64 = 13
-	E2AP_TimeToWaitW10s   uint64 = 14
-	E2AP_TimeToWaitW20s   uint64 = 15
-	E2AP_TimeToWaitW60    uint64 = 16
+	E2AP_TimeToWaitW20ms  uint64 = 5
+	E2AP_TimeToWaitW30ms  uint64 = 6
+	E2AP_TimeToWaitW40ms  uint64 = 7
+	E2AP_TimeToWaitW50ms  uint64 = 8
+	E2AP_TimeToWaitW100ms uint64 = 9
+	E2AP_TimeToWaitW200ms uint64 = 10
+	E2AP_TimeToWaitW500ms uint64 = 11
+	E2AP_TimeToWaitW1s    uint64 = 12
+	E2AP_TimeToWaitW2s    uint64 = 13
+	E2AP_TimeToWaitW5s    uint64 = 14
+	E2AP_TimeToWaitW10s   uint64 = 15
+	E2AP_TimeToWaitW20s   uint64 = 16
+	E2AP_TimeToWaitW60    uint64 = 17
 )
 
 var E2AP_TimeToWaitStrMap = map[string]uint64{
