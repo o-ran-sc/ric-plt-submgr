@@ -35,7 +35,7 @@ import (
 //-----------------------------------------------------------------------------
 func CaseBegin(desc string) *teststub.TestWrapper {
 	tent := teststub.NewTestWrapper(desc)
-	tent.Info(desc)
+	tent.Debug(desc)
 	return tent
 }
 
@@ -104,7 +104,7 @@ func ut_test_init() func() {
 	   defer os.Remove(cfgfilename)
 	   os.Setenv("CFG_FILE", cfgfilename)
 	*/
-	tent.Info("Using cfg file %s", os.Getenv("CFG_FILE"))
+	tent.Debug("Using cfg file %s", os.Getenv("CFG_FILE"))
 
 	//---------------------------------
 	// Static routetable for rmr
@@ -152,12 +152,12 @@ func ut_test_init() func() {
 	rt.AddMeid(e2term2src.String(), []string{"RAN_NAME_11", "RAN_NAME_12"})
 
 	rt.Enable()
-	tent.Info("rttable[%s]", rt.Table())
+	tent.Debug("rttable[%s]", rt.Table())
 
 	//---------------------------------
 	//
 	//---------------------------------
-	tent.Info("### submgr ctrl run ###")
+	tent.Debug("### submgr ctrl run ###")
 	mainCtrl = createSubmgrControl(mainsrc, teststub.RmrRtgSvc{})
 
 	//
@@ -168,13 +168,13 @@ func ut_test_init() func() {
 	//env variables. Re-create rt info.
 	for i := 0; i < int(10)*2; i++ {
 		if os.Getenv("RMR_SEED_RT") == rt.FileName() {
-			tent.Info("Waiting that alarm alternates RMR_SEED_RT=%s", os.Getenv("RMR_SEED_RT"))
+			tent.Debug("Waiting that alarm alternates RMR_SEED_RT=%s", os.Getenv("RMR_SEED_RT"))
 			time.Sleep(500 * time.Millisecond)
 		} else {
-			tent.Info("Alarm has alternated RMR_SEED_RT=%s, so waiting 0.5 secs before restoring it", os.Getenv("RMR_SEED_RT"))
+			tent.Debug("Alarm has alternated RMR_SEED_RT=%s, so waiting 0.5 secs before restoring it", os.Getenv("RMR_SEED_RT"))
 			time.Sleep(500 * time.Millisecond)
 			rt.Enable()
-			tent.Info("rttable[%s]", rt.Table())
+			tent.Debug("rttable[%s]", rt.Table())
 			break
 		}
 	}
@@ -187,31 +187,31 @@ func ut_test_init() func() {
 	//---------------------------------
 	//
 	//---------------------------------
-	tent.Info("### xapp1 stub run ###")
+	tent.Debug("### xapp1 stub run ###")
 	xappConn1 = teststube2ap.CreateNewE2Stub("xappstub1", xapp1src, teststub.RmrRtgSvc{}, "RMRXAPP1STUB", teststubPortSeed, "RAN_NAME_1", "localhost", 13560, 8080)
 
 	//---------------------------------
 	//
 	//---------------------------------
-	tent.Info("### xapp2 stub run ###")
+	tent.Debug("### xapp2 stub run ###")
 	xappConn2 = teststube2ap.CreateNewE2Stub("xappstub2", xapp2src, teststub.RmrRtgSvc{}, "RMRXAPP2STUB", teststubPortSeed, "RAN_NAME_2", "localhost", 13660, 8080)
 
 	//---------------------------------
 	//
 	//---------------------------------
-	tent.Info("### e2term1 stub run ###")
+	tent.Debug("### e2term1 stub run ###")
 	e2termConn1 = teststube2ap.CreateNewE2termStub("e2termstub1", e2term1src, teststub.RmrRtgSvc{}, "RMRE2TERMSTUB1", teststubPortSeed)
 
 	//---------------------------------
 	//
 	//---------------------------------
-	tent.Info("### e2term2 stub run ###")
+	tent.Debug("### e2term2 stub run ###")
 	e2termConn2 = teststube2ap.CreateNewE2termStub("e2termstub2", e2term2src, teststub.RmrRtgSvc{}, "RMRE2TERMSTUB2", teststubPortSeed)
 
 	//---------------------------------
 	// Just to test dummy stub
 	//---------------------------------
-	tent.Info("### dummy stub run ###")
+	tent.Debug("### dummy stub run ###")
 	dummystub = teststubdummy.CreateNewRmrDummyStub("dummystub", dummysrc, teststub.RmrRtgSvc{}, "DUMMYSTUB", teststubPortSeed)
 
 	//---------------------------------

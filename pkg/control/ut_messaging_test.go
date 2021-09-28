@@ -2134,6 +2134,7 @@ func TestSubReqNokAndSubDelOkWithRestartInMiddle(t *testing.T) {
 	mainCtrl.SimulateRestart(t)
 	xapp.Logger.Debug("mainCtrl.SimulateRestart done")
 
+	// Submgr send delete for uncompleted subscription
 	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
 	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
 
@@ -2419,6 +2420,7 @@ func TestRESTSubReqAndRouteNok(t *testing.T) {
 	})
 
 	const subReqCount int = 1
+
 	// Add delay for rtmgt HTTP handling so that HTTP response is received before notify on XAPP side
 	waiter := rtmgrHttp.AllocNextSleep(50, false)
 	newSubsId := mainCtrl.get_registry_next_subid(t)
@@ -2430,7 +2432,7 @@ func TestRESTSubReqAndRouteNok(t *testing.T) {
 	waiter.WaitResult(t)
 
 	e2SubsId := xappConn1.WaitRESTNotification(t, restSubId)
-	xapp.Logger.Info("TEST: REST notification received e2SubsId=%v", e2SubsId)
+	xapp.Logger.Debug("TEST: REST notification received e2SubsId=%v", e2SubsId)
 
 	// Del
 	xappConn1.SendRESTSubsDelReq(t, &restSubId)
@@ -2472,7 +2474,7 @@ func TestRESTSubReqAndRouteUpdateNok(t *testing.T) {
 	params = xappConn2.GetRESTSubsReqReportParams(subReqCount)
 	params.SetMeid("RAN_NAME_1")
 	restSubId2 := xappConn2.SendRESTSubsReq(t, params)
-	xapp.Logger.Info("Send REST subscriber request for second subscriber : %v", restSubId2)
+	xapp.Logger.Debug("Send REST subscriber request for second subscriber : %v", restSubId2)
 	xappConn2.ExpectRESTNotificationNok(t, restSubId2, "allFail")
 	waiter.WaitResult(t)
 	// e2SubsId2 := xappConn2.WaitRESTNotification(t, restSubId2) - TOD: missing delete
@@ -2617,11 +2619,15 @@ func TestRESTSubReqRetransmission(t *testing.T) {
 
 	// Subs Create
 	const subReqCount int = 1
+	//	const e2Timeout int64 = 2
+	//	const e2RetryCount int64 = 2
+	//	const routingNeeded bool = true
 
 	// In order to force both XAPP's to create their own subscriptions, force rtmgr to block a while so that 2nd create
 	// gets into execution before the rtmgrg responds for the first one.
 	waiter := rtmgrHttp.AllocNextSleep(10, true)
 	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
+	//	params.SetSubscriptionDirectives(e2Timeout, e2RetryCount, routingNeeded)
 	restSubId1 := xappConn1.SendRESTSubsReq(t, params)
 	xappConn2.SendRESTSubsReq(t, params)
 
@@ -2635,7 +2641,7 @@ func TestRESTSubReqRetransmission(t *testing.T) {
 	e2termConn1.SendSubsResp(t, crereq, cremsg)
 
 	e2SubsIdA := <-xappConn1.ListedRESTNotifications
-	xapp.Logger.Info("TEST: 1.st XAPP notification received e2SubsId=%v", e2SubsIdA)
+	xapp.Logger.Debug("TEST: 1.st XAPP notification received e2SubsId=%v", e2SubsIdA)
 
 	// Del1
 	xappConn1.SendRESTSubsDelReq(t, &restSubId1)
@@ -3324,12 +3330,12 @@ func TestRESTSubReqAndSubDelOkTwoParallel(t *testing.T) {
 	//Req1
 	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
 	restSubId1 := xappConn1.SendRESTSubsReq(t, params)
-	xapp.Logger.Info("Send 1st REST subscriber request for subscriberId : %v", restSubId1)
+	xapp.Logger.Debug("Send 1st REST subscriber request for subscriberId : %v", restSubId1)
 
 	//Req2
 	params = xappConn2.GetRESTSubsReqReportParams(subReqCount)
 	restSubId2 := xappConn2.SendRESTSubsReq(t, params)
-	xapp.Logger.Info("Send 2nd REST subscriber request for subscriberId : %v", restSubId2)
+	xapp.Logger.Debug("Send 2nd REST subscriber request for subscriberId : %v", restSubId2)
 
 	crereq1, cremsg1 := e2termConn1.RecvSubsReq(t)
 	crereq2, cremsg2 := e2termConn1.RecvSubsReq(t)
@@ -3343,9 +3349,9 @@ func TestRESTSubReqAndSubDelOkTwoParallel(t *testing.T) {
 	e2termConn1.SendSubsResp(t, crereq2, cremsg2)
 
 	e2SubsIdA := <-xappConn1.ListedRESTNotifications
-	xapp.Logger.Info("TEST: 1.st XAPP notification received e2SubsId=%v", e2SubsIdA)
+	xapp.Logger.Debug("TEST: 1.st XAPP notification received e2SubsId=%v", e2SubsIdA)
 	e2SubsIdB := <-xappConn1.ListedRESTNotifications
-	xapp.Logger.Info("TEST: 2.nd XAPP notification received e2SubsId=%v", e2SubsIdB)
+	xapp.Logger.Debug("TEST: 2.nd XAPP notification received e2SubsId=%v", e2SubsIdB)
 
 	//Del1
 	deleteSubscription(t, xappConn1, e2termConn1, &restSubId1)
@@ -3377,12 +3383,12 @@ func TestRESTSameSubsDiffRan(t *testing.T) {
 
 	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
 	restSubId1, e2SubsId1 := createSubscription(t, xappConn1, e2termConn1, params)
-	xapp.Logger.Info("Send 1st REST subscriber request for subscriberId : %v", restSubId1)
+	xapp.Logger.Debug("Send 1st REST subscriber request for subscriberId : %v", restSubId1)
 
 	params = xappConn1.GetRESTSubsReqReportParams(subReqCount)
 	params.SetMeid("RAN_NAME_2")
 	restSubId2, e2SubsId2 := createSubscription(t, xappConn1, e2termConn1, params)
-	xapp.Logger.Info("Send 2nd REST subscriber request for subscriberId : %v", restSubId2)
+	xapp.Logger.Debug("Send 2nd REST subscriber request for subscriberId : %v", restSubId2)
 
 	//Del1
 	deleteSubscription(t, xappConn1, e2termConn1, &restSubId1)
@@ -3417,11 +3423,11 @@ func TestRESTSubReqRetryInSubmgr(t *testing.T) {
 	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
 	restSubId := xappConn1.SendRESTSubsReq(t, params)
 
-	xapp.Logger.Info("Send REST subscriber request for subscriber : %v", restSubId)
+	xapp.Logger.Debug("Send REST subscriber request for subscriber : %v", restSubId)
 
 	// Catch the first message and ignore it
 	crereq, cremsg := e2termConn1.RecvSubsReq(t)
-	xapp.Logger.Info("Ignore REST subscriber request for subscriber : %v", restSubId)
+	xapp.Logger.Debug("Ignore REST subscriber request for subscriber : %v", restSubId)
 
 	// The second request is being handled normally
 	crereq, cremsg = e2termConn1.RecvSubsReq(t)
@@ -3496,13 +3502,13 @@ func TestRESTSubReqRetryNoRespSubDelRespInSubmgr(t *testing.T) {
 
 	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
 	restSubId := xappConn1.SendRESTSubsReq(t, params)
-	xapp.Logger.Info("Send REST subscriber request for subscriber : %v", restSubId)
+	xapp.Logger.Debug("Send REST subscriber request for subscriber : %v", restSubId)
 
 	e2termConn1.RecvSubsReq(t)
-	xapp.Logger.Info("Ignore 1st REST subscriber request for subscriber : %v", restSubId)
+	xapp.Logger.Debug("Ignore 1st REST subscriber request for subscriber : %v", restSubId)
 
 	e2termConn1.RecvSubsReq(t)
-	xapp.Logger.Info("Ignore 2nd REST subscriber request for subscriber : %v", restSubId)
+	xapp.Logger.Debug("Ignore 2nd REST subscriber request for subscriber : %v", restSubId)
 
 	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
 	xappConn1.ExpectRESTNotificationNok(t, restSubId, "allFail")
@@ -3531,20 +3537,20 @@ func TestREST2eTermNotRespondingToSubReq(t *testing.T) {
 
 	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
 	restSubId := xappConn1.SendRESTSubsReq(t, params)
-	xapp.Logger.Info("Send REST subscriber request for subscriber : %v", restSubId)
+	xapp.Logger.Debug("Send REST subscriber request for subscriber : %v", restSubId)
 
 	e2termConn1.RecvSubsReq(t)
-	xapp.Logger.Info("Ignore 1st REST subscriber request for subscriber : %v", restSubId)
+	xapp.Logger.Debug("Ignore 1st REST subscriber request for subscriber : %v", restSubId)
 
 	e2termConn1.RecvSubsReq(t)
-	xapp.Logger.Info("Ignore 2nd REST subscriber request for subscriber : %v", restSubId)
+	xapp.Logger.Debug("Ignore 2nd REST subscriber request for subscriber : %v", restSubId)
 
 	e2termConn1.RecvSubsDelReq(t)
-	xapp.Logger.Info("Ignore 1st INTERNAL delete request for subscriber : %v", restSubId)
+	xapp.Logger.Debug("Ignore 1st INTERNAL delete request for subscriber : %v", restSubId)
 
 	xappConn1.ExpectRESTNotificationNok(t, restSubId, "allFail")
 	e2termConn1.RecvSubsDelReq(t)
-	xapp.Logger.Info("Ignore 2nd INTERNAL delete request for subscriber : %v", restSubId)
+	xapp.Logger.Debug("Ignore 2nd INTERNAL delete request for subscriber : %v", restSubId)
 
 	e2SubsId := xappConn1.WaitRESTNotification(t, restSubId)
 
@@ -3609,20 +3615,20 @@ func TestRESTSubReqTwoRetriesNoRespAtAllInSubmgr(t *testing.T) {
 
 	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
 	restSubId := xappConn1.SendRESTSubsReq(t, params)
-	xapp.Logger.Info("Send REST subscriber request for subscriber : %v", restSubId)
+	xapp.Logger.Debug("Send REST subscriber request for subscriber : %v", restSubId)
 
 	e2termConn1.RecvSubsReq(t)
-	xapp.Logger.Info("Ignore 1st REST subscriber request for subscriber : %v", restSubId)
+	xapp.Logger.Debug("Ignore 1st REST subscriber request for subscriber : %v", restSubId)
 
 	e2termConn1.RecvSubsReq(t)
-	xapp.Logger.Info("Ignore 2nd REST subscriber request for subscriber : %v", restSubId)
+	xapp.Logger.Debug("Ignore 2nd REST subscriber request for subscriber : %v", restSubId)
 
 	e2termConn1.RecvSubsDelReq(t)
-	xapp.Logger.Info("Ignore 1st INTERNAL delete request for subscriber : %v", restSubId)
+	xapp.Logger.Debug("Ignore 1st INTERNAL delete request for subscriber : %v", restSubId)
 
 	xappConn1.ExpectRESTNotificationNok(t, restSubId, "allFail")
 	e2termConn1.RecvSubsDelReq(t)
-	xapp.Logger.Info("Ignore 2nd INTERNAL delete request for subscriber : %v", restSubId)
+	xapp.Logger.Debug("Ignore 2nd INTERNAL delete request for subscriber : %v", restSubId)
 
 	e2SubsId := xappConn1.WaitRESTNotification(t, restSubId)
 
@@ -3690,7 +3696,7 @@ func TestRESTSubReqSubFailRespInSubmgr(t *testing.T) {
 	xappConn1.ExpectRESTNotificationNok(t, restSubId, "allFail")
 	e2termConn1.SendSubsDelResp(t, delreq1, delmsg1)
 	e2SubsId := xappConn1.WaitRESTNotification(t, restSubId)
-	xapp.Logger.Info("TEST: REST notification received e2SubsId=%v", e2SubsId)
+	xapp.Logger.Debug("TEST: REST notification received e2SubsId=%v", e2SubsId)
 
 	// REST subscription sill there to be deleted
 	xappConn1.SendRESTSubsDelReq(t, &restSubId)
@@ -3964,9 +3970,9 @@ func TestRESTSubReqAndSubDelOkSameAction(t *testing.T) {
 	waiter := rtmgrHttp.AllocNextSleep(10, true)
 	restSubId2 := xappConn2.SendRESTSubsReq(t, params)
 	waiter.WaitResult(t)
-	xapp.Logger.Info("Send REST subscriber request for subscriberId : %v", restSubId2)
+	xapp.Logger.Debug("Send REST subscriber request for subscriberId : %v", restSubId2)
 	e2SubsId2 := xappConn2.WaitAnyRESTNotification(t)
-	xapp.Logger.Info("REST notification received e2SubsId=%v", e2SubsId2)
+	xapp.Logger.Debug("REST notification received e2SubsId=%v", e2SubsId2)
 
 	queryXappSubscription(t, int64(e2SubsId1), "RAN_NAME_1", []string{"localhost:13560", "localhost:13660"})
 
@@ -4164,9 +4170,9 @@ func TestRESTSubReqAndSubDelNoAnswerSameActionParallel(t *testing.T) {
 	e2termConn1.SendSubsDelResp(t, delreq1, delmsg1)
 
 	e2SubsIdA := <-xappConn1.ListedRESTNotifications
-	xapp.Logger.Info("TEST: 1.st XAPP notification received e2SubsId=%v", e2SubsIdA)
+	xapp.Logger.Debug("TEST: 1.st XAPP notification received e2SubsId=%v", e2SubsIdA)
 	e2SubsIdB := <-xappConn1.ListedRESTNotifications
-	xapp.Logger.Info("TEST: 2.nd XAPP notification received e2SubsId=%v", e2SubsIdB)
+	xapp.Logger.Debug("TEST: 2.nd XAPP notification received e2SubsId=%v", e2SubsIdB)
 
 	// Del1
 	xappConn1.SendRESTSubsDelReq(t, &restSubId1)
@@ -4271,9 +4277,9 @@ func TestRESTSubReqAndSubDelNokSameActionParallel(t *testing.T) {
 	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
 
 	e2SubsIdA := <-xappConn1.ListedRESTNotifications
-	xapp.Logger.Info("TEST: 1.st XAPP notification received e2SubsId=%v", e2SubsIdA)
+	xapp.Logger.Debug("TEST: 1.st XAPP notification received e2SubsId=%v", e2SubsIdA)
 	e2SubsIdB := <-xappConn1.ListedRESTNotifications
-	xapp.Logger.Info("TEST: 2.nd XAPP notification received e2SubsId=%v", e2SubsIdB)
+	xapp.Logger.Debug("TEST: 2.nd XAPP notification received e2SubsId=%v", e2SubsIdB)
 
 	// Del1
 	xappConn1.SendRESTSubsDelReq(t, &restSubId1)
@@ -4304,17 +4310,15 @@ func TestRESTSubReqPolicyAndSubDelOk(t *testing.T) {
 		Counter{cRestSubDelRespToXapp, 1},
 	})
 
-	const subReqCount int = 1
-
 	params := xappConn1.GetRESTSubsReqPolicyParams(subReqCount)
 	restSubId := xappConn1.SendRESTSubsReq(t, params)
-	xapp.Logger.Info("Send REST Policy subscriber request for subscriberId : %v", restSubId)
+	xapp.Logger.Debug("Send REST Policy subscriber request for subscriberId : %v", restSubId)
 
 	crereq1, cremsg1 := e2termConn1.RecvSubsReq(t)
 	xappConn1.ExpectRESTNotification(t, restSubId)
 	e2termConn1.SendSubsResp(t, crereq1, cremsg1)
 	e2SubsId := xappConn1.WaitRESTNotification(t, restSubId)
-	xapp.Logger.Info("REST notification received e2SubsId=%v", e2SubsId)
+	xapp.Logger.Debug("REST notification received e2SubsId=%v", e2SubsId)
 
 	xappConn1.SendRESTSubsDelReq(t, &restSubId)
 	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
@@ -4390,15 +4394,20 @@ func TestRESTSubReqPolicyChangeAndSubDelOk(t *testing.T) {
 	})
 
 	const subReqCount int = 1
+	const e2Timeout int64 = 1
+	const e2RetryCount int64 = 0
+	const routingNeeded bool = true
 
 	// Req
 	params := xappConn1.GetRESTSubsReqPolicyParams(subReqCount)
+	params.SetSubscriptionDirectives(e2Timeout, e2RetryCount, routingNeeded)
 	restSubId, e2SubsId := createSubscription(t, xappConn1, e2termConn1, params)
 
 	// Policy change
-	// GetRESTSubsReqPolicyParams sets some coutners on tc side.
+	// GetRESTSubsReqPolicyParams sets some counters on tc side.
 
 	params = xappConn1.GetRESTSubsReqPolicyParams(subReqCount)
+	params.SetSubscriptionDirectives(e2Timeout, e2RetryCount, routingNeeded)
 	params.SetSubscriptionID(&restSubId)
 	params.SetTimeToWait("w200ms")
 	restSubId, e2SubsId = createSubscription(t, xappConn1, e2termConn1, params)
@@ -4439,7 +4448,7 @@ func TestRESTSubReqPolicyChangeAndSubDelOk(t *testing.T) {
 //     | RESTSubReq      |              |
 //     |---------------->|              |
 //     |                 |              |
-//     |         RESTSubUpdateFail      |
+//     |         RESTSubUpdateFail(400 Bad request)
 //     |                 |              |
 //     | RESTSubDelReq   |              |
 //     |---------------->|              |
@@ -4470,17 +4479,14 @@ func TestRESTSubReqPolicyChangeNOk(t *testing.T) {
 		Counter{cRestSubDelRespToXapp, 1},
 	})
 
-	const subReqCount int = 1
-
 	// Req
 	params := xappConn1.GetRESTSubsReqPolicyParams(subReqCount)
 	restSubId, e2SubsId := createSubscription(t, xappConn1, e2termConn1, params)
 
 	// Policy change
-
 	params = xappConn1.GetRESTSubsReqPolicyParams(subReqCount)
 
-	restSubIdUpd := strings.ToUpper(restSubId)
+	restSubIdUpd := strings.ToUpper(restSubId) // This makes RESTSubReq to fail
 	params.SetSubscriptionID(&restSubIdUpd)
 	params.SetTimeToWait("w200ms")
 
@@ -4574,13 +4580,13 @@ func TestRESTSubReqAndSubDelOkTwoE2termParallel(t *testing.T) {
 	xappConn1.ExpectRESTNotification(t, restSubId1)
 	e2termConn1.SendSubsResp(t, crereq1, cremsg1)
 	e2SubsId1 := xappConn1.WaitRESTNotification(t, restSubId1)
-	xapp.Logger.Info("TEST: REST notification received e2SubsId1=%v", e2SubsId1)
+	xapp.Logger.Debug("TEST: REST notification received e2SubsId1=%v", e2SubsId1)
 
 	// Resp2
 	xappConn2.ExpectRESTNotification(t, restSubId2)
 	e2termConn2.SendSubsResp(t, crereq2, cremsg2)
 	e2SubsId2 := xappConn2.WaitRESTNotification(t, restSubId2)
-	xapp.Logger.Info("TEST: REST notification received e2SubsId2=%v", e2SubsId2)
+	xapp.Logger.Debug("TEST: REST notification received e2SubsId2=%v", e2SubsId2)
 
 	// Delete1
 	xappConn1.SendRESTSubsDelReq(t, &restSubId1)
@@ -4626,7 +4632,7 @@ func TestRESTSubReqAndSubDelOkTwoE2termParallel(t *testing.T) {
 func TestRESTSubReqAsn1EncodeFail(t *testing.T) {
 	CaseBegin("TestRESTSubReqAsn1EncodeFail")
 
-	xapp.Logger.Info("Xapp-frame, v0.8.1 sufficient REST API validation")
+	xapp.Logger.Debug("Xapp-frame, v0.8.1 sufficient REST API validation")
 
 }
 
@@ -4750,7 +4756,7 @@ func TestRESTSubReqNokAndSubDelOkWithRestartInMiddle(t *testing.T) {
 	//Req
 	mainCtrl.SetResetTestFlag(t, true) // subs.DoNotWaitSubResp will be set TRUE for the subscription
 	restSubId := xappConn1.SendRESTSubsReq(t, params)
-	xapp.Logger.Info("Send REST subscriber request for subscriber : %v", restSubId)
+	xapp.Logger.Debug("Send REST subscriber request for subscriber : %v", restSubId)
 
 	e2termConn1.RecvSubsReq(t)
 
@@ -4831,17 +4837,13 @@ func TestRESTSubReqAndSubDelOkWithRestartInMiddle(t *testing.T) {
 
 	// Create subscription
 	restSubId, e2SubsId := createSubscription(t, xappConn1, e2termConn1, params)
-	xapp.Logger.Info("Send REST subscriber request for subscriber : %v", restSubId)
+	xapp.Logger.Debug("Send REST subscriber request for subscriber : %v", restSubId)
 
 	// Check subscription
 	queryXappSubscription(t, int64(e2SubsId), "RAN_NAME_1", []string{"localhost:13560"})
 
-	// When SDL support for the REST Interface is added
-	// the submgr restart statement below should be removed
-	// from the comment.
-
-	//	mainCtrl.SimulateRestart(t)
-	//	xapp.Logger.Debug("mainCtrl.SimulateRestart done")
+	mainCtrl.SimulateRestart(t)
+	xapp.Logger.Debug("mainCtrl.SimulateRestart done")
 
 	// Check subscription
 	queryXappSubscription(t, int64(e2SubsId), "RAN_NAME_1", []string{"localhost:13560"})
@@ -4934,7 +4936,7 @@ func TestRESTSubReqAndSubDelOkSameActionWithRestartsInMiddle(t *testing.T) {
 
 	// Create subscription 1
 	restSubId1, e2SubsId1 := createSubscription(t, xappConn1, e2termConn1, params)
-	xapp.Logger.Info("Send REST subscriber request for subscriber 1 : %v", restSubId1)
+	xapp.Logger.Debug("Send REST subscriber request for subscriber 1 : %v", restSubId1)
 
 	// Create subscription 2 with same action
 	params = xappConn2.GetRESTSubsReqReportParams(subReqCount)
@@ -4942,30 +4944,22 @@ func TestRESTSubReqAndSubDelOkSameActionWithRestartsInMiddle(t *testing.T) {
 	xapp.Subscription.SetResponseCB(xappConn2.SubscriptionRespHandler)
 	xappConn2.ExpectAnyNotification(t)
 	restSubId2 := xappConn2.SendRESTSubsReq(t, params)
-	xapp.Logger.Info("Send REST subscriber request for subscriberId : %v", restSubId2)
+	xapp.Logger.Debug("Send REST subscriber request for subscriberId : %v", restSubId2)
 	e2SubsId2 := xappConn2.WaitAnyRESTNotification(t)
-	xapp.Logger.Info("REST notification received e2SubsId=%v", e2SubsId2)
+	xapp.Logger.Debug("REST notification received e2SubsId=%v", e2SubsId2)
 
 	queryXappSubscription(t, int64(e2SubsId1), "RAN_NAME_1", []string{"localhost:13560", "localhost:13660"})
 
-	// When SDL support for the REST Interface is added
-	// the submgr restart statement below should be removed
-	// from the comment.
-
-	//	mainCtrl.SimulateRestart(t)
-	//	xapp.Logger.Debug("mainCtrl.SimulateRestart done")
+	mainCtrl.SimulateRestart(t)
+	xapp.Logger.Debug("mainCtrl.SimulateRestart done")
 
 	// Delete subscription 1, and wait until it has removed the first endpoint
 	subepcnt := mainCtrl.get_subs_entrypoint_cnt(t, e2SubsId1)
 	xappConn1.SendRESTSubsDelReq(t, &restSubId1)
 	mainCtrl.wait_subs_entrypoint_cnt_change(t, e2SubsId1, subepcnt, 10)
 
-	// When SDL support for the REST Interface is added
-	// the submgr restart statement below should be removed
-	// from the comment.
-
-	//	mainCtrl.SimulateRestart(t)
-	//	xapp.Logger.Debug("mainCtrl.SimulateRestart done")
+	mainCtrl.SimulateRestart(t)
+	xapp.Logger.Debug("mainCtrl.SimulateRestart done")
 	queryXappSubscription(t, int64(e2SubsId1), "RAN_NAME_1", []string{"localhost:13660"})
 
 	// Delete subscription 2
@@ -5024,13 +5018,13 @@ func TestRESTSubReqAndSubDelOkSameActionWithRestartsInMiddle(t *testing.T) {
 
 func TestRESTReportSubReqAndSubDelOk(t *testing.T) {
 	CaseBegin("TestRESTReportSubReqAndSubDelOk")
-	subReqCount := 1
+	const subReqCount int = 1
 	testIndex := 1
 	RESTReportSubReqAndSubDelOk(t, subReqCount, testIndex)
 }
 
 func RESTReportSubReqAndSubDelOk(t *testing.T, subReqCount int, testIndex int) {
-	xapp.Logger.Info("TEST: TestRESTReportSubReqAndSubDelOk with testIndex %v", testIndex)
+	xapp.Logger.Debug("TEST: TestRESTReportSubReqAndSubDelOk with testIndex %v", testIndex)
 
 	// Req
 	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
@@ -5043,7 +5037,7 @@ func RESTReportSubReqAndSubDelOk(t *testing.T, subReqCount int, testIndex int) {
 
 		e2termConn1.SendSubsResp(t, crereq, cremsg)
 		instanceId := xappConn1.WaitRESTNotification(t, restSubId)
-		xapp.Logger.Info("TEST: REST notification received e2SubsId=%v", instanceId)
+		xapp.Logger.Debug("TEST: REST notification received e2SubsId=%v", instanceId)
 		e2SubsId = append(e2SubsId, instanceId)
 		resp, _ := xapp.Subscription.QuerySubscriptions()
 		assert.Equal(t, resp[i].SubscriptionID, (int64)(instanceId))
@@ -5084,13 +5078,11 @@ func TestRESTPolicySubReqAndSubDelOk(t *testing.T) {
 }
 */
 func RESTPolicySubReqAndSubDelOk(t *testing.T, subReqCount int, testIndex int) {
-	xapp.Logger.Info("TEST: TestRESTPolicySubReqAndSubDelOk with testIndex %v", testIndex)
+	xapp.Logger.Debug("TEST: TestRESTPolicySubReqAndSubDelOk with testIndex %v", testIndex)
 
 	// Req
 	params := xappConn1.GetRESTSubsReqPolicyParams(subReqCount)
 	restSubId := xappConn1.SendRESTSubsReq(t, params)
-	//params := xappConn1.GetRESTSubsReqPolicyParams1(subReqCount)
-	//restSubId := xappConn1.SendRESTPolicySubsReq(t, params)
 
 	var e2SubsId []uint32
 	for i := 0; i < subReqCount; i++ {
@@ -5098,7 +5090,7 @@ func RESTPolicySubReqAndSubDelOk(t *testing.T, subReqCount int, testIndex int) {
 		xappConn1.ExpectRESTNotification(t, restSubId)
 		e2termConn1.SendSubsResp(t, crereq, cremsg)
 		instanceId := xappConn1.WaitRESTNotification(t, restSubId)
-		xapp.Logger.Info("TEST: REST notification received e2SubsId=%v", instanceId)
+		xapp.Logger.Debug("TEST: REST notification received e2SubsId=%v", instanceId)
 		e2SubsId = append(e2SubsId, instanceId)
 	}
 
@@ -5121,8 +5113,6 @@ func RESTPolicySubReqAndSubDelOk(t *testing.T, subReqCount int, testIndex int) {
 
 func TestRESTTwoPolicySubReqAndSubDelOk(t *testing.T) {
 
-	subReqCount := 2
-
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 1},
 		Counter{cRestSubRespToXapp, 1},
@@ -5134,6 +5124,8 @@ func TestRESTTwoPolicySubReqAndSubDelOk(t *testing.T) {
 		Counter{cSubDelRespFromE2, 2},
 		Counter{cRestSubDelRespToXapp, 1},
 	})
+
+	const subReqCount int = 2
 
 	// Req
 	params := xappConn1.GetRESTSubsReqPolicyParams(subReqCount)
@@ -5154,8 +5146,6 @@ func TestRESTTwoPolicySubReqAndSubDelOk(t *testing.T) {
 }
 func TestRESTPolicySubReqAndSubDelOkFullAmount(t *testing.T) {
 
-	subReqCount := 19
-
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 1},
 		Counter{cRestSubRespToXapp, 1},
@@ -5168,6 +5158,7 @@ func TestRESTPolicySubReqAndSubDelOkFullAmount(t *testing.T) {
 		Counter{cRestSubDelRespToXapp, 1},
 	})
 
+	const subReqCount int = 19
 	// Req
 	params := xappConn1.GetRESTSubsReqPolicyParams(subReqCount)
 	restSubId := xappConn1.SendRESTSubsReq(t, params)
@@ -5184,6 +5175,7 @@ func TestRESTPolicySubReqAndSubDelOkFullAmount(t *testing.T) {
 
 	mainCtrl.VerifyCounterValues(t)
 }
+
 func TestRESTTwoReportSubReqAndSubDelOk(t *testing.T) {
 
 	subReqCount := 2
@@ -5306,7 +5298,7 @@ func TestRESTSubReqReportSameActionDiffEventTriggerDefinitionLen(t *testing.T) {
 
 	//Subs Create
 	restSubId1, e2SubsId1 := createSubscription(t, xappConn1, e2termConn1, params)
-	xapp.Logger.Info("Send REST subscriber request for subscriberId : %v", restSubId1)
+	xapp.Logger.Debug("Send REST subscriber request for subscriberId : %v", restSubId1)
 
 	queryXappSubscription(t, int64(e2SubsId1), "RAN_NAME_1", []string{"localhost:13560"})
 
@@ -5317,7 +5309,7 @@ func TestRESTSubReqReportSameActionDiffEventTriggerDefinitionLen(t *testing.T) {
 	params.SetSubEventTriggerDefinition(eventTriggerDefinition)
 
 	restSubId2 := xappConn2.SendRESTSubsReq(t, params)
-	xapp.Logger.Info("Send REST subscriber request for subscriberId : %v", restSubId2)
+	xapp.Logger.Debug("Send REST subscriber request for subscriberId : %v", restSubId2)
 	crereq, cremsg := e2termConn1.RecvSubsReq(t)
 	xappConn2.ExpectRESTNotification(t, restSubId2)
 	e2termConn1.SendSubsResp(t, crereq, cremsg)
@@ -5353,7 +5345,7 @@ func TestRESTSubReqReportSameActionDiffActionListLen(t *testing.T) {
 
 	//Subs Create
 	restSubId1, e2SubsId1 := createSubscription(t, xappConn1, e2termConn1, params)
-	xapp.Logger.Info("Send REST subscriber request for subscriberId : %v", restSubId1)
+	xapp.Logger.Debug("Send REST subscriber request for subscriberId : %v", restSubId1)
 
 	queryXappSubscription(t, int64(e2SubsId1), "RAN_NAME_1", []string{"localhost:13560"})
 
@@ -5369,7 +5361,7 @@ func TestRESTSubReqReportSameActionDiffActionListLen(t *testing.T) {
 	params.AppendActionToActionToBeSetupList(actionId, actionType, actionDefinition, subsequestActionType, timeToWait)
 
 	restSubId2 := xappConn2.SendRESTSubsReq(t, params)
-	xapp.Logger.Info("Send REST subscriber request for subscriberId : %v", restSubId2)
+	xapp.Logger.Debug("Send REST subscriber request for subscriberId : %v", restSubId2)
 	crereq, cremsg := e2termConn1.RecvSubsReq(t)
 	xappConn2.ExpectRESTNotification(t, restSubId2)
 	e2termConn1.SendSubsResp(t, crereq, cremsg)
@@ -5405,7 +5397,7 @@ func TestRESTSubReqReportSameActionDiffActionID(t *testing.T) {
 
 	//Subs Create
 	restSubId1, e2SubsId1 := createSubscription(t, xappConn1, e2termConn1, params)
-	xapp.Logger.Info("Send REST subscriber request for subscriberId : %v", restSubId1)
+	xapp.Logger.Debug("Send REST subscriber request for subscriberId : %v", restSubId1)
 
 	queryXappSubscription(t, int64(e2SubsId1), "RAN_NAME_1", []string{"localhost:13560"})
 
@@ -5415,7 +5407,7 @@ func TestRESTSubReqReportSameActionDiffActionID(t *testing.T) {
 	params.SetSubActionIDs(int64(2))
 
 	restSubId2 := xappConn2.SendRESTSubsReq(t, params)
-	xapp.Logger.Info("Send REST subscriber request for subscriberId : %v", restSubId2)
+	xapp.Logger.Debug("Send REST subscriber request for subscriberId : %v", restSubId2)
 	crereq, cremsg := e2termConn1.RecvSubsReq(t)
 	xappConn2.ExpectRESTNotification(t, restSubId2)
 	e2termConn1.SendSubsResp(t, crereq, cremsg)
@@ -5446,21 +5438,27 @@ func TestRESTSubReqDiffActionType(t *testing.T) {
 		Counter{cRestSubDelRespToXapp, 2},
 	})
 
+	const e2Timeout int64 = 2
+	const e2RetryCount int64 = 2
+	const routingNeeded bool = true
+
 	// Req1
 	params := xappConn1.GetRESTSubsReqPolicyParams(subReqCount)
+	params.SetSubscriptionDirectives(e2Timeout, e2RetryCount, routingNeeded)
 
 	//Subs Create
 	restSubId1, e2SubsId1 := createSubscription(t, xappConn1, e2termConn1, params)
-	xapp.Logger.Info("Send REST subscriber request for subscriberId : %v", restSubId1)
+	xapp.Logger.Debug("Send REST subscriber request for subscriberId : %v", restSubId1)
 
 	queryXappSubscription(t, int64(e2SubsId1), "RAN_NAME_1", []string{"localhost:13560"})
 
 	// Req2
 	params = xappConn2.GetRESTSubsReqReportParams(subReqCount)
+	params.SetSubscriptionDirectives(e2Timeout, e2RetryCount, routingNeeded)
 	params.SetMeid("RAN_NAME_1")
 
 	restSubId2 := xappConn2.SendRESTSubsReq(t, params)
-	xapp.Logger.Info("Send REST subscriber request for subscriberId : %v", restSubId2)
+	xapp.Logger.Debug("Send REST subscriber request for subscriberId : %v", restSubId2)
 	crereq, cremsg := e2termConn1.RecvSubsReq(t)
 	xappConn2.ExpectRESTNotification(t, restSubId2)
 	e2termConn1.SendSubsResp(t, crereq, cremsg)
@@ -5491,21 +5489,27 @@ func TestRESTSubReqPolicyAndSubDelOkSameAction(t *testing.T) {
 		Counter{cRestSubDelRespToXapp, 2},
 	})
 
+	const e2Timeout int64 = 2
+	const e2RetryCount int64 = 2
+	const routingNeeded bool = true
+
 	// Req1
 	params := xappConn1.GetRESTSubsReqPolicyParams(subReqCount)
+	params.SetSubscriptionDirectives(e2Timeout, e2RetryCount, routingNeeded)
 
 	//Subs Create
 	restSubId1, e2SubsId1 := createSubscription(t, xappConn1, e2termConn1, params)
-	xapp.Logger.Info("Send REST subscriber request for subscriberId : %v", restSubId1)
+	xapp.Logger.Debug("Send REST subscriber request for subscriberId : %v", restSubId1)
 
 	queryXappSubscription(t, int64(e2SubsId1), "RAN_NAME_1", []string{"localhost:13560"})
 
 	// Req2
 	params = xappConn2.GetRESTSubsReqPolicyParams(subReqCount)
+	params.SetSubscriptionDirectives(e2Timeout, e2RetryCount, routingNeeded)
 	params.SetMeid("RAN_NAME_1")
 
 	restSubId2 := xappConn2.SendRESTSubsReq(t, params)
-	xapp.Logger.Info("Send REST subscriber request for subscriberId : %v", restSubId2)
+	xapp.Logger.Debug("Send REST subscriber request for subscriberId : %v", restSubId2)
 	crereq, cremsg := e2termConn1.RecvSubsReq(t)
 	xappConn2.ExpectRESTNotification(t, restSubId2)
 	e2termConn1.SendSubsResp(t, crereq, cremsg)
@@ -5541,7 +5545,7 @@ func TestRESTSubReqReportSameActionDiffActionDefinitionLen(t *testing.T) {
 
 	//Subs Create
 	restSubId1, e2SubsId1 := createSubscription(t, xappConn1, e2termConn1, params)
-	xapp.Logger.Info("Send REST subscriber request for subscriberId : %v", restSubId1)
+	xapp.Logger.Debug("Send REST subscriber request for subscriberId : %v", restSubId1)
 
 	queryXappSubscription(t, int64(e2SubsId1), "RAN_NAME_1", []string{"localhost:13560"})
 
@@ -5552,7 +5556,7 @@ func TestRESTSubReqReportSameActionDiffActionDefinitionLen(t *testing.T) {
 	params.SetSubActionDefinition(actionDefinition)
 
 	restSubId2 := xappConn2.SendRESTSubsReq(t, params)
-	xapp.Logger.Info("Send REST subscriber request for subscriberId : %v", restSubId2)
+	xapp.Logger.Debug("Send REST subscriber request for subscriberId : %v", restSubId2)
 	crereq, cremsg := e2termConn1.RecvSubsReq(t)
 	xappConn2.ExpectRESTNotification(t, restSubId2)
 	e2termConn1.SendSubsResp(t, crereq, cremsg)
@@ -5588,7 +5592,7 @@ func TestRESTSubReqReportSameActionDiffActionDefinitionContents(t *testing.T) {
 
 	//Subs Create
 	restSubId1, e2SubsId1 := createSubscription(t, xappConn1, e2termConn1, params)
-	xapp.Logger.Info("Send REST subscriber request for subscriberId : %v", restSubId1)
+	xapp.Logger.Debug("Send REST subscriber request for subscriberId : %v", restSubId1)
 
 	queryXappSubscription(t, int64(e2SubsId1), "RAN_NAME_1", []string{"localhost:13560"})
 
@@ -5599,7 +5603,7 @@ func TestRESTSubReqReportSameActionDiffActionDefinitionContents(t *testing.T) {
 	params.SetSubActionDefinition(actionDefinition)
 
 	restSubId2 := xappConn2.SendRESTSubsReq(t, params)
-	xapp.Logger.Info("Send REST subscriber request for subscriberId : %v", restSubId2)
+	xapp.Logger.Debug("Send REST subscriber request for subscriberId : %v", restSubId2)
 	crereq, cremsg := e2termConn1.RecvSubsReq(t)
 	xappConn2.ExpectRESTNotification(t, restSubId2)
 	e2termConn1.SendSubsResp(t, crereq, cremsg)
@@ -5635,7 +5639,7 @@ func TestRESTSubReqReportSameActionDiffSubsAction(t *testing.T) {
 
 	//Subs Create
 	restSubId1, e2SubsId1 := createSubscription(t, xappConn1, e2termConn1, params)
-	xapp.Logger.Info("Send REST subscriber request for subscriberId : %v", restSubId1)
+	xapp.Logger.Debug("Send REST subscriber request for subscriberId : %v", restSubId1)
 
 	queryXappSubscription(t, int64(e2SubsId1), "RAN_NAME_1", []string{"localhost:13560"})
 
@@ -5644,7 +5648,7 @@ func TestRESTSubReqReportSameActionDiffSubsAction(t *testing.T) {
 	params.SetMeid("RAN_NAME_1")
 	params.SetTimeToWait("w200ms")
 	restSubId2 := xappConn2.SendRESTSubsReq(t, params)
-	xapp.Logger.Info("Send REST subscriber request for subscriberId : %v", restSubId2)
+	xapp.Logger.Debug("Send REST subscriber request for subscriberId : %v", restSubId2)
 	crereq, cremsg := e2termConn1.RecvSubsReq(t)
 	xappConn2.ExpectRESTNotification(t, restSubId2)
 	e2termConn1.SendSubsResp(t, crereq, cremsg)
@@ -5696,8 +5700,8 @@ func TestRESTSubReqReportSameActionDiffSubsAction(t *testing.T) {
 //-----------------------------------------------------------------------------
 
 func TestRESTUnpackSubscriptionResponseDecodeFail(t *testing.T) {
-	xapp.Logger.Info("TEST: TestRESTUnpackSubscriptionResponseDecodeFail")
-	subReqCount := 1
+	xapp.Logger.Debug("TEST: TestRESTUnpackSubscriptionResponseDecodeFail")
+	const subReqCount int = 1
 
 	// Req
 	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
@@ -5721,7 +5725,7 @@ func TestRESTUnpackSubscriptionResponseDecodeFail(t *testing.T) {
 	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
 
 	instanceId := xappConn1.WaitRESTNotification(t, restSubId)
-	xapp.Logger.Info("TEST: REST notification received e2SubsId=%v", instanceId)
+	xapp.Logger.Debug("TEST: REST notification received e2SubsId=%v", instanceId)
 
 	// Wait that subs is cleaned
 	mainCtrl.wait_subs_clean(t, crereq.RequestId.InstanceId, 10)
@@ -5767,8 +5771,8 @@ func TestRESTUnpackSubscriptionResponseDecodeFail(t *testing.T) {
 //-----------------------------------------------------------------------------
 
 func TestRESTUnpackSubscriptionResponseUnknownInstanceId(t *testing.T) {
-	xapp.Logger.Info("TEST: TestRESTUnpackSubscriptionResponseUnknownInstanceId")
-	subReqCount := 1
+	xapp.Logger.Debug("TEST: TestRESTUnpackSubscriptionResponseUnknownInstanceId")
+	const subReqCount int = 1
 
 	// Req
 	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
@@ -5795,7 +5799,7 @@ func TestRESTUnpackSubscriptionResponseUnknownInstanceId(t *testing.T) {
 	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
 
 	instanceId := xappConn1.WaitRESTNotification(t, restSubId)
-	xapp.Logger.Info("TEST: REST notification received e2SubsId=%v", instanceId)
+	xapp.Logger.Debug("TEST: REST notification received e2SubsId=%v", instanceId)
 
 	// Wait that subs is cleaned
 	mainCtrl.wait_subs_clean(t, orgInstanceId, 10)
@@ -5846,8 +5850,8 @@ func TestRESTUnpackSubscriptionResponseUnknownInstanceId(t *testing.T) {
 //
 //-----------------------------------------------------------------------------
 func TestRESTUnpackSubscriptionResponseNoTransaction(t *testing.T) {
-	xapp.Logger.Info("TEST: TestRESTUnpackSubscriptionResponseNoTransaction")
-	subReqCount := 1
+	xapp.Logger.Debug("TEST: TestRESTUnpackSubscriptionResponseNoTransaction")
+	const subReqCount int = 1
 
 	// Req
 	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
@@ -5877,7 +5881,7 @@ func TestRESTUnpackSubscriptionResponseNoTransaction(t *testing.T) {
 	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
 
 	instanceId := xappConn1.WaitRESTNotification(t, restSubId)
-	xapp.Logger.Info("TEST: REST notification received e2SubsId=%v", instanceId)
+	xapp.Logger.Debug("TEST: REST notification received e2SubsId=%v", instanceId)
 
 	// Wait that subs is cleaned
 	mainCtrl.wait_subs_clean(t, crereq.RequestId.InstanceId, 10)
@@ -5923,8 +5927,8 @@ func TestRESTUnpackSubscriptionResponseNoTransaction(t *testing.T) {
 //
 //-----------------------------------------------------------------------------
 func TestRESTUnpackSubscriptionFailureDecodeFail(t *testing.T) {
-	xapp.Logger.Info("TEST: TestRESTUnpackSubscriptionFailureDecodeFail")
-	subReqCount := 1
+	xapp.Logger.Debug("TEST: TestRESTUnpackSubscriptionFailureDecodeFail")
+	const subReqCount int = 1
 
 	// Req
 	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
@@ -5949,7 +5953,7 @@ func TestRESTUnpackSubscriptionFailureDecodeFail(t *testing.T) {
 	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
 
 	instanceId := xappConn1.WaitRESTNotification(t, restSubId)
-	xapp.Logger.Info("TEST: REST notification received e2SubsId=%v", instanceId)
+	xapp.Logger.Debug("TEST: REST notification received e2SubsId=%v", instanceId)
 
 	// Wait that subs is cleaned
 	mainCtrl.wait_subs_clean(t, crereq.RequestId.InstanceId, 10)
@@ -5994,8 +5998,8 @@ func TestRESTUnpackSubscriptionFailureDecodeFail(t *testing.T) {
 //
 //-----------------------------------------------------------------------------
 func TestRESTUnpackSubscriptionFailureUnknownInstanceId(t *testing.T) {
-	xapp.Logger.Info("TEST: TestRESTUnpackSubscriptionFailureUnknownInstanceId")
-	subReqCount := 1
+	xapp.Logger.Debug("TEST: TestRESTUnpackSubscriptionFailureUnknownInstanceId")
+	const subReqCount int = 1
 
 	// Req
 	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
@@ -6021,7 +6025,7 @@ func TestRESTUnpackSubscriptionFailureUnknownInstanceId(t *testing.T) {
 	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
 
 	instanceId := xappConn1.WaitRESTNotification(t, restSubId)
-	xapp.Logger.Info("TEST: REST notification received e2SubsId=%v", instanceId)
+	xapp.Logger.Debug("TEST: REST notification received e2SubsId=%v", instanceId)
 
 	// Wait that subs is cleaned
 	mainCtrl.wait_subs_clean(t, crereq.RequestId.InstanceId, 10)
@@ -6066,8 +6070,8 @@ func TestRESTUnpackSubscriptionFailureUnknownInstanceId(t *testing.T) {
 //
 //-----------------------------------------------------------------------------
 func TestRESTUnpackSubscriptionFailureNoTransaction(t *testing.T) {
-	xapp.Logger.Info("TEST: TestRESTUnpackSubscriptionFailureNoTransaction")
-	subReqCount := 1
+	xapp.Logger.Debug("TEST: TestRESTUnpackSubscriptionFailureNoTransaction")
+	const subReqCount int = 1
 
 	// Req
 	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
@@ -6098,7 +6102,7 @@ func TestRESTUnpackSubscriptionFailureNoTransaction(t *testing.T) {
 	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
 
 	instanceId := xappConn1.WaitRESTNotification(t, restSubId)
-	xapp.Logger.Info("TEST: REST notification received e2SubsId=%v", instanceId)
+	xapp.Logger.Debug("TEST: REST notification received e2SubsId=%v", instanceId)
 
 	// Wait that subs is cleaned
 	mainCtrl.wait_subs_clean(t, crereq.RequestId.InstanceId, 10)
@@ -6140,7 +6144,7 @@ func TestRESTUnpackSubscriptionFailureNoTransaction(t *testing.T) {
 //
 //-----------------------------------------------------------------------------
 func TestRESTUnpackSubscriptionDeleteResponseDecodeFail(t *testing.T) {
-	xapp.Logger.Info("TEST: TestRESTUnpackSubscriptionDeleteResponseDecodeFail")
+	xapp.Logger.Debug("TEST: TestRESTUnpackSubscriptionDeleteResponseDecodeFail")
 
 	// Req
 	var params *teststube2ap.RESTSubsReqParams = nil
@@ -6200,7 +6204,7 @@ func TestRESTUnpackSubscriptionDeleteResponseDecodeFail(t *testing.T) {
 //
 //-----------------------------------------------------------------------------
 func TestRESTUnpackSubscriptionDeleteResponseUnknownInstanceId(t *testing.T) {
-	xapp.Logger.Info("TEST: TestRESTUnpackSubscriptionDeleteResponseUnknownInstanceId")
+	xapp.Logger.Debug("TEST: TestRESTUnpackSubscriptionDeleteResponseUnknownInstanceId")
 
 	// Req
 	var params *teststube2ap.RESTSubsReqParams = nil
@@ -6261,7 +6265,7 @@ func TestRESTUnpackSubscriptionDeleteResponseUnknownInstanceId(t *testing.T) {
 //
 //-----------------------------------------------------------------------------
 func TestRESTUnpackSubscriptionDeleteResponseNoTransaction(t *testing.T) {
-	xapp.Logger.Info("TEST: TestRESTUnpackSubscriptionDeleteResponseNoTransaction")
+	xapp.Logger.Debug("TEST: TestRESTUnpackSubscriptionDeleteResponseNoTransaction")
 
 	// Req
 	var params *teststube2ap.RESTSubsReqParams = nil
@@ -6323,7 +6327,7 @@ func TestRESTUnpackSubscriptionDeleteResponseNoTransaction(t *testing.T) {
 //
 //-----------------------------------------------------------------------------
 func TestRESTUnpackSubscriptionDeleteFailureDecodeFail(t *testing.T) {
-	xapp.Logger.Info("TEST: TestRESTUnpackSubscriptionDeleteFailureDecodeFail")
+	xapp.Logger.Debug("TEST: TestRESTUnpackSubscriptionDeleteFailureDecodeFail")
 
 	// Req
 	var params *teststube2ap.RESTSubsReqParams = nil
@@ -6383,7 +6387,7 @@ func TestRESTUnpackSubscriptionDeleteFailureDecodeFail(t *testing.T) {
 //
 //-----------------------------------------------------------------------------
 func TestRESTUnpackSubscriptionDeleteailureUnknownInstanceId(t *testing.T) {
-	xapp.Logger.Info("TEST: TestRESTUnpackSubscriptionDeleteailureUnknownInstanceId")
+	xapp.Logger.Debug("TEST: TestRESTUnpackSubscriptionDeleteailureUnknownInstanceId")
 
 	// Req
 	var params *teststube2ap.RESTSubsReqParams = nil
@@ -6444,7 +6448,7 @@ func TestRESTUnpackSubscriptionDeleteailureUnknownInstanceId(t *testing.T) {
 //
 //-----------------------------------------------------------------------------
 func TestRESTUnpackSubscriptionDeleteFailureNoTransaction(t *testing.T) {
-	xapp.Logger.Info("TEST: TestRESTUnpackSubscriptionDeleteFailureNoTransaction")
+	xapp.Logger.Debug("TEST: TestRESTUnpackSubscriptionDeleteFailureNoTransaction")
 
 	// Req
 	var params *teststube2ap.RESTSubsReqParams = nil
@@ -6510,12 +6514,10 @@ func TestRESTSubReqFailAsn1PackSubReqError(t *testing.T) {
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 1},
 		Counter{cRestSubRespToXapp, 1},
-		Counter{cSubDelReqToE2, 1},
-		Counter{cSubDelFailFromE2, 1},
 		Counter{cRestSubFailNotifToXapp, 1},
 	})
 
-	subReqCount := 1
+	const subReqCount int = 1
 
 	var params *teststube2ap.RESTSubsReqParams = nil
 	params = xappConn1.GetRESTSubsReqReportParams(subReqCount)
@@ -6523,21 +6525,194 @@ func TestRESTSubReqFailAsn1PackSubReqError(t *testing.T) {
 
 	// Req
 	restSubId := xappConn1.SendRESTSubsReq(t, params)
-	xapp.Logger.Info("Send REST subscriber request for subscriberId : %v", restSubId)
+	xapp.Logger.Debug("Send REST subscriber request for subscriberId : %v", restSubId)
 
 	// E2t: Receive SubsDelReq
-	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
 	xappConn1.ExpectRESTNotificationNok(t, restSubId, "allFail")
 
-	// Subscription does not exist in in E2 Node.
-	e2termConn1.SendSubsDelFail(t, delreq, delmsg)
-
 	e2SubsId := xappConn1.WaitRESTNotification(t, restSubId)
-	xapp.Logger.Info("TEST: REST notification received e2SubsId=%v", e2SubsId)
+	xapp.Logger.Debug("TEST: REST notification received e2SubsId=%v", e2SubsId)
 
 	e2ap_wrapper.AllowE2apToProcess(e2ap_wrapper.SUB_REQ, true)
 	// Wait that subs is cleaned
 	waitSubsCleanup(t, e2SubsId, 10)
+	mainCtrl.VerifyCounterValues(t)
+}
+
+func TestRESTSubReqPolicyUpdateTimeoutAndSubDelOkSameAction(t *testing.T) {
+	CaseBegin("TestRESTSubReqPolicyUpdateTimeoutAndSubDelOkSameAction")
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 2},
+		Counter{cRestSubRespToXapp, 2},
+		Counter{cSubReqToE2, 2},
+		Counter{cSubRespFromE2, 1},
+		Counter{cRestSubNotifToXapp, 1},
+		Counter{cRestSubFailNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelRespFromE2, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+	})
+
+	const e2Timeout int64 = 1
+	const e2RetryCount int64 = 0
+	const routingNeeded bool = false
+
+	// Req1
+	params := xappConn1.GetRESTSubsReqPolicyParams(subReqCount)
+	params.SetSubscriptionDirectives(e2Timeout, e2RetryCount, routingNeeded)
+
+	// Subs Create
+	restSubId := xappConn1.SendRESTSubsReq(t, params)
+	xapp.Logger.Debug("Send REST subscribe request for subscriberId : %v", restSubId)
+
+	crereq1, cremsg1 := e2termConn1.RecvSubsReq(t)
+	xappConn1.ExpectRESTNotification(t, restSubId)
+	e2termConn1.SendSubsResp(t, crereq1, cremsg1)
+	e2SubsId := xappConn1.WaitRESTNotification(t, restSubId)
+	xapp.Logger.Debug("REST notification received e2SubsId=%v", e2SubsId)
+
+	// Policy change
+	params = xappConn1.GetRESTSubsReqPolicyParams(subReqCount)
+	params.SetSubscriptionDirectives(e2Timeout, e2RetryCount, routingNeeded)
+	params.SetSubscriptionID(&restSubId)
+	params.SetTimeToWait("w200ms")
+	restSubId = xappConn1.SendRESTSubsReq(t, params)
+	xapp.Logger.Debug("Send REST subscribe request for subscriberId : %v", restSubId)
+
+	crereq1, cremsg1 = e2termConn1.RecvSubsReq(t)
+	xappConn1.ExpectRESTNotification(t, restSubId)
+	// SubsResp is missing
+	e2SubsId = xappConn1.WaitRESTNotification(t, restSubId)
+	xapp.Logger.Debug("TEST: REST notification received e2SubsId=%v", e2SubsId)
+
+	// Del
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
+
+	waitSubsCleanup(t, e2SubsId, 10)
+
+	mainCtrl.VerifyCounterValues(t)
+}
+
+//-----------------------------------------------------------------------------
+// TestPolicyUpdateRESTSubReqAndSubDelOkWithRestartInMiddle
+//
+//   stub                             stub
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//     |                 |              |
+//     | RESTSubReq      |              |
+//     |---------------->|              |
+//     |                 |              |
+//     |     RESTSubResp |              |
+//     |<----------------|              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |      SubResp |
+//     |                 |<-------------|
+//     |                 |              |
+//     |       RESTNotif |              |
+//     |<----------------|              |
+//     |                 |              |
+//     | RESTSubReq      |              |
+//     |---------------->|              |
+//     |                 |              |
+//     |     RESTSubResp |              |
+//     |<----------------|              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                                |
+//     |           Submgr restart       |
+//     |                 |              |
+//     | RESTSubDelReq   |              |
+//     |---------------->|              |
+//     |                 |              |
+//     |                 | SubDelReq    |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |   SubDelResp |
+//     |                 |<-------------|
+//     |                 |              |
+//     |  RESTSubDelResp |              |
+//     |<----------------|              |
+//
+//-----------------------------------------------------------------------------
+
+func TestPolicyUpdateRESTSubReqAndSubDelOkWithRestartInMiddle(t *testing.T) {
+	CaseBegin("TestPolicyUpdateRESTSubReqAndSubDelOkWithRestartInMiddle")
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 2},
+		Counter{cRestSubRespToXapp, 2},
+		Counter{cSubReqToE2, 2},
+		Counter{cSubRespFromE2, 1},
+		Counter{cRestSubNotifToXapp, 1},
+		Counter{cRestSubNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+	})
+
+	// Remove possible existing subscription
+	mainCtrl.removeExistingSubscriptions(t)
+
+	const e2Timeout int64 = 1
+	const e2RetryCount int64 = 0
+	const routingNeeded bool = false
+
+	// Req1
+	params := xappConn1.GetRESTSubsReqPolicyParams(subReqCount)
+	params.SetSubscriptionDirectives(e2Timeout, e2RetryCount, routingNeeded)
+	// Create subscription
+	restSubId := xappConn1.SendRESTSubsReq(t, params)
+	xapp.Logger.Debug("Send REST subscribe request for subscriberId : %v", restSubId)
+
+	crereq1, cremsg1 := e2termConn1.RecvSubsReq(t)
+	xappConn1.ExpectRESTNotification(t, restSubId)
+	e2termConn1.SendSubsResp(t, crereq1, cremsg1)
+	e2SubsId := xappConn1.WaitRESTNotification(t, restSubId)
+	xapp.Logger.Debug("REST notification received e2SubsId=%v", e2SubsId)
+
+	// Check subscription
+	queryXappSubscription(t, int64(e2SubsId), "RAN_NAME_1", []string{"localhost:13560"})
+
+	// Policy change
+	params = xappConn1.GetRESTSubsReqPolicyParams(subReqCount)
+	params.SetSubscriptionDirectives(e2Timeout, e2RetryCount, routingNeeded)
+	params.SetSubscriptionID(&restSubId)
+	params.SetTimeToWait("w200ms")
+	mainCtrl.SetResetTestFlag(t, true) // subs.DoNotWaitSubResp will be set TRUE for the subscription
+	restSubId = xappConn1.SendRESTSubsReq(t, params)
+	xapp.Logger.Debug("Send REST subscribe request for subscriberId : %v", restSubId)
+
+	crereq1, cremsg1 = e2termConn1.RecvSubsReq(t)
+	mainCtrl.SetResetTestFlag(t, false)
+
+	// SubsResp is missing due to submgr restart
+
+	mainCtrl.SimulateRestart(t)
+	xapp.Logger.Debug("mainCtrl.SimulateRestart done")
+
+	// Check subscription
+	queryXappSubscription(t, int64(e2SubsId), "RAN_NAME_1", []string{"localhost:13560"})
+
+	xapp.Logger.Debug("Here 1")
+	//<-time.After(3 * time.Second)
+	xapp.Logger.Debug("Here 2")
+
+	// Delete subscription
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
+
+	//Wait that subs is cleaned
+	waitSubsCleanup(t, e2SubsId, 10)
+
 	mainCtrl.VerifyCounterValues(t)
 }
 
@@ -6552,13 +6727,13 @@ func createSubscription(t *testing.T, fromXappConn *teststube2ap.E2Stub, toE2ter
 		params = fromXappConn.GetRESTSubsReqReportParams(subReqCount)
 	}
 	restSubId := fromXappConn.SendRESTSubsReq(t, params)
-	xapp.Logger.Info("Send REST subscriber request for subscriberId : %v", restSubId)
+	xapp.Logger.Debug("Send REST subscriber request for subscriberId : %v", restSubId)
 
 	crereq1, cremsg1 := toE2termConn.RecvSubsReq(t)
 	fromXappConn.ExpectRESTNotification(t, restSubId)
 	toE2termConn.SendSubsResp(t, crereq1, cremsg1)
 	e2SubsId := fromXappConn.WaitRESTNotification(t, restSubId)
-	xapp.Logger.Info("REST notification received e2SubsId=%v", e2SubsId)
+	xapp.Logger.Debug("REST notification received e2SubsId=%v", e2SubsId)
 
 	return restSubId, e2SubsId
 }
@@ -6572,23 +6747,24 @@ func createXapp2MergedSubscription(t *testing.T, meid string) (string, uint32) {
 	xapp.Subscription.SetResponseCB(xappConn2.SubscriptionRespHandler)
 	restSubId := xappConn2.SendRESTSubsReq(t, params)
 	xappConn2.ExpectRESTNotification(t, restSubId)
-	xapp.Logger.Info("Send REST subscriber request for subscriberId : %v", restSubId)
+	xapp.Logger.Debug("Send REST subscriber request for subscriberId : %v", restSubId)
 	e2SubsId := xappConn2.WaitRESTNotification(t, restSubId)
-	xapp.Logger.Info("REST notification received e2SubsId=%v", e2SubsId)
+	xapp.Logger.Debug("REST notification received e2SubsId=%v", e2SubsId)
 
 	return restSubId, e2SubsId
 }
 
 func createXapp1PolicySubscription(t *testing.T) (string, uint32) {
+
 	params := xappConn1.GetRESTSubsReqPolicyParams(subReqCount)
 	restSubId := xappConn1.SendRESTSubsReq(t, params)
-	xapp.Logger.Info("Send REST Policy subscriber request for subscriberId : %v", restSubId)
+	xapp.Logger.Debug("Send REST Policy subscriber request for subscriberId : %v", restSubId)
 
 	crereq1, cremsg1 := e2termConn1.RecvSubsReq(t)
 	xappConn1.ExpectRESTNotification(t, restSubId)
 	e2termConn1.SendSubsResp(t, crereq1, cremsg1)
 	e2SubsId := xappConn1.WaitRESTNotification(t, restSubId)
-	xapp.Logger.Info("REST notification received e2SubsId=%v", e2SubsId)
+	xapp.Logger.Debug("REST notification received e2SubsId=%v", e2SubsId)
 
 	return restSubId, e2SubsId
 }
@@ -6606,7 +6782,7 @@ func createXapp1ReportSubscriptionE2Fail(t *testing.T) (string, uint32) {
 	xappConn1.ExpectRESTNotification(t, restSubId)
 	e2termConn1.SendSubsDelResp(t, delreq1, delmsg1)
 	e2SubsId := xappConn1.WaitRESTNotification(t, restSubId)
-	xapp.Logger.Info("TEST: REST notification received e2SubsId=%v", e2SubsId)
+	xapp.Logger.Debug("TEST: REST notification received e2SubsId=%v", e2SubsId)
 
 	return restSubId, e2SubsId
 }
@@ -6651,14 +6827,14 @@ func sendAndReceiveMultipleE2SubReqs(t *testing.T, count int, fromXappConn *test
 	var e2SubsId []uint32
 
 	for i := 0; i < count; i++ {
-		xapp.Logger.Info("TEST: %d ===================================== BEGIN CRE ============================================", i+1)
+		xapp.Logger.Debug("TEST: %d ===================================== BEGIN CRE ============================================", i+1)
 		crereq, cremsg := toE2termConn.RecvSubsReq(t)
 		fromXappConn.ExpectRESTNotification(t, restSubId)
 		toE2termConn.SendSubsResp(t, crereq, cremsg)
 		instanceId := fromXappConn.WaitRESTNotification(t, restSubId)
 		e2SubsId = append(e2SubsId, instanceId)
-		xapp.Logger.Info("TEST: %v", e2SubsId)
-		xapp.Logger.Info("TEST: %d ===================================== END CRE ============================================", i+1)
+		xapp.Logger.Debug("TEST: %v", e2SubsId)
+		xapp.Logger.Debug("TEST: %d ===================================== END CRE ============================================", i+1)
 		<-time.After(100 * time.Millisecond)
 	}
 	return e2SubsId
@@ -6667,11 +6843,11 @@ func sendAndReceiveMultipleE2SubReqs(t *testing.T, count int, fromXappConn *test
 func sendAndReceiveMultipleE2DelReqs(t *testing.T, e2SubsIds []uint32, toE2termConn *teststube2ap.E2Stub) {
 
 	for i := 0; i < len(e2SubsIds); i++ {
-		xapp.Logger.Info("TEST: %d ===================================== BEGIN DEL ============================================", i+1)
+		xapp.Logger.Debug("TEST: %d ===================================== BEGIN DEL ============================================", i+1)
 		delreq, delmsg := toE2termConn.RecvSubsDelReq(t)
 		toE2termConn.SendSubsDelResp(t, delreq, delmsg)
 		<-time.After(1 * time.Second)
-		xapp.Logger.Info("TEST: %d ===================================== END DEL ============================================", i+1)
+		xapp.Logger.Debug("TEST: %d ===================================== END DEL ============================================", i+1)
 		<-time.After(100 * time.Millisecond)
 	}
 

@@ -54,7 +54,7 @@ func CreateNewRmrDummyStub(desc string, srcId teststub.RmrSrcId, rtgSvc teststub
 //-----------------------------------------------------------------------------
 
 func (tc *RmrDummyStub) SendReq(t *testing.T, plen int) {
-	tc.Info("SendReq")
+	tc.Debug("SendReq")
 	len := plen
 	if len == 0 {
 		len = 100
@@ -77,7 +77,7 @@ func (tc *RmrDummyStub) SendReq(t *testing.T, plen int) {
 }
 
 func (tc *RmrDummyStub) SendResp(t *testing.T, plen int) {
-	tc.Info("SendReq")
+	tc.Debug("SendReq")
 	len := plen
 	if len == 0 {
 		len = 100
@@ -99,7 +99,7 @@ func (tc *RmrDummyStub) SendResp(t *testing.T, plen int) {
 }
 
 func (tc *RmrDummyStub) RecvReq(t *testing.T) bool {
-	tc.Info("RecvReq")
+	tc.Debug("RecvReq")
 
 	msg := tc.WaitMsg(15)
 	if msg != nil {
@@ -115,7 +115,7 @@ func (tc *RmrDummyStub) RecvReq(t *testing.T) bool {
 }
 
 func (tc *RmrDummyStub) RecvResp(t *testing.T) bool {
-	tc.Info("RecvResp")
+	tc.Debug("RecvResp")
 
 	msg := tc.WaitMsg(15)
 	if msg != nil {
