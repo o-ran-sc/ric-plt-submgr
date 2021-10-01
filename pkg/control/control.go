@@ -318,7 +318,7 @@ func (c *Control) Run() {
 //-------------------------------------------------------------------
 //
 //-------------------------------------------------------------------
-func (c *Control) GetOrCreateRestSubscription(p *models.SubscriptionParams, md5sum string, xAppRmrEndpoint string) (*RESTSubscription, string, string, error) {
+func (c *Control) GetOrCreateRestSubscription(p *models.SubscriptionParams, md5sum string, xAppRmrEndpoint string) (*RESTSubscription, string, error) {
 
 	var restSubId string
 	var restSubscription *RESTSubscription
@@ -357,7 +357,7 @@ func (c *Control) GetOrCreateRestSubscription(p *models.SubscriptionParams, md5s
 			// Subscription with id in REST request does not exist
 			xapp.Logger.Error("%s", err.Error())
 			c.UpdateCounter(cRestSubFailToXapp)
-			return nil, "", models.SubscriptionInstanceRejectCauseRESTSubscriptionWithGivenIDDoesNotExist, err
+			return nil, "", err
 		}
 
 		if !exists {
@@ -367,7 +367,7 @@ func (c *Control) GetOrCreateRestSubscription(p *models.SubscriptionParams, md5s
 		}
 	}
 
-	return restSubscription, restSubId, "", nil
+	return restSubscription, restSubId, nil
 }
 
 //-------------------------------------------------------------------
@@ -389,14 +389,14 @@ func (c *Control) RESTSubscriptionHandler(params interface{}) (*models.Subscript
 		err := fmt.Errorf("ClientEndpoint == nil")
 		xapp.Logger.Error("%v", err)
 		c.UpdateCounter(cRestSubFailToXapp)
-		return c.GetSubscriptionResponse(models.SubscriptionInstanceRejectCauseInvalidRESTRequestMessage, err.Error(), "SUBMGR", ""), common.SubscribeBadRequestCode
+		return nil, common.SubscribeBadRequestCode
 	}
 
 	_, xAppRmrEndpoint, err := ConstructEndpointAddresses(*p.ClientEndpoint)
 	if err != nil {
 		xapp.Logger.Error("%s", err.Error())
 		c.UpdateCounter(cRestSubFailToXapp)
-		return c.GetSubscriptionResponse(models.SubscriptionInstanceRejectCauseInvalidRESTRequestMessage, err.Error(), "SUBMGR", ""), common.SubscribeBadRequestCode
+		return nil, common.SubscribeBadRequestCode
 	}
 
 	md5sum, err := CalculateRequestMd5sum(params)
@@ -404,10 +404,10 @@ func (c *Control) RESTSubscriptionHandler(params interface{}) (*models.Subscript
 		xapp.Logger.Error("Failed to generate md5sum from incoming request - %s", err.Error())
 	}
 
-	restSubscription, restSubId, rejectCause, err := c.GetOrCreateRestSubscription(p, md5sum, xAppRmrEndpoint)
+	restSubscription, restSubId, err := c.GetOrCreateRestSubscription(p, md5sum, xAppRmrEndpoint)
 	if err != nil {
-		xapp.Logger.Error("Failed to get/allocate REST subscription")
-		return c.GetSubscriptionResponse(rejectCause, err.Error(), "SUBMGR", ""), common.SubscribeBadRequestCode
+		xapp.Logger.Error("Subscription with id in REST request does not exist")
+		return nil, common.SubscribeNotFoundCode
 	}
 
 	subResp.SubscriptionID = &restSubId
@@ -418,7 +418,7 @@ func (c *Control) RESTSubscriptionHandler(params interface{}) (*models.Subscript
 		restDuplicateCtrl.DeleteLastKnownRestSubsIdBasedOnMd5sum(md5sum)
 		c.registry.DeleteRESTSubscription(&restSubId)
 		c.UpdateCounter(cRestSubFailToXapp)
-		return c.GetSubscriptionResponse(models.SubscriptionInstanceRejectCauseInvalidRESTRequestMessage, err.Error(), "SUBMGR", ""), common.SubscribeBadRequestCode
+		return nil, common.SubscribeBadRequestCode
 	}
 
 	duplicate := restDuplicateCtrl.IsDuplicateToOngoingTransaction(restSubId, md5sum)
@@ -433,7 +433,7 @@ func (c *Control) RESTSubscriptionHandler(params interface{}) (*models.Subscript
 	e2SubscriptionDirectives, err := c.GetE2SubscriptionDirectives(p)
 	if err != nil {
 		xapp.Logger.Error("%s", err)
-		return c.GetSubscriptionResponse(models.SubscriptionInstanceRejectCauseInvalidRESTRequestMessage, err.Error(), "SUBMGR", ""), common.SubscribeBadRequestCode
+		return nil, common.SubscribeBadRequestCode
 	}
 	go c.processSubscriptionRequests(restSubscription, &subReqList, p.ClientEndpoint, p.Meid, &restSubId, xAppRmrEndpoint, md5sum, e2SubscriptionDirectives)
 
@@ -468,35 +468,12 @@ func (c *Control) GetE2SubscriptionDirectives(p *models.SubscriptionParams) (*E2
 				return nil, fmt.Errorf("p.E2SubscriptionDirectives.E2RetryCount out of range (0-10): %v", *p.E2SubscriptionDirectives.E2RetryCount)
 			}
 		}
-		if p.E2SubscriptionDirectives.RMRRoutingNeeded == nil {
-			xapp.Logger.Error("p.E2SubscriptionDirectives.RMRRoutingNeeded == nil")
-			e2SubscriptionDirectives.CreateRMRRoute = true
-		} else {
-			e2SubscriptionDirectives.CreateRMRRoute = *p.E2SubscriptionDirectives.RMRRoutingNeeded
-		}
+		e2SubscriptionDirectives.CreateRMRRoute = p.E2SubscriptionDirectives.RMRRoutingNeeded
 	}
 	xapp.Logger.Debug("e2SubscriptionDirectives.E2TimeoutTimerValue: %v", e2SubscriptionDirectives.E2TimeoutTimerValue)
 	xapp.Logger.Debug("e2SubscriptionDirectives.E2MaxTryCount: %v", e2SubscriptionDirectives.E2MaxTryCount)
 	xapp.Logger.Debug("e2SubscriptionDirectives.CreateRMRRoute: %v", e2SubscriptionDirectives.CreateRMRRoute)
 	return e2SubscriptionDirectives, nil
-}
-
-//-------------------------------------------------------------------
-//
-//-------------------------------------------------------------------
-func (c *Control) GetSubscriptionResponse(rejectCause string, errorCause string, errorSource string, timeoutType string) *models.SubscriptionResponse {
-	subResp := models.SubscriptionResponse{}
-	subscriptionInstance := models.SubscriptionInstance{}
-	subscriptionInstance.RejectCause = &rejectCause
-	subscriptionInstance.ErrorCause = &errorCause
-	subscriptionInstance.ErrorSource = &errorSource
-	if timeoutType != "" {
-		subscriptionInstance.TimeoutType = &timeoutType
-	}
-	subResp.SubscriptionInstances = append(subResp.SubscriptionInstances, &subscriptionInstance)
-	xapp.Logger.Error("etSubscriptionResponse() %+v", subscriptionInstance)
-
-	return &subResp
 }
 
 //-------------------------------------------------------------------
@@ -624,9 +601,9 @@ func (c *Control) sendUnsuccesfullResponseNotification(restSubId *string, restSu
 		SubscriptionID: restSubId,
 		SubscriptionInstances: []*models.SubscriptionInstance{
 			&models.SubscriptionInstance{E2EventInstanceID: &e2EventInstanceID,
-				ErrorCause:          &errorInfo.ErrorCause,
-				ErrorSource:         &errorInfo.ErrorSource,
-				TimeoutType:         &errorInfo.TimeoutType,
+				ErrorCause:          errorInfo.ErrorCause,
+				ErrorSource:         errorInfo.ErrorSource,
+				TimeoutType:         errorInfo.TimeoutType,
 				XappEventInstanceID: &xAppEventInstanceID},
 		},
 	}
@@ -660,7 +637,7 @@ func (c *Control) sendSuccesfullResponseNotification(restSubId *string, restSubs
 		SubscriptionID: restSubId,
 		SubscriptionInstances: []*models.SubscriptionInstance{
 			&models.SubscriptionInstance{E2EventInstanceID: &e2EventInstanceID,
-				ErrorCause:          nil,
+				ErrorCause:          "",
 				XappEventInstanceID: &xAppEventInstanceID},
 		},
 	}
@@ -1506,11 +1483,7 @@ func (c *Control) PrintRESTSubscriptionRequest(p *models.SubscriptionParams) {
 			fmt.Printf("    E2RetryCount = %v\n", *p.E2SubscriptionDirectives.E2RetryCount)
 		}
 		fmt.Printf("    E2TimeoutTimerValue = %v\n", p.E2SubscriptionDirectives.E2TimeoutTimerValue)
-		if p.E2SubscriptionDirectives.RMRRoutingNeeded == nil {
-			fmt.Println("    RMRRoutingNeeded == nil")
-		} else {
-			fmt.Printf("    RMRRoutingNeeded = %v\n", *p.E2SubscriptionDirectives.RMRRoutingNeeded)
-		}
+		fmt.Printf("    RMRRoutingNeeded = %v\n", p.E2SubscriptionDirectives.RMRRoutingNeeded)
 	}
 	for _, subscriptionDetail := range p.SubscriptionDetails {
 		if p.RANFunctionID != nil {

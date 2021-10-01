@@ -2619,15 +2619,11 @@ func TestRESTSubReqRetransmission(t *testing.T) {
 
 	// Subs Create
 	const subReqCount int = 1
-	//	const e2Timeout int64 = 2
-	//	const e2RetryCount int64 = 2
-	//	const routingNeeded bool = true
 
 	// In order to force both XAPP's to create their own subscriptions, force rtmgr to block a while so that 2nd create
 	// gets into execution before the rtmgrg responds for the first one.
 	waiter := rtmgrHttp.AllocNextSleep(10, true)
 	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
-	//	params.SetSubscriptionDirectives(e2Timeout, e2RetryCount, routingNeeded)
 	restSubId1 := xappConn1.SendRESTSubsReq(t, params)
 	xappConn2.SendRESTSubsReq(t, params)
 
@@ -3683,8 +3679,12 @@ func TestRESTSubReqSubFailRespInSubmgr(t *testing.T) {
 	})
 
 	const subReqCount int = 1
+	const e2Timeout int64 = 2
+	const e2RetryCount int64 = 1
+	const routingNeeded bool = true
 
 	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
+	params.SetSubscriptionDirectives(e2Timeout, e2RetryCount, routingNeeded)
 	restSubId := xappConn1.SendRESTSubsReq(t, params)
 
 	crereq1, cremsg1 := e2termConn1.RecvSubsReq(t)
