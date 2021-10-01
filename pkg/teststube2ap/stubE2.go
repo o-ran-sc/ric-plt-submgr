@@ -838,21 +838,9 @@ func (tc *E2Stub) GetE2RestIds(resp *clientmodel.SubscriptionResponse) *E2RestId
 			if resp.SubscriptionInstances[0].E2EventInstanceID != nil {
 				e2RestIds.E2SubsId = uint32(*resp.SubscriptionInstances[0].E2EventInstanceID)
 			}
-			if resp.SubscriptionInstances[0].ErrorCause != nil {
-				e2RestIds.ErrorCause = *resp.SubscriptionInstances[0].ErrorCause
-			} else {
-				e2RestIds.ErrorCause = "nil"
-			}
-			if resp.SubscriptionInstances[0].ErrorSource != nil {
-				e2RestIds.ErrorSource = *resp.SubscriptionInstances[0].ErrorSource
-			} else {
-				e2RestIds.ErrorSource = "nil"
-			}
-			if resp.SubscriptionInstances[0].TimeoutType != nil {
-				e2RestIds.TimeoutType = *resp.SubscriptionInstances[0].TimeoutType
-			} else {
-				e2RestIds.TimeoutType = "nil"
-			}
+			e2RestIds.ErrorCause = resp.SubscriptionInstances[0].ErrorCause
+			e2RestIds.ErrorSource = resp.SubscriptionInstances[0].ErrorSource
+			e2RestIds.TimeoutType = resp.SubscriptionInstances[0].TimeoutType
 		}
 	}
 	return e2RestIds
@@ -900,38 +888,11 @@ func (tc *E2Stub) SendRESTSubsReq(t *testing.T, params *RESTSubsReqParams) strin
 		// Swagger generated code makes checks for the values that are inserted the subscription function
 		// If error cause is unknown and POST is not done, the problem is in the inserted values
 		tc.Error("======== REST subscription request failed %s ========", err.Error())
-		if resp != nil {
-			tc.PrintSubscriptionInsctanceErrorInfo(resp)
-		} else {
-			tc.Error("Subscribe resp == nil")
-		}
 		return ""
 	}
 	tc.subscriptionId = *resp.SubscriptionID
 	tc.Debug("======== REST subscriptions posted successfully. SubscriptionID = %s, RequestCount = %v ========", *resp.SubscriptionID, tc.requestCount)
 	return *resp.SubscriptionID
-}
-
-//-----------------------------------------------------------------------------
-//
-//-----------------------------------------------------------------------------
-func (tc *E2Stub) PrintSubscriptionInsctanceErrorInfo(resp *clientmodel.SubscriptionResponse) {
-	for _, subscriptionInstance := range resp.SubscriptionInstances {
-		if subscriptionInstance != nil {
-			if subscriptionInstance.RejectCause != nil {
-				tc.Error("subscriptionInstance.RejectCause= %s", *subscriptionInstance.RejectCause)
-			}
-			if subscriptionInstance.ErrorCause != nil {
-				tc.Error("subscriptionInstance.ErrorCause= %s", *subscriptionInstance.ErrorCause)
-			}
-			if subscriptionInstance.ErrorSource != nil {
-				tc.Error("subscriptionInstance.ErrorSource= %s", *subscriptionInstance.ErrorSource)
-			}
-			if subscriptionInstance.TimeoutType != nil {
-				tc.Error("subscriptionInstance.TimeoutType = %s", *subscriptionInstance.TimeoutType)
-			}
-		}
-	}
 }
 
 //-----------------------------------------------------------------------------
@@ -1033,7 +994,7 @@ func (p *RESTSubsReqParams) SetE2SubscriptionDirectives(E2RetryCount int64, E2Ti
 	p.SubsReqParams.E2SubscriptionDirectives = E2SubscriptionDirectives
 	p.SubsReqParams.E2SubscriptionDirectives.E2RetryCount = &E2RetryCount
 	p.SubsReqParams.E2SubscriptionDirectives.E2TimeoutTimerValue = E2TimeoutTimerValue
-	p.SubsReqParams.E2SubscriptionDirectives.RMRRoutingNeeded = &RMRRoutingNeeded
+	p.SubsReqParams.E2SubscriptionDirectives.RMRRoutingNeeded = RMRRoutingNeeded
 }
 
 func (p *RESTSubsReqParams) RemoveE2SubscriptionDirectives() {
@@ -1227,7 +1188,7 @@ func (p *RESTSubsReqParams) SetSubscriptionDirectives(e2Timeout int64, e2RetryCo
 	e2SubscriptionDirectives := &clientmodel.SubscriptionParamsE2SubscriptionDirectives{}
 	e2SubscriptionDirectives.E2TimeoutTimerValue = e2Timeout
 	e2SubscriptionDirectives.E2RetryCount = &e2RetryCount
-	e2SubscriptionDirectives.RMRRoutingNeeded = &routingNeeded
+	e2SubscriptionDirectives.RMRRoutingNeeded = routingNeeded
 	p.SubsReqParams.E2SubscriptionDirectives = e2SubscriptionDirectives
 
 }

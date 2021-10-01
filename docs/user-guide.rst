@@ -78,8 +78,9 @@ which record is found Subscription Manager returns successful REST notification 
 contain E2 subscriptions only for one E2 Node.
 
 Subscription Manager indicates to xApp in response notification if there has happened any error or timeout. xApp can send retry based on that information but
-resending should happen after Subscription Manager has processed the previous request completely otherwise the request is rejected. If timeout happens response
-notification contains information where it happened. Timeout can happen in E2, Routing Manager and SDL interface.
+resending should happen after Subscription Manager has processed the previous request completely, otherwise xApp will get successful response for the new request
+without that the request is actually retried. If timeout happens, response notification contains information where it happened. Timeout can happen in E2, Routing
+Manager and SDL interface.
 
 If there is need to change REPORT or INSERT type subscription then previously made subscription need to be deleted first. If there are any REPORT or INSERT
 type E2 subscription which need to change frequently, it is not good idea to bundle them with other REPORT or INSERT type E2 subscriptions in the same REST
@@ -133,21 +134,21 @@ Architecture
       `<https://wiki.o-ran-sc.org/display/RICP/Routing+Manager+and+Subscription+Manager>`_
 
 
-  * Subscription Request message
+  * REST Subscription Request message
   
     .. image:: images/REST_Subscription_Request.png
       :width: 600
-      :alt: Subscription Request message
+      :alt: REST Subscription Request message
 
 
-  * Subscription RESTRequest Response message
+  * REST Subscription Response message
   
     .. image:: images/REST_Subscription_Response.png
       :width: 600
-      :alt: REST Subscription Request Response message
+      :alt: REST Subscription Response message
 
 
-  * Subscription Request Notification message
+  * REST Subscription Notification message
   
     .. image:: images/REST_Subscription_Notification.png
       :width: 600
@@ -198,7 +199,10 @@ Architecture
       If values are does not accepted then send function returns "unknown error".
 
       If failure happens when Subscription Manager validates the REST request then error is returned instantly and processing of request is
-      stopped. xApp receives bad request (HTTP response code 400) response.
+      stopped. xApp receives "Bad Request" (HTTP response code 400) response.
+
+      If failure happens when xApp resends the same request including REST request id but the subscription is not found from Subscription Manager's
+      records, then xApp receives "Not Found" (HTTP response code 404) response.
 
       If failure response is received from E2 Node then REST notification is forwarded to xApp with appropriate error cause. The notification
       contains REST request id, xApp instance id and zero E2 instance id.

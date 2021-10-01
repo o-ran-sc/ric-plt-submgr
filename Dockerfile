@@ -25,6 +25,16 @@
 ###########################################################
 FROM nexus3.o-ran-sc.org:10002/o-ran-sc/bldr-ubuntu18-c-go:1.9.0 as submgrcore
 
+ARG GOVERSION=1.14
+
+ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin:/opt/go/${GOVERSION}/bin:/root/go/bin
+
+# Update CA certificates
+RUN apt update && apt install --reinstall -y \
+  ca-certificates \
+  && \
+  update-ca-certificates
+
 RUN apt update && apt install -y iputils-ping net-tools curl tcpdump gdb valgrind
 
 WORKDIR /tmp
