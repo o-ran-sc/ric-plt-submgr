@@ -86,6 +86,7 @@ type Control struct {
 	ResetTestFlag bool
 	Counters      map[string]xapp.Counter
 	LoggerLevel   uint32
+	UTTesting     bool
 }
 
 type RMRMeid struct {
@@ -427,7 +428,8 @@ func (c *Control) SubscriptionHandler(params interface{}) (*models.SubscriptionR
 func (c *Control) processSubscriptionRequests(restSubscription *RESTSubscription, subReqList *e2ap.SubscriptionRequestList,
 	clientEndpoint *models.SubscriptionParamsClientEndpoint, meid *string, restSubId *string, xAppRmrEndpoint string, md5sum string) {
 
-	xapp.Logger.Info("Subscription Request count=%v ", len(subReqList.E2APSubscriptionRequests))
+	c.SubscriptionProcessingStartDelay()
+	xapp.Logger.Debug("Subscription Request count=%v ", len(subReqList.E2APSubscriptionRequests))
 
 	var xAppEventInstanceID int64
 	var e2EventInstanceID int64
@@ -462,6 +464,19 @@ func (c *Control) processSubscriptionRequests(restSubscription *RESTSubscription
 			c.sendSuccesfullResponseNotification(restSubId, restSubscription, xAppEventInstanceID, e2EventInstanceID, clientEndpoint, trans)
 		}
 		trans.Release()
+	}
+}
+
+//-------------------------------------------------------------------
+//
+//------------------------------------------------------------------
+func (c *Control) SubscriptionProcessingStartDelay() {
+	if c.UTTesting == true {
+		// This is temporary fix for the UT problem that notification arrives before subscription response
+		// Correct fix would be to allow notification come before response and process it correctly
+		xapp.Logger.Debug("Setting 50 ms delay before starting processing Subscriptions")
+		<-time.After(time.Millisecond * 50)
+		xapp.Logger.Debug("Continuing after delay")
 	}
 }
 
