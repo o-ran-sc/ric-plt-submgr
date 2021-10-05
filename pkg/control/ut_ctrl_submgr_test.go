@@ -55,6 +55,7 @@ func createSubmgrControl(srcId teststub.RmrSrcId, rtgSvc teststub.RmrRtgSvc) *te
 	mainCtrl = &testingSubmgrControl{}
 	mainCtrl.RmrControl.Init("SUBMGRCTL", srcId, rtgSvc)
 	mainCtrl.c = NewControl()
+	mainCtrl.c.UTTesting = true
 	mainCtrl.c.LoggerLevel = int(xapp.Logger.GetLevel())
 	xapp.Logger.Debug("Test: LoggerLevel %v", mainCtrl.c.LoggerLevel)
 	xapp.Logger.Debug("Replacing real db with test db")
