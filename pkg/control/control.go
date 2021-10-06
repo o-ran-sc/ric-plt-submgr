@@ -511,6 +511,7 @@ func (c *Control) processSubscriptionRequests(restSubscription *RESTSubscription
 		subRespMsg, errorInfo, err := c.handleSubscriptionRequest(trans, &subReqMsg, meid, *restSubId, e2SubscriptionDirectives)
 
 		xapp.Logger.Debug("Handled SubscriptionRequest index=%v, %s", index, idstring(nil, trans))
+		trans.Release()
 
 		if err != nil {
 			c.sendUnsuccesfullResponseNotification(restSubId, restSubscription, xAppEventInstanceID, err, clientEndpoint, trans, errorInfo)
@@ -521,7 +522,6 @@ func (c *Control) processSubscriptionRequests(restSubscription *RESTSubscription
 				index, *restSubId, clientEndpoint.Host, *clientEndpoint.HTTPPort, xAppEventInstanceID, e2EventInstanceID, idstring(nil, trans))
 			c.sendSuccesfullResponseNotification(restSubId, restSubscription, xAppEventInstanceID, e2EventInstanceID, clientEndpoint, trans)
 		}
-		trans.Release()
 	}
 }
 

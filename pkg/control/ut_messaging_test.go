@@ -6583,9 +6583,9 @@ func TestRESTSubReqPolicyUpdateTimeoutAndSubDelOkSameAction(t *testing.T) {
 
 	crereq1, cremsg1 = e2termConn1.RecvSubsReq(t)
 	xappConn1.ExpectRESTNotification(t, restSubId)
-	// SubsResp is missing
-	e2SubsId = xappConn1.WaitRESTNotification(t, restSubId)
-	xapp.Logger.Debug("TEST: REST notification received e2SubsId=%v", e2SubsId)
+	// SubsResp is missing, e2SubsId will be 0
+	zeroE2SubsId := xappConn1.WaitRESTNotification(t, restSubId)
+	xapp.Logger.Debug("TEST: REST notification received e2SubsId=%v", zeroE2SubsId)
 
 	// Del
 	xappConn1.SendRESTSubsDelReq(t, &restSubId)
