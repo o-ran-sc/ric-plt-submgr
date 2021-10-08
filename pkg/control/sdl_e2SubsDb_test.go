@@ -463,12 +463,16 @@ func TestRemoveAllSubscriptionsFromSdlFail(t *testing.T) {
 	t.Log("TEST: All subscription removed from db")
 }
 
-func (m *Mock) Set(pairs ...interface{}) error {
+func (m *Mock) Set(ns string, pairs ...interface{}) error {
 	var key string
 	var val string
 
 	m.marshalLock.Lock()
 	defer m.marshalLock.Unlock()
+
+	if ns != e2SubSdlNs {
+		return fmt.Errorf("Unexpected namespace '%s' error\n", ns)
+	}
 
 	if sdlShouldReturnError == true {
 		return GetSdlError()
@@ -507,8 +511,13 @@ func (m *Mock) Set(pairs ...interface{}) error {
 	return nil
 }
 
-func (m *Mock) Get(keys []string) (map[string]interface{}, error) {
+func (m *Mock) Get(ns string, keys []string) (map[string]interface{}, error) {
 	retMap := make(map[string]interface{})
+
+	if ns != e2SubSdlNs {
+		return nil, fmt.Errorf("Unexpected namespace '%s' error\n", ns)
+	}
+
 	if len(keys) == 0 {
 		return nil, fmt.Errorf("Get() error: len(key) == 0\n")
 	}
@@ -527,7 +536,11 @@ func (m *Mock) Get(keys []string) (map[string]interface{}, error) {
 	return retMap, nil
 }
 
-func (m *Mock) GetAll() ([]string, error) {
+func (m *Mock) GetAll(ns string) ([]string, error) {
+
+	if ns != e2SubSdlNs {
+		return nil, fmt.Errorf("Unexpected namespace '%s' error\n", ns)
+	}
 
 	if sdlShouldReturnError == true {
 		return nil, GetSdlError()
@@ -540,7 +553,12 @@ func (m *Mock) GetAll() ([]string, error) {
 	return keys, nil
 }
 
-func (m *Mock) Remove(keys []string) error {
+func (m *Mock) Remove(ns string, keys []string) error {
+
+	if ns != e2SubSdlNs {
+		return fmt.Errorf("Unexpected namespace '%s' error\n", ns)
+	}
+
 	if len(keys) == 0 {
 		return fmt.Errorf("Remove() error: len(key) == 0\n")
 	}
@@ -560,7 +578,11 @@ func (m *Mock) Remove(keys []string) error {
 	return nil
 }
 
-func (m *Mock) RemoveAll() error {
+func (m *Mock) RemoveAll(ns string) error {
+
+	if ns != e2SubSdlNs {
+		return fmt.Errorf("Unexpected namespace '%s' error\n", ns)
+	}
 
 	for key := range m.e2SubsDb {
 		subId64, err := strconv.ParseUint(key, 10, 64)

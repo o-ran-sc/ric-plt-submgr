@@ -37,11 +37,11 @@ func (rid *RequestId) String() string {
 }
 
 type Sdlnterface interface {
-	Set(pairs ...interface{}) error
-	Get(keys []string) (map[string]interface{}, error)
-	GetAll() ([]string, error)
-	Remove(keys []string) error
-	RemoveAll() error
+	Set(ns string, pairs ...interface{}) error
+	Get(ns string, keys []string) (map[string]interface{}, error)
+	GetAll(ns string) ([]string, error)
+	Remove(ns string, keys []string) error
+	RemoveAll(ns string) error
 }
 
 type E2SubscriptionDirectives struct {

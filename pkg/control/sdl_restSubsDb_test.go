@@ -369,12 +369,16 @@ func TestRemoveAllRESTSubscriptionsFromSdlFail(t *testing.T) {
 	t.Log("TEST: All subscription removed from db")
 }
 
-func (m *RestSubsDbMock) Set(pairs ...interface{}) error {
+func (m *RestSubsDbMock) Set(ns string, pairs ...interface{}) error {
 	var key string
 	var val string
 
 	m.marshalLock.Lock()
 	defer m.marshalLock.Unlock()
+
+	if ns != restSubSdlNs {
+		return fmt.Errorf("Unexpected namespace '%s' error\n", ns)
+	}
 
 	if sdlRestShouldReturnError == true {
 		return GetSdlRestError()
@@ -412,8 +416,13 @@ func (m *RestSubsDbMock) Set(pairs ...interface{}) error {
 	return nil
 }
 
-func (m *RestSubsDbMock) Get(keys []string) (map[string]interface{}, error) {
+func (m *RestSubsDbMock) Get(ns string, keys []string) (map[string]interface{}, error) {
 	retMap := make(map[string]interface{})
+
+	if ns != restSubSdlNs {
+		return nil, fmt.Errorf("Unexpected namespace '%s' error\n", ns)
+	}
+
 	if len(keys) == 0 {
 		return nil, fmt.Errorf("Get() error: len(key) == 0\n")
 	}
@@ -432,7 +441,11 @@ func (m *RestSubsDbMock) Get(keys []string) (map[string]interface{}, error) {
 	return retMap, nil
 }
 
-func (m *RestSubsDbMock) GetAll() ([]string, error) {
+func (m *RestSubsDbMock) GetAll(ns string) ([]string, error) {
+
+	if ns != restSubSdlNs {
+		return nil, fmt.Errorf("Unexpected namespace '%s' error\n", ns)
+	}
 
 	if sdlRestShouldReturnError == true {
 		return nil, GetSdlRestError()
@@ -445,7 +458,12 @@ func (m *RestSubsDbMock) GetAll() ([]string, error) {
 	return keys, nil
 }
 
-func (m *RestSubsDbMock) Remove(keys []string) error {
+func (m *RestSubsDbMock) Remove(ns string, keys []string) error {
+
+	if ns != restSubSdlNs {
+		return fmt.Errorf("Unexpected namespace '%s' error\n", ns)
+	}
+
 	if len(keys) == 0 {
 		return fmt.Errorf("Remove() error: len(key) == 0\n")
 	}
@@ -460,7 +478,11 @@ func (m *RestSubsDbMock) Remove(keys []string) error {
 	return nil
 }
 
-func (m *RestSubsDbMock) RemoveAll() error {
+func (m *RestSubsDbMock) RemoveAll(ns string) error {
+
+	if ns != restSubSdlNs {
+		return fmt.Errorf("Unexpected namespace '%s' error\n", ns)
+	}
 
 	for key := range m.restSubsDb {
 

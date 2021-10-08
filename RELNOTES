@@ -1,3 +1,6 @@
+### v0.10.8
+* Replacing deprecated SDL APIs
+
 ### v0.10.7
 * Xapp-frame version update
 * Dockerfile correction for test applications

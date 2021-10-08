@@ -27,6 +27,8 @@ import (
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 )
 
+const restSubSdlNs = "submgr_restSubsDb"
+
 type RESTSubscriptionInfo struct {
 	XAppRmrEndPoint  string
 	Meid             string
@@ -38,7 +40,7 @@ type RESTSubscriptionInfo struct {
 }
 
 func CreateRESTSdl() Sdlnterface {
-	return sdl.NewSdlInstance("submgr_restSubsDb", sdl.NewDatabase())
+	return sdl.NewSyncStorage()
 }
 
 func (c *Control) WriteRESTSubscriptionToSdl(restSubId string, restSubs *RESTSubscription) error {
@@ -57,7 +59,7 @@ func (c *Control) WriteRESTSubscriptionToSdl(restSubId string, restSubs *RESTSub
 		return fmt.Errorf("SDL: WriteSubscriptionToSdl() json.Marshal error: %s", err.Error())
 	}
 
-	if err = c.restSubsDb.Set(restSubId, jsonData); err != nil {
+	if err = c.restSubsDb.Set(restSubSdlNs, restSubId, jsonData); err != nil {
 		c.UpdateCounter(cSDLWriteFailure)
 		return fmt.Errorf("SDL: WriteSubscriptionToSdl(): %s", err.Error())
 	} else {
@@ -70,7 +72,7 @@ func (c *Control) ReadRESTSubscriptionFromSdl(restSubId string) (*RESTSubscripti
 
 	// This function is now just for testing purpose
 	key := restSubId
-	retMap, err := c.restSubsDb.Get([]string{key})
+	retMap, err := c.restSubsDb.Get(restSubSdlNs, []string{key})
 	if err != nil {
 		c.UpdateCounter(cSDLReadFailure)
 		return nil, fmt.Errorf("SDL: ReadSubscriptionFromSdl(): %s", err.Error())
@@ -116,7 +118,7 @@ func (c *Control) CreateRESTSubscription(restSubscriptionInfo *RESTSubscriptionI
 func (c *Control) RemoveRESTSubscriptionFromSdl(restSubId string) error {
 
 	key := restSubId
-	if err := c.restSubsDb.Remove([]string{key}); err != nil {
+	if err := c.restSubsDb.Remove(restSubSdlNs, []string{key}); err != nil {
 		return fmt.Errorf("SDL: RemoveSubscriptionfromSdl(): %s\n", err.Error())
 	} else {
 		xapp.Logger.Debug("SDL: Subscription removed from restSubsDb. restSubId = %v", restSubId)
@@ -128,7 +130,7 @@ func (c *Control) ReadAllRESTSubscriptionsFromSdl() (map[string]*RESTSubscriptio
 
 	retMap := make(map[string]*RESTSubscription)
 	// Get all keys
-	keys, err := c.restSubsDb.GetAll()
+	keys, err := c.restSubsDb.GetAll(restSubSdlNs)
 	if err != nil {
 		c.UpdateCounter(cSDLReadFailure)
 		return nil, fmt.Errorf("SDL: ReadAllSubscriptionsFromSdl(), GetAll(). Error while reading REST subscriptions keys from DBAAS %s\n", err.Error())
@@ -139,7 +141,7 @@ func (c *Control) ReadAllRESTSubscriptionsFromSdl() (map[string]*RESTSubscriptio
 	}
 
 	// Get all subscriptionInfos
-	iRESTSubscriptionMap, err := c.restSubsDb.Get(keys)
+	iRESTSubscriptionMap, err := c.restSubsDb.Get(restSubSdlNs, keys)
 	if err != nil {
 		c.UpdateCounter(cSDLReadFailure)
 		return nil, fmt.Errorf("SDL: ReadAllSubscriptionsFromSdl(), Get():  Error while reading REST subscriptions from DBAAS %s\n", err.Error())
@@ -166,11 +168,11 @@ func (c *Control) ReadAllRESTSubscriptionsFromSdl() (map[string]*RESTSubscriptio
 
 func (c *Control) RemoveAllRESTSubscriptionsFromSdl() error {
 
-	if err := c.restSubsDb.RemoveAll(); err != nil {
+	if err := c.restSubsDb.RemoveAll(restSubSdlNs); err != nil {
 		c.UpdateCounter(cSDLRemoveFailure)
 		return fmt.Errorf("SDL: RemoveAllSubscriptionsFromSdl(): %s\n", err.Error())
 	} else {
-		xapp.Logger.Debug("SDL: All subscriptions removed from e2SubsDb")
+		xapp.Logger.Debug("SDL: All subscriptions removed from restSubsDb")
 	}
 	return nil
 }

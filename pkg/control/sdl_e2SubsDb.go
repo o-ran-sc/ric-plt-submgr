@@ -29,6 +29,8 @@ import (
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 )
 
+const e2SubSdlNs = "submgr_e2SubsDb"
+
 type SubscriptionInfo struct {
 	Valid        bool
 	ReqId        RequestId
@@ -41,7 +43,7 @@ type SubscriptionInfo struct {
 }
 
 func CreateSdl() Sdlnterface {
-	return sdl.NewSdlInstance("submgr_e2SubsDb", sdl.NewDatabase())
+	return sdl.NewSyncStorage()
 }
 
 func (c *Control) WriteSubscriptionToSdl(subId uint32, subs *Subscription) error {
@@ -66,7 +68,7 @@ func (c *Control) WriteSubscriptionToSdl(subId uint32, subs *Subscription) error
 		return fmt.Errorf("SDL: WriteSubscriptionToSdl() json.Marshal error: %s", err.Error())
 	}
 
-	if err = c.e2SubsDb.Set(strconv.FormatUint(uint64(subId), 10), jsonData); err != nil {
+	if err = c.e2SubsDb.Set(e2SubSdlNs, strconv.FormatUint(uint64(subId), 10), jsonData); err != nil {
 		c.UpdateCounter(cSDLWriteFailure)
 		return fmt.Errorf("SDL: WriteSubscriptionToSdl(): %s", err.Error())
 	} else {
@@ -79,7 +81,7 @@ func (c *Control) ReadSubscriptionFromSdl(subId uint32) (*Subscription, error) {
 
 	// This function is now just for testing purpose
 	key := strconv.FormatUint(uint64(subId), 10)
-	retMap, err := c.e2SubsDb.Get([]string{key})
+	retMap, err := c.e2SubsDb.Get(e2SubSdlNs, []string{key})
 	if err != nil {
 		c.UpdateCounter(cSDLReadFailure)
 		return nil, fmt.Errorf("SDL: ReadSubscriptionFromSdl(): %s", err.Error())
@@ -138,7 +140,7 @@ func (c *Control) CreateSubscription(subscriptionInfo *SubscriptionInfo, jsonSub
 func (c *Control) RemoveSubscriptionFromSdl(subId uint32) error {
 
 	key := strconv.FormatUint(uint64(subId), 10)
-	if err := c.e2SubsDb.Remove([]string{key}); err != nil {
+	if err := c.e2SubsDb.Remove(e2SubSdlNs, []string{key}); err != nil {
 		return fmt.Errorf("SDL: RemoveSubscriptionfromSdl(): %s\n", err.Error())
 	} else {
 		xapp.Logger.Debug("SDL: Subscription removed from e2SubsDb. subId = %v", subId)
@@ -157,7 +159,7 @@ func (c *Control) ReadAllSubscriptionsFromSdl() ([]uint32, map[uint32]*Subscript
 
 	retMap := make(map[uint32]*Subscription)
 	// Get all keys
-	keys, err := c.e2SubsDb.GetAll()
+	keys, err := c.e2SubsDb.GetAll(e2SubSdlNs)
 	if err != nil {
 		c.UpdateCounter(cSDLReadFailure)
 		return nil, nil, fmt.Errorf("SDL: ReadAllSubscriptionsFromSdl(), GetAll(). Error while reading E2 subscriptions  keys from DBAAS %s\n", err.Error())
@@ -168,7 +170,7 @@ func (c *Control) ReadAllSubscriptionsFromSdl() ([]uint32, map[uint32]*Subscript
 	}
 
 	// Get all subscriptionInfos
-	iSubscriptionMap, err := c.e2SubsDb.Get(keys)
+	iSubscriptionMap, err := c.e2SubsDb.Get(e2SubSdlNs, keys)
 	if err != nil {
 		c.UpdateCounter(cSDLReadFailure)
 		return nil, nil, fmt.Errorf("SDL: ReadAllSubscriptionsFromSdl(), Get():  Error while reading E2 subscriptions from DBAAS %s\n", err.Error())
@@ -213,7 +215,7 @@ func removeNumber(s []uint32, removedNum uint32) ([]uint32, error) {
 }
 func (c *Control) RemoveAllSubscriptionsFromSdl() error {
 
-	if err := c.e2SubsDb.RemoveAll(); err != nil {
+	if err := c.e2SubsDb.RemoveAll(e2SubSdlNs); err != nil {
 		c.UpdateCounter(cSDLRemoveFailure)
 		return fmt.Errorf("SDL: RemoveAllSubscriptionsFromSdl(): %s\n", err.Error())
 	} else {
