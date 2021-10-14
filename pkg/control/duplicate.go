@@ -30,24 +30,24 @@ import (
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 )
 
-type retransEntry struct {
+type RetransEntry struct {
 	restSubsId string
 	startTime  time.Time
 }
 
-type duplicateCtrl struct {
+type DuplicateCtrl struct {
 	mutex              sync.Mutex
-	ongoingRequestMap  map[string]retransEntry
+	ongoingRequestMap  map[string]RetransEntry
 	previousRequestMap map[string]string
 	collCount          int
 }
 
-func (d *duplicateCtrl) Init() {
-	d.ongoingRequestMap = make(map[string]retransEntry)
+func (d *DuplicateCtrl) Init() {
+	d.ongoingRequestMap = make(map[string]RetransEntry)
 	d.previousRequestMap = make(map[string]string)
 }
 
-func (d *duplicateCtrl) SetMd5sumFromLastOkRequest(restSubsId string, md5sum string) {
+func (d *DuplicateCtrl) SetMd5sumFromLastOkRequest(restSubsId string, md5sum string) {
 
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
@@ -74,7 +74,7 @@ func (d *duplicateCtrl) SetMd5sumFromLastOkRequest(restSubsId string, md5sum str
 	d.previousRequestMap[md5sum] = restSubsId
 }
 
-func (d *duplicateCtrl) GetLastKnownRestSubsIdBasedOnMd5sum(md5sum string) (string, bool) {
+func (d *DuplicateCtrl) GetLastKnownRestSubsIdBasedOnMd5sum(md5sum string) (string, bool) {
 
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
@@ -88,7 +88,7 @@ func (d *duplicateCtrl) GetLastKnownRestSubsIdBasedOnMd5sum(md5sum string) (stri
 	return m, e
 }
 
-func (d *duplicateCtrl) DeleteLastKnownRestSubsIdBasedOnMd5sum(md5sum string) {
+func (d *DuplicateCtrl) DeleteLastKnownRestSubsIdBasedOnMd5sum(md5sum string) {
 
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
@@ -121,7 +121,7 @@ func CalculateRequestMd5sum(payload interface{}) (string, error) {
 	return hex.EncodeToString(hash[:]), nil
 }
 
-func (d *duplicateCtrl) IsDuplicateToOngoingTransaction(restSubsId string, md5sum string) bool {
+func (d *DuplicateCtrl) IsDuplicateToOngoingTransaction(restSubsId string, md5sum string) bool {
 
 	if md5sum == "" {
 		return false
@@ -138,7 +138,7 @@ func (d *duplicateCtrl) IsDuplicateToOngoingTransaction(restSubsId string, md5su
 		return true
 	}
 
-	entry = retransEntry{restSubsId: restSubsId, startTime: time.Now()}
+	entry = RetransEntry{restSubsId: restSubsId, startTime: time.Now()}
 
 	xapp.Logger.Debug("No collision detected against ongoing transaction. Added md5sum %s for restSubsId %s at %s\n", md5sum, entry.restSubsId, entry.startTime)
 
@@ -147,7 +147,7 @@ func (d *duplicateCtrl) IsDuplicateToOngoingTransaction(restSubsId string, md5su
 	return false
 }
 
-func (d *duplicateCtrl) TransactionComplete(md5sum string) error {
+func (d *DuplicateCtrl) TransactionComplete(md5sum string) error {
 
 	if md5sum == "" {
 		return nil
@@ -159,7 +159,7 @@ func (d *duplicateCtrl) TransactionComplete(md5sum string) error {
 	return d.removeOngoingTransaction(md5sum)
 }
 
-func (d *duplicateCtrl) removeOngoingTransaction(md5sum string) error {
+func (d *DuplicateCtrl) removeOngoingTransaction(md5sum string) error {
 
 	entry, present := d.ongoingRequestMap[md5sum]
 

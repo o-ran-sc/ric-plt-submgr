@@ -72,22 +72,22 @@ var waitRouteCleanup_ms time.Duration
 var e2tMaxSubReqTryCount uint64    // Initial try + retry
 var e2tMaxSubDelReqTryCount uint64 // Initial try + retry
 var readSubsFromDb string
-var restDuplicateCtrl duplicateCtrl
 var dbRetryForever string
 var dbTryCount int
 
 type Control struct {
 	*xapp.RMRClient
-	e2ap          *E2ap
-	registry      *Registry
-	tracker       *Tracker
-	e2SubsDb      Sdlnterface
-	restSubsDb    Sdlnterface
-	CntRecvMsg    uint64
-	ResetTestFlag bool
-	Counters      map[string]xapp.Counter
-	LoggerLevel   int
-	UTTesting     bool
+	e2ap              *E2ap
+	registry          *Registry
+	tracker           *Tracker
+	restDuplicateCtrl *DuplicateCtrl
+	e2SubsDb          Sdlnterface
+	restSubsDb        Sdlnterface
+	CntRecvMsg        uint64
+	ResetTestFlag     bool
+	Counters          map[string]xapp.Counter
+	LoggerLevel       int
+	UTTesting         bool
 }
 
 type RMRMeid struct {
@@ -133,13 +133,17 @@ func NewControl() *Control {
 	tracker := new(Tracker)
 	tracker.Init()
 
+	restDuplicateCtrl := new(DuplicateCtrl)
+	restDuplicateCtrl.Init()
+
 	c := &Control{e2ap: new(E2ap),
-		registry:    registry,
-		tracker:     tracker,
-		e2SubsDb:    CreateSdl(),
-		restSubsDb:  CreateRESTSdl(),
-		Counters:    xapp.Metric.RegisterCounterGroup(GetMetricsOpts(), "SUBMGR"),
-		LoggerLevel: 3,
+		registry:          registry,
+		tracker:           tracker,
+		restDuplicateCtrl: restDuplicateCtrl,
+		e2SubsDb:          CreateSdl(),
+		restSubsDb:        CreateRESTSdl(),
+		Counters:          xapp.Metric.RegisterCounterGroup(GetMetricsOpts(), "SUBMGR"),
+		LoggerLevel:       4,
 	}
 	c.ReadConfigParameters("")
 
@@ -148,17 +152,16 @@ func NewControl() *Control {
 	xapp.Resource.InjectRoute("/ric/v1/restsubscriptions", c.GetAllRestSubscriptions, "GET")
 	xapp.Resource.InjectRoute("/ric/v1/symptomdata", c.SymptomDataHandler, "GET")
 
-	go xapp.Subscription.Listen(c.RESTSubscriptionHandler, c.RESTQueryHandler, c.RESTSubscriptionDeleteHandler)
-
 	if readSubsFromDb == "false" {
 		return c
 	}
 
-	restDuplicateCtrl.Init()
-
 	// Read subscriptions from db
 	c.ReadE2Subscriptions()
 	c.ReadRESTSubscriptions()
+
+	go xapp.Subscription.Listen(c.RESTSubscriptionHandler, c.RESTQueryHandler, c.RESTSubscriptionDeleteHandler)
+
 	return c
 }
 
@@ -325,7 +328,7 @@ func (c *Control) GetOrCreateRestSubscription(p *models.SubscriptionParams, md5s
 	var restSubscription *RESTSubscription
 	var err error
 
-	prevRestSubsId, exists := restDuplicateCtrl.GetLastKnownRestSubsIdBasedOnMd5sum(md5sum)
+	prevRestSubsId, exists := c.restDuplicateCtrl.GetLastKnownRestSubsIdBasedOnMd5sum(md5sum)
 	if p.SubscriptionID == "" {
 		// Subscription does not contain REST subscription Id
 		if exists {
@@ -340,7 +343,7 @@ func (c *Control) GetOrCreateRestSubscription(p *models.SubscriptionParams, md5s
 				}
 			} else {
 				xapp.Logger.Debug("None existing restSubId %s referred by MD5sum %s for a request without subscription ID - deleting cached entry", prevRestSubsId, md5sum)
-				restDuplicateCtrl.DeleteLastKnownRestSubsIdBasedOnMd5sum(md5sum)
+				c.restDuplicateCtrl.DeleteLastKnownRestSubsIdBasedOnMd5sum(md5sum)
 			}
 		}
 
@@ -416,13 +419,13 @@ func (c *Control) RESTSubscriptionHandler(params interface{}) (*models.Subscript
 	err = c.e2ap.FillSubscriptionReqMsgs(params, &subReqList, restSubscription)
 	if err != nil {
 		xapp.Logger.Error("%s", err.Error())
-		restDuplicateCtrl.DeleteLastKnownRestSubsIdBasedOnMd5sum(md5sum)
+		c.restDuplicateCtrl.DeleteLastKnownRestSubsIdBasedOnMd5sum(md5sum)
 		c.registry.DeleteRESTSubscription(&restSubId)
 		c.UpdateCounter(cRestSubFailToXapp)
 		return nil, common.SubscribeBadRequestCode
 	}
 
-	duplicate := restDuplicateCtrl.IsDuplicateToOngoingTransaction(restSubId, md5sum)
+	duplicate := c.restDuplicateCtrl.IsDuplicateToOngoingTransaction(restSubId, md5sum)
 	if duplicate {
 		err := fmt.Errorf("Retransmission blocker direct ACK for request of restSubsId %s restSubId MD5sum %s as retransmission", restSubId, md5sum)
 		xapp.Logger.Debug("%s", err)
@@ -491,7 +494,7 @@ func (c *Control) processSubscriptionRequests(restSubscription *RESTSubscription
 	var e2EventInstanceID int64
 	errorInfo := &ErrorInfo{}
 
-	defer restDuplicateCtrl.SetMd5sumFromLastOkRequest(*restSubId, md5sum)
+	defer c.restDuplicateCtrl.SetMd5sumFromLastOkRequest(*restSubId, md5sum)
 
 	for index := 0; index < len(subReqList.E2APSubscriptionRequests); index++ {
 		subReqMsg := subReqList.E2APSubscriptionRequests[index]
@@ -707,7 +710,7 @@ func (c *Control) RESTSubscriptionDeleteHandler(restSubId string) int {
 			restSubscription.DeleteXappIdToE2Id(xAppEventInstanceID)
 			restSubscription.DeleteE2InstanceId(instanceId)
 		}
-		restDuplicateCtrl.DeleteLastKnownRestSubsIdBasedOnMd5sum(restSubscription.lastReqMd5sum)
+		c.restDuplicateCtrl.DeleteLastKnownRestSubsIdBasedOnMd5sum(restSubscription.lastReqMd5sum)
 		c.registry.DeleteRESTSubscription(&restSubId)
 		c.RemoveRESTSubscriptionFromDb(restSubId)
 	}()
