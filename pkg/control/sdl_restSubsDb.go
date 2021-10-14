@@ -94,7 +94,7 @@ func (c *Control) ReadRESTSubscriptionFromSdl(restSubId string) (*RESTSubscripti
 
 		restSubs = c.CreateRESTSubscription(restSubscriptionInfo, &jsonSubscriptionInfo)
 
-		restDuplicateCtrl.SetMd5sumFromLastOkRequest(restSubId, restSubs.lastReqMd5sum)
+		c.restDuplicateCtrl.SetMd5sumFromLastOkRequest(restSubId, restSubs.lastReqMd5sum)
 	}
 	return restSubs, nil
 }

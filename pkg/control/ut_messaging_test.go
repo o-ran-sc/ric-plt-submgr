@@ -39,7 +39,7 @@ func TestSuiteSetup(t *testing.T) {
 
 	SetPackerIf(e2ap_wrapper.NewUtAsn1E2APPacker())
 
-	restDuplicateCtrl.Init()
+	mainCtrl.c.restDuplicateCtrl.Init()
 
 }
 

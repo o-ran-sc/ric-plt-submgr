@@ -36,7 +36,7 @@ func TestDefaultUseCase(t *testing.T) {
 
 	fmt.Println("#####################  TestRetransmissionChecker  #####################")
 
-	var retransCtrl duplicateCtrl
+	var retransCtrl DuplicateCtrl
 	restSubdId := "898dfkjashntgkjasgho4"
 	var name string = "yolo"
 	var someVal int64 = 98765
@@ -61,7 +61,7 @@ func TestDuplicate(t *testing.T) {
 
 	fmt.Println("#####################  TestDuplicate  #####################")
 
-	var retransCtrl duplicateCtrl
+	var retransCtrl DuplicateCtrl
 	restSubdId := "898dfkjashntgkjasgho4"
 	var name string = "yolo"
 	var someVal int64 = 98765
@@ -101,7 +101,7 @@ func TestNoneDuplicate(t *testing.T) {
 
 	fmt.Println("#####################  TestNoneDuplicate  #####################")
 
-	var retransCtrl duplicateCtrl
+	var retransCtrl DuplicateCtrl
 	restSubdId := "898dfkjashntgkjasgho4"
 	var name string = "yolo"
 	var someVal int64 = 98765
@@ -142,7 +142,7 @@ func TestEncodingError(t *testing.T) {
 
 	fmt.Println("#####################  TestEncodingError  #####################")
 
-	var retransCtrl duplicateCtrl
+	var retransCtrl DuplicateCtrl
 	var data interface{}
 
 	retransCtrl.Init()
@@ -155,7 +155,7 @@ func TestRemovalError(t *testing.T) {
 
 	fmt.Println("#####################  TestRemovalError  #####################")
 
-	var retransCtrl duplicateCtrl
+	var retransCtrl DuplicateCtrl
 	restSubdId := "898dfkjashntgkjasgho4"
 	var data testData
 
@@ -179,7 +179,7 @@ func TestXappRestReqDuplicate(t *testing.T) {
 
 	fmt.Println("#####################  TestXappRestReqDuplicate  #####################")
 
-	var retransCtrl duplicateCtrl
+	var retransCtrl DuplicateCtrl
 
 	msg1 := new(models.SubscriptionParams)
 	msg2 := new(models.SubscriptionParams)
