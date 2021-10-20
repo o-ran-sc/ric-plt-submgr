@@ -25,9 +25,15 @@
 ###########################################################
 FROM nexus3.o-ran-sc.org:10002/o-ran-sc/bldr-ubuntu18-c-go:1.9.0 as submgrcore
 
-ARG GOVERSION=1.14
+ARG g14="1.14.4"
+ARG GOVERSION="1.14"
+RUN wget -nv https://dl.google.com/go/go${g14}.linux-amd64.tar.gz \
+     && tar -xf go${g14}.linux-amd64.tar.gz \
+     && mv go /opt/go/${GOVERSION} \
+     && rm -f go*.gz
 
-ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin:/opt/go/${GOVERSION}/bin:/root/go/bin
+ENV DEFAULTPATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ENV PATH=$DEFAULTPATH:/usr/local/go/bin:/opt/go/${GOVERSION}/bin:/root/go/bin
 
 # Update CA certificates
 RUN apt update && apt install --reinstall -y \
