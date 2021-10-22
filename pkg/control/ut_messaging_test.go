@@ -20,6 +20,7 @@
 package control
 
 import (
+	//"os"
 	"strings"
 	"testing"
 	"time"
@@ -31,9 +32,28 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestRanStatusChangeViaSDLNotification(t *testing.T) {
+
+	// This initialization test case could be moved somewhere else
+	mainCtrl.c.e2IfState.ReadE2ConfigurationFromRnib()
+	mainCtrl.c.e2IfState.SubscribeChannels()
+	if err := mainCtrl.c.e2IfStateDb.XappRnibStoreAndPublish("RAN_CONNECTION_STATUS_CHANGE", "RAN_NAME_1_CONNECTED", "key1", "data1"); err != nil {
+		t.Errorf("XappRnibStoreAndPublish failed: %v", err)
+	}
+
+	if err := mainCtrl.c.e2IfStateDb.XappRnibStoreAndPublish("RAN_CONNECTION_STATUS_CHANGE", "RAN_NAME_11_CONNECTED", "key1", "data1"); err != nil {
+		t.Errorf("XappRnibStoreAndPublish failed: %v", err)
+	}
+
+	if err := mainCtrl.c.e2IfStateDb.XappRnibStoreAndPublish("RAN_CONNECTION_STATUS_CHANGE", "RAN_NAME_2_CONNECTED", "key1", "data1"); err != nil {
+		t.Errorf("XappRnibStoreAndPublish failed: %v", err)
+	}
+	time.Sleep(time.Duration(2) * time.Second)
+}
+
 func TestSuiteSetup(t *testing.T) {
-	// The effect of this call shall endure thgough the UT suite!
-	// If this causes any issues, the previout interface can be restored
+	// The effect of this call shall endure though the UT suite!
+	// If this causes any issues, the previous interface can be restored
 	// like this:git log
 	// SetPackerIf(e2ap_wrapper.NewAsn1E2APPacker())
 
