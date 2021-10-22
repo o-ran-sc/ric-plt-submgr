@@ -81,6 +81,8 @@ type Control struct {
 	registry          *Registry
 	tracker           *Tracker
 	restDuplicateCtrl *DuplicateCtrl
+	e2IfState         *E2IfState
+	e2IfStateDb       XappRnibInterface
 	e2SubsDb          Sdlnterface
 	restSubsDb        Sdlnterface
 	CntRecvMsg        uint64
@@ -136,15 +138,21 @@ func NewControl() *Control {
 	restDuplicateCtrl := new(DuplicateCtrl)
 	restDuplicateCtrl.Init()
 
+	e2IfState := new(E2IfState)
+
 	c := &Control{e2ap: new(E2ap),
 		registry:          registry,
 		tracker:           tracker,
 		restDuplicateCtrl: restDuplicateCtrl,
+		e2IfState:         e2IfState,
+		e2IfStateDb:       CreateXappRnibIfInstance(),
 		e2SubsDb:          CreateSdl(),
 		restSubsDb:        CreateRESTSdl(),
 		Counters:          xapp.Metric.RegisterCounterGroup(GetMetricsOpts(), "SUBMGR"),
 		LoggerLevel:       4,
 	}
+
+	e2IfState.Init(c)
 	c.ReadConfigParameters("")
 
 	// Register REST handler for testing support
@@ -414,6 +422,12 @@ func (c *Control) RESTSubscriptionHandler(params interface{}) (*models.Subscript
 		return nil, common.SubscribeNotFoundCode
 	}
 
+	if c.e2IfState.IsE2ConnectionUp(p.Meid) == false {
+		xapp.Logger.Error("No E2 connection for ranName %v", *p.Meid)
+		c.UpdateCounter(cRESTReqRejDueE2Down)
+		return nil, common.SubscribeServiceUnavailableCode
+	}
+
 	subResp.SubscriptionID = &restSubId
 	subReqList := e2ap.SubscriptionRequestList{}
 	err = c.e2ap.FillSubscriptionReqMsgs(params, &subReqList, restSubscription)
@@ -568,13 +582,21 @@ func (c *Control) handleSubscriptionRequest(trans *TransactionXapp, subReqMsg *e
 	//
 	go c.handleSubscriptionCreate(subs, trans, e2SubscriptionDirectives)
 	event, _ := trans.WaitEvent(0) //blocked wait as timeout is handled in subs side
+	subs.Ongoing = false
 
 	err = nil
 	if event != nil {
 		switch themsg := event.(type) {
 		case *e2ap.E2APSubscriptionResponse:
 			trans.Release()
-			return themsg, &errorInfo, nil
+			if c.e2IfState.isNodeBActive(subs.Meid.RanName) == true {
+				return themsg, &errorInfo, nil
+			} else {
+				c.registry.RemoveFromSubscription(subs, trans, waitRouteCleanup_ms, c)
+				err = fmt.Errorf("E2 interface down")
+				errorInfo.SetInfo(err.Error(), models.SubscriptionInstanceErrorSourceE2Node, "")
+				return nil, &errorInfo, err
+			}
 		case *e2ap.E2APSubscriptionFailure:
 			err = fmt.Errorf("E2 SubscriptionFailure received")
 			errorInfo.SetInfo(err.Error(), models.SubscriptionInstanceErrorSourceE2Node, "")
@@ -750,6 +772,7 @@ func (c *Control) SubscriptionDeleteHandler(restSubId *string, endPoint *string,
 	//
 	// Wake subs delete
 	//
+	subs.Ongoing = true
 	go c.handleSubscriptionDelete(subs, trans)
 	trans.WaitEvent(0) //blocked wait as timeout is handled in subs side
 

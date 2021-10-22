@@ -20,27 +20,50 @@
 package control
 
 import (
+	//"os"
 	"strings"
 	"testing"
 	"time"
 
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap_wrapper"
+	"gerrit.o-ran-sc.org/r/ric-plt/nodeb-rnib.git/entities"
 	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/teststube2ap"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestSuiteSetup(t *testing.T) {
-	// The effect of this call shall endure thgough the UT suite!
-	// If this causes any issues, the previout interface can be restored
+	// The effect of this call shall endure though the UT suite!
+	// If this causes any issues, the previous interface can be restored
 	// like this:git log
 	// SetPackerIf(e2ap_wrapper.NewAsn1E2APPacker())
 
 	SetPackerIf(e2ap_wrapper.NewUtAsn1E2APPacker())
-
 	mainCtrl.c.restDuplicateCtrl.Init()
 
+}
+func TestRanStatusChangeViaSDLNotification(t *testing.T) {
+
+	// Current UT test cases use these ran names
+	xappRnibMock.CreateGnb("RAN_NAME_1", entities.ConnectionStatus_CONNECTED)
+	xappRnibMock.CreateGnb("RAN_NAME_11", entities.ConnectionStatus_CONNECTED)
+	xappRnibMock.CreateGnb("RAN_NAME_2", entities.ConnectionStatus_CONNECTED)
+
+	mainCtrl.c.e2IfState.ReadE2ConfigurationFromRnib()
+	mainCtrl.c.e2IfState.SubscribeChannels()
+	if err := mainCtrl.c.e2IfStateDb.XappRnibStoreAndPublish("RAN_CONNECTION_STATUS_CHANGE", "RAN_NAME_1_CONNECTED", "key1", "data1"); err != nil {
+		t.Errorf("XappRnibStoreAndPublish failed: %v", err)
+	}
+
+	if err := mainCtrl.c.e2IfStateDb.XappRnibStoreAndPublish("RAN_CONNECTION_STATUS_CHANGE", "RAN_NAME_11_CONNECTED", "key1", "data1"); err != nil {
+		t.Errorf("XappRnibStoreAndPublish failed: %v", err)
+	}
+
+	if err := mainCtrl.c.e2IfStateDb.XappRnibStoreAndPublish("RAN_CONNECTION_STATUS_CHANGE", "RAN_NAME_2_CONNECTED", "key1", "data1"); err != nil {
+		t.Errorf("XappRnibStoreAndPublish failed: %v", err)
+	}
+	//time.Sleep(time.Duration(2) * time.Second)
 }
 
 //-----------------------------------------------------------------------------

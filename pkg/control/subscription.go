@@ -30,23 +30,25 @@ import (
 //
 //-----------------------------------------------------------------------------
 type Subscription struct {
-	mutex            sync.Mutex                    // Lock
-	valid            bool                          // valid
-	registry         *Registry                     // Registry
-	ReqId            RequestId                     // ReqId (Requestor Id + Seq Nro a.k.a subsid)
-	Meid             *xapp.RMRMeid                 // Meid/RanName
-	EpList           xapp.RmrEndpointList          // Endpoints
-	RMRRouteCreated  bool                          // Does subscription have RMR route
-	TransLock        sync.Mutex                    // Lock transactions, only one executed per time for subs
-	TheTrans         TransactionIf                 // Ongoing transaction
-	SubReqMsg        *e2ap.E2APSubscriptionRequest // Subscription information
-	SubRFMsg         interface{}                   // Subscription information
-	PolicyUpdate     bool                          // This is true when policy subscrition is being updated. Used not to send delete for update after timeout or restart
-	RetryFromXapp    bool                          // Retry form xApp for subscription that already exist
-	SubRespRcvd      bool                          // Subscription response received
-	DeleteFromDb     bool                          // Delete subscription from db
-	NoRespToXapp     bool                          // Send no response for subscription delete to xApp after restart
-	DoNotWaitSubResp bool                          // Test flag. Response is not waited for Subscription Request
+	mutex              sync.Mutex                    // Lock
+	valid              bool                          // valid
+	registry           *Registry                     // Registry
+	ReqId              RequestId                     // ReqId (Requestor Id + Seq Nro a.k.a subsid)
+	Meid               *xapp.RMRMeid                 // Meid/RanName
+	EpList             xapp.RmrEndpointList          // Endpoints
+	RMRRouteCreated    bool                          // Does subscription have RMR route
+	TransLock          sync.Mutex                    // Lock transactions, only one executed per time for subs
+	TheTrans           TransactionIf                 // Ongoing transaction
+	SubReqMsg          *e2ap.E2APSubscriptionRequest // Subscription information
+	SubRFMsg           interface{}                   // Subscription information
+	Ongoing            bool                          // Subscription create or delete process is ongoing
+	DeleteWhenComplete bool                          // Subscription record should deleted when completed due E2 interface went down
+	PolicyUpdate       bool                          // This is true when policy subscrition is being updated. Used not to send delete for update after timeout or restart
+	RetryFromXapp      bool                          // Retry form xApp for subscription that already exist
+	SubRespRcvd        bool                          // Subscription response received
+	DeleteFromDb       bool                          // Delete subscription from db
+	NoRespToXapp       bool                          // Send no response for subscription delete to xApp after restart
+	DoNotWaitSubResp   bool                          // Test flag. Response is not waited for Subscription Request
 }
 
 func (s *Subscription) String() string {
