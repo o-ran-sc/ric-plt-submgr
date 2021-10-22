@@ -71,6 +71,7 @@ var e2tRecvMsgTimeout time.Duration
 var waitRouteCleanup_ms time.Duration
 var e2tMaxSubReqTryCount uint64    // Initial try + retry
 var e2tMaxSubDelReqTryCount uint64 // Initial try + retry
+var checkE2State string
 var readSubsFromDb string
 var dbRetryForever string
 var dbTryCount int
@@ -81,6 +82,8 @@ type Control struct {
 	registry          *Registry
 	tracker           *Tracker
 	restDuplicateCtrl *DuplicateCtrl
+	e2IfState         *E2IfState
+	e2IfStateDb       XappRnibInterface
 	e2SubsDb          Sdlnterface
 	restSubsDb        Sdlnterface
 	CntRecvMsg        uint64
@@ -136,15 +139,21 @@ func NewControl() *Control {
 	restDuplicateCtrl := new(DuplicateCtrl)
 	restDuplicateCtrl.Init()
 
+	e2IfState := new(E2IfState)
+
 	c := &Control{e2ap: new(E2ap),
 		registry:          registry,
 		tracker:           tracker,
 		restDuplicateCtrl: restDuplicateCtrl,
+		e2IfState:         e2IfState,
+		e2IfStateDb:       CreateXappRnibIfInstance(),
 		e2SubsDb:          CreateSdl(),
 		restSubsDb:        CreateRESTSdl(),
 		Counters:          xapp.Metric.RegisterCounterGroup(GetMetricsOpts(), "SUBMGR"),
 		LoggerLevel:       4,
 	}
+
+	e2IfState.Init(c)
 	c.ReadConfigParameters("")
 
 	// Register REST handler for testing support
@@ -237,48 +246,54 @@ func (c *Control) ReadConfigParameters(f string) {
 	if e2tSubReqTimeout == 0 {
 		e2tSubReqTimeout = 2000 * 1000000
 	}
-	xapp.Logger.Debug("e2tSubReqTimeout %v", e2tSubReqTimeout)
+	xapp.Logger.Debug("e2tSubReqTimeout %v=", e2tSubReqTimeout)
 
 	e2tSubDelReqTime = viper.GetDuration("controls.e2tSubDelReqTime_ms") * 1000000
 	if e2tSubDelReqTime == 0 {
 		e2tSubDelReqTime = 2000 * 1000000
 	}
-	xapp.Logger.Debug("e2tSubDelReqTime %v", e2tSubDelReqTime)
+	xapp.Logger.Debug("e2tSubDelReqTime %v=", e2tSubDelReqTime)
 	e2tRecvMsgTimeout = viper.GetDuration("controls.e2tRecvMsgTimeout_ms") * 1000000
 	if e2tRecvMsgTimeout == 0 {
 		e2tRecvMsgTimeout = 2000 * 1000000
 	}
-	xapp.Logger.Debug("e2tRecvMsgTimeout %v", e2tRecvMsgTimeout)
+	xapp.Logger.Debug("e2tRecvMsgTimeout %v=", e2tRecvMsgTimeout)
 
 	e2tMaxSubReqTryCount = viper.GetUint64("controls.e2tMaxSubReqTryCount")
 	if e2tMaxSubReqTryCount == 0 {
 		e2tMaxSubReqTryCount = 1
 	}
-	xapp.Logger.Debug("e2tMaxSubReqTryCount %v", e2tMaxSubReqTryCount)
+	xapp.Logger.Debug("e2tMaxSubReqTryCount %v=", e2tMaxSubReqTryCount)
 
 	e2tMaxSubDelReqTryCount = viper.GetUint64("controls.e2tMaxSubDelReqTryCount")
 	if e2tMaxSubDelReqTryCount == 0 {
 		e2tMaxSubDelReqTryCount = 1
 	}
-	xapp.Logger.Debug("e2tMaxSubDelReqTryCount %v", e2tMaxSubDelReqTryCount)
+	xapp.Logger.Debug("e2tMaxSubDelReqTryCount %v=", e2tMaxSubDelReqTryCount)
+
+	checkE2State = viper.GetString("controls.checkE2State")
+	if checkE2State == "" {
+		checkE2State = "true"
+	}
+	xapp.Logger.Debug("checkE2State %v=", checkE2State)
 
 	readSubsFromDb = viper.GetString("controls.readSubsFromDb")
 	if readSubsFromDb == "" {
 		readSubsFromDb = "true"
 	}
-	xapp.Logger.Debug("readSubsFromDb %v", readSubsFromDb)
+	xapp.Logger.Debug("readSubsFromDb %v=", readSubsFromDb)
 
 	dbTryCount = viper.GetInt("controls.dbTryCount")
 	if dbTryCount == 0 {
 		dbTryCount = 200
 	}
-	xapp.Logger.Debug("dbTryCount %v", dbTryCount)
+	xapp.Logger.Debug("dbTryCount %v=", dbTryCount)
 
 	dbRetryForever = viper.GetString("controls.dbRetryForever")
 	if dbRetryForever == "" {
 		dbRetryForever = "true"
 	}
-	xapp.Logger.Debug("dbRetryForever %v", dbRetryForever)
+	xapp.Logger.Debug("dbRetryForever %v=", dbRetryForever)
 
 	// Internal cfg parameter, used to define a wait time for RMR route clean-up. None default
 	// value 100ms used currently only in unittests.
@@ -286,7 +301,7 @@ func (c *Control) ReadConfigParameters(f string) {
 	if waitRouteCleanup_ms == 0 {
 		waitRouteCleanup_ms = 5000 * 1000000
 	}
-	xapp.Logger.Debug("waitRouteCleanup %v", waitRouteCleanup_ms)
+	xapp.Logger.Debug("waitRouteCleanup %v=", waitRouteCleanup_ms)
 }
 
 //-------------------------------------------------------------------
@@ -387,6 +402,12 @@ func (c *Control) RESTSubscriptionHandler(params interface{}) (*models.Subscript
 
 	if c.LoggerLevel > 2 {
 		c.PrintRESTSubscriptionRequest(p)
+	}
+
+	if c.e2IfState.IsE2ConnectionUp(p.Meid) == false {
+		xapp.Logger.Error("No E2 connection for ranName %v", *p.Meid)
+		c.UpdateCounter(cRestReqRejDueE2Down)
+		return nil, common.SubscribeServiceUnavailableCode
 	}
 
 	if p.ClientEndpoint == nil {
@@ -566,15 +587,25 @@ func (c *Control) handleSubscriptionRequest(trans *TransactionXapp, subReqMsg *e
 	//
 	// Wake subs request
 	//
+	subs.OngoingReqCount++
 	go c.handleSubscriptionCreate(subs, trans, e2SubscriptionDirectives)
 	event, _ := trans.WaitEvent(0) //blocked wait as timeout is handled in subs side
+	subs.OngoingReqCount--
 
 	err = nil
 	if event != nil {
 		switch themsg := event.(type) {
 		case *e2ap.E2APSubscriptionResponse:
 			trans.Release()
-			return themsg, &errorInfo, nil
+			if c.e2IfState.IsE2ConnectionUp(meid) == true {
+				return themsg, &errorInfo, nil
+			} else {
+				c.registry.RemoveFromSubscription(subs, trans, waitRouteCleanup_ms, c)
+				c.RemoveSubscriptionFromDb(subs)
+				err = fmt.Errorf("E2 interface down")
+				errorInfo.SetInfo(err.Error(), models.SubscriptionInstanceErrorSourceE2Node, "")
+				return nil, &errorInfo, err
+			}
 		case *e2ap.E2APSubscriptionFailure:
 			err = fmt.Errorf("E2 SubscriptionFailure received")
 			errorInfo.SetInfo(err.Error(), models.SubscriptionInstanceErrorSourceE2Node, "")
@@ -638,6 +669,11 @@ func (c *Control) sendUnsuccesfullResponseNotification(restSubId *string, restSu
 
 	c.UpdateCounter(cRestSubFailNotifToXapp)
 	xapp.Subscription.Notify(resp, *clientEndpoint)
+
+	if c.e2IfState.IsE2ConnectionUp(&restSubscription.Meid) == false && restSubscription.SubReqOngoing == false {
+		c.registry.DeleteRESTSubscription(restSubId)
+		c.RemoveRESTSubscriptionFromDb(*restSubId)
+	}
 }
 
 //-------------------------------------------------------------------
@@ -667,6 +703,11 @@ func (c *Control) sendSuccesfullResponseNotification(restSubId *string, restSubs
 
 	c.UpdateCounter(cRestSubNotifToXapp)
 	xapp.Subscription.Notify(resp, *clientEndpoint)
+
+	if c.e2IfState.IsE2ConnectionUp(&restSubscription.Meid) == false && restSubscription.SubReqOngoing == false {
+		c.registry.DeleteRESTSubscription(restSubId)
+		c.RemoveRESTSubscriptionFromDb(*restSubId)
+	}
 }
 
 //-------------------------------------------------------------------
@@ -684,14 +725,17 @@ func (c *Control) RESTSubscriptionDeleteHandler(restSubId string) int {
 		xapp.Logger.Error("%s", err.Error())
 		if restSubscription == nil {
 			// Subscription was not found
+			c.UpdateCounter(cRestSubDelRespToXapp)
 			return common.UnsubscribeNoContentCode
 		} else {
 			if restSubscription.SubReqOngoing == true {
 				err := fmt.Errorf("Handling of the REST Subscription Request still ongoing %s", restSubId)
 				xapp.Logger.Error("%s", err.Error())
+				c.UpdateCounter(cRestSubDelFailToXapp)
 				return common.UnsubscribeBadRequestCode
 			} else if restSubscription.SubDelReqOngoing == true {
 				// Previous request for same restSubId still ongoing
+				c.UpdateCounter(cRestSubDelFailToXapp)
 				return common.UnsubscribeBadRequestCode
 			}
 		}
@@ -716,7 +760,6 @@ func (c *Control) RESTSubscriptionDeleteHandler(restSubId string) int {
 	}()
 
 	c.UpdateCounter(cRestSubDelRespToXapp)
-
 	return common.UnsubscribeNoContentCode
 }
 
@@ -750,8 +793,10 @@ func (c *Control) SubscriptionDeleteHandler(restSubId *string, endPoint *string,
 	//
 	// Wake subs delete
 	//
+	subs.OngoingDelCount++
 	go c.handleSubscriptionDelete(subs, trans)
 	trans.WaitEvent(0) //blocked wait as timeout is handled in subs side
+	subs.OngoingDelCount--
 
 	xapp.Logger.Debug("XAPP-SubDelReq: Handling event %s ", idstring(nil, trans, subs))
 
@@ -891,6 +936,11 @@ func (c *Control) handleXAPPSubscriptionRequest(params *xapp.RMRParams) {
 	xapp.Logger.Debug("MSG from XAPP: %s", params.String())
 	c.UpdateCounter(cSubReqFromXapp)
 
+	if c.e2IfState.IsE2ConnectionUp(&params.Meid.RanName) == false {
+		xapp.Logger.Error("No E2 connection for ranName %v", params.Meid.RanName)
+		return
+	}
+
 	subReqMsg, err := c.e2ap.UnpackSubscriptionRequest(params.Payload)
 	if err != nil {
 		xapp.Logger.Error("XAPP-SubReq: %s", idstring(err, params))
@@ -925,8 +975,10 @@ func (c *Control) handleXAPPSubscriptionRequest(params *xapp.RMRParams) {
 func (c *Control) wakeSubscriptionRequest(subs *Subscription, trans *TransactionXapp) {
 
 	e2SubscriptionDirectives, _ := c.GetE2SubscriptionDirectives(nil)
+	subs.OngoingReqCount++
 	go c.handleSubscriptionCreate(subs, trans, e2SubscriptionDirectives)
 	event, _ := trans.WaitEvent(0) //blocked wait as timeout is handled in subs side
+	subs.OngoingReqCount--
 	var err error
 	if event != nil {
 		switch themsg := event.(type) {
@@ -961,6 +1013,11 @@ func (c *Control) handleXAPPSubscriptionDeleteRequest(params *xapp.RMRParams) {
 	xapp.Logger.Debug("MSG from XAPP: %s", params.String())
 	c.UpdateCounter(cSubDelReqFromXapp)
 
+	if c.e2IfState.IsE2ConnectionUp(&params.Meid.RanName) == false {
+		xapp.Logger.Error("No E2 connection for ranName %v", params.Meid.RanName)
+		return
+	}
+
 	subDelReqMsg, err := c.e2ap.UnpackSubscriptionDeleteRequest(params.Payload)
 	if err != nil {
 		xapp.Logger.Error("XAPP-SubDelReq %s", idstring(err, params))
@@ -989,8 +1046,10 @@ func (c *Control) handleXAPPSubscriptionDeleteRequest(params *xapp.RMRParams) {
 	//
 	// Wake subs delete
 	//
+	subs.OngoingDelCount++
 	go c.handleSubscriptionDelete(subs, trans)
 	trans.WaitEvent(0) //blocked wait as timeout is handled in subs side
+	subs.OngoingDelCount--
 
 	xapp.Logger.Debug("XAPP-SubDelReq: Handling event %s ", idstring(nil, trans, subs))
 

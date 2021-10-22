@@ -7,4 +7,4 @@ project: ric-plt/submgr
 ref: 6c63019f4daa458507decc19f2d742681e2053b4
 containers:
     - name: ric-plt-submgr
-      version: 0.7.1
+      version: 0.7.2

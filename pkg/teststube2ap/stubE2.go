@@ -705,25 +705,25 @@ func (tc *E2Stub) expectNotification(t *testing.T, restSubsId string, expectErro
 	tc.restSubsIdList = []string{restSubsId}
 	xapp.Subscription.SetResponseCB(tc.ListedRestNotifHandler)
 	if tc.requestCount == 0 {
-		tc.TestError(t, "### NO REST notifications SET received for endpoint=%s, request zount ZERO! (%v)", tc.clientEndpoint, tc)
+		tc.TestError(t, "### NO REST notifications SET received for endpoint=%s, request zount ZERO! (%v)", tc.clientEndpoint, *tc)
 	}
 	go func() {
 		select {
 		case e2Ids := <-tc.CallBackListedNotifications:
 			if tc.requestCount == 0 {
-				tc.TestError(t, "### REST notification count unexpectedly ZERO for %s (%v)", restSubsId, tc)
+				tc.TestError(t, "### REST notification count unexpectedly ZERO for %s (%v)", restSubsId, *tc)
 			} else if e2Ids.RestSubsId != restSubsId {
-				tc.TestError(t, "### Unexpected REST notifications received, expected %s bunt got %s instead| (%v)", e2Ids.RestSubsId, restSubsId, tc)
+				tc.TestError(t, "### Unexpected REST notifications received, expected %s bunt got %s instead| (%v)", e2Ids.RestSubsId, restSubsId, *tc)
 			} else if e2Ids.ErrorCause == "" && expectError == "allFail" {
-				tc.TestError(t, "### Unexpected ok cause received from REST notifications |%s:%s| (%v)", e2Ids.RestSubsId, restSubsId, tc)
+				tc.TestError(t, "### Unexpected ok cause received from REST notifications |%s:%s| (%v)", e2Ids.RestSubsId, restSubsId, *tc)
 			} else if e2Ids.ErrorCause != "" && expectError == "allOk" {
-				tc.TestError(t, "### Unexpected ErrorCause: (%s), ErrorSource: (%s), TimeoutType: (%s) received from REST notifications |%s:%s| (%v)", e2Ids.ErrorCause, e2Ids.ErrorSource, e2Ids.TimeoutType, e2Ids.RestSubsId, restSubsId, tc)
+				tc.TestError(t, "### Unexpected ErrorCause: (%s), ErrorSource: (%s), TimeoutType: (%s) received from REST notifications |%s:%s| (%v)", e2Ids.ErrorCause, e2Ids.ErrorSource, e2Ids.TimeoutType, e2Ids.RestSubsId, restSubsId, *tc)
 			} else {
 				tc.requestCount--
 				if tc.requestCount == 0 {
-					tc.Debug("### All expected REST notifications received for %s (%v)", e2Ids.RestSubsId, tc)
+					tc.Debug("### All expected REST notifications received for %s (%v)", e2Ids.RestSubsId, *tc)
 				} else {
-					tc.Debug("### Expected REST notifications received for %s, (%v)", e2Ids.RestSubsId, tc)
+					tc.Debug("### Expected REST notifications received for %s, (%v)", e2Ids.RestSubsId, *tc)
 				}
 				if e2Ids.ErrorCause != "" && expectError == "allFail" {
 					tc.Debug("### REST Notification: RestSubsId: %s, ErrorCause: %s, ErrorSource: (%s), TimeoutType: (%s)", e2Ids.RestSubsId, e2Ids.ErrorCause, e2Ids.ErrorSource, e2Ids.TimeoutType)
@@ -748,10 +748,10 @@ func (tc *E2Stub) WaitRESTNotification(t *testing.T, restSubsId string) uint32 {
 	select {
 	case e2SubsId := <-tc.ListedRESTNotifications:
 		if e2SubsId.RestSubsId == restSubsId {
-			tc.Debug("### Expected REST notifications received %s, e2SubsId %v for endpoint=%s, (%v)", e2SubsId.RestSubsId, e2SubsId.E2SubsId, tc.clientEndpoint, tc)
+			tc.Debug("### Expected REST notifications received %s, e2SubsId %v for endpoint=%v, (%v)", e2SubsId.RestSubsId, e2SubsId.E2SubsId, tc.clientEndpoint, *tc)
 			return e2SubsId.E2SubsId
 		} else {
-			tc.TestError(t, "### Unexpected REST notification %s received, expected %s for endpoint=%s, (%v)", e2SubsId.RestSubsId, restSubsId, tc.clientEndpoint, tc)
+			tc.TestError(t, "### Unexpected REST notification %s received, expected %v for endpoint=%v, (%v)", e2SubsId.RestSubsId, restSubsId, tc.clientEndpoint, *tc)
 			xapp.Logger.Debug("CALL STACK:\n %s", stack)
 			return 0
 		}
@@ -796,7 +796,7 @@ func (tc *E2Stub) WaitAnyRESTNotification(t *testing.T) uint32 {
 func (tc *E2Stub) ListedRestNotifHandler(resp *clientmodel.SubscriptionResponse) {
 
 	if len(tc.restSubsIdList) == 0 {
-		tc.Error("Unexpected listed REST notifications received for endpoint=%s, expected restSubsId list size was ZERO!", tc.clientEndpoint)
+		tc.Error("Unexpected listed REST notifications received for endpoint=%v, expected restSubsId list size was ZERO!", tc.clientEndpoint)
 	} else {
 		for i, subsId := range tc.restSubsIdList {
 			if *resp.SubscriptionID == subsId {
@@ -813,7 +813,7 @@ func (tc *E2Stub) ListedRestNotifHandler(resp *clientmodel.SubscriptionResponse)
 				//				}
 
 				if len(tc.restSubsIdList) == 0 {
-					tc.Debug("All listed REST notifications received for endpoint=%s", tc.clientEndpoint)
+					tc.Debug("All listed REST notifications received for endpoint=%v", tc.clientEndpoint)
 				}
 
 				return

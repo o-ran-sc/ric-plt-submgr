@@ -20,27 +20,298 @@
 package control
 
 import (
+	//"os"
 	"strings"
 	"testing"
 	"time"
 
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap_wrapper"
+	"gerrit.o-ran-sc.org/r/ric-plt/nodeb-rnib.git/entities"
 	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/teststube2ap"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestSuiteSetup(t *testing.T) {
-	// The effect of this call shall endure thgough the UT suite!
-	// If this causes any issues, the previout interface can be restored
+	// The effect of this call shall endure though the UT suite!
+	// If this causes any issues, the previous interface can be restored
 	// like this:git log
 	// SetPackerIf(e2ap_wrapper.NewAsn1E2APPacker())
 
 	SetPackerIf(e2ap_wrapper.NewUtAsn1E2APPacker())
-
 	mainCtrl.c.restDuplicateCtrl.Init()
 
+}
+func TestRanStatusChangeViaSDLNotification(t *testing.T) {
+
+	// Current UT test cases use these ran names
+	xappRnibMock.CreateGnb("RAN_NAME_1", entities.ConnectionStatus_DISCONNECTED)
+	xappRnibMock.CreateGnb("RAN_NAME_11", entities.ConnectionStatus_DISCONNECTED)
+	xappRnibMock.CreateGnb("RAN_NAME_2", entities.ConnectionStatus_DISCONNECTED)
+
+	mainCtrl.c.e2IfState.ReadE2ConfigurationFromRnib()
+	mainCtrl.c.e2IfState.SubscribeChannels()
+
+	mainCtrl.SetE2State(t, "RAN_NAME_1_CONNECTED")
+	mainCtrl.SetE2State(t, "RAN_NAME_2_CONNECTED")
+	mainCtrl.SetE2State(t, "RAN_NAME_11_CONNECTED")
+}
+
+//-----------------------------------------------------------------------------
+// TestRESTSubReqAfterE2ConnBreak
+//
+//   stub                             stub
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//     |                 |              |
+//     |         [E2 Conn. DOWN]        |
+//     |                 |              |
+//     | RESTSubReq      |              |
+//     |---------------->|              |
+//     |     RESTSubFail |              |
+//     |<----------------|              |
+//     |                 |              |
+//
+//-----------------------------------------------------------------------------
+
+func TestRESTSubReqAfterE2ConnBreak(t *testing.T) {
+	CaseBegin("TestRESTSubReqAfterE2ConnBreak")
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 1},
+		Counter{cRestReqRejDueE2Down, 1},
+	})
+
+	// E2 disconnect after E2term has received response
+	mainCtrl.SetE2State(t, "RAN_NAME_1_DISCONNECTED")
+	// Req
+	const subReqCount int = 1
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
+	xappConn1.SendRESTSubsReq(t, params)
+
+	// Restore E2 connection for following test cases
+	mainCtrl.SetE2State(t, "RAN_NAME_1_CONNECTED")
+
+	mainCtrl.VerifyCounterValues(t)
+}
+
+//-----------------------------------------------------------------------------
+// TestRESTSubReqE2ConnBreak
+//
+//   stub                             stub
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//     |                 |              |
+//     | RESTSubReq      |              |
+//     |---------------->|              |
+//     |     RESTSubResp |              |
+//     |<----------------|              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |      SubResp |
+//     |                 |<-------------|
+//     |                 |              |
+//     |         [E2 Conn. DOWN]        |
+//     |        [Int. SUBS DELETE]      |
+//     |                 |              |
+//     |      RESTNotif(unsuccessful)   |
+//     |<----------------|              |
+//     |                 |              |
+//     |                 |              |
+//
+//-----------------------------------------------------------------------------
+func TestRESTSubReqE2ConnBreak(t *testing.T) {
+	CaseBegin("TestRESTSubReqE2ConnBreak")
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 1},
+		Counter{cRestSubRespToXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cSubRespFromE2, 1},
+		Counter{cRestSubFailNotifToXapp, 1},
+	})
+
+	// Req
+	const subReqCount int = 1
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
+	restSubId := xappConn1.SendRESTSubsReq(t, params)
+
+	crereq, cremsg := e2termConn1.RecvSubsReq(t)
+	xappConn1.ExpectRESTNotification(t, restSubId)
+
+	// E2 disconnect after E2term has received response
+	mainCtrl.SetE2State(t, "RAN_NAME_1_DISCONNECTED")
+
+	e2termConn1.SendSubsResp(t, crereq, cremsg)
+	e2SubsId := xappConn1.WaitRESTNotification(t, restSubId)
+
+	<-time.After(time.Second * 1)
+	assert.Equal(t, 0, len(mainCtrl.c.registry.register))
+	assert.Equal(t, 0, len(mainCtrl.c.registry.restSubscriptions))
+
+	subIds, register, err := mainCtrl.c.ReadAllSubscriptionsFromSdl()
+	if err != nil {
+		xapp.Logger.Error("%v", err)
+	} else {
+		assert.Equal(t, 65534, len(subIds)) // range 1-65535 , FFFF = 65535
+		assert.Equal(t, 0, len(register))
+	}
+
+	restSubscriptions, err := mainCtrl.c.ReadAllRESTSubscriptionsFromSdl()
+	if err != nil {
+		xapp.Logger.Error("%v", err)
+	} else {
+		assert.Equal(t, 0, len(restSubscriptions))
+	}
+
+	// Restore E2 connection for following test cases
+	mainCtrl.SetE2State(t, "RAN_NAME_1_CONNECTED")
+
+	// Wait that subs is cleaned
+	waitSubsCleanup(t, e2SubsId, 10)
+	mainCtrl.VerifyCounterValues(t)
+}
+
+//-----------------------------------------------------------------------------
+// TestRESTSubscriptionDeleteAfterE2ConnectionBreak
+//
+//   stub                             stub
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//     |                 |              |
+//     |            [SUBS CREATE]       |
+//     |                 |              |
+//     |           [E2 Conn. DOWN]      |
+//     |                 |              |
+//     | RESTSubDelReq   |              |
+//     |---------------->|              |
+//     |                 |              |
+//     |  RESTSubDelResp |              |
+//     |<----------------|              |
+//     |                 |              |
+//     |  [No valid subscription found] |
+//     |                 |              |
+//
+//-----------------------------------------------------------------------------
+func TestRESTSubscriptionDeleteAfterE2ConnectionBreak(t *testing.T) {
+	xapp.Logger.Debug("TEST: TestRESTSubscriptionDeleteAfterE2ConnectionBreak")
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 1},
+		Counter{cRestSubRespToXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cSubRespFromE2, 1},
+		Counter{cRestSubNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+	})
+
+	// Req
+	var params *teststube2ap.RESTSubsReqParams = nil
+	restSubId, e2SubsId := createSubscription(t, xappConn1, e2termConn1, params)
+
+	// E2 disconnect after E2term has received response
+	mainCtrl.SetE2State(t, "RAN_NAME_1_DISCONNECTED")
+
+	// Del
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+
+	<-time.After(time.Second * 1)
+	assert.Equal(t, 0, len(mainCtrl.c.registry.register))
+	assert.Equal(t, 0, len(mainCtrl.c.registry.restSubscriptions))
+
+	subIds, register, err := mainCtrl.c.ReadAllSubscriptionsFromSdl()
+	if err != nil {
+		xapp.Logger.Error("%v", err)
+	} else {
+		assert.Equal(t, 65534, len(subIds)) // range 1-65535 , FFFF = 65535
+		assert.Equal(t, 0, len(register))
+	}
+
+	restSubscriptions, err := mainCtrl.c.ReadAllRESTSubscriptionsFromSdl()
+	if err != nil {
+		xapp.Logger.Error("%v", err)
+	} else {
+		assert.Equal(t, 0, len(restSubscriptions))
+	}
+
+	// Restore E2 connection for following test cases
+	mainCtrl.SetE2State(t, "RAN_NAME_1_CONNECTED")
+
+	// Wait that subs is cleaned
+	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
+
+	xappConn1.TestMsgChanEmpty(t)
+	e2termConn1.TestMsgChanEmpty(t)
+	mainCtrl.wait_registry_empty(t, 10)
+	mainCtrl.VerifyCounterValues(t)
+}
+
+//-----------------------------------------------------------------------------
+// TestRESTOtherE2ConnectionChanges
+//
+
+//   stub                             stub
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//     |                 |              |
+//     |            [SUBS CREATE]       |
+//     |                 |              |
+//     |  [E2 CONNECTED_SETUP_FAILED]   |
+//     |         [E2 CONNECTING]        |
+//     |        [E2 SHUTTING_DOWN]      |
+//     |          [E2 SHUT_DOWN]        |
+//     |                 |              |
+//     |            [SUBS DELETE]       |
+//     |                 |              |
+//
+//-----------------------------------------------------------------------------
+func TestRESTOtherE2ConnectionChanges(t *testing.T) {
+	xapp.Logger.Debug("TEST: TestRESTOtherE2ConnectionChanges")
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 1},
+		Counter{cRestSubRespToXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cSubRespFromE2, 1},
+		Counter{cRestSubNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelRespFromE2, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+	})
+
+	// Req
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
+	restSubId := xappConn1.SendRESTSubsReq(t, params)
+
+	crereq, cremsg := e2termConn1.RecvSubsReq(t)
+	xappConn1.ExpectRESTNotification(t, restSubId)
+	e2termConn1.SendSubsResp(t, crereq, cremsg)
+	e2SubsId := xappConn1.WaitRESTNotification(t, restSubId)
+
+	// Submgr should not react any other connection state changes than CONNECTED and DISCONNECTED
+	mainCtrl.SetE2State(t, "RAN_NAME_1_CONNECTED_SETUP_FAILED")
+	mainCtrl.SetE2State(t, "RAN_NAME_1_CONNECTING")
+	mainCtrl.SetE2State(t, "RAN_NAME_1_SHUTTING_DOWN")
+	mainCtrl.SetE2State(t, "RAN_NAME_1_SHUT_DOWN")
+
+	// Del
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
+
+	// Restore E2 connection for following test cases
+	mainCtrl.SetE2State(t, "RAN_NAME_1_CONNECTED")
+
+	// Wait that subs is cleaned
+	waitSubsCleanup(t, e2SubsId, 10)
+	mainCtrl.VerifyCounterValues(t)
 }
 
 //-----------------------------------------------------------------------------

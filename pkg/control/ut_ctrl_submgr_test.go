@@ -59,8 +59,9 @@ func createSubmgrControl(srcId teststub.RmrSrcId, rtgSvc teststub.RmrRtgSvc) *te
 	mainCtrl.c.LoggerLevel = int(xapp.Logger.GetLevel())
 	xapp.Logger.Debug("Test: LoggerLevel %v", mainCtrl.c.LoggerLevel)
 	xapp.Logger.Debug("Replacing real db with test db")
-	mainCtrl.c.e2SubsDb = CreateMock()             // This overrides real E2 Subscription database for testing
-	mainCtrl.c.restSubsDb = CreateRestSubsDbMock() // This overrides real REST Subscription database for testing
+	mainCtrl.c.e2SubsDb = CreateMock()              // This overrides real E2 Subscription database for testing
+	mainCtrl.c.restSubsDb = CreateRestSubsDbMock()  // This overrides real REST Subscription database for testing
+	mainCtrl.c.e2IfStateDb = CreateXappRnibIfMock() // This overrides real RNIB database for testing
 	xapp.SetReadyCB(mainCtrl.ReadyCB, nil)
 	go xapp.RunWithParams(mainCtrl.c, false)
 	mainCtrl.WaitCB()
@@ -337,7 +338,7 @@ func (mc *testingSubmgrControl) VerifyCounterValues(t *testing.T) {
 		}
 	}
 
-	// Check that not any unexpected counter are added
+	// Check that not any unexpected counter are added (this is not working correctly!)
 	for _, currentCounter := range currentCountersMap {
 		if _, ok := toBeAddedCountersMap[currentCounter.Name]; ok == false {
 			if beforeCounter, ok := countersBeforeMap[currentCounter.Name]; ok == true {
@@ -454,4 +455,14 @@ func (mc *testingSubmgrControl) sendPostRequest(t *testing.T, addr string, path 
 	}
 	mc.TestLog(t, "%s", respBody)
 	return
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+func (mc *testingSubmgrControl) SetE2State(t *testing.T, ranNameState string) {
+
+	if err := mc.c.e2IfStateDb.XappRnibStoreAndPublish("RAN_CONNECTION_STATUS_CHANGE", ranNameState, "key1", "data1"); err != nil {
+		t.Errorf("XappRnibStoreAndPublish failed: %v", err)
+	}
 }

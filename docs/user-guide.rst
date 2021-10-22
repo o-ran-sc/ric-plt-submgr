@@ -358,6 +358,12 @@ Architecture
     
     Restoring subscriptions from db can be disable via submgr-config.yaml file by setting "readSubsFromDb": "false".
 
+  * E2 connection break
+
+    Subscription Manager subscribes E2 connection status notifications from RNIB. Whenever E2 interface goes up or down Subscription Manager gets notifies. When interface is down
+    subscription is not possible. Subscription Manager rejects new request for the E2 node. Http Reject cause is 503 Subscribe Service Unavailable. When interface goes down
+    Subscription Manager deletes all subscriptions related to the RanName from its memory and database. E2 node and XApp are expected to do the same.
+
 Metrics
 -------
  Subscription Manager adds following statistic counters:
