@@ -41,6 +41,8 @@ type Subscription struct {
 	TheTrans         TransactionIf                 // Ongoing transaction
 	SubReqMsg        *e2ap.E2APSubscriptionRequest // Subscription information
 	SubRFMsg         interface{}                   // Subscription information
+	OngoingReqCount  int                           // Subscription create process is ongoing. In merge case it can ongoing for more than one endpoint
+	OngoingDelCount  int                           // Subscription delete process is ongoing. In merge case it can ongoing for more than one endpoint
 	PolicyUpdate     bool                          // This is true when policy subscrition is being updated. Used not to send delete for update after timeout or restart
 	RetryFromXapp    bool                          // Retry form xApp for subscription that already exist
 	SubRespRcvd      bool                          // Subscription response received

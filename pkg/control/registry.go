@@ -181,6 +181,8 @@ func (r *Registry) allocateSubs(trans *TransactionXapp, subReqMsg *e2ap.E2APSubs
 			Meid:             trans.Meid,
 			RMRRouteCreated:  rmrRoutecreated,
 			SubReqMsg:        subReqMsg,
+			OngoingReqCount:  0,
+			OngoingDelCount:  0,
 			valid:            true,
 			PolicyUpdate:     false,
 			RetryFromXapp:    false,
@@ -405,7 +407,6 @@ func (r *Registry) RemoveFromSubscription(subs *Subscription, trans *Transaction
 	delStatus := subs.EpList.DelEndpoint(trans.GetEndpoint())
 	epamount := subs.EpList.Size()
 	subId := subs.ReqId.InstanceId
-
 	if delStatus == false {
 		return nil
 	}
@@ -516,5 +517,51 @@ func (r *Registry) SetResetTestFlag(resetTestFlag bool, subs *Subscription) {
 		subs.DoNotWaitSubResp = true
 	} else {
 		xapp.Logger.Debug("resetTestFlag == false")
+	}
+}
+
+func (r *Registry) DeleteAllE2Subscriptions(ranName string, c *Control) {
+
+	xapp.Logger.Debug("Registry: DeleteAllE2Subscriptions()")
+	for subId, subs := range r.register {
+		if subs.Meid.RanName == ranName {
+			if subs.OngoingReqCount != 0 || subs.OngoingDelCount != 0 {
+				// Subscription creation or deletion processes need to be processed gracefully till the end.
+				// Subscription is deleted at end of the process in both cases.
+				xapp.Logger.Debug("Registry: E2 subscription under prosessing ongoing cannot delete it yet. subId=%v, OngoingReqCount=%v, OngoingDelCount=%v", subId, subs.OngoingReqCount, subs.OngoingDelCount)
+				continue
+			} else {
+				// Delete route
+				if subs.RMRRouteCreated == true {
+					for _, ep := range subs.EpList.Endpoints {
+						tmpList := xapp.RmrEndpointList{}
+						tmpList.AddEndpoint(&ep)
+						subRouteAction := SubRouteInfo{tmpList, uint16(subs.ReqId.InstanceId)}
+						if err := r.rtmgrClient.SubscriptionRequestDelete(subRouteAction); err != nil {
+							c.UpdateCounter(cRouteDeleteFail)
+						}
+					}
+				}
+				// Delete E2 subscription from registry and db
+				xapp.Logger.Debug("Registry: Subscription delete. subId=%v", subId)
+				delete(r.register, subId)
+				r.subIds = append(r.subIds, subId)
+				c.RemoveSubscriptionFromDb(subs)
+			}
+		}
+	}
+
+	// Delete REST subscription from registry and db
+	for restSubId, restSubs := range r.restSubscriptions {
+		if restSubs.Meid == ranName && restSubs.SubReqOngoing == true || restSubs.SubDelReqOngoing == true {
+			// Subscription creation or deletion processes need to be processed gracefully till the end.
+			// Subscription is deleted at end of the process in both cases.
+			xapp.Logger.Debug("Registry: REST subscription under prosessing ongoing cannot delete it yet. RestSubId=%v, SubReqOngoing=%v, SubDelReqOngoing=%v", restSubId, restSubs.SubReqOngoing, restSubs.SubDelReqOngoing)
+			continue
+		} else {
+			xapp.Logger.Debug("Registry: REST subscription delete. subId=%v", restSubId)
+			delete(r.restSubscriptions, restSubId)
+			c.RemoveRESTSubscriptionFromDb(restSubId)
+		}
 	}
 }

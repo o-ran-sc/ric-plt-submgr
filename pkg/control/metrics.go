@@ -37,6 +37,9 @@ const (
 	cSDLWriteFailure        string = "SDLWriteFailure"
 	cSDLReadFailure         string = "SDLReadFailure"
 	cSDLRemoveFailure       string = "SDLRemoveFailure"
+	cE2StateChangedToUp     string = "E2StateChangedToUp"
+	cE2StateChangedToDown   string = "E2StateChangedToDown"
+	cRestReqRejDueE2Down    string = "RestReqRejDueE2Down"
 )
 
 func GetMetricsOpts() []xapp.CounterOpts {
@@ -60,6 +63,7 @@ func GetMetricsOpts() []xapp.CounterOpts {
 		{Name: cRouteCreateUpdateFail, Help: "The total number of subscription route create update failure"},
 		{Name: cMergedSubscriptions, Help: "The total number of merged Subscriptions"},
 		{Name: cDuplicateE2SubReq, Help: "The total number of same E2 SubscriptionRequest messages from same xApp"},
+		{Name: cRestReqRejDueE2Down, Help: "The total number of Rest SubscriptionRequest messages rejected due E2 Interface down"},
 
 		// Subscrition delete counters
 		{Name: cSubDelReqFromXapp, Help: "The total number of SubscriptionDeleteRequest messages received from xApp"},
@@ -79,9 +83,14 @@ func GetMetricsOpts() []xapp.CounterOpts {
 		{Name: cSDLWriteFailure, Help: "The total number of SDL write failures"},
 		{Name: cSDLReadFailure, Help: "The total number of SDL read failures"},
 		{Name: cSDLRemoveFailure, Help: "The total number of SDL read failures"},
+
+		// E2 interface state counters
+		{Name: cE2StateChangedToUp, Help: "The total number of E2 interface change connected state"},
+		{Name: cE2StateChangedToDown, Help: "The total number of E2 interface change disconnected state"},
 	}
 }
 
 func (c *Control) UpdateCounter(counterName string) {
+	xapp.Logger.Debug("Add counterName=%v", counterName)
 	c.Counters[counterName].Inc()
 }
