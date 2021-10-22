@@ -518,3 +518,38 @@ func (r *Registry) SetResetTestFlag(resetTestFlag bool, subs *Subscription) {
 		xapp.Logger.Debug("resetTestFlag == false")
 	}
 }
+
+func (r *Registry) DeleteAllE2Subscriptions(ranName string, c *Control) {
+
+	for subId, subs := range r.register {
+		if subs.Meid.RanName == ranName {
+			// Delete route
+			if subs.RMRRouteCreated == true {
+				for _, ep := range subs.EpList.Endpoints {
+					tmpList := xapp.RmrEndpointList{}
+					tmpList.AddEndpoint(&ep)
+					subRouteAction := SubRouteInfo{tmpList, uint16(subs.ReqId.InstanceId)}
+					if err := r.rtmgrClient.SubscriptionRequestDelete(subRouteAction); err != nil {
+						c.UpdateCounter(cRouteDeleteFail)
+					}
+				}
+			}
+			//if subs.SubReqOngoing == true || subs.SubDelReqOngoing == true {
+			// If subscription creation is ongoing while E2 connection is down it will fail
+			// and subscription will be deleted in submgr too. If Deletion is on going record
+			// will be deleted.
+			//	continue
+			//}
+			// Delete E2 subscription
+			delete(r.register, subId)
+			r.subIds = append(r.subIds, subId)
+		}
+	}
+
+	// Delete REST subscription
+	for restSubId, restSubs := range r.restSubscriptions {
+		if restSubs.Meid == ranName {
+			delete(r.restSubscriptions, restSubId)
+		}
+	}
+}

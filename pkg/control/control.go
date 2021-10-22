@@ -81,6 +81,8 @@ type Control struct {
 	registry          *Registry
 	tracker           *Tracker
 	restDuplicateCtrl *DuplicateCtrl
+	e2IfState         *E2IfState
+	e2IfStateDb       XappRnibInterface
 	e2SubsDb          Sdlnterface
 	restSubsDb        Sdlnterface
 	CntRecvMsg        uint64
@@ -136,15 +138,21 @@ func NewControl() *Control {
 	restDuplicateCtrl := new(DuplicateCtrl)
 	restDuplicateCtrl.Init()
 
+	e2IfState := new(E2IfState)
+
 	c := &Control{e2ap: new(E2ap),
 		registry:          registry,
 		tracker:           tracker,
 		restDuplicateCtrl: restDuplicateCtrl,
+		e2IfState:         e2IfState,
+		e2IfStateDb:       CreateXappRnibIfInstance(),
 		e2SubsDb:          CreateSdl(),
 		restSubsDb:        CreateRESTSdl(),
 		Counters:          xapp.Metric.RegisterCounterGroup(GetMetricsOpts(), "SUBMGR"),
 		LoggerLevel:       4,
 	}
+
+	e2IfState.Init(c)
 	c.ReadConfigParameters("")
 
 	// Register REST handler for testing support
@@ -412,6 +420,11 @@ func (c *Control) RESTSubscriptionHandler(params interface{}) (*models.Subscript
 	if err != nil {
 		xapp.Logger.Error("Subscription with id in REST request does not exist")
 		return nil, common.SubscribeNotFoundCode
+	}
+
+	if c.e2IfState.IsE2ConnectionUp(p.Meid) == false {
+		xapp.Logger.Error("No E2 connection for ranName %v", *p.Meid)
+		return nil, common.SubscribeServiceUnavailableCode
 	}
 
 	subResp.SubscriptionID = &restSubId

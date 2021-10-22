@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
+	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 )
 
 //-----------------------------------------------------------------------------
@@ -70,4 +71,11 @@ func (e *ErrorInfo) SetInfo(errorCause string, errorSource string, timeoutType s
 	e.ErrorCause = errorCause
 	e.ErrorSource = errorSource
 	e.TimeoutType = timeoutType
+}
+
+type XappRnibInterface interface {
+	XappRnibSubscribe(cb func(string, ...string), channel string) error
+	XappRnibGetListGnbIds() ([]*xapp.RNIBNbIdentity, xapp.RNIBIRNibError)
+	XappRnibStoreAndPublish(channel string, event string, pairs ...interface{}) error
+	XappRnibGetNodeb(inventoryName string) (*xapp.RNIBNodebInfo, xapp.RNIBIRNibError)
 }
