@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "25b2898c_a387d6b0",
+        "filename": "go.sum",
+        "patchSetId": 2
+      },
+      "lineNbr": 13,
+      "author": {
+        "id": 1001272
+      },
+      "writtenOn": "2021-10-22T11:55:44Z",
+      "side": 1,
+      "message": "Just adding a note here so that we remember to take care of this conflict.",
+      "revId": "f0aeaf42668ad908129b41df971148f0e7738282",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
+    }
+  ]
+}
