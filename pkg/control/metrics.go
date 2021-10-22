@@ -11,6 +11,7 @@ const (
 	cSubRespToXapp          string = "SubRespToXapp"
 	cRestSubRespToXapp      string = "RestSubRespToXapp"
 	cRestSubFailToXapp      string = "RestSubFailToXapp"
+	cRestReqRejDueE2Down    string = "RestReqRejDueE2Down"
 	cRestSubNotifToXapp     string = "RestSubNotifToXapp"
 	cRestSubFailNotifToXapp string = "RestSubFailNotifToXapp"
 	cSubReqToE2             string = "SubReqToE2"
@@ -26,6 +27,7 @@ const (
 	cSubDelRespToXapp       string = "SubDelRespToXapp"
 	cRestSubDelReqFromXapp  string = "RestSubDelReqFromXapp"
 	cRestSubDelRespToXapp   string = "RestSubDelRespToXapp"
+	cRestSubDelFailToXapp   string = "RestSubDelFailToXapp"
 	cSubDelReqToE2          string = "SubDelReqToE2"
 	cSubDelReReqToE2        string = "SubDelReReqToE2"
 	cSubDelRespFromE2       string = "SubDelRespFromE2"
@@ -37,6 +39,8 @@ const (
 	cSDLWriteFailure        string = "SDLWriteFailure"
 	cSDLReadFailure         string = "SDLReadFailure"
 	cSDLRemoveFailure       string = "SDLRemoveFailure"
+	cE2StateChangedToUp     string = "E2StateChangedToUp"
+	cE2StateChangedToDown   string = "E2StateChangedToDown"
 )
 
 func GetMetricsOpts() []xapp.CounterOpts {
@@ -49,6 +53,7 @@ func GetMetricsOpts() []xapp.CounterOpts {
 		{Name: cRestSubReqFromXapp, Help: "The total number of Rest SubscriptionRequest messages received from xApp"},
 		{Name: cRestSubRespToXapp, Help: "The total number of Rest SubscriptionResponse messages sent to xApp"},
 		{Name: cRestSubFailToXapp, Help: "The total number of Rest SubscriptionFailure messages sent to xApp"},
+		{Name: cRestReqRejDueE2Down, Help: "The total number of Rest SubscriptionRequest messages rejected due E2 Interface down"},
 		{Name: cRestSubNotifToXapp, Help: "The total number of successful Rest SubscriptionNotification messages sent to xApp"},
 		{Name: cRestSubFailNotifToXapp, Help: "The total number of failure Rest SubscriptionNotification messages sent to xApp"},
 		{Name: cSubReqToE2, Help: "The total number of SubscriptionRequest messages sent to E2Term"},
@@ -66,6 +71,7 @@ func GetMetricsOpts() []xapp.CounterOpts {
 		{Name: cSubDelRespToXapp, Help: "The total number of SubscriptionDeleteResponse messages sent to xApp"},
 		{Name: cRestSubDelReqFromXapp, Help: "The total number of Rest SubscriptionDeleteRequest messages received from xApp"},
 		{Name: cRestSubDelRespToXapp, Help: "The total number of Rest SubscriptionDeleteResponse messages sent to xApp"},
+		{Name: cRestSubDelFailToXapp, Help: "The total number of Rest SubscriptionDeleteFailure messages sent to xApp"},
 		{Name: cSubDelReqToE2, Help: "The total number of SubscriptionDeleteRequest messages sent to E2Term"},
 		{Name: cSubDelReReqToE2, Help: "The total number of SubscriptionDeleteRequest messages resent to E2Term"},
 		{Name: cSubDelRespFromE2, Help: "The total number of SubscriptionDeleteResponse messages from E2Term"},
@@ -79,9 +85,14 @@ func GetMetricsOpts() []xapp.CounterOpts {
 		{Name: cSDLWriteFailure, Help: "The total number of SDL write failures"},
 		{Name: cSDLReadFailure, Help: "The total number of SDL read failures"},
 		{Name: cSDLRemoveFailure, Help: "The total number of SDL read failures"},
+
+		// E2 interface state counters
+		{Name: cE2StateChangedToUp, Help: "The total number of E2 interface change connected state"},
+		{Name: cE2StateChangedToDown, Help: "The total number of E2 interface change disconnected state"},
 	}
 }
 
 func (c *Control) UpdateCounter(counterName string) {
+	xapp.Logger.Debug("Add counterName=%v", counterName)
 	c.Counters[counterName].Inc()
 }
