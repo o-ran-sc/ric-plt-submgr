@@ -16,6 +16,24 @@
       "message": "Just adding a note here so that we remember to take care of this conflict.",
       "revId": "f0aeaf42668ad908129b41df971148f0e7738282",
       "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "6dbbffb5_b7c1023b",
+        "filename": "go.sum",
+        "patchSetId": 2
+      },
+      "lineNbr": 13,
+      "author": {
+        "id": 1000033
+      },
+      "writtenOn": "2021-11-03T07:44:44Z",
+      "side": 1,
+      "message": "Ack",
+      "parentUuid": "25b2898c_a387d6b0",
+      "revId": "f0aeaf42668ad908129b41df971148f0e7738282",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
     }
   ]
 }
