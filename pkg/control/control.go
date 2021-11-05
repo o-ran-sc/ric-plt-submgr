@@ -1112,7 +1112,6 @@ func (c *Control) handleSubscriptionCreate(subs *Subscription, parentTrans *Tran
 			removeSubscriptionFromDb = true
 			subRfMsg, valid = subs.SetCachedResponse(event, false)
 			xapp.Logger.Debug("SUBS-SubReq: internal delete due failure event(%s) %s", typeofSubsMessage(event), idstring(nil, trans, subs, parentTrans))
-			c.sendE2TSubscriptionDeleteRequest(subs, trans, parentTrans)
 		case *SubmgrRestartTestEvent:
 			// This simulates that no response has been received and after restart subscriptions are restored from db
 			xapp.Logger.Debug("Test restart flag is active. Dropping this transaction to test restart case")

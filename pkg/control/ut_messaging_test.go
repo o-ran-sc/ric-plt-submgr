@@ -1446,12 +1446,6 @@ func TestSubReqTwoRetriesNoRespAtAllInSubmgr(t *testing.T) {
 //     |              |      SubFail |
 //     |              |<-------------|
 //     |              |              |
-//     |              | SubDelReq    |
-//     |              |------------->|
-//     |              |              |
-//     |              |   SubDelResp |
-//     |              |<-------------|
-//     |              |              |
 //     |      SubFail |              |
 //     |<-------------|              |
 //     |              |              |
@@ -1476,10 +1470,6 @@ func TestSubReqSubFailRespInSubmgr(t *testing.T) {
 	fparams1 := &teststube2ap.E2StubSubsFailParams{}
 	fparams1.Set(crereq1)
 	e2termConn1.SendSubsFail(t, fparams1, cremsg1)
-
-	// E2t: Receive SubsDelReq and send SubsDelResp (internal first)
-	delreq1, delmsg1 := e2termConn1.RecvSubsDelReq(t)
-	e2termConn1.SendSubsDelResp(t, delreq1, delmsg1)
 
 	// Xapp: Receive SubsFail
 	e2SubsId := xappConn1.RecvSubsFail(t, cretrans)
@@ -1755,8 +1745,6 @@ func TestSubReqAndSubDelOkSameAction(t *testing.T) {
 	rparams2 := &teststube2ap.E2StubSubsReqParams{}
 	rparams2.Init()
 	cretrans2 := xappConn2.SendSubsReq(t, rparams2, nil)
-	//crereq2, cremsg2 := e2termConn1.RecvSubsReq(t)
-	//e2termConn1.SendSubsResp(t, crereq2, cremsg2)
 	e2SubsId2 := xappConn2.RecvSubsResp(t, cretrans2)
 
 	resp, _ := xapp.Subscription.QuerySubscriptions()
@@ -1766,11 +1754,7 @@ func TestSubReqAndSubDelOkSameAction(t *testing.T) {
 
 	//Del1
 	deltrans1 := xappConn1.SendSubsDelReq(t, nil, e2SubsId1)
-	//e2termConn1.RecvSubsDelReq(t)
-	//e2termConn1.SendSubsDelResp(t, delreq1, delmsg1)
 	xappConn1.RecvSubsDelResp(t, deltrans1)
-	//Wait that subs is cleaned
-	//mainCtrl.wait_subs_clean(t, e2SubsId1, 10)
 
 	//Del2
 	deltrans2 := xappConn2.SendSubsDelReq(t, nil, e2SubsId2)
@@ -1892,11 +1876,6 @@ func TestSubReqAndSubDelOkSameActionParallel(t *testing.T) {
 //     |             |              |    SubFail1  |
 //     |             |              |<-------------|
 //     |             |              |              |
-//     |             |              | SubDelReq    |
-//     |             |              |------------->|
-//     |             |              |   SubDelResp |
-//     |             |              |<-------------|
-//     |             |              |              |
 //     |             |    SubFail1  |              |
 //     |             |<-------------|              |
 //     |             |              |              |
@@ -1926,10 +1905,6 @@ func TestSubReqAndSubDelNokSameActionParallel(t *testing.T) {
 	fparams1 := &teststube2ap.E2StubSubsFailParams{}
 	fparams1.Set(crereq1)
 	e2termConn1.SendSubsFail(t, fparams1, cremsg1)
-
-	// E2t: internal delete
-	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
-	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
 
 	//Fail1
 	e2SubsId1 := xappConn1.RecvSubsFail(t, cretrans1)
@@ -2834,7 +2809,6 @@ func TestRESTSubMergeDelAndRouteUpdateNok(t *testing.T) {
 	deleteXapp2Subscription(t, &restSubId2)
 
 	waitSubsCleanup(t, e2SubsId2, 10)
-
 	mainCtrl.VerifyCounterValues(t)
 }
 
@@ -3923,12 +3897,6 @@ func TestRESTSubReqTwoRetriesNoRespAtAllInSubmgr(t *testing.T) {
 //     |                 |      SubFail |
 //     |                 |<-------------|
 //     |                 |              |
-//     |                 | SubDelReq    |
-//     |                 |------------->|
-//     |                 |              |
-//     |                 |   SubDelResp |
-//     |                 |<-------------|
-//     |                 |              |
 //     |       RESTNotif |              |
 //     |       unsuccess |              |
 //     |<----------------|              |
@@ -3961,11 +3929,9 @@ func TestRESTSubReqSubFailRespInSubmgr(t *testing.T) {
 	crereq1, cremsg1 := e2termConn1.RecvSubsReq(t)
 	fparams1 := &teststube2ap.E2StubSubsFailParams{}
 	fparams1.Set(crereq1)
+	xappConn1.ExpectRESTNotificationNok(t, restSubId, "allFail")
 	e2termConn1.SendSubsFail(t, fparams1, cremsg1)
 
-	delreq1, delmsg1 := e2termConn1.RecvSubsDelReq(t)
-	xappConn1.ExpectRESTNotificationNok(t, restSubId, "allFail")
-	e2termConn1.SendSubsDelResp(t, delreq1, delmsg1)
 	e2SubsId := xappConn1.WaitRESTNotification(t, restSubId)
 	xapp.Logger.Debug("TEST: REST notification received e2SubsId=%v", e2SubsId)
 
@@ -4490,12 +4456,8 @@ func TestRESTSubReqAndSubDelNoAnswerSameActionParallel(t *testing.T) {
 //     |                    RESTNotif2 |              |
 //     |             |       unsuccess |              |
 //     |<------------------------------|              |
-//     |             |                 | SubDelReq    |
-//     |             |                 |------------->|
-//     |             |                 |   SubDelResp |
-//     |             |                 |<-------------|
 //     |             |                 |              |
-//     |             | RESTSubDelReq1  |              |
+//     |             | RESTSubDelReq1  |              |   There is no need for xApp to send delete for failed subscriptions but some xApp might do so.
 //     |             |---------------->|              |
 //     |             |                 |              |
 //     |             | RESTSubDelResp1 |              |
@@ -4518,8 +4480,6 @@ func TestRESTSubReqAndSubDelNokSameActionParallel(t *testing.T) {
 		Counter{cSubFailFromE2, 1},
 		Counter{cRestSubFailNotifToXapp, 2},
 		Counter{cRestSubDelReqFromXapp, 2},
-		Counter{cSubDelReqToE2, 1},
-		Counter{cSubDelRespFromE2, 1},
 		Counter{cRestSubDelRespToXapp, 2},
 	})
 
@@ -4542,11 +4502,7 @@ func TestRESTSubReqAndSubDelNokSameActionParallel(t *testing.T) {
 	fparams1.Set(crereq1)
 	e2termConn1.SendSubsFail(t, fparams1, cremsg1)
 
-	// E2t: internal delete
-	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
 	xappConn1.WaitListedRestNotifications(t, []string{restSubId1, restSubId2})
-	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
-
 	e2SubsIdA := <-xappConn1.ListedRESTNotifications
 	xapp.Logger.Debug("TEST: 1.st XAPP notification received e2SubsId=%v", e2SubsIdA)
 	e2SubsIdB := <-xappConn1.ListedRESTNotifications
@@ -5962,11 +5918,7 @@ func TestRESTSubReqReportSameActionDiffSubsAction(t *testing.T) {
 //     |                 |<-------------|
 //     | RESTNotif (fail)|              |
 //     |<----------------|              |
-//     |                 | SubDelReq    |
-//     |                 |------------->|
 //     |                 |              |
-//     |                 |   SubDelResp |
-//     |                 |<-------------|
 //
 //-----------------------------------------------------------------------------
 
@@ -5991,9 +5943,6 @@ func TestRESTUnpackSubscriptionResponseDecodeFail(t *testing.T) {
 	fparams.Set(crereq)
 	fparams.SetCauseVal(0, 1, 3) // CauseRIC / duplicate-action
 	e2termConn1.SendSubsFail(t, fparams, cremsg)
-
-	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
-	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
 
 	instanceId := xappConn1.WaitRESTNotification(t, restSubId)
 	xapp.Logger.Debug("TEST: REST notification received e2SubsId=%v", instanceId)
@@ -6190,11 +6139,7 @@ func TestRESTUnpackSubscriptionResponseNoTransaction(t *testing.T) {
 //     |                 |<-------------|
 //     | RESTNotif (fail)|              |
 //     |<----------------|              |
-//     |                 | SubDelReq    |
-//     |                 |------------->|
 //     |                 |              |
-//     |                 |   SubDelResp |
-//     |                 |<-------------|
 //
 //-----------------------------------------------------------------------------
 func TestRESTUnpackSubscriptionFailureDecodeFail(t *testing.T) {
@@ -6219,9 +6164,6 @@ func TestRESTUnpackSubscriptionFailureDecodeFail(t *testing.T) {
 	fparams.Set(crereq)
 	fparams.SetCauseVal(0, 1, 3) // CauseRIC / duplicate-action
 	e2termConn1.SendSubsFail(t, fparams, cremsg)
-
-	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
-	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
 
 	instanceId := xappConn1.WaitRESTNotification(t, restSubId)
 	xapp.Logger.Debug("TEST: REST notification received e2SubsId=%v", instanceId)
