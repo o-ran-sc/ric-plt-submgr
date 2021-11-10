@@ -344,25 +344,25 @@ Architecture
 
   * xApp restart
 
-    When xApp is restarted for any reason it may resend REST subscription requests for subscriptions which have already been subscribed. If REPORT or INSERT type
-    subscription already exists and RMR endpoint of requesting xApp is attached to subscription then successful response is sent to xApp directly without
-    updating Routing Manager and E2 Node. If POLICY type subscription already exists, request is forwarded to E2 Node and successful response is sent to xApp.
-    E2 Node is expected to accept duplicate POLICY type requests. In restart IP address of the xApp may change but domain service address name does not.
-    RMR message routing uses domain service address name.
+     When xApp is restarted for any reason it may resend REST subscription requests for subscriptions which have already been subscribed. If REPORT or INSERT type
+     subscription already exists and RMR endpoint of requesting xApp is attached to subscription then successful response is sent to xApp directly without
+     updating Routing Manager and E2 Node. If POLICY type subscription already exists, request is forwarded to E2 Node and successful response is sent to xApp.
+     E2 Node is expected to accept duplicate POLICY type requests. In restart IP address of the xApp may change but domain service address name does not.
+     RMR message routing uses domain service address name.
 
   * Subscription Manager restart
 
-    Subscription Manager stores REST request ids, E2 subscriptions and their mapping to REST request ids in db (SDL). In start up Subscription Manager restores REST request
-    ids, E2 subscriptions and their mapping from db. For E2 subscriptions which were not successfully completed, Subscription Manager sends delete request to E2 Node and
-    removes routes created for those. In restart case xApp may need to resend the same REST request to get all E2 subscriptions completed.
+     Subscription Manager stores REST request ids, E2 subscriptions and their mapping to REST request ids in db (SDL). In start up Subscription Manager restores REST request
+     ids, E2 subscriptions and their mapping from db. For E2 subscriptions which were not successfully completed, Subscription Manager sends delete request to E2 Node and
+     removes routes created for those. In restart case xApp may need to resend the same REST request to get all E2 subscriptions completed.
     
-    Restoring subscriptions from db can be disable via submgr-config.yaml file by setting "readSubsFromDb": "false".
+     Restoring subscriptions from db can be disabled via submgr-config.yaml file by setting "readSubsFromDb": "false".
 
   * E2 connection break
 
-    Subscription Manager subscribes E2 connection status notifications from RNIB. Whenever E2 interface goes up or down Subscription Manager gets notifies. When interface is down
-    subscription is not possible. Subscription Manager rejects new request for the E2 node. Http Reject cause is 503 Subscribe Service Unavailable. When interface goes down
-    Subscription Manager deletes all subscriptions related to the RanName from its memory and database. E2 node and XApp are expected to do the same.
+     Subscription Manager subscribes E2 connection status notifications from RNIB. Whenever E2 interface goes up or down Subscription Manager gets notifies. When interface is down
+     subscription is not possible. Subscription Manager rejects new request for the E2 node. Http Reject cause is 503 Subscribe Service Unavailable. When interface goes down
+     Subscription Manager deletes all subscriptions related to the RanName from its memory and database. E2 node and XApp are expected to do the same.
 
 Metrics
 -------
@@ -372,6 +372,12 @@ Metrics
 		- SubReqFromXapp: The total number of SubscriptionRequest messages received from xApp
 		- SubRespToXapp: The total number of SubscriptionResponse messages sent to xApp
 		- SubFailToXapp: The total number of SubscriptionFailure messages sent to xApp
+		- RestSubReqFromXapp: The total number of Rest SubscriptionRequest messages received from xApp,
+		- RestSubRespToXapp: The total number of Rest SubscriptionResponse messages sent to xApp,
+		- RestSubFailToXapp: The total number of Rest SubscriptionFailure messages sent to xApp
+		- RestReqRejDueE2Down: The total number of Rest SubscriptionRequest messages rejected due E2 Interface down
+		- RestSubNotifToXapp: The total number of successful Rest SubscriptionNotification messages sent to xApp
+		- RestSubFailNotifToXapp: The total number of failure Rest SubscriptionNotification messages sent to xApp
 		- SubReqToE2: The total number of SubscriptionRequest messages sent to E2Term
 		- SubReReqToE2: The total number of SubscriptionRequest messages resent to E2Term
 		- SubRespFromE2: The total number of SubscriptionResponse messages from E2Term
@@ -380,10 +386,14 @@ Metrics
 		- RouteCreateFail: The total number of subscription route create failure
 		- RouteCreateUpdateFail: The total number of subscription route create update failure
 		- MergedSubscriptions: The total number of merged Subscriptions
+		- DuplicateE2SubReq: The total number of same E2 SubscriptionRequest messages from same xApp,
 
  Subscription delete counters:
 		- SubDelReqFromXapp: The total number of SubscriptionDeleteResponse messages received from xApp
 		- SubDelRespToXapp: The total number of SubscriptionDeleteResponse messages sent to xApp
+		- RestSubDelReqFromXapp: The total number of Rest SubscriptionDeleteRequest messages received from xApp
+		- RestSubDelRespToXapp: The total number of Rest SubscriptionDeleteResponse messages sent to xApp
+		- RestSubDelFailToXapp: The total number of Rest SubscriptionDeleteFailure messages sent to xApp
 		- SubDelReqToE2: The total number of SubscriptionDeleteRequest messages sent to E2Term
 		- SubDelReReqToE2: The total number of SubscriptionDeleteRequest messages resent to E2Term
 		- SubDelRespFromE2: The total number of SubscriptionDeleteResponse messages from E2Term
@@ -396,7 +406,11 @@ Metrics
  SDL failure counters:
 		- SDLWriteFailure: The total number of SDL write failures
 		- SDLReadFailure: The total number of SDL read failures
-		- SDLRemoveFailure: The total number of SDL read failures
+		- SDLRemoveFailure: The total number of SDL remove failures
+
+ E2 interface state counters
+    - E2StateChangedToUp: The total number of E2 interface change connected state
+    - E2StateChangedToDown: The total number of E2 interface change disconnected state
 
 Configurable parameters
 -----------------------
@@ -416,14 +430,24 @@ Configurable parameters
    - Try count for RIC Subscription Delete Request message   
       - e2tMaxSubDelReqTryCount: 2 is the default value
    
+   - Shall Subscription Manager check is E2 interface up before new SubscriptionRequest is processed
+      - checkE2State: true is the default value
+
    - Are subscriptions read from database in Subscription Manager startup
-      - readSubsFromDb: "true"  is the default value
- 
+      - readSubsFromDb: "true" is the default value
+
+    - How many times Subscription Manager tries to read database in start up before it continues startup procedure
+      - dbTryCount: 200 is the default value
+
+    - Shall Subscription Manager try to read data base forever in start up before it continues startup procedure
+      - dbRetryForever: true is the default value
+
+
  The parameters can be changed on the fly via Kubernetes Configmap. Default parameters values are defined in Helm chart
 
  Use following command to open Subscription Manager's Configmap in Nano editor. First change parameter and then store the
  change by pressing first Ctrl + o. Close editor by pressing the Ctrl + x. The change is visible in Subscription Manager's
- log after some 20 - 30 seconds.
+ log after some 20 - 30 seconds. Note that some of the parameters maybe be useful just for testing purpose.
  
  .. code-block:: none
 
@@ -435,15 +459,9 @@ REST interface for debugging and testing
 
  .. code-block:: none
 
-  kubectl get pods -A | grep submgr
-  
-  ricplt        submgr-75bccb84b6-n9vnt          1/1     Running             0          81m
+  kubectl get pods -A -o wide | grep submgr
+  ricplt        submgr-6d5f487777-2bc4t        1/1     Running   0       6d13h   10.244.0.181   my-ubuntu-18   <none>       <none>
 
-  Syntax: kubectl exec -t -n ricplt <add-submgr-pod-name> -- cat /etc/hosts | grep submgr | awk '{print $1}'
-  
-  Example: kubectl exec -t -n ricplt submgr-75bccb84b6-n9vnt -- cat /etc/hosts | grep submgr | awk '{print $1}'
-
-  10.244.0.181
 
  Get metrics
 
@@ -451,19 +469,20 @@ REST interface for debugging and testing
 
   Example: curl -s GET "http://10.244.0.181:8080/ric/v1/metrics"
 
- Get REST subscriptions
+ Get REST subscriptions.
 
  .. code-block:: none
 
   Example: curl -X GET "http://10.244.0.181:8080/ric/v1/restsubscriptions"
 
- Get E2 subscriptions
+ Get E2 subscriptions.
 
  .. code-block:: none
 
   Example: curl -X GET "http://10.244.0.181:8088/ric/v1/subscriptions"
 
- Delete single E2 subscription from db
+ Delete single E2 subscription from db. Note that the subscription is not deleted from Subscription Manager's RAM memory!
+ Subscription Manager pod restart is required for that.
 
  .. code-block:: none
 
@@ -471,25 +490,26 @@ REST interface for debugging and testing
   
   Example: curl -X POST "http://10.244.0.181:8080/ric/v1/test/deletesubid=1"
 
- Remove all subscriptions from db
+ Remove all subscriptions from db. Note that the subscription is not deleted from Subscription Manager's RAM memory!
+ Subscription Manager pod restart is required for that.
 
  .. code-block:: none
 
   Example: curl -X POST "http://10.244.0.181:8080/ric/v1/test/emptydb"
 
- Make Subscription Manager restart
+ Make Subscription Manager restart.
 
  .. code-block:: none
 
   Example: curl -X POST "http://10.244.0.181:8080/ric/v1/test/restart"
 
- Use this command to get Subscription Manager's log writings
+ Use this command to get Subscription Manager's log writings.
 
  .. code-block:: none
 
    Example: kubectl logs -n ricplt submgr-75bccb84b6-n9vnt
 
- Logger level in configmap.yaml file in Helm chart is by default 2. It means that only info logs are printed.
+ Logger level in configmap.yaml file in Helm chart is by default 1. It means that only info logs are printed.
  To see debug log writings it has to be changed to 4.
 
  .. code-block:: none

@@ -84,7 +84,7 @@ func GetMetricsOpts() []xapp.CounterOpts {
 		// SDL failure counters
 		{Name: cSDLWriteFailure, Help: "The total number of SDL write failures"},
 		{Name: cSDLReadFailure, Help: "The total number of SDL read failures"},
-		{Name: cSDLRemoveFailure, Help: "The total number of SDL read failures"},
+		{Name: cSDLRemoveFailure, Help: "The total number of SDL remove failures"},
 
 		// E2 interface state counters
 		{Name: cE2StateChangedToUp, Help: "The total number of E2 interface change connected state"},
