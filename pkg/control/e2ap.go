@@ -50,6 +50,13 @@ type E2ap struct {
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
+func (c *E2ap) SetASN1DebugPrintStatus(logLevel int) {
+	e2ap_wrapper.SetASN1DebugPrintStatus(logLevel)
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
 func (c *E2ap) FillSubscriptionReqMsgs(params interface{}, subreqList *e2ap.SubscriptionRequestList, restSubscription *RESTSubscription) error {
 	xapp.Logger.Debug("FillSubscriptionReqMsgs")
 

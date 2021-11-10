@@ -429,6 +429,8 @@ typedef struct  {
 //////////////////////////////////////////////////////////////////////
 // Function declarations
 
+void allowASN1DebugPrints(bool);
+
 const char* getE2ErrorString(uint64_t);
 
 typedef void* e2ap_pdu_ptr_t;

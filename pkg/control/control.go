@@ -150,7 +150,7 @@ func NewControl() *Control {
 		e2SubsDb:          CreateSdl(),
 		restSubsDb:        CreateRESTSdl(),
 		Counters:          xapp.Metric.RegisterCounterGroup(GetMetricsOpts(), "SUBMGR"),
-		LoggerLevel:       4,
+		LoggerLevel:       1,
 	}
 
 	e2IfState.Init(c)
@@ -161,16 +161,13 @@ func NewControl() *Control {
 	xapp.Resource.InjectRoute("/ric/v1/restsubscriptions", c.GetAllRestSubscriptions, "GET")
 	xapp.Resource.InjectRoute("/ric/v1/symptomdata", c.SymptomDataHandler, "GET")
 
-	if readSubsFromDb == "false" {
-		return c
+	if readSubsFromDb == "true" {
+		// Read subscriptions from db
+		c.ReadE2Subscriptions()
+		c.ReadRESTSubscriptions()
 	}
 
-	// Read subscriptions from db
-	c.ReadE2Subscriptions()
-	c.ReadRESTSubscriptions()
-
 	go xapp.Subscription.Listen(c.RESTSubscriptionHandler, c.RESTQueryHandler, c.RESTSubscriptionDeleteHandler)
-
 	return c
 }
 
@@ -242,6 +239,7 @@ func (c *Control) ReadConfigParameters(f string) {
 
 	c.LoggerLevel = int(xapp.Logger.GetLevel())
 	xapp.Logger.Debug("LoggerLevel= %v", c.LoggerLevel)
+	c.e2ap.SetASN1DebugPrintStatus(c.LoggerLevel)
 
 	// viper.GetDuration returns nanoseconds
 	e2tSubReqTimeout = viper.GetDuration("controls.e2tSubReqTimeout_ms") * 1000000

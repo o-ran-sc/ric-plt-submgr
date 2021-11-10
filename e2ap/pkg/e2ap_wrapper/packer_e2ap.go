@@ -1116,6 +1116,19 @@ func (e2apMsg *e2apMsgPackerSubscriptionDeleteFailure) String() string {
 }
 
 //-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+func SetASN1DebugPrintStatus(logLevel int) {
+	if logLevel >= 4 {
+		fmt.Println("Setting ASN1 debug prints ON")
+		C.allowASN1DebugPrints(true)
+	} else {
+		fmt.Println("Setting ASN1 debug prints OFF")
+		C.allowASN1DebugPrints(false)
+	}
+}
+
+//-----------------------------------------------------------------------------
 // Public E2AP packer creators
 //-----------------------------------------------------------------------------
 

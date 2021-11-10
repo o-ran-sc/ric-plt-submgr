@@ -27,12 +27,7 @@
 #include "asn_constant.h"
 #include "E2AP_if.h"
 
-
-#ifdef DEBUG
-    static const bool debug = true;
-#else
-    static const bool debug = true; //false;
-#endif
+static bool debugPrints = false;
 
 const int64_t cMaxNrOfErrors = 256;
 const uint64_t cMaxSizeOfOctetString = 1024;
@@ -75,6 +70,11 @@ typedef union {
 } IdOctects_t;
 
 //////////////////////////////////////////////////////////////////////
+void allowASN1DebugPrints(bool allowASN1DebugPrints) {
+    debugPrints = allowASN1DebugPrints;
+}
+
+//////////////////////////////////////////////////////////////////////
 const char* getE2ErrorString(uint64_t errorCode) {
 
     return E2ErrorStrings[errorCode];
@@ -83,8 +83,7 @@ const char* getE2ErrorString(uint64_t errorCode) {
 /////////////////////////////////////////////////////////////////////
 bool E2encode(E2AP_PDU_t* pE2AP_PDU, size_t* dataBufferSize, byte* dataBuffer, char* pLogBuffer) {
 
-    // Debug print
-    if (debug)
+    if (debugPrints)
         asn_fprint(stdout, &asn_DEF_E2AP_PDU, pE2AP_PDU);
 
     asn_enc_rval_t rval;
@@ -100,7 +99,7 @@ bool E2encode(E2AP_PDU_t* pE2AP_PDU, size_t* dataBufferSize, byte* dataBuffer, c
         return false;
     }
     else {
-        if (debug)
+        if (debugPrints)
             sprintf(pLogBuffer,"Successfully encoded %s. Buffer size %zu, encoded size %zu",asn_DEF_E2AP_PDU.name, *dataBufferSize, rval.encoded);
 
         ASN_STRUCT_FREE(asn_DEF_E2AP_PDU, pE2AP_PDU);
@@ -653,8 +652,7 @@ e2ap_pdu_ptr_t* unpackE2AP_pdu(const size_t dataBufferSize, const byte* dataBuff
     rval = asn_decode(0, ATS_ALIGNED_BASIC_PER, &asn_DEF_E2AP_PDU, (void **)&pE2AP_PDU, dataBuffer, dataBufferSize);
     switch (rval.code) {
     case RC_OK:
-        // Debug print
-        if (debug) {
+        if (debugPrints) {
             sprintf(pLogBuffer,"Successfully decoded E2AP-PDU");
             asn_fprint(stdout, &asn_DEF_E2AP_PDU, pE2AP_PDU);
         }

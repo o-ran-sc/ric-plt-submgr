@@ -56,7 +56,8 @@ func createSubmgrControl(srcId teststub.RmrSrcId, rtgSvc teststub.RmrRtgSvc) *te
 	mainCtrl.RmrControl.Init("SUBMGRCTL", srcId, rtgSvc)
 	mainCtrl.c = NewControl()
 	mainCtrl.c.UTTesting = true
-	mainCtrl.c.LoggerLevel = int(xapp.Logger.GetLevel())
+	mainCtrl.c.LoggerLevel = 4
+	mainCtrl.c.e2ap.SetASN1DebugPrintStatus(mainCtrl.c.LoggerLevel)
 	xapp.Logger.Debug("Test: LoggerLevel %v", mainCtrl.c.LoggerLevel)
 	xapp.Logger.Debug("Replacing real db with test db")
 	mainCtrl.c.e2SubsDb = CreateMock()              // This overrides real E2 Subscription database for testing
