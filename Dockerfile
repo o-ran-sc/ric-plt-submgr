@@ -23,7 +23,7 @@
 ###########################################################
 #
 ###########################################################
-FROM nexus3.o-ran-sc.org:10002/o-ran-sc/bldr-ubuntu18-c-go:1.9.0 as submgrcore
+FROM nexus3.o-ran-sc.org:10002/o-ran-sc/bldr-ubuntu20-c-go:1.0.0 as submgrcore
 
 ARG g14="1.14.4"
 ARG GOVERSION="1.14"
@@ -211,7 +211,7 @@ RUN test -z "$(gofmt -l pkg/teststube2ap/*.go)"
 ###########################################################
 #
 ###########################################################
-FROM ubuntu:18.04
+FROM ubuntu:20.04
 
 RUN apt update && apt install -y iputils-ping net-tools curl tcpdump
 
