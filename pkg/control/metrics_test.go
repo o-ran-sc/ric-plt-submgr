@@ -33,6 +33,7 @@ func TestAddAllCountersOnce(t *testing.T) {
 		Counter{cRestSubReqFromXapp, 1},
 		Counter{cRestSubRespToXapp, 1},
 		Counter{cRestSubFailToXapp, 1},
+		Counter{cRestReqRejDueE2Down, 1},
 		Counter{cRestSubNotifToXapp, 1},
 		Counter{cRestSubFailNotifToXapp, 1},
 		Counter{cSubReqToE2, 1},
@@ -59,6 +60,8 @@ func TestAddAllCountersOnce(t *testing.T) {
 		Counter{cSDLWriteFailure, 1},
 		Counter{cSDLReadFailure, 1},
 		Counter{cSDLRemoveFailure, 1},
+		Counter{cE2StateChangedToUp, 1},
+		Counter{cE2StateChangedToDown, 1},
 	})
 
 	mainCtrl.c.UpdateCounter(cSubReqFromXapp)
@@ -67,6 +70,7 @@ func TestAddAllCountersOnce(t *testing.T) {
 	mainCtrl.c.UpdateCounter(cRestSubReqFromXapp)
 	mainCtrl.c.UpdateCounter(cRestSubRespToXapp)
 	mainCtrl.c.UpdateCounter(cRestSubFailToXapp)
+	mainCtrl.c.UpdateCounter(cRestReqRejDueE2Down)
 	mainCtrl.c.UpdateCounter(cRestSubNotifToXapp)
 	mainCtrl.c.UpdateCounter(cRestSubFailNotifToXapp)
 	mainCtrl.c.UpdateCounter(cSubReqToE2)
@@ -93,6 +97,8 @@ func TestAddAllCountersOnce(t *testing.T) {
 	mainCtrl.c.UpdateCounter(cSDLWriteFailure)
 	mainCtrl.c.UpdateCounter(cSDLReadFailure)
 	mainCtrl.c.UpdateCounter(cSDLRemoveFailure)
+	mainCtrl.c.UpdateCounter(cE2StateChangedToUp)
+	mainCtrl.c.UpdateCounter(cE2StateChangedToDown)
 
 	mainCtrl.VerifyCounterValues(t)
 }

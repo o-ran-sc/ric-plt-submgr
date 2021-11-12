@@ -238,7 +238,7 @@ func (c *Control) ReadConfigParameters(f string) {
 	xapp.Logger.Debug("ReadConfigParameters")
 
 	c.LoggerLevel = int(xapp.Logger.GetLevel())
-	xapp.Logger.Debug("LoggerLevel= %v", c.LoggerLevel)
+	xapp.Logger.Info("LoggerLevel = %v", c.LoggerLevel)
 	c.e2ap.SetASN1DebugPrintStatus(c.LoggerLevel)
 
 	// viper.GetDuration returns nanoseconds
@@ -633,6 +633,7 @@ func (c *Control) handleSubscriptionRequest(trans *TransactionXapp, subReqMsg *e
 			break
 		}
 	} else {
+		// Timer expiry
 		err = fmt.Errorf("E2 subscription response timeout")
 		errorInfo.SetInfo(err.Error(), "", models.SubscriptionInstanceTimeoutTypeE2Timeout)
 		if subs.PolicyUpdate == true {
@@ -641,6 +642,7 @@ func (c *Control) handleSubscriptionRequest(trans *TransactionXapp, subReqMsg *e
 	}
 
 	xapp.Logger.Error("XAPP-SubReq E2 subscription failed %s", idstring(err, trans, subs))
+
 	c.registry.RemoveFromSubscription(subs, trans, waitRouteCleanup_ms, c)
 	return nil, &errorInfo, err
 }
@@ -746,8 +748,8 @@ func (c *Control) RESTSubscriptionDeleteHandler(restSubId string) int {
 				return common.UnsubscribeBadRequestCode
 			} else if restSubscription.SubDelReqOngoing == true {
 				// Previous request for same restSubId still ongoing
-				c.UpdateCounter(cRestSubDelFailToXapp)
-				return common.UnsubscribeBadRequestCode
+				c.UpdateCounter(cRestSubDelRespToXapp)
+				return common.UnsubscribeNoContentCode
 			}
 		}
 	}
@@ -1116,6 +1118,7 @@ func (c *Control) handleSubscriptionCreate(subs *Subscription, parentTrans *Tran
 		case *PackSubscriptionRequestErrortEvent, *SDLWriteErrortEvent:
 			subRfMsg, valid = subs.SetCachedResponse(event, false)
 		default:
+			// Timer expiry
 			if subs.PolicyUpdate == false {
 				xapp.Logger.Debug("SUBS-SubReq: internal delete due default event(%s) %s", typeofSubsMessage(event), idstring(nil, trans, subs, parentTrans))
 				removeSubscriptionFromDb = true

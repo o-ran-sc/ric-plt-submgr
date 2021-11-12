@@ -48,7 +48,9 @@ type Counter struct {
 
 type CountersToBeAdded []Counter
 
-var countersBeforeMap map[string]Counter
+var allCountersMap map[string]Counter
+var allCountersBeforeMap map[string]Counter
+var toBeAddedCountersBeforeMap map[string]Counter
 var toBeAddedCountersMap map[string]Counter
 
 func createSubmgrControl(srcId teststub.RmrSrcId, rtgSvc teststub.RmrRtgSvc) *testingSubmgrControl {
@@ -302,6 +304,17 @@ func (mc *testingSubmgrControl) GetMetrics(t *testing.T) (string, error) {
 	return string(respBody[:]), nil
 }
 
+func (mc *testingSubmgrControl) InitAllCounterMap() {
+	counterOpts := GetMetricsOpts()
+
+	allCountersMap = make(map[string]Counter)
+	for _, counterOpt := range counterOpts {
+		//fmt.Printf("counterOpt.Name: '%v'\n", counterOpt.Name)
+		counter := Counter{counterOpt.Name, 0}
+		allCountersMap[counterOpt.Name] = counter
+	}
+}
+
 func (mc *testingSubmgrControl) CounterValuesToBeVeriefied(t *testing.T, countersToBeAdded CountersToBeAdded) {
 
 	if len(toBeAddedCountersMap) == 0 {
@@ -314,25 +327,26 @@ func (mc *testingSubmgrControl) CounterValuesToBeVeriefied(t *testing.T, counter
 }
 
 func (mc *testingSubmgrControl) GetCounterValuesBefore(t *testing.T) {
-	countersBeforeMap = make(map[string]Counter)
-	countersBeforeMap = mc.GetCurrentCounterValues(t, toBeAddedCountersMap)
+	toBeAddedCountersBeforeMap = make(map[string]Counter)
+	toBeAddedCountersBeforeMap = mc.GetCurrentCounterValues(t, toBeAddedCountersMap)
+	allCountersBeforeMap = make(map[string]Counter)
+	allCountersBeforeMap = mc.GetCurrentCounterValues(t, allCountersMap)
 }
 
 func (mc *testingSubmgrControl) VerifyCounterValues(t *testing.T) {
 
 	// Check that expected counters are added ok
+	// Get current values of counters exected to be added
 	currentCountersMap := mc.GetCurrentCounterValues(t, toBeAddedCountersMap)
 	for _, toBeAddedCounter := range toBeAddedCountersMap {
 		if currentCounter, ok := currentCountersMap[toBeAddedCounter.Name]; ok == true {
-			if beforeCounter, ok := countersBeforeMap[toBeAddedCounter.Name]; ok == true {
+			if beforeCounter, ok := toBeAddedCountersBeforeMap[toBeAddedCounter.Name]; ok == true {
 				if currentCounter.Value != beforeCounter.Value+toBeAddedCounter.Value {
 					mc.TestError(t, "Error in expected counter value: counterName %v, current value %v, expected value %v",
 						currentCounter.Name, currentCounter.Value, beforeCounter.Value+toBeAddedCounter.Value)
-
-					//fmt.Printf("beforeCounter.Value=%v, toBeAddedCounter.Value=%v, \n",beforeCounter.Value, toBeAddedCounter.Value)
 				}
 			} else {
-				mc.TestError(t, "Counter %v not in countersBeforeMap", toBeAddedCounter.Name)
+				mc.TestError(t, "Counter %v not in toBeAddedCountersBeforeMap", toBeAddedCounter.Name)
 			}
 		} else {
 			mc.TestError(t, "Counter %v not in currentCountersMap", toBeAddedCounter.Name)
@@ -340,24 +354,22 @@ func (mc *testingSubmgrControl) VerifyCounterValues(t *testing.T) {
 	}
 
 	// Check that not any unexpected counter are added (this is not working correctly!)
+	// Get current values of all counters
+	currentCountersMap = mc.GetCurrentCounterValues(t, allCountersMap)
 	for _, currentCounter := range currentCountersMap {
 		if _, ok := toBeAddedCountersMap[currentCounter.Name]; ok == false {
-			if beforeCounter, ok := countersBeforeMap[currentCounter.Name]; ok == true {
+			if beforeCounter, ok := allCountersBeforeMap[currentCounter.Name]; ok == true {
 				if currentCounter.Value != beforeCounter.Value {
-					mc.TestError(t, "Error: unexpected counter value added: counterName %v, current value %v, expected value %v",
-						currentCounter.Name, beforeCounter.Value, beforeCounter.Value)
-
-					//fmt.Printf("beforeCounter.Value=%v, toBeAddedCounter.Value=%v, \n",beforeCounter.Value, toBeAddedCounter.Value)
+					mc.TestError(t, "Error: unexpected counter added: counterName %v, current value %v, expected value %v",
+						currentCounter.Name, currentCounter.Value, beforeCounter.Value)
 				}
-			} else {
-				mc.TestError(t, "Counter %v not in countersBeforeMap", beforeCounter.Name)
 			}
 		}
 	}
 
 	// Make map empty
-	//fmt.Printf("toBeAddedCountersMap=%v\n",toBeAddedCountersMap)
 	toBeAddedCountersMap = make(map[string]Counter)
+	allCountersBeforeMap = make(map[string]Counter)
 }
 
 func (mc *testingSubmgrControl) GetCurrentCounterValues(t *testing.T, chekedCountersMap map[string]Counter) map[string]Counter {
@@ -388,7 +400,6 @@ func (mc *testingSubmgrControl) GetCurrentCounterValues(t *testing.T, chekedCoun
 
 	if len(retCounterMap) != len(chekedCountersMap) {
 		mc.TestError(t, "Error: len(retCounterMap) != len(chekedCountersMap)")
-
 	}
 	return retCounterMap
 }

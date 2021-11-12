@@ -39,6 +39,7 @@ func TestSuiteSetup(t *testing.T) {
 	// like this:git log
 	// SetPackerIf(e2ap_wrapper.NewAsn1E2APPacker())
 
+	mainCtrl.InitAllCounterMap()
 	SetPackerIf(e2ap_wrapper.NewUtAsn1E2APPacker())
 	mainCtrl.c.restDuplicateCtrl.Init()
 
@@ -95,6 +96,7 @@ func TestRESTSubReqAfterE2ConnBreak(t *testing.T) {
 	mainCtrl.SetE2State(t, "RAN_NAME_1_CONNECTED")
 
 	mainCtrl.VerifyCounterValues(t)
+	//os.Exit(1)
 }
 
 //-----------------------------------------------------------------------------
@@ -726,6 +728,7 @@ func TestSubMergeDelAndRouteUpdateNok(t *testing.T) {
 	// Init counter check
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cSubReqFromXapp, 2},
+		Counter{cMergedSubscriptions, 1},
 		Counter{cSubReqToE2, 1},
 		Counter{cSubRespFromE2, 1},
 		Counter{cSubRespToXapp, 2},
@@ -734,6 +737,7 @@ func TestSubMergeDelAndRouteUpdateNok(t *testing.T) {
 		Counter{cSubDelReqToE2, 1},
 		Counter{cSubDelRespFromE2, 1},
 		Counter{cSubDelRespToXapp, 2},
+		Counter{cUnmergedSubscriptions, 1},
 	})
 
 	//Req1
@@ -1260,6 +1264,7 @@ func TestSubReqRetryInSubmgr(t *testing.T) {
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cSubReqFromXapp, 1},
 		Counter{cSubReqToE2, 1},
+		Counter{cSubReqTimerExpiry, 1},
 		Counter{cSubReReqToE2, 1},
 		Counter{cSubRespFromE2, 1},
 		Counter{cSubRespToXapp, 1},
@@ -2777,6 +2782,7 @@ func TestRESTSubMergeDelAndRouteUpdateNok(t *testing.T) {
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 2},
+		Counter{cMergedSubscriptions, 1},
 		Counter{cRestSubRespToXapp, 2},
 		Counter{cSubReqToE2, 1},
 		Counter{cSubRespFromE2, 1},
@@ -2786,6 +2792,7 @@ func TestRESTSubMergeDelAndRouteUpdateNok(t *testing.T) {
 		Counter{cSubDelReqToE2, 1},
 		Counter{cSubDelRespFromE2, 1},
 		Counter{cRestSubDelRespToXapp, 2},
+		Counter{cUnmergedSubscriptions, 1},
 	})
 
 	var params *teststube2ap.RESTSubsReqParams = nil
@@ -2941,6 +2948,7 @@ func TestRESTSubReqRetransmissionV2(t *testing.T) {
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 3},
+		Counter{cDuplicateE2SubReq, 2},
 		Counter{cRestSubRespToXapp, 3},
 		Counter{cSubReqToE2, 1},
 		Counter{cSubRespFromE2, 1},
@@ -3025,6 +3033,7 @@ func TestRESTSubReqRetransmissionV3(t *testing.T) {
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 3},
+		Counter{cDuplicateE2SubReq, 2},
 		Counter{cRestSubRespToXapp, 3},
 		Counter{cSubReqToE2, 1},
 		Counter{cSubRespFromE2, 1},
@@ -3129,6 +3138,7 @@ func TestRESTSubReqRetransmissionV4(t *testing.T) {
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 3},
+		Counter{cDuplicateE2SubReq, 2},
 		Counter{cRestSubRespToXapp, 3},
 		Counter{cSubReqToE2, 2},
 		Counter{cSubRespFromE2, 2},
@@ -3250,6 +3260,7 @@ func TestRESTSubReqRetransmissionV5(t *testing.T) {
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 3},
+		Counter{cDuplicateE2SubReq, 2},
 		Counter{cRestSubRespToXapp, 3},
 		Counter{cSubReqToE2, 2},
 		Counter{cSubRespFromE2, 2},
@@ -3382,6 +3393,7 @@ func TestRESTSubReqRetransmissionV6(t *testing.T) {
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 3},
+		Counter{cDuplicateE2SubReq, 1},
 		Counter{cRestSubRespToXapp, 3},
 		Counter{cSubReqToE2, 3},
 		Counter{cSubRespFromE2, 3},
@@ -3453,7 +3465,7 @@ func TestRESTSubDelReqRetransmission(t *testing.T) {
 		Counter{cRestSubDelReqFromXapp, 2},
 		Counter{cSubDelReqToE2, 1},
 		Counter{cSubDelRespFromE2, 1},
-		Counter{cRestSubDelRespToXapp, 1},
+		Counter{cRestSubDelRespToXapp, 2},
 	})
 
 	var params *teststube2ap.RESTSubsReqParams = nil
@@ -3517,6 +3529,7 @@ func TestRESTSubReqDelReq(t *testing.T) {
 		Counter{cSubRespFromE2, 1},
 		Counter{cRestSubNotifToXapp, 1},
 		Counter{cRestSubDelReqFromXapp, 2},
+		Counter{cRestSubDelFailToXapp, 1},
 		Counter{cSubDelReqToE2, 1},
 		Counter{cSubDelRespFromE2, 1},
 		Counter{cRestSubDelRespToXapp, 1},
@@ -3641,7 +3654,6 @@ func TestRESTSameSubsDiffRan(t *testing.T) {
 	waitSubsCleanup(t, e2SubsId2, 10)
 
 	mainCtrl.VerifyCounterValues(t)
-
 }
 
 func TestRESTSubReqRetryInSubmgr(t *testing.T) {
@@ -3652,6 +3664,7 @@ func TestRESTSubReqRetryInSubmgr(t *testing.T) {
 		Counter{cRestSubReqFromXapp, 1},
 		Counter{cRestSubRespToXapp, 1},
 		Counter{cSubReqToE2, 1},
+		Counter{cSubReqTimerExpiry, 1},
 		Counter{cSubReReqToE2, 1},
 		Counter{cSubRespFromE2, 1},
 		Counter{cRestSubNotifToXapp, 1},
@@ -3737,10 +3750,10 @@ func TestRESTSubReqRetryNoRespSubDelRespInSubmgr(t *testing.T) {
 		Counter{cSubReqToE2, 1},
 		Counter{cSubReReqToE2, 1},
 		Counter{cSubReqTimerExpiry, 2},
+		Counter{cRestSubFailNotifToXapp, 1},
 		Counter{cSubDelReqToE2, 1},
 		Counter{cSubDelRespFromE2, 1},
 	})
-
 	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
 	restSubId := xappConn1.SendRESTSubsReq(t, params)
 	xapp.Logger.Debug("Send REST subscriber request for subscriber : %v", restSubId)
@@ -3772,10 +3785,11 @@ func TestREST2eTermNotRespondingToSubReq(t *testing.T) {
 		Counter{cSubReqToE2, 1},
 		Counter{cSubReReqToE2, 1},
 		Counter{cSubReqTimerExpiry, 2},
+		Counter{cSubDelReReqToE2, 1},
+		Counter{cRestSubFailNotifToXapp, 1},
 		Counter{cSubDelReqToE2, 1},
 		Counter{cSubDelReqTimerExpiry, 2},
 	})
-
 	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
 	restSubId := xappConn1.SendRESTSubsReq(t, params)
 	xapp.Logger.Debug("Send REST subscriber request for subscriber : %v", restSubId)
@@ -3849,6 +3863,7 @@ func TestRESTSubReqTwoRetriesNoRespAtAllInSubmgr(t *testing.T) {
 		Counter{cSubReqToE2, 1},
 		Counter{cSubReReqToE2, 1},
 		Counter{cSubReqTimerExpiry, 2},
+		Counter{cRestSubFailNotifToXapp, 1},
 		Counter{cSubDelReqToE2, 1},
 		Counter{cSubDelReReqToE2, 1},
 		Counter{cSubDelReqTimerExpiry, 2},
@@ -3915,6 +3930,7 @@ func TestRESTSubReqSubFailRespInSubmgr(t *testing.T) {
 		Counter{cSubFailFromE2, 1},
 		Counter{cRestSubFailNotifToXapp, 1},
 		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cRestSubDelRespToXapp, 1},
 	})
 
 	const subReqCount int = 1
@@ -3983,6 +3999,7 @@ func TestRESTSubDelReqRetryInSubmgr(t *testing.T) {
 		Counter{cRestSubNotifToXapp, 1},
 		Counter{cRestSubDelReqFromXapp, 1},
 		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelReqTimerExpiry, 1},
 		Counter{cSubDelReReqToE2, 1},
 		Counter{cSubDelRespFromE2, 1},
 		Counter{cRestSubDelRespToXapp, 1},
@@ -4043,6 +4060,7 @@ func TestRESTSubDelReqTwoRetriesNoRespInSubmgr(t *testing.T) {
 		Counter{cRestSubNotifToXapp, 1},
 		Counter{cRestSubDelReqFromXapp, 1},
 		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelReqTimerExpiry, 1},
 		Counter{cSubDelReReqToE2, 1},
 		Counter{cSubDelRespFromE2, 1},
 		Counter{cRestSubDelRespToXapp, 1},
@@ -4339,7 +4357,7 @@ func TestRESTSubReqAndSubDelOkSameActionParallel(t *testing.T) {
 //     | RESTSubReq2                   |              |
 //     |------------------------------>|              |
 //     |             |                 |              |
-//     |               RESTSubDelResp2 |              |
+//     |               RESTSubResp2    |              |
 //     |<------------------------------|              |
 //     |             |                 | SubReq1      |
 //     |             |                 |------------->|
@@ -4375,15 +4393,17 @@ func TestRESTSubReqAndSubDelNoAnswerSameActionParallel(t *testing.T) {
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 2},
+		Counter{cMergedSubscriptions, 1},
 		Counter{cRestSubRespToXapp, 2},
 		Counter{cSubReqToE2, 1},
+		Counter{cSubReqTimerExpiry, 2},
+		Counter{cSubReReqToE2, 1},
 		Counter{cRestSubFailNotifToXapp, 2},
 		Counter{cRestSubDelReqFromXapp, 2},
 		Counter{cSubDelReqToE2, 1},
 		Counter{cSubDelRespFromE2, 1},
 		Counter{cRestSubDelRespToXapp, 2},
 	})
-
 	const subReqCount int = 1
 
 	// Req1
@@ -4475,6 +4495,7 @@ func TestRESTSubReqAndSubDelNokSameActionParallel(t *testing.T) {
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 2},
+		Counter{cMergedSubscriptions, 1},
 		Counter{cRestSubRespToXapp, 2},
 		Counter{cSubReqToE2, 1},
 		Counter{cSubFailFromE2, 1},
@@ -4971,6 +4992,7 @@ func TestRESTSubReqNokAndSubDelOkWithRestartInMiddle(t *testing.T) {
 		Counter{cSubDelReqFromXapp, 1},
 		Counter{cSubDelReqToE2, 1},
 		Counter{cSubDelRespFromE2, 1},
+		Counter{cRestSubFailNotifToXapp, 1},
 	})
 
 	const subReqCount int = 1
@@ -5054,9 +5076,9 @@ func TestRESTSubReqAndSubDelOkWithRestartInMiddle(t *testing.T) {
 		Counter{cRestSubNotifToXapp, 1},
 		Counter{cRestSubDelReqFromXapp, 1},
 		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelRespFromE2, 1},
 		Counter{cRestSubDelRespToXapp, 1},
 	})
-
 	// Remove possible existing subscription
 	mainCtrl.removeExistingSubscriptions(t)
 
@@ -6759,6 +6781,7 @@ func TestRESTSubReqPolicyUpdateTimeoutAndSubDelOkSameAction(t *testing.T) {
 		Counter{cRestSubReqFromXapp, 2},
 		Counter{cRestSubRespToXapp, 2},
 		Counter{cSubReqToE2, 2},
+		Counter{cSubReqTimerExpiry, 1},
 		Counter{cSubRespFromE2, 1},
 		Counter{cRestSubNotifToXapp, 1},
 		Counter{cRestSubFailNotifToXapp, 1},
@@ -6865,9 +6888,10 @@ func TestPolicyUpdateRESTSubReqAndSubDelOkWithRestartInMiddle(t *testing.T) {
 		Counter{cSubReqToE2, 2},
 		Counter{cSubRespFromE2, 1},
 		Counter{cRestSubNotifToXapp, 1},
-		Counter{cRestSubNotifToXapp, 1},
+		Counter{cRestSubFailNotifToXapp, 1},
 		Counter{cRestSubDelReqFromXapp, 1},
 		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelRespFromE2, 1},
 		Counter{cRestSubDelRespToXapp, 1},
 	})
 
@@ -6913,10 +6937,6 @@ func TestPolicyUpdateRESTSubReqAndSubDelOkWithRestartInMiddle(t *testing.T) {
 
 	// Check subscription
 	queryXappSubscription(t, int64(e2SubsId), "RAN_NAME_1", []string{"localhost:13560"})
-
-	xapp.Logger.Debug("Here 1")
-	//<-time.After(3 * time.Second)
-	xapp.Logger.Debug("Here 2")
 
 	// Delete subscription
 	xappConn1.SendRESTSubsDelReq(t, &restSubId)

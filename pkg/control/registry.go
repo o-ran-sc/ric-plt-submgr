@@ -455,6 +455,7 @@ func (r *Registry) RemoveFromSubscription(subs *Subscription, trans *Transaction
 }
 
 func (r *Registry) RouteDelete(subs *Subscription, trans *TransactionXapp, c *Control) {
+
 	tmpList := xapp.RmrEndpointList{}
 	tmpList.AddEndpoint(trans.GetEndpoint())
 	subRouteAction := SubRouteInfo{tmpList, uint16(subs.ReqId.InstanceId)}
