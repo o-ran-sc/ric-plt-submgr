@@ -198,6 +198,17 @@ func TestWriteSubscriptionToSdl(t *testing.T) {
 	if err != nil {
 		t.Errorf("TEST: %s", err.Error())
 	}
+	verifyE2KeyCount(t, 1)
+}
+
+func verifyE2KeyCount(t *testing.T, expectedCount int) {
+
+	count, err := mainCtrl.c.GetE2KeyCount()
+	if err != nil {
+		t.Errorf("TEST: %s", err.Error())
+	} else {
+		assert.Equal(t, expectedCount, count)
+	}
 }
 
 func TestReadSubscriptionFromSdl(t *testing.T) {

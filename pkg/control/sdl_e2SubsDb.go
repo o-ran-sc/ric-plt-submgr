@@ -223,3 +223,14 @@ func (c *Control) RemoveAllSubscriptionsFromSdl() error {
 	}
 	return nil
 }
+
+func (c *Control) GetE2KeyCount() (int, error) {
+
+	// Get all keys
+	keys, err := c.e2SubsDb.GetAll(e2SubSdlNs)
+	if err != nil {
+		c.UpdateCounter(cSDLReadFailure)
+		return 0, fmt.Errorf("SDL: GetE2KeyCount(), GetAll(). Error while reading E2 subscriptions  keys from DBAAS %s\n", err.Error())
+	}
+	return len(keys), nil
+}

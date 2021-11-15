@@ -176,3 +176,14 @@ func (c *Control) RemoveAllRESTSubscriptionsFromSdl() error {
 	}
 	return nil
 }
+
+func (c *Control) GetRESTKeyCount() (int, error) {
+
+	// Get all keys
+	keys, err := c.restSubsDb.GetAll(restSubSdlNs)
+	if err != nil {
+		c.UpdateCounter(cSDLReadFailure)
+		return 0, fmt.Errorf("SDL: GetRESTKeyCount(), GetAll(). Error while reading E2 subscriptions  keys from DBAAS %s\n", err.Error())
+	}
+	return len(keys), nil
+}

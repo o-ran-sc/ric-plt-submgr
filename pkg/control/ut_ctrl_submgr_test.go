@@ -21,6 +21,7 @@ package control
 
 import (
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -283,6 +284,14 @@ func (mc *testingSubmgrControl) wait_msgcounter_change(t *testing.T, orig uint64
 	}
 	mc.TestError(t, "(submgr) no msg counter change within %d secs", secs)
 	return 0, false
+}
+
+func (mc *testingSubmgrControl) VerifyAllClean(t *testing.T) {
+	// Verify that all resources are freed
+	assert.Equal(t, 0, len(mainCtrl.c.registry.register))
+	assert.Equal(t, 0, len(mainCtrl.c.registry.restSubscriptions))
+	verifyRESTKeyCount(t, 0)
+	verifyE2KeyCount(t, 0)
 }
 
 func (mc *testingSubmgrControl) GetMetrics(t *testing.T) (string, error) {

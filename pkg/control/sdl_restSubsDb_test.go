@@ -120,6 +120,17 @@ func TestWriteRESTSubscriptionToSdl(t *testing.T) {
 		t.Errorf("TEST: %s", err.Error())
 	}
 	restSubsDbMock.AddRestSubIdsInDb(restSubId)
+	verifyRESTKeyCount(t, 1)
+}
+
+func verifyRESTKeyCount(t *testing.T, expectedCount int) {
+
+	count, err := mainCtrl.c.GetRESTKeyCount()
+	if err != nil {
+		t.Errorf("TEST: %s", err.Error())
+	} else {
+		assert.Equal(t, expectedCount, count)
+	}
 }
 
 func TestReadRESTSubscriptionFromSdl(t *testing.T) {
