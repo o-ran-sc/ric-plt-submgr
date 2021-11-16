@@ -461,6 +461,7 @@ func (c *Control) RESTSubscriptionHandler(params interface{}) (*models.Subscript
 	if duplicate {
 		err := fmt.Errorf("Retransmission blocker direct ACK for request of restSubsId %s restSubId MD5sum %s as retransmission", restSubId, md5sum)
 		xapp.Logger.Debug("%s", err)
+		c.registry.DeleteRESTSubscription(&restSubId)
 		c.UpdateCounter(cRestSubRespToXapp)
 		return &subResp, common.SubscribeCreatedCode
 	}
@@ -469,6 +470,7 @@ func (c *Control) RESTSubscriptionHandler(params interface{}) (*models.Subscript
 	e2SubscriptionDirectives, err := c.GetE2SubscriptionDirectives(p)
 	if err != nil {
 		xapp.Logger.Error("%s", err)
+		c.registry.DeleteRESTSubscription(&restSubId)
 		return nil, common.SubscribeBadRequestCode
 	}
 	go c.processSubscriptionRequests(restSubscription, &subReqList, p.ClientEndpoint, p.Meid, &restSubId, xAppRmrEndpoint, md5sum, e2SubscriptionDirectives)
@@ -520,7 +522,7 @@ func (c *Control) processSubscriptionRequests(restSubscription *RESTSubscription
 	clientEndpoint *models.SubscriptionParamsClientEndpoint, meid *string, restSubId *string, xAppRmrEndpoint string, md5sum string, e2SubscriptionDirectives *E2SubscriptionDirectives) {
 
 	c.SubscriptionProcessingStartDelay()
-	xapp.Logger.Debug("Subscription Request count=%v ", len(subReqList.E2APSubscriptionRequests))
+	xapp.Logger.Debug("E2 SubscriptionRequest count =%v ", len(subReqList.E2APSubscriptionRequests))
 
 	var xAppEventInstanceID int64
 	var e2EventInstanceID int64
@@ -615,18 +617,16 @@ func (c *Control) handleSubscriptionRequest(trans *TransactionXapp, subReqMsg *e
 				c.RemoveSubscriptionFromDb(subs)
 				err = fmt.Errorf("E2 interface down")
 				errorInfo.SetInfo(err.Error(), models.SubscriptionInstanceErrorSourceE2Node, "")
-				return nil, &errorInfo, err
 			}
 		case *e2ap.E2APSubscriptionFailure:
 			err = fmt.Errorf("E2 SubscriptionFailure received")
 			errorInfo.SetInfo(err.Error(), models.SubscriptionInstanceErrorSourceE2Node, "")
-			return nil, &errorInfo, err
 		case *PackSubscriptionRequestErrortEvent:
 			err = fmt.Errorf("E2 SubscriptionRequest pack failure")
-			return nil, &themsg.ErrorInfo, err
+			errorInfo = themsg.ErrorInfo
 		case *SDLWriteErrortEvent:
 			err = fmt.Errorf("SDL write failure")
-			return nil, &themsg.ErrorInfo, err
+			errorInfo = themsg.ErrorInfo
 		default:
 			err = fmt.Errorf("Unexpected E2 subscription response received")
 			errorInfo.SetInfo(err.Error(), models.SubscriptionInstanceErrorSourceE2Node, "")
@@ -642,7 +642,6 @@ func (c *Control) handleSubscriptionRequest(trans *TransactionXapp, subReqMsg *e
 	}
 
 	xapp.Logger.Error("XAPP-SubReq E2 subscription failed %s", idstring(err, trans, subs))
-
 	c.registry.RemoveFromSubscription(subs, trans, waitRouteCleanup_ms, c)
 	return nil, &errorInfo, err
 }
@@ -683,6 +682,7 @@ func (c *Control) sendUnsuccesfullResponseNotification(restSubId *string, restSu
 	c.UpdateCounter(cRestSubFailNotifToXapp)
 	xapp.Subscription.Notify(resp, *clientEndpoint)
 
+	// E2 is down. Delete completely processed request safely now
 	if c.e2IfState.IsE2ConnectionUp(&restSubscription.Meid) == false && restSubscription.SubReqOngoing == false {
 		c.registry.DeleteRESTSubscription(restSubId)
 		c.RemoveRESTSubscriptionFromDb(*restSubId)
@@ -717,6 +717,7 @@ func (c *Control) sendSuccesfullResponseNotification(restSubId *string, restSubs
 	c.UpdateCounter(cRestSubNotifToXapp)
 	xapp.Subscription.Notify(resp, *clientEndpoint)
 
+	// E2 is down. Delete completely processed request safely now
 	if c.e2IfState.IsE2ConnectionUp(&restSubscription.Meid) == false && restSubscription.SubReqOngoing == false {
 		c.registry.DeleteRESTSubscription(restSubId)
 		c.RemoveRESTSubscriptionFromDb(*restSubId)
@@ -1116,6 +1117,7 @@ func (c *Control) handleSubscriptionCreate(subs *Subscription, parentTrans *Tran
 			// This simulates that no response has been received and after restart subscriptions are restored from db
 			xapp.Logger.Debug("Test restart flag is active. Dropping this transaction to test restart case")
 		case *PackSubscriptionRequestErrortEvent, *SDLWriteErrortEvent:
+			removeSubscriptionFromDb = true
 			subRfMsg, valid = subs.SetCachedResponse(event, false)
 		default:
 			// Timer expiry
@@ -1189,7 +1191,7 @@ func (c *Control) sendE2TSubscriptionRequest(subs *Subscription, trans *Transact
 	subReqMsg.RequestId.Id = ricRequestorId
 	trans.Mtype, trans.Payload, err = c.e2ap.PackSubscriptionRequest(subReqMsg)
 	if err != nil {
-		xapp.Logger.Error("SUBS-SubReq: %s", idstring(err, trans, subs, parentTrans))
+		xapp.Logger.Error("SUBS-SubReq ASN1 pack error: %s", idstring(err, trans, subs, parentTrans))
 		return &PackSubscriptionRequestErrortEvent{
 			ErrorInfo{
 				ErrorSource: models.SubscriptionInstanceErrorSourceASN1,

@@ -21,13 +21,14 @@ package control
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 
 	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/teststub"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/models"
@@ -289,7 +290,13 @@ func (mc *testingSubmgrControl) wait_msgcounter_change(t *testing.T, orig uint64
 func (mc *testingSubmgrControl) VerifyAllClean(t *testing.T) {
 	// Verify that all resources are freed
 	assert.Equal(t, 0, len(mainCtrl.c.registry.register))
+	if len(mainCtrl.c.registry.register) > 0 {
+		fmt.Printf("registry.register: %v\n", mainCtrl.c.registry.register)
+	}
 	assert.Equal(t, 0, len(mainCtrl.c.registry.restSubscriptions))
+	if len(mainCtrl.c.registry.restSubscriptions) > 0 {
+		fmt.Printf("registry.restSubscriptions: %v\n", mainCtrl.c.registry.restSubscriptions)
+	}
 	verifyRESTKeyCount(t, 0)
 	verifyE2KeyCount(t, 0)
 }

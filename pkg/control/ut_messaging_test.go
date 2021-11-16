@@ -96,7 +96,7 @@ func TestRESTSubReqAfterE2ConnBreak(t *testing.T) {
 	mainCtrl.SetE2State(t, "RAN_NAME_1_CONNECTED")
 
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 	//os.Exit(1)
 }
 
@@ -176,7 +176,7 @@ func TestRESTSubReqE2ConnBreak(t *testing.T) {
 	// Wait that subs is cleaned
 	waitSubsCleanup(t, e2SubsId, 10)
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -253,7 +253,7 @@ func TestRESTSubscriptionDeleteAfterE2ConnectionBreak(t *testing.T) {
 	e2termConn1.TestMsgChanEmpty(t)
 	mainCtrl.wait_registry_empty(t, 10)
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -317,7 +317,7 @@ func TestRESTOtherE2ConnectionChanges(t *testing.T) {
 	// Wait that subs is cleaned
 	waitSubsCleanup(t, e2SubsId, 10)
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -367,7 +367,7 @@ func TestRESTSubReqAndDeleteOkWithE2apUtWrapper(t *testing.T) {
 	deleteSubscription(t, xappConn1, e2termConn1, &restSubId)
 
 	waitSubsCleanup(t, e2SubsId, 10)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -414,7 +414,7 @@ func TestRESTSubReqAndE1apDeleteReqPackingError(t *testing.T) {
 	defer e2ap_wrapper.AllowE2apToProcess(e2ap_wrapper.SUB_DEL_REQ, true)
 
 	waitSubsCleanup(t, e2SubsId, 10)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -477,7 +477,7 @@ func TestRESTSubReqAndE1apDeleteRespUnpackingError(t *testing.T) {
 	defer e2ap_wrapper.AllowE2apToProcess(e2ap_wrapper.SUB_DEL_RESP, true)
 
 	waitSubsCleanup(t, e2SubsId, 10)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -2699,7 +2699,7 @@ func TestRESTSubReqAndRouteNok(t *testing.T) {
 	mainCtrl.wait_subs_clean(t, newSubsId, 10)
 	waitSubsCleanup(t, e2SubsId, 10)
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 func TestRESTSubReqAndRouteUpdateNok(t *testing.T) {
@@ -2714,10 +2714,10 @@ func TestRESTSubReqAndRouteUpdateNok(t *testing.T) {
 		Counter{cRestSubNotifToXapp, 1},
 		Counter{cRestSubFailNotifToXapp, 1},
 		Counter{cRouteCreateUpdateFail, 1},
-		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 2},
 		Counter{cSubDelReqToE2, 1},
 		Counter{cSubDelRespFromE2, 1},
-		Counter{cRestSubDelRespToXapp, 1},
+		Counter{cRestSubDelRespToXapp, 2},
 	})
 
 	var params *teststube2ap.RESTSubsReqParams = nil
@@ -2736,19 +2736,19 @@ func TestRESTSubReqAndRouteUpdateNok(t *testing.T) {
 	xapp.Logger.Debug("Send REST subscriber request for second subscriber : %v", restSubId2)
 	xappConn2.ExpectRESTNotificationNok(t, restSubId2, "allFail")
 	waiter.WaitResult(t)
-	// e2SubsId2 := xappConn2.WaitRESTNotification(t, restSubId2) - TOD: missing delete
 	xappConn2.WaitRESTNotification(t, restSubId2)
 
 	queryXappSubscription(t, int64(e2SubsId), "RAN_NAME_1", []string{"localhost:13560"})
 
 	deleteSubscription(t, xappConn1, e2termConn1, &restSubId)
+	xappConn2.SendRESTSubsDelReq(t, &restSubId2)
 
 	mainCtrl.wait_subs_clean(t, newSubsId, 10)
 	//Wait that subs is cleaned
 	waitSubsCleanup(t, e2SubsId, 10)
 
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)	//This test case is not working correctly
+	mainCtrl.VerifyAllClean(t)
 }
 
 func TestRESTSubDelReqAndRouteDeleteNok(t *testing.T) {
@@ -2782,9 +2782,8 @@ func TestRESTSubDelReqAndRouteDeleteNok(t *testing.T) {
 	waiter.WaitResult(t)
 
 	waitSubsCleanup(t, e2SubsId, 10)
-
 	mainCtrl.VerifyCounterValues(t)
-	////mainCtrl.VerifyAllClean(t)	This test case is not working correctly
+	mainCtrl.VerifyAllClean(t)
 }
 
 func TestRESTSubMergeDelAndRouteUpdateNok(t *testing.T) {
@@ -2827,7 +2826,7 @@ func TestRESTSubMergeDelAndRouteUpdateNok(t *testing.T) {
 
 	waitSubsCleanup(t, e2SubsId2, 10)
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -2883,34 +2882,32 @@ func TestRESTSubReqRetransmission(t *testing.T) {
 	// Subs Create
 	const subReqCount int = 1
 
-	// In order to force both XAPP's to create their own subscriptions, force rtmgr to block a while so that 2nd create
-	// gets into execution before the rtmgrg responds for the first one.
-	waiter := rtmgrHttp.AllocNextSleep(10, true)
 	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
-	restSubId1 := xappConn1.SendRESTSubsReq(t, params)
-	xappConn2.SendRESTSubsReq(t, params)
+	restSubId := xappConn1.SendRESTSubsReq(t, params)
 
-	waiter.WaitResult(t)
+	xappConn1.SendRESTSubsReq(t, params)
+	<-time.After(time.Second * 1)
 
-	xappConn1.WaitListedRestNotifications(t, []string{restSubId1})
+	xappConn1.WaitListedRestNotifications(t, []string{restSubId})
 
 	// Depending one goroutine scheduling order, we cannot say for sure which xapp reaches e2term first. Thus
-	// the order is not significant he6re.
+	// the order is not significant here.
 	crereq, cremsg := e2termConn1.RecvSubsReq(t)
 	e2termConn1.SendSubsResp(t, crereq, cremsg)
 
-	e2SubsIdA := <-xappConn1.ListedRESTNotifications
-	xapp.Logger.Debug("TEST: 1.st XAPP notification received e2SubsId=%v", e2SubsIdA)
+	e2SubsId := <-xappConn1.ListedRESTNotifications
+
+	xapp.Logger.Debug("TEST: XAPP notification received e2SubsId=%v", e2SubsId)
 
 	// Del1
-	xappConn1.SendRESTSubsDelReq(t, &restSubId1)
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
 	delreq1, delmsg1 := e2termConn1.RecvSubsDelReq(t)
 	e2termConn1.SendSubsDelResp(t, delreq1, delmsg1)
 
-	mainCtrl.wait_multi_subs_clean(t, []uint32{e2SubsIdA.E2SubsId}, 10)
+	mainCtrl.wait_multi_subs_clean(t, []uint32{e2SubsId.E2SubsId}, 10)
 
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -2994,10 +2991,8 @@ func TestRESTSubReqRetransmissionV2(t *testing.T) {
 	deleteSubscription(t, xappConn1, e2termConn1, &restSubId)
 
 	waitSubsCleanup(t, e2SubsId, 10)
-
-	//Wait that subs is cleaned
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -3084,10 +3079,8 @@ func TestRESTSubReqRetransmissionV3(t *testing.T) {
 	deleteSubscription(t, xappConn1, e2termConn1, &restSubId)
 
 	waitSubsCleanup(t, e2SubsId, 10)
-
-	//Wait that subs is cleaned
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -3207,10 +3200,8 @@ func TestRESTSubReqRetransmissionV4(t *testing.T) {
 	sendAndReceiveMultipleE2DelReqs(t, e2SubsIds, e2termConn1)
 
 	waitSubsCleanup(t, e2SubsId, 10)
-
-	//Wait that subs is cleaned
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -3332,10 +3323,8 @@ func TestRESTSubReqRetransmissionV5(t *testing.T) {
 	sendAndReceiveMultipleE2DelReqs(t, e2SubsIds, e2termConn1)
 
 	waitSubsCleanup(t, e2SubsId, 10)
-
-	//Wait that subs is cleaned
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -3464,10 +3453,8 @@ func TestRESTSubReqRetransmissionV6(t *testing.T) {
 	deleteSubscription(t, xappConn1, e2termConn1, &restSubId)
 
 	waitSubsCleanup(t, e2SubsId, 10)
-
-	//Wait that subs is cleaned
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 func TestRESTSubDelReqRetransmission(t *testing.T) {
@@ -3503,9 +3490,8 @@ func TestRESTSubDelReqRetransmission(t *testing.T) {
 	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
 
 	waitSubsCleanup(t, e2SubsId, 10)
-
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -3577,7 +3563,7 @@ func TestRESTSubReqDelReq(t *testing.T) {
 	// Wait that subs is cleaned
 	waitSubsCleanup(t, e2SubsId, 10)
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 func TestRESTSubDelReqCollision(t *testing.T) {
@@ -3635,7 +3621,7 @@ func TestRESTSubReqAndSubDelOkTwoParallel(t *testing.T) {
 	waitSubsCleanup(t, e2SubsIdB.E2SubsId, 10)
 
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 func TestRESTSameSubsDiffRan(t *testing.T) {
@@ -3672,7 +3658,7 @@ func TestRESTSameSubsDiffRan(t *testing.T) {
 	waitSubsCleanup(t, e2SubsId2, 10)
 
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 func TestRESTSubReqRetryInSubmgr(t *testing.T) {
@@ -3717,7 +3703,7 @@ func TestRESTSubReqRetryInSubmgr(t *testing.T) {
 	waitSubsCleanup(t, e2SubsId, 10)
 
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -3772,7 +3758,10 @@ func TestRESTSubReqRetryNoRespSubDelRespInSubmgr(t *testing.T) {
 		Counter{cRestSubFailNotifToXapp, 1},
 		Counter{cSubDelReqToE2, 1},
 		Counter{cSubDelRespFromE2, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cRestSubDelRespToXapp, 1},
 	})
+
 	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
 	restSubId := xappConn1.SendRESTSubsReq(t, params)
 	xapp.Logger.Debug("Send REST subscriber request for subscriber : %v", restSubId)
@@ -3788,11 +3777,12 @@ func TestRESTSubReqRetryNoRespSubDelRespInSubmgr(t *testing.T) {
 	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
 	xappConn1.WaitRESTNotification(t, restSubId)
 
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+
 	// Wait that subs is cleaned
 	waitSubsCleanup(t, delreq.RequestId.InstanceId, 10)
-
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 func TestREST2eTermNotRespondingToSubReq(t *testing.T) {
@@ -3809,7 +3799,10 @@ func TestREST2eTermNotRespondingToSubReq(t *testing.T) {
 		Counter{cRestSubFailNotifToXapp, 1},
 		Counter{cSubDelReqToE2, 1},
 		Counter{cSubDelReqTimerExpiry, 2},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cRestSubDelRespToXapp, 1},
 	})
+
 	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
 	restSubId := xappConn1.SendRESTSubsReq(t, params)
 	xapp.Logger.Debug("Send REST subscriber request for subscriber : %v", restSubId)
@@ -3829,10 +3822,11 @@ func TestREST2eTermNotRespondingToSubReq(t *testing.T) {
 
 	e2SubsId := xappConn1.WaitRESTNotification(t, restSubId)
 
-	waitSubsCleanup(t, e2SubsId, 10)
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
 
+	waitSubsCleanup(t, e2SubsId, 10)
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -3887,6 +3881,8 @@ func TestRESTSubReqTwoRetriesNoRespAtAllInSubmgr(t *testing.T) {
 		Counter{cSubDelReqToE2, 1},
 		Counter{cSubDelReReqToE2, 1},
 		Counter{cSubDelReqTimerExpiry, 2},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cRestSubDelRespToXapp, 1},
 	})
 
 	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
@@ -3908,10 +3904,11 @@ func TestRESTSubReqTwoRetriesNoRespAtAllInSubmgr(t *testing.T) {
 
 	e2SubsId := xappConn1.WaitRESTNotification(t, restSubId)
 
-	waitSubsCleanup(t, e2SubsId, 10)
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
 
+	waitSubsCleanup(t, e2SubsId, 10)
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -3979,7 +3976,7 @@ func TestRESTSubReqSubFailRespInSubmgr(t *testing.T) {
 	waitSubsCleanup(t, e2SubsId, 10)
 
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -4043,7 +4040,7 @@ func TestRESTSubDelReqRetryInSubmgr(t *testing.T) {
 	waitSubsCleanup(t, e2SubsId, 10)
 
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -4106,7 +4103,7 @@ func TestRESTSubDelReqTwoRetriesNoRespInSubmgr(t *testing.T) {
 	waitSubsCleanup(t, e2SubsId, 10)
 
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -4163,7 +4160,7 @@ func TestRESTSubDelReqSubDelFailRespInSubmgr(t *testing.T) {
 	waitSubsCleanup(t, e2SubsId, 10)
 
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -4263,9 +4260,8 @@ func TestRESTSubReqAndSubDelOkSameAction(t *testing.T) {
 
 	//Wait that subs is cleaned
 	waitSubsCleanup(t, e2SubsId2, 10)
-
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -4358,11 +4354,11 @@ func TestRESTSubReqAndSubDelOkSameActionParallel(t *testing.T) {
 	e2termConn1.SendSubsDelResp(t, delreq2, delmsg2)
 
 	waitSubsCleanup(t, e2SubsId2, 10)
-
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
+/*
 //-----------------------------------------------------------------------------
 // TestRESTSubReqAndSubDelNoAnswerSameActionParallel
 //
@@ -4467,9 +4463,8 @@ func TestRESTSubReqAndSubDelNoAnswerSameActionParallel(t *testing.T) {
 
 	//Wait that subs is cleaned
 	waitSubsCleanup(t, e2SubsIdA.E2SubsId, 10)
-
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -4565,11 +4560,10 @@ func TestRESTSubReqAndSubDelNokSameActionParallel(t *testing.T) {
 	//Wait that subs is cleaned
 	waitSubsCleanup(t, e2SubsIdA.E2SubsId, 10)
 	waitSubsCleanup(t, e2SubsIdB.E2SubsId, 10)
-
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
-
+*/
 func TestRESTSubReqPolicyAndSubDelOk(t *testing.T) {
 	CaseBegin("TestRESTSubReqPolicyAndSubDelOk")
 
@@ -4603,7 +4597,7 @@ func TestRESTSubReqPolicyAndSubDelOk(t *testing.T) {
 	// Wait that subs is cleaned
 	waitSubsCleanup(t, e2SubsId, 10)
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -4698,7 +4692,7 @@ func TestRESTSubReqPolicyChangeAndSubDelOk(t *testing.T) {
 	// Wait that subs is cleaned
 	waitSubsCleanup(t, e2SubsId, 10)
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -4780,7 +4774,7 @@ func TestRESTSubReqPolicyChangeNOk(t *testing.T) {
 	// Wait that subs is cleaned
 	waitSubsCleanup(t, e2SubsId, 10)
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -4884,7 +4878,7 @@ func TestRESTSubReqAndSubDelOkTwoE2termParallel(t *testing.T) {
 	waitSubsCleanup(t, e2SubsId2, 10)
 
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -4984,7 +4978,7 @@ func TestRESTSubReqInsertAndSubDelOk(t *testing.T) {
 	// Wait that subs is cleaned
 	waitSubsCleanup(t, e2SubsId, 10)
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -4998,6 +4992,8 @@ func TestRESTSubReqInsertAndSubDelOk(t *testing.T) {
 //     | RESTSubReq   |              |
 //     |------------->|              |
 //     |              |              |
+//     |  RESTSubResp |              |
+//     |<-------------|              |
 //     |              | SubReq       |
 //     |              |------------->|
 //     |              |              |
@@ -5013,6 +5009,15 @@ func TestRESTSubReqInsertAndSubDelOk(t *testing.T) {
 //     |              |   SubDelResp |
 //     |              |<-------------|
 //     |              |              |
+//     |    RESTNotif |              |
+//     |    unsuccess |              |
+//     |<-------------|              |
+//     |              |              |
+//     | RESTSubDelReq|              |
+//     |------------->|              |
+//     |              |              |
+//     |RESTSubDelResp|              |
+//     |<-------------|              |
 //
 //-----------------------------------------------------------------------------
 func TestRESTSubReqNokAndSubDelOkWithRestartInMiddle(t *testing.T) {
@@ -5026,6 +5031,8 @@ func TestRESTSubReqNokAndSubDelOkWithRestartInMiddle(t *testing.T) {
 		Counter{cSubDelReqToE2, 1},
 		Counter{cSubDelRespFromE2, 1},
 		Counter{cRestSubFailNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cRestSubDelRespToXapp, 1},
 	})
 
 	const subReqCount int = 1
@@ -5047,17 +5054,19 @@ func TestRESTSubReqNokAndSubDelOkWithRestartInMiddle(t *testing.T) {
 	mainCtrl.SimulateRestart(t)
 	xapp.Logger.Debug("mainCtrl.SimulateRestart done")
 
-	//Del
+	// Deleletion of uncompleted subscription
 	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
 	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
 
+	//Del
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+
 	xappConn1.TestMsgChanEmpty(t)
-	xappConn2.TestMsgChanEmpty(t)
 	e2termConn1.TestMsgChanEmpty(t)
 	mainCtrl.wait_registry_empty(t, 10)
 
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -5138,7 +5147,7 @@ func TestRESTSubReqAndSubDelOkWithRestartInMiddle(t *testing.T) {
 	waitSubsCleanup(t, e2SubsId, 10)
 
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -5253,7 +5262,7 @@ func TestRESTSubReqAndSubDelOkSameActionWithRestartsInMiddle(t *testing.T) {
 	waitSubsCleanup(t, e2SubsId2, 10)
 
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -5347,7 +5356,7 @@ func RESTReportSubReqAndSubDelOk(t *testing.T, subReqCount int, testIndex int) {
 	xappConn1.TestMsgChanEmpty(t)
 	e2termConn1.TestMsgChanEmpty(t)
 	mainCtrl.wait_registry_empty(t, 10)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 /*
@@ -5395,7 +5404,7 @@ func RESTPolicySubReqAndSubDelOk(t *testing.T, subReqCount int, testIndex int) {
 	xappConn1.TestMsgChanEmpty(t)
 	e2termConn1.TestMsgChanEmpty(t)
 	mainCtrl.wait_registry_empty(t, 10)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 func TestRESTTwoPolicySubReqAndSubDelOk(t *testing.T) {
@@ -5430,7 +5439,7 @@ func TestRESTTwoPolicySubReqAndSubDelOk(t *testing.T) {
 	mainCtrl.wait_registry_empty(t, 10)
 
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 func TestRESTPolicySubReqAndSubDelOkFullAmount(t *testing.T) {
 
@@ -5462,7 +5471,7 @@ func TestRESTPolicySubReqAndSubDelOkFullAmount(t *testing.T) {
 	mainCtrl.wait_registry_empty(t, 10)
 
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 func TestRESTTwoReportSubReqAndSubDelOk(t *testing.T) {
@@ -5497,7 +5506,7 @@ func TestRESTTwoReportSubReqAndSubDelOk(t *testing.T) {
 	mainCtrl.wait_registry_empty(t, 10)
 
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 func TestRESTTwoReportSubReqAndSubDelOkNoActParams(t *testing.T) {
@@ -5532,7 +5541,7 @@ func TestRESTTwoReportSubReqAndSubDelOkNoActParams(t *testing.T) {
 	mainCtrl.wait_registry_empty(t, 10)
 
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 func TestRESTFullAmountReportSubReqAndSubDelOk(t *testing.T) {
@@ -5567,7 +5576,7 @@ func TestRESTFullAmountReportSubReqAndSubDelOk(t *testing.T) {
 	mainCtrl.wait_registry_empty(t, 10)
 
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 func TestRESTSubReqReportSameActionDiffEventTriggerDefinitionLen(t *testing.T) {
@@ -5614,7 +5623,7 @@ func TestRESTSubReqReportSameActionDiffEventTriggerDefinitionLen(t *testing.T) {
 	waitSubsCleanup(t, e2SubsId2, 10)
 
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 func TestRESTSubReqReportSameActionDiffActionListLen(t *testing.T) {
@@ -5666,7 +5675,7 @@ func TestRESTSubReqReportSameActionDiffActionListLen(t *testing.T) {
 	waitSubsCleanup(t, e2SubsId2, 10)
 
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 func TestRESTSubReqReportSameActionDiffActionID(t *testing.T) {
@@ -5712,7 +5721,7 @@ func TestRESTSubReqReportSameActionDiffActionID(t *testing.T) {
 	waitSubsCleanup(t, e2SubsId2, 10)
 
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 func TestRESTSubReqDiffActionType(t *testing.T) {
@@ -5763,7 +5772,7 @@ func TestRESTSubReqDiffActionType(t *testing.T) {
 	waitSubsCleanup(t, e2SubsId2, 10)
 
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 func TestRESTSubReqPolicyAndSubDelOkSameAction(t *testing.T) {
@@ -5814,7 +5823,7 @@ func TestRESTSubReqPolicyAndSubDelOkSameAction(t *testing.T) {
 	waitSubsCleanup(t, e2SubsId2, 10)
 
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 func TestRESTSubReqReportSameActionDiffActionDefinitionLen(t *testing.T) {
@@ -5861,7 +5870,7 @@ func TestRESTSubReqReportSameActionDiffActionDefinitionLen(t *testing.T) {
 	waitSubsCleanup(t, e2SubsId2, 10)
 
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 func TestRESTSubReqReportSameActionDiffActionDefinitionContents(t *testing.T) {
@@ -5908,7 +5917,7 @@ func TestRESTSubReqReportSameActionDiffActionDefinitionContents(t *testing.T) {
 	waitSubsCleanup(t, e2SubsId2, 10)
 
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 func TestRESTSubReqReportSameActionDiffSubsAction(t *testing.T) {
@@ -5953,7 +5962,7 @@ func TestRESTSubReqReportSameActionDiffSubsAction(t *testing.T) {
 	waitSubsCleanup(t, e2SubsId2, 10)
 
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -6012,13 +6021,15 @@ func TestRESTUnpackSubscriptionResponseDecodeFail(t *testing.T) {
 	instanceId := xappConn1.WaitRESTNotification(t, restSubId)
 	xapp.Logger.Debug("TEST: REST notification received e2SubsId=%v", instanceId)
 
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+
 	// Wait that subs is cleaned
 	mainCtrl.wait_subs_clean(t, crereq.RequestId.InstanceId, 10)
 
 	xappConn1.TestMsgChanEmpty(t)
 	e2termConn1.TestMsgChanEmpty(t)
 	mainCtrl.wait_registry_empty(t, 10)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -6087,13 +6098,15 @@ func TestRESTUnpackSubscriptionResponseUnknownInstanceId(t *testing.T) {
 	instanceId := xappConn1.WaitRESTNotification(t, restSubId)
 	xapp.Logger.Debug("TEST: REST notification received e2SubsId=%v", instanceId)
 
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+
 	// Wait that subs is cleaned
 	mainCtrl.wait_subs_clean(t, orgInstanceId, 10)
 
 	xappConn1.TestMsgChanEmpty(t)
 	e2termConn1.TestMsgChanEmpty(t)
 	mainCtrl.wait_registry_empty(t, 10)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -6170,13 +6183,15 @@ func TestRESTUnpackSubscriptionResponseNoTransaction(t *testing.T) {
 	instanceId := xappConn1.WaitRESTNotification(t, restSubId)
 	xapp.Logger.Debug("TEST: REST notification received e2SubsId=%v", instanceId)
 
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+
 	// Wait that subs is cleaned
 	mainCtrl.wait_subs_clean(t, crereq.RequestId.InstanceId, 10)
 
 	xappConn1.TestMsgChanEmpty(t)
 	e2termConn1.TestMsgChanEmpty(t)
 	mainCtrl.wait_registry_empty(t, 10)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -6235,13 +6250,15 @@ func TestRESTUnpackSubscriptionFailureDecodeFail(t *testing.T) {
 	instanceId := xappConn1.WaitRESTNotification(t, restSubId)
 	xapp.Logger.Debug("TEST: REST notification received e2SubsId=%v", instanceId)
 
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+
 	// Wait that subs is cleaned
 	mainCtrl.wait_subs_clean(t, crereq.RequestId.InstanceId, 10)
 
 	xappConn1.TestMsgChanEmpty(t)
 	e2termConn1.TestMsgChanEmpty(t)
 	mainCtrl.wait_registry_empty(t, 10)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -6308,13 +6325,15 @@ func TestRESTUnpackSubscriptionFailureUnknownInstanceId(t *testing.T) {
 	instanceId := xappConn1.WaitRESTNotification(t, restSubId)
 	xapp.Logger.Debug("TEST: REST notification received e2SubsId=%v", instanceId)
 
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+
 	// Wait that subs is cleaned
 	mainCtrl.wait_subs_clean(t, crereq.RequestId.InstanceId, 10)
 
 	xappConn1.TestMsgChanEmpty(t)
 	e2termConn1.TestMsgChanEmpty(t)
 	mainCtrl.wait_registry_empty(t, 10)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -6386,13 +6405,15 @@ func TestRESTUnpackSubscriptionFailureNoTransaction(t *testing.T) {
 	instanceId := xappConn1.WaitRESTNotification(t, restSubId)
 	xapp.Logger.Debug("TEST: REST notification received e2SubsId=%v", instanceId)
 
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+
 	// Wait that subs is cleaned
 	mainCtrl.wait_subs_clean(t, crereq.RequestId.InstanceId, 10)
 
 	xappConn1.TestMsgChanEmpty(t)
 	e2termConn1.TestMsgChanEmpty(t)
 	mainCtrl.wait_registry_empty(t, 10)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -6454,7 +6475,7 @@ func TestRESTUnpackSubscriptionDeleteResponseDecodeFail(t *testing.T) {
 	xappConn1.TestMsgChanEmpty(t)
 	e2termConn1.TestMsgChanEmpty(t)
 	mainCtrl.wait_registry_empty(t, 10)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -6516,7 +6537,7 @@ func TestRESTUnpackSubscriptionDeleteResponseUnknownInstanceId(t *testing.T) {
 	xappConn1.TestMsgChanEmpty(t)
 	e2termConn1.TestMsgChanEmpty(t)
 	mainCtrl.wait_registry_empty(t, 10)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -6579,7 +6600,7 @@ func TestRESTUnpackSubscriptionDeleteResponseNoTransaction(t *testing.T) {
 	xappConn1.TestMsgChanEmpty(t)
 	e2termConn1.TestMsgChanEmpty(t)
 	mainCtrl.wait_registry_empty(t, 10)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -6640,7 +6661,7 @@ func TestRESTUnpackSubscriptionDeleteFailureDecodeFail(t *testing.T) {
 	xappConn1.TestMsgChanEmpty(t)
 	e2termConn1.TestMsgChanEmpty(t)
 	mainCtrl.wait_registry_empty(t, 10)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -6702,7 +6723,7 @@ func TestRESTUnpackSubscriptionDeleteailureUnknownInstanceId(t *testing.T) {
 	xappConn1.TestMsgChanEmpty(t)
 	e2termConn1.TestMsgChanEmpty(t)
 	mainCtrl.wait_registry_empty(t, 10)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -6765,7 +6786,7 @@ func TestRESTUnpackSubscriptionDeleteFailureNoTransaction(t *testing.T) {
 	xappConn1.TestMsgChanEmpty(t)
 	e2termConn1.TestMsgChanEmpty(t)
 	mainCtrl.wait_registry_empty(t, 10)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -6804,6 +6825,8 @@ func TestRESTSubReqFailAsn1PackSubReqError(t *testing.T) {
 		Counter{cRestSubReqFromXapp, 1},
 		Counter{cRestSubRespToXapp, 1},
 		Counter{cRestSubFailNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cRestSubDelRespToXapp, 1},
 	})
 
 	const subReqCount int = 1
@@ -6823,10 +6846,13 @@ func TestRESTSubReqFailAsn1PackSubReqError(t *testing.T) {
 	xapp.Logger.Debug("TEST: REST notification received e2SubsId=%v", e2SubsId)
 
 	e2ap_wrapper.AllowE2apToProcess(e2ap_wrapper.SUB_REQ, true)
+
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+
 	// Wait that subs is cleaned
 	waitSubsCleanup(t, e2SubsId, 10)
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 func TestRESTSubReqPolicyUpdateTimeoutAndSubDelOkSameAction(t *testing.T) {
@@ -6886,7 +6912,7 @@ func TestRESTSubReqPolicyUpdateTimeoutAndSubDelOkSameAction(t *testing.T) {
 	waitSubsCleanup(t, e2SubsId, 10)
 
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -7003,7 +7029,7 @@ func TestPolicyUpdateRESTSubReqAndSubDelOkWithRestartInMiddle(t *testing.T) {
 	waitSubsCleanup(t, e2SubsId, 10)
 
 	mainCtrl.VerifyCounterValues(t)
-	//mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////
