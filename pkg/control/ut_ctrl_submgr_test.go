@@ -76,37 +76,30 @@ func createSubmgrControl(srcId teststub.RmrSrcId, rtgSvc teststub.RmrRtgSvc) *te
 
 func (mc *testingSubmgrControl) SimulateRestart(t *testing.T) {
 	mc.TestLog(t, "Simulating submgr restart")
-	mainCtrl.c.registry.subIds = nil
+
 	// Initialize subIds slice and subscription map
+	mainCtrl.c.registry.subIds = nil
 	mainCtrl.c.registry.Initialize()
 	mainCtrl.c.restDuplicateCtrl.Init()
+
 	// Read subIds and subscriptions from database
-	subIds, register, err := mainCtrl.c.ReadAllSubscriptionsFromSdl()
-	if err != nil {
-		mc.TestError(t, "%v", err)
-	} else {
-		mainCtrl.c.registry.subIds = subIds
-		mainCtrl.c.registry.register = register
-		mc.TestLog(t, "mainCtrl.c.registry.register:")
+	go mainCtrl.c.ReadE2Subscriptions() // This needs to be run in own go routine when called from here <<--- improve this
+	mc.TestLog(t, "mainCtrl.c.registry.register:")
+	/*
 		for subId, subs := range mainCtrl.c.registry.register {
 			mc.TestLog(t, "  subId=%v", subId)
 			mc.TestLog(t, "  subs.SubRespRcvd=%v", subs.SubRespRcvd)
 			mc.TestLog(t, "  subs=%v\n", subs)
 		}
+	*/
+	// Read REST subIds and REST subscriptions from database
+	mainCtrl.c.ReadRESTSubscriptions()
+	mc.TestLog(t, "mainCtrl.c.registry.restSubscriptions:")
+	for restSubId, restSubs := range mainCtrl.c.registry.restSubscriptions {
+		mc.TestLog(t, "  restSubId=%v", restSubId)
+		mc.TestLog(t, "  restSubs=%v\n", restSubs)
 	}
-	restSubscriptions, err := mainCtrl.c.ReadAllRESTSubscriptionsFromSdl()
-	if err != nil {
-		mc.TestError(t, "%v", err)
-	} else {
-		mainCtrl.c.registry.restSubscriptions = restSubscriptions
-		mc.TestLog(t, "mainCtrl.c.registry.restSubscriptions:")
-		for restSubId, restSubs := range mainCtrl.c.registry.restSubscriptions {
-			mc.TestLog(t, "  restSubId=%v", restSubId)
-			mc.TestLog(t, "  restSubs=%v\n", restSubs)
-		}
-	}
-
-	go mainCtrl.c.HandleUncompletedSubscriptions(mainCtrl.c.registry.register)
+	//go mainCtrl.c.HandleUncompletedSubscriptions(mainCtrl.c.registry.register) // This needs to be run in own go routine when called from here
 }
 
 func (mc *testingSubmgrControl) MakeTransactionNil(t *testing.T, subId uint32) {
@@ -288,7 +281,26 @@ func (mc *testingSubmgrControl) wait_msgcounter_change(t *testing.T, orig uint64
 }
 
 func (mc *testingSubmgrControl) VerifyAllClean(t *testing.T) {
-	// Verify that all resources are freed
+
+	// Verify that all resources are freed. Wait cleaning up to 10 seconds
+	for i := 0; i < 100; i++ {
+		if len(mainCtrl.c.registry.register) == 0 && len(mainCtrl.c.registry.restSubscriptions) == 0 {
+			RESTKeyCount, err := mainCtrl.c.GetRESTKeyCount()
+			if err != nil {
+				t.Errorf("TEST: %s", err.Error())
+			}
+			E2KeyCount, err := mainCtrl.c.GetE2KeyCount()
+			if err != nil {
+				t.Errorf("TEST: %s", err.Error())
+			}
+			if RESTKeyCount == 0 && E2KeyCount == 0 {
+				break
+			}
+		}
+		<-time.After(time.Millisecond * 100)
+		mc.TestLog(t, "VerifyAllClean delay plus 100ms")
+	}
+
 	assert.Equal(t, 0, len(mainCtrl.c.registry.register))
 	if len(mainCtrl.c.registry.register) > 0 {
 		fmt.Printf("registry.register: %v\n", mainCtrl.c.registry.register)
@@ -369,7 +381,7 @@ func (mc *testingSubmgrControl) VerifyCounterValues(t *testing.T) {
 		}
 	}
 
-	// Check that not any unexpected counter are added (this is not working correctly!)
+	// Check that not any unexpected counter are added
 	// Get current values of all counters
 	currentCountersMap = mc.GetCurrentCounterValues(t, allCountersMap)
 	for _, currentCounter := range currentCountersMap {

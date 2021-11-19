@@ -97,7 +97,7 @@ func TestRESTSubReqAfterE2ConnBreak(t *testing.T) {
 
 	mainCtrl.VerifyCounterValues(t)
 	mainCtrl.VerifyAllClean(t)
-	//os.Exit(1)
+	//os.Exit(0)
 }
 
 //-----------------------------------------------------------------------------
@@ -2375,9 +2375,6 @@ func TestSubReqRetransmissionWithSameSubIdDiffXid(t *testing.T) {
 func TestSubReqNokAndSubDelOkWithRestartInMiddle(t *testing.T) {
 	CaseBegin("TestSubReqNokAndSubDelOkWithRestartInMiddle")
 
-	// Remove possible existing subscrition
-	mainCtrl.removeExistingSubscriptions(t)
-
 	mainCtrl.SetResetTestFlag(t, true) // subs.DoNotWaitSubResp will be set TRUE for the subscription
 	xappConn1.SendSubsReq(t, nil, nil)
 	e2termConn1.RecvSubsReq(t)
@@ -2458,6 +2455,10 @@ func TestSubReqAndSubDelOkWithRestartInMiddle(t *testing.T) {
 
 	mainCtrl.SimulateRestart(t)
 	xapp.Logger.Debug("mainCtrl.SimulateRestart done")
+
+	// ReadE2Subscriptions() for testing is running in own go routine (go mainCtrl.c.ReadE2Subscriptions())
+	// That needs to be completed before successful subscription query is possible
+	<-time.After(time.Second * 1)
 
 	// Check that subscription is restored correctly after restart
 	resp, _ = xapp.Subscription.QuerySubscriptions()
@@ -2553,13 +2554,17 @@ func TestSubReqAndSubDelOkSameActionWithRestartsInMiddle(t *testing.T) {
 	e2SubsId2 := xappConn2.RecvSubsResp(t, cretrans2)
 
 	// Check subscription
-	resp, _ := xapp.Subscription.QuerySubscriptions() ////////////////////////////////
+	resp, _ := xapp.Subscription.QuerySubscriptions()
 	assert.Equal(t, resp[0].SubscriptionID, int64(e2SubsId1))
 	assert.Equal(t, resp[0].Meid, "RAN_NAME_1")
 	assert.Equal(t, resp[0].ClientEndpoint, []string{"localhost:13560", "localhost:13660"})
 
 	mainCtrl.SimulateRestart(t)
 	xapp.Logger.Debug("mainCtrl.SimulateRestart done")
+
+	// ReadE2Subscriptions() for testing is running in own go routine (go mainCtrl.c.ReadE2Subscriptions())
+	// That needs to be completed before successful subscription query is possible
+	<-time.After(time.Second * 1)
 
 	// Check that subscription is restored correctly after restart
 	resp, _ = xapp.Subscription.QuerySubscriptions()
@@ -2575,6 +2580,10 @@ func TestSubReqAndSubDelOkSameActionWithRestartsInMiddle(t *testing.T) {
 
 	mainCtrl.SimulateRestart(t)
 	xapp.Logger.Debug("mainCtrl.SimulateRestart done")
+
+	// ReadE2Subscriptions() for testing is running in own go routine (go mainCtrl.c.ReadE2Subscriptions())
+	// Submgr need be ready before successful subscription deletion is possible
+	<-time.After(time.Second * 1)
 
 	//Del2
 	deltrans2 := xappConn2.SendSubsDelReq(t, nil, e2SubsId2)
@@ -4358,7 +4367,6 @@ func TestRESTSubReqAndSubDelOkSameActionParallel(t *testing.T) {
 	mainCtrl.VerifyAllClean(t)
 }
 
-/*
 //-----------------------------------------------------------------------------
 // TestRESTSubReqAndSubDelNoAnswerSameActionParallel
 //
@@ -4421,6 +4429,7 @@ func TestRESTSubReqAndSubDelNoAnswerSameActionParallel(t *testing.T) {
 		Counter{cSubReqTimerExpiry, 2},
 		Counter{cSubReReqToE2, 1},
 		Counter{cRestSubFailNotifToXapp, 2},
+		Counter{cUnmergedSubscriptions, 1},
 		Counter{cRestSubDelReqFromXapp, 2},
 		Counter{cSubDelReqToE2, 1},
 		Counter{cSubDelRespFromE2, 1},
@@ -4522,6 +4531,7 @@ func TestRESTSubReqAndSubDelNokSameActionParallel(t *testing.T) {
 		Counter{cSubReqToE2, 1},
 		Counter{cSubFailFromE2, 1},
 		Counter{cRestSubFailNotifToXapp, 2},
+		Counter{cUnmergedSubscriptions, 1},
 		Counter{cRestSubDelReqFromXapp, 2},
 		Counter{cRestSubDelRespToXapp, 2},
 	})
@@ -4563,7 +4573,7 @@ func TestRESTSubReqAndSubDelNokSameActionParallel(t *testing.T) {
 	mainCtrl.VerifyCounterValues(t)
 	mainCtrl.VerifyAllClean(t)
 }
-*/
+
 func TestRESTSubReqPolicyAndSubDelOk(t *testing.T) {
 	CaseBegin("TestRESTSubReqPolicyAndSubDelOk")
 
@@ -5030,15 +5040,11 @@ func TestRESTSubReqNokAndSubDelOkWithRestartInMiddle(t *testing.T) {
 		Counter{cSubDelReqFromXapp, 1},
 		Counter{cSubDelReqToE2, 1},
 		Counter{cSubDelRespFromE2, 1},
-		Counter{cRestSubFailNotifToXapp, 1},
 		Counter{cRestSubDelReqFromXapp, 1},
 		Counter{cRestSubDelRespToXapp, 1},
 	})
 
 	const subReqCount int = 1
-
-	// Remove possible existing subscription
-	mainCtrl.removeExistingSubscriptions(t)
 
 	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
 
@@ -5122,12 +5128,9 @@ func TestRESTSubReqAndSubDelOkWithRestartInMiddle(t *testing.T) {
 		Counter{cSubDelRespFromE2, 1},
 		Counter{cRestSubDelRespToXapp, 1},
 	})
-	// Remove possible existing subscription
-	mainCtrl.removeExistingSubscriptions(t)
-
-	var params *teststube2ap.RESTSubsReqParams = nil
 
 	// Create subscription
+	var params *teststube2ap.RESTSubsReqParams = nil
 	restSubId, e2SubsId := createSubscription(t, xappConn1, e2termConn1, params)
 	xapp.Logger.Debug("Send REST subscriber request for subscriber : %v", restSubId)
 
@@ -5136,6 +5139,10 @@ func TestRESTSubReqAndSubDelOkWithRestartInMiddle(t *testing.T) {
 
 	mainCtrl.SimulateRestart(t)
 	xapp.Logger.Debug("mainCtrl.SimulateRestart done")
+
+	// ReadE2Subscriptions() for testing is running in own go routine (go mainCtrl.c.ReadE2Subscriptions())
+	// That needs to be completed before successful subscription query is possible
+	<-time.After(time.Second * 1)
 
 	// Check subscription
 	queryXappSubscription(t, int64(e2SubsId), "RAN_NAME_1", []string{"localhost:13560"})
@@ -5204,7 +5211,6 @@ func TestRESTSubReqAndSubDelOkWithRestartInMiddle(t *testing.T) {
 //     |             |                 |              |
 //
 //-----------------------------------------------------------------------------
-
 func TestRESTSubReqAndSubDelOkSameActionWithRestartsInMiddle(t *testing.T) {
 	CaseBegin("TestRESTSubReqAndSubDelOkSameActionWithRestartsInMiddle")
 
@@ -5222,12 +5228,8 @@ func TestRESTSubReqAndSubDelOkSameActionWithRestartsInMiddle(t *testing.T) {
 		Counter{cRestSubDelRespToXapp, 2},
 	})
 
-	// Remove possible existing subscription
-	mainCtrl.removeExistingSubscriptions(t)
-
-	var params *teststube2ap.RESTSubsReqParams = nil
-
 	// Create subscription 1
+	var params *teststube2ap.RESTSubsReqParams = nil
 	restSubId1, e2SubsId1 := createSubscription(t, xappConn1, e2termConn1, params)
 	xapp.Logger.Debug("Send REST subscriber request for subscriber 1 : %v", restSubId1)
 
@@ -5244,15 +5246,27 @@ func TestRESTSubReqAndSubDelOkSameActionWithRestartsInMiddle(t *testing.T) {
 	queryXappSubscription(t, int64(e2SubsId1), "RAN_NAME_1", []string{"localhost:13560", "localhost:13660"})
 
 	mainCtrl.SimulateRestart(t)
-	xapp.Logger.Debug("mainCtrl.SimulateRestart done")
+	xapp.Logger.Debug("mainCtrl.SimulateRestart done 1")
+
+	// ReadE2Subscriptions() for testing is running in own go routine (go mainCtrl.c.ReadE2Subscriptions())
+	// That needs to be completed before successful subscription delete is possible
+	<-time.After(time.Second * 1)
 
 	// Delete subscription 1, and wait until it has removed the first endpoint
 	subepcnt := mainCtrl.get_subs_entrypoint_cnt(t, e2SubsId1)
 	xappConn1.SendRESTSubsDelReq(t, &restSubId1)
 	mainCtrl.wait_subs_entrypoint_cnt_change(t, e2SubsId1, subepcnt, 10)
 
+	// Above wait does not work correctly anymore as this delay makes this test case work
+	//<-time.After(time.Second * 1)
+
 	mainCtrl.SimulateRestart(t)
-	xapp.Logger.Debug("mainCtrl.SimulateRestart done")
+	xapp.Logger.Debug("mainCtrl.SimulateRestart done 2")
+
+	// ReadE2Subscriptions() for testing is running in own go routine (go mainCtrl.c.ReadE2Subscriptions())
+	// That needs to be completed before successful subscription query is possible
+	<-time.After(time.Second * 1)
+
 	queryXappSubscription(t, int64(e2SubsId1), "RAN_NAME_1", []string{"localhost:13660"})
 
 	// Delete subscription 2
@@ -5360,7 +5374,7 @@ func RESTReportSubReqAndSubDelOk(t *testing.T, subReqCount int, testIndex int) {
 }
 
 /*
-func TestRESTPolicySubReqAndSubDelOk(t *testing.T) {
+func TestRESTPolicySubReqAndSubDelOk(t *testing.T) {  was in comments already
 	CaseBegin("TestRESTPolicySubReqAndSubDelOk")
 
 	subReqCount := 2
@@ -6970,15 +6984,11 @@ func TestPolicyUpdateRESTSubReqAndSubDelOkWithRestartInMiddle(t *testing.T) {
 		Counter{cSubReqToE2, 2},
 		Counter{cSubRespFromE2, 1},
 		Counter{cRestSubNotifToXapp, 1},
-		Counter{cRestSubFailNotifToXapp, 1},
 		Counter{cRestSubDelReqFromXapp, 1},
 		Counter{cSubDelReqToE2, 1},
 		Counter{cSubDelRespFromE2, 1},
 		Counter{cRestSubDelRespToXapp, 1},
 	})
-
-	// Remove possible existing subscription
-	mainCtrl.removeExistingSubscriptions(t)
 
 	const e2Timeout int64 = 1
 	const e2RetryCount int64 = 0
@@ -7016,6 +7026,10 @@ func TestPolicyUpdateRESTSubReqAndSubDelOkWithRestartInMiddle(t *testing.T) {
 
 	mainCtrl.SimulateRestart(t)
 	xapp.Logger.Debug("mainCtrl.SimulateRestart done")
+
+	// ReadE2Subscriptions() for testing is running in own go routine (go mainCtrl.c.ReadE2Subscriptions())
+	// That needs to be completed before successful subscription query is possible
+	<-time.After(time.Second * 1)
 
 	// Check subscription
 	queryXappSubscription(t, int64(e2SubsId), "RAN_NAME_1", []string{"localhost:13560"})
@@ -7123,9 +7137,9 @@ func deleteXapp2Subscription(t *testing.T, restSubId *string) {
 
 func queryXappSubscription(t *testing.T, e2SubsId int64, meid string, endpoint []string) {
 	resp, _ := xapp.Subscription.QuerySubscriptions()
-	assert.Equal(t, resp[0].SubscriptionID, e2SubsId)
-	assert.Equal(t, resp[0].Meid, meid)
-	assert.Equal(t, resp[0].ClientEndpoint, endpoint)
+	assert.Equal(t, e2SubsId, resp[0].SubscriptionID)
+	assert.Equal(t, meid, resp[0].Meid)
+	assert.Equal(t, endpoint, resp[0].ClientEndpoint)
 }
 
 func waitSubsCleanup(t *testing.T, e2SubsId uint32, timeout int) {

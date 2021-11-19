@@ -89,7 +89,7 @@ func (r *RESTSubscription) SetProcessed(err error) {
 }
 
 type Registry struct {
-	mutex             sync.Mutex
+	mutex             *sync.Mutex
 	register          map[uint32]*Subscription
 	subIds            []uint32
 	rtmgrClient       *RtmgrClient
@@ -97,6 +97,7 @@ type Registry struct {
 }
 
 func (r *Registry) Initialize() {
+	r.mutex = new(sync.Mutex)
 	r.register = make(map[uint32]*Subscription)
 	r.restSubscriptions = make(map[string]*RESTSubscription)
 
@@ -396,9 +397,9 @@ func (r *Registry) CheckActionTypes(subReqMsg *e2ap.E2APSubscriptionRequest) (ui
 	return e2ap.E2AP_ActionTypeInvalid, fmt.Errorf("Invalid action type in RICactions-ToBeSetup-List")
 }
 
-// TODO: Works with concurrent calls, but check if can be improved
 func (r *Registry) RemoveFromSubscription(subs *Subscription, trans *TransactionXapp, waitRouteClean time.Duration, c *Control) error {
 
+	xapp.Logger.Debug("RemoveFromSubscription %s", idstring(nil, trans, subs, trans))
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 	subs.mutex.Lock()
@@ -406,56 +407,59 @@ func (r *Registry) RemoveFromSubscription(subs *Subscription, trans *Transaction
 
 	delStatus := subs.EpList.DelEndpoint(trans.GetEndpoint())
 	epamount := subs.EpList.Size()
+
 	subId := subs.ReqId.InstanceId
 	if delStatus == false {
 		return nil
 	}
 
-	go func() {
-		if waitRouteClean > 0 {
-			xapp.Logger.Debug("Pending %v in order to wait route cleanup", waitRouteClean)
-			time.Sleep(waitRouteClean)
+	if waitRouteClean > 0 {
+		// Wait here that response is delivered to xApp via RMR before route is cleaned
+		xapp.Logger.Debug("Pending %v in order to wait route cleanup", waitRouteClean)
+		time.Sleep(waitRouteClean)
+	}
+
+	xapp.Logger.Debug("CLEAN %s", subs.String())
+
+	if epamount == 0 {
+		//
+		// Subscription route delete
+		//
+		if subs.RMRRouteCreated == true {
+			r.RouteDelete(subs, trans, c)
 		}
 
-		subs.mutex.Lock()
-		defer subs.mutex.Unlock()
-		xapp.Logger.Debug("CLEAN %s", subs.String())
+		// Not merged subscription is being deleted
+		xapp.Logger.Debug("Subscription route delete RemoveSubscriptionFromDb")
+		c.RemoveSubscriptionFromDb(subs)
 
-		if epamount == 0 {
-			//
-			// Subscription route delete
-			//
-			if subs.RMRRouteCreated == true {
-				r.RouteDelete(subs, trans, c)
-			}
+		//
+		// Subscription release
+		//
 
-			//
-			// Subscription release
-			//
-			r.mutex.Lock()
-			defer r.mutex.Unlock()
-
-			if _, ok := r.register[subId]; ok {
-				xapp.Logger.Debug("RELEASE %s", subs.String())
-				delete(r.register, subId)
-				xapp.Logger.Debug("Registry: substable=%v", r.register)
-			}
-			r.subIds = append(r.subIds, subId)
-		} else if subs.EpList.Size() > 0 {
-			//
-			// Subscription route update
-			//
-			if subs.RMRRouteCreated == true {
-				r.RouteDeleteUpdate(subs, c)
-			}
+		if _, ok := r.register[subId]; ok {
+			xapp.Logger.Debug("RELEASE %s", subs.String())
+			delete(r.register, subId)
+			xapp.Logger.Debug("Registry: substable=%v", r.register)
 		}
-	}()
+		r.subIds = append(r.subIds, subId)
+	} else if subs.EpList.Size() > 0 {
+		//
+		// Subscription route update
+		//
+		if subs.RMRRouteCreated == true {
+			r.RouteDeleteUpdate(subs, c)
+		}
 
+		// Endpoint of merged subscription is being deleted
+		xapp.Logger.Debug("Subscription route update WriteSubscriptionToDb")
+		c.WriteSubscriptionToDb(subs)
+		c.UpdateCounter(cUnmergedSubscriptions)
+	}
 	return nil
 }
 
 func (r *Registry) RouteDelete(subs *Subscription, trans *TransactionXapp, c *Control) {
-
 	tmpList := xapp.RmrEndpointList{}
 	tmpList.AddEndpoint(trans.GetEndpoint())
 	subRouteAction := SubRouteInfo{tmpList, uint16(subs.ReqId.InstanceId)}
@@ -468,26 +472,6 @@ func (r *Registry) RouteDeleteUpdate(subs *Subscription, c *Control) {
 	subRouteAction := SubRouteInfo{subs.EpList, uint16(subs.ReqId.InstanceId)}
 	if err := r.rtmgrClient.SubscriptionRequestUpdate(subRouteAction); err != nil {
 		c.UpdateCounter(cRouteDeleteUpdateFail)
-	}
-}
-
-func (r *Registry) UpdateSubscriptionToDb(subs *Subscription, c *Control) {
-	r.mutex.Lock()
-	defer r.mutex.Unlock()
-	subs.mutex.Lock()
-	defer subs.mutex.Unlock()
-
-	epamount := subs.EpList.Size()
-	if epamount == 0 {
-		if _, ok := r.register[subs.ReqId.InstanceId]; ok {
-			// Not merged subscription is being deleted
-			c.RemoveSubscriptionFromDb(subs)
-
-		}
-	} else if subs.EpList.Size() > 0 {
-		// Endpoint of merged subscription is being deleted
-		c.WriteSubscriptionToDb(subs)
-		c.UpdateCounter(cUnmergedSubscriptions)
 	}
 }
 
