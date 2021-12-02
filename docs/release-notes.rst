@@ -47,7 +47,10 @@ Version history
 | 2020-12-11         | v0.5.8             | Juha Hyttinen      | Cherry Release     |
 |                    |                    |                    |                    |
 +--------------------+--------------------+--------------------+--------------------+
-| 2020-12-11         | v0.7.0             | Anssi Mannila      | Dawn Release       |
+| 2020-01-16         | v0.7.0             | Anssi Mannila      | Dawn Release       |
+|                    |                    |                    |                    |
++--------------------+--------------------+--------------------+--------------------+
+| 2020-12-02         | v0.8.0             | Anssi Mannila      | E Release          |
 |                    |                    |                    |                    |
 +--------------------+--------------------+--------------------+--------------------+
 
@@ -55,11 +58,30 @@ Version history
 
 Summary
 -------
-  - The Bronze release of Subscription Manager supports newer E2 specs
+  - Bronze release added support for new E2 specs
+  - Dawn release added support for REST subscription interface
+  - E release added support for E2 restart and improved error handling in REST subscription interface
 
 
 Release Data
 ------------
+
++--------------------------------------+--------------------------------------+
+| **Project**                          | Subscription Manager                 |
+|                                      |                                      |
++--------------------------------------+--------------------------------------+
+| **Repo/commit-ID**                   | ric-plt/submgr                       |
+|                                      |                                      |
++--------------------------------------+--------------------------------------+
+| **Release designation**              | E                                    |
+|                                      |                                      |
++--------------------------------------+--------------------------------------+
+| **Release date**                     | 2021-06-16                           |
+|                                      |                                      |
++--------------------------------------+--------------------------------------+
+| **Purpose of the delivery**          | New Release                          |
+|                                      |                                      |
++--------------------------------------+--------------------------------------+
 
 +--------------------------------------+--------------------------------------+
 | **Project**                          | Subscription Manager                 |
