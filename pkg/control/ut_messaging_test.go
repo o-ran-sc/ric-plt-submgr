@@ -675,7 +675,6 @@ func TestSubDelReqAndRouteDeleteNok(t *testing.T) {
 	xappConn2.TestMsgChanEmpty(t)
 	e2termConn1.TestMsgChanEmpty(t)
 	mainCtrl.wait_registry_empty(t, 10)
-
 	mainCtrl.VerifyCounterValues(t)
 }
 
@@ -3292,7 +3291,7 @@ func TestRESTSubReqRetransmissionV5(t *testing.T) {
 
 	<-time.After(100 * time.Millisecond)
 
-	// Send modified  requst, this time with e2 subscriptions.
+	// Send modified  request, this time with e2 subscriptions.
 	params2 := xappConn1.GetRESTSubsReqReportParams(subReqCount + 1)
 	params2.SetSubscriptionID(&restSubId)
 
@@ -5313,14 +5312,14 @@ func TestRESTSubReqAndSubDelOkSameActionWithRestartsInMiddle(t *testing.T) {
 //     | RESTSubDelReq   |              |
 //     |---------------->|              |
 //     |                 |              |
+//     |   RESTSubDelResp|              |
+//     |<----------------|              |
 //     |                 | SubDelReq    |
 //     |                 |------------->|
 //     |                 |              |
 //     |                 |   SubDelResp |
 //     |                 |<-------------|
 //     |                 |              |
-//     |   RESTSubDelResp|              |
-//     |<----------------|              |
 //
 //-----------------------------------------------------------------------------
 
@@ -5333,6 +5332,18 @@ func TestRESTReportSubReqAndSubDelOk(t *testing.T) {
 
 func RESTReportSubReqAndSubDelOk(t *testing.T, subReqCount int, testIndex int) {
 	xapp.Logger.Debug("TEST: TestRESTReportSubReqAndSubDelOk with testIndex %v", testIndex)
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 1},
+		Counter{cRestSubRespToXapp, 1},
+		Counter{cSubReqToE2, uint64(subReqCount)},
+		Counter{cSubRespFromE2, uint64(subReqCount)},
+		Counter{cRestSubNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+		Counter{cSubDelReqToE2, uint64(subReqCount)},
+		Counter{cSubDelRespFromE2, uint64(subReqCount)},
+	})
 
 	// Req
 	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
@@ -5371,10 +5382,11 @@ func RESTReportSubReqAndSubDelOk(t *testing.T, subReqCount int, testIndex int) {
 	e2termConn1.TestMsgChanEmpty(t)
 	mainCtrl.wait_registry_empty(t, 10)
 	mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyCounterValues(t)
 }
 
 /*
-func TestRESTPolicySubReqAndSubDelOk(t *testing.T) {  was in comments already
+func TestRESTPolicySubReqAndSubDelOk(t *testing.T) {  //Was in comments already. Next case is not run!
 	CaseBegin("TestRESTPolicySubReqAndSubDelOk")
 
 	subReqCount := 2
@@ -5388,6 +5400,18 @@ func TestRESTPolicySubReqAndSubDelOk(t *testing.T) {  was in comments already
 */
 func RESTPolicySubReqAndSubDelOk(t *testing.T, subReqCount int, testIndex int) {
 	xapp.Logger.Debug("TEST: TestRESTPolicySubReqAndSubDelOk with testIndex %v", testIndex)
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 1},
+		Counter{cRestSubRespToXapp, 1},
+		Counter{cSubReqToE2, uint64(subReqCount)},
+		Counter{cSubRespFromE2, uint64(subReqCount)},
+		Counter{cRestSubNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+		Counter{cSubDelReqToE2, uint64(subReqCount)},
+		Counter{cSubDelRespFromE2, uint64(subReqCount)},
+	})
 
 	// Req
 	params := xappConn1.GetRESTSubsReqPolicyParams(subReqCount)
@@ -5419,6 +5443,7 @@ func RESTPolicySubReqAndSubDelOk(t *testing.T, subReqCount int, testIndex int) {
 	e2termConn1.TestMsgChanEmpty(t)
 	mainCtrl.wait_registry_empty(t, 10)
 	mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyCounterValues(t)
 }
 
 func TestRESTTwoPolicySubReqAndSubDelOk(t *testing.T) {
@@ -5997,7 +6022,7 @@ func TestRESTSubReqReportSameActionDiffSubsAction(t *testing.T) {
 //     |                 |------------->|
 //     |                 |              |
 //     |                 |      SubResp | ASN.1 decode fails
-//     |                 |<-------------|
+//     |                 |<-------------| Decode failed. More data needed. This will result timer expiry and resending
 //     |                 |              |
 //     |                 | SubReq       |
 //     |                 |------------->|
@@ -6007,11 +6032,27 @@ func TestRESTSubReqReportSameActionDiffSubsAction(t *testing.T) {
 //     | RESTNotif (fail)|              |
 //     |<----------------|              |
 //     |                 |              |
+//     |           [SUBS DELETE]        |
+//     |                 |              |
 //
 //-----------------------------------------------------------------------------
 
 func TestRESTUnpackSubscriptionResponseDecodeFail(t *testing.T) {
 	xapp.Logger.Debug("TEST: TestRESTUnpackSubscriptionResponseDecodeFail")
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 1},
+		Counter{cRestSubRespToXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cSubReqTimerExpiry, 1},
+		Counter{cSubReReqToE2, 1},
+		Counter{cSubRespFromE2, 1},
+		Counter{cSubFailFromE2, 1},
+		Counter{cRestSubFailNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+	})
+
 	const subReqCount int = 1
 
 	// Req
@@ -6044,6 +6085,7 @@ func TestRESTUnpackSubscriptionResponseDecodeFail(t *testing.T) {
 	e2termConn1.TestMsgChanEmpty(t)
 	mainCtrl.wait_registry_empty(t, 10)
 	mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyCounterValues(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -6064,13 +6106,13 @@ func TestRESTUnpackSubscriptionResponseDecodeFail(t *testing.T) {
 //     |                 |------------->|
 //     |                 |              |
 //     |                 |      SubResp | Unknown instanceId
-//     |                 |<-------------|
+//     |                 |<-------------| No valid subscription found with subIds [0]
 //     |                 |              |
 //     |                 | SubReq       |
 //     |                 |------------->|
 //     |                 |              |
 //     |                 |      SubFail | Duplicated action
-//     |                 |<-------------|
+//     |                 |<-------------| No valid subscription found with subIds [0]
 //     | RESTNotif (fail)|              |
 //     |<----------------|              |
 //     |                 | SubDelReq    |
@@ -6078,11 +6120,30 @@ func TestRESTUnpackSubscriptionResponseDecodeFail(t *testing.T) {
 //     |                 |              |
 //     |                 |   SubDelResp |
 //     |                 |<-------------|
+//     |                 |              |
+//     |           [SUBS DELETE]        |
+//     |                 |              |
 //
 //-----------------------------------------------------------------------------
 
 func TestRESTUnpackSubscriptionResponseUnknownInstanceId(t *testing.T) {
 	xapp.Logger.Debug("TEST: TestRESTUnpackSubscriptionResponseUnknownInstanceId")
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 1},
+		Counter{cRestSubRespToXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cSubReqTimerExpiry, 2},
+		Counter{cSubReReqToE2, 1},
+		Counter{cSubRespFromE2, 1},
+		Counter{cSubFailFromE2, 1},
+		Counter{cRestSubFailNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelRespFromE2, 1},
+	})
+
 	const subReqCount int = 1
 
 	// Req
@@ -6091,7 +6152,7 @@ func TestRESTUnpackSubscriptionResponseUnknownInstanceId(t *testing.T) {
 
 	crereq, cremsg := e2termConn1.RecvSubsReq(t)
 
-	// Unknown instanceId in this response which will result resending original request
+	// Unknown instanceId 0 in this response which will result resending original request
 	orgInstanceId := crereq.RequestId.InstanceId
 	crereq.RequestId.InstanceId = 0
 	e2termConn1.SendSubsResp(t, crereq, cremsg)
@@ -6100,7 +6161,7 @@ func TestRESTUnpackSubscriptionResponseUnknownInstanceId(t *testing.T) {
 
 	xappConn1.ExpectRESTNotificationNok(t, restSubId, "allFail")
 
-	// Subscription already created in E2 Node.
+	// Subscription already created in E2 Node. E2 Node responds with failure but there is also same unknown instanceId 0
 	fparams := &teststube2ap.E2StubSubsFailParams{}
 	fparams.Set(crereq)
 	fparams.SetCauseVal(0, 1, 3) // CauseRIC / duplicate-action
@@ -6121,6 +6182,7 @@ func TestRESTUnpackSubscriptionResponseUnknownInstanceId(t *testing.T) {
 	e2termConn1.TestMsgChanEmpty(t)
 	mainCtrl.wait_registry_empty(t, 10)
 	mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyCounterValues(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -6141,30 +6203,51 @@ func TestRESTUnpackSubscriptionResponseUnknownInstanceId(t *testing.T) {
 //     |                 |------------->|
 //     |                 |              |
 //     |                 |      SubResp | No transaction for the response
-//     |                 |<-------------|
+//     |                 |<-------------| Ongoing transaction not found. This will result timer expiry and resending
 //     |                 |              |
 //     |                 | SubReq       |
 //     |                 |------------->|
 //     |                 |              |
 //     |                 |      SubFail | Duplicated action
-//     |                 |<-------------|
+//     |                 |<-------------|Ongoing transaction not found. This will result timer expiry and sending delete
 //     | RESTNotif (fail)|              |
 //     |<----------------|              |
 //     |                 | SubDelReq    |
 //     |                 |------------->|
 //     |                 |              |
 //     |                 |   SubDelResp |
-//     |                 |<-------------|
+//     |                 |<-------------| Ongoing transaction not found. This will result timer expiry and resending
 //     |                 |              |
 //     |                 | SubDelReq    |
 //     |                 |------------->|
 //     |                 |              |
 //     |                 |   SubDelResp |
-//     |                 |<-------------|
+//     |                 |<-------------| Ongoing transaction not found.
+//     |                 |              |
+//     |           [SUBS DELETE]        |
+//     |                 |              |
 //
 //-----------------------------------------------------------------------------
 func TestRESTUnpackSubscriptionResponseNoTransaction(t *testing.T) {
 	xapp.Logger.Debug("TEST: TestRESTUnpackSubscriptionResponseNoTransaction")
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 1},
+		Counter{cRestSubRespToXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cSubReqTimerExpiry, 2},
+		Counter{cSubReReqToE2, 1},
+		Counter{cSubRespFromE2, 1},
+		Counter{cSubFailFromE2, 1},
+		Counter{cRestSubFailNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelReqTimerExpiry, 2},
+		Counter{cSubDelReReqToE2, 1},
+		Counter{cSubDelRespFromE2, 2},
+	})
+
 	const subReqCount int = 1
 
 	// Req
@@ -6206,6 +6289,7 @@ func TestRESTUnpackSubscriptionResponseNoTransaction(t *testing.T) {
 	e2termConn1.TestMsgChanEmpty(t)
 	mainCtrl.wait_registry_empty(t, 10)
 	mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyCounterValues(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -6226,7 +6310,7 @@ func TestRESTUnpackSubscriptionResponseNoTransaction(t *testing.T) {
 //     |                 |------------->|
 //     |                 |              |
 //     |                 |      SubFail | ASN.1 decode fails
-//     |                 |<-------------|
+//     |                 |<-------------| Decode failed. More data needed. This will result timer expiry and resending
 //     |                 |              |
 //     |                 | SubReq       |
 //     |                 |------------->|
@@ -6236,10 +6320,25 @@ func TestRESTUnpackSubscriptionResponseNoTransaction(t *testing.T) {
 //     | RESTNotif (fail)|              |
 //     |<----------------|              |
 //     |                 |              |
+//     |           [SUBS DELETE]        |
+//     |                 |              |
 //
 //-----------------------------------------------------------------------------
 func TestRESTUnpackSubscriptionFailureDecodeFail(t *testing.T) {
 	xapp.Logger.Debug("TEST: TestRESTUnpackSubscriptionFailureDecodeFail")
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 1},
+		Counter{cRestSubRespToXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cSubReqTimerExpiry, 1},
+		Counter{cSubReReqToE2, 1},
+		Counter{cSubFailFromE2, 2},
+		Counter{cRestSubFailNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+	})
+
 	const subReqCount int = 1
 
 	// Req
@@ -6273,6 +6372,7 @@ func TestRESTUnpackSubscriptionFailureDecodeFail(t *testing.T) {
 	e2termConn1.TestMsgChanEmpty(t)
 	mainCtrl.wait_registry_empty(t, 10)
 	mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyCounterValues(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -6293,13 +6393,13 @@ func TestRESTUnpackSubscriptionFailureDecodeFail(t *testing.T) {
 //     |                 |------------->|
 //     |                 |              |
 //     |                 |      SubFail | Unknown instanceId
-//     |                 |<-------------|
+//     |                 |<-------------| No valid subscription found with subIds [0]. This will result timer expiry and resending
 //     |                 |              |
 //     |                 | SubReq       |
 //     |                 |------------->|
 //     |                 |              |
 //     |                 |      SubFail | Duplicated action
-//     |                 |<-------------|
+//     |                 |<-------------|No valid subscription found with subIds [0]. This will result timer expiry and sending delete
 //     | RESTNotif (fail)|              |
 //     |<----------------|              |
 //     |                 | SubDelReq    |
@@ -6307,11 +6407,28 @@ func TestRESTUnpackSubscriptionFailureDecodeFail(t *testing.T) {
 //     |                 |              |
 //     |                 |   SubDelResp |
 //     |                 |<-------------|
+//     |                 |              |
+//     |           [SUBS DELETE]        |
+//     |                 |              |
 //
 //-----------------------------------------------------------------------------
 func TestRESTUnpackSubscriptionFailureUnknownInstanceId(t *testing.T) {
 	xapp.Logger.Debug("TEST: TestRESTUnpackSubscriptionFailureUnknownInstanceId")
 	const subReqCount int = 1
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 1},
+		Counter{cRestSubRespToXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cSubReqTimerExpiry, 2},
+		Counter{cSubReReqToE2, 1},
+		Counter{cSubFailFromE2, 2},
+		Counter{cRestSubFailNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelRespFromE2, 1},
+	})
 
 	// Req
 	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
@@ -6319,7 +6436,7 @@ func TestRESTUnpackSubscriptionFailureUnknownInstanceId(t *testing.T) {
 
 	crereq, cremsg := e2termConn1.RecvSubsReq(t)
 
-	// Unknown instanceId in this response which will result resending original request
+	// Unknown instanceId 0 in this response which will result resending original request
 	fparams := &teststube2ap.E2StubSubsFailParams{}
 	fparams.Set(crereq)
 	fparams.Fail.RequestId.InstanceId = 0
@@ -6329,7 +6446,7 @@ func TestRESTUnpackSubscriptionFailureUnknownInstanceId(t *testing.T) {
 
 	xappConn1.ExpectRESTNotificationNok(t, restSubId, "allFail")
 
-	// Subscription already created in E2 Node.
+	// Subscription already created in E2 Node. E2 Node responds with failure but there is also same unknown instanceId 0
 	fparams.SetCauseVal(0, 1, 3) // CauseRIC / duplicate-action
 	e2termConn1.SendSubsFail(t, fparams, cremsg)
 
@@ -6348,6 +6465,7 @@ func TestRESTUnpackSubscriptionFailureUnknownInstanceId(t *testing.T) {
 	e2termConn1.TestMsgChanEmpty(t)
 	mainCtrl.wait_registry_empty(t, 10)
 	mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyCounterValues(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -6368,25 +6486,50 @@ func TestRESTUnpackSubscriptionFailureUnknownInstanceId(t *testing.T) {
 //     |                 |------------->|
 //     |                 |              |
 //     |                 |      SubFail | No transaction for the response
-//     |                 |<-------------|
+//     |                 |<-------------| Ongoing transaction not found. This will result timer expiry and resending
 //     |                 |              |
 //     |                 | SubReq       |
 //     |                 |------------->|
 //     |                 |              |
 //     |                 |      SubFail | Duplicated action
-//     |                 |<-------------|
+//     |                 |<-------------| Ongoing transaction not found. This will result timer expiry and sending delete
 //     | RESTNotif (fail)|              |
 //     |<----------------|              |
 //     |                 | SubDelReq    |
 //     |                 |------------->|
 //     |                 |              |
 //     |                 |   SubDelResp |
-//     |                 |<-------------|
+//     |                 |<-------------| Ongoing transaction not found. This will result timer expiry and resending
+//     |                 |              |
+//     |                 | SubDelReq    |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |   SubDelResp |
+//     |                 |<-------------| Ongoing transaction not found.
+//     |                 |              |
+//     |           [SUBS DELETE]        |
+//     |                 |              |
 //
 //-----------------------------------------------------------------------------
 func TestRESTUnpackSubscriptionFailureNoTransaction(t *testing.T) {
 	xapp.Logger.Debug("TEST: TestRESTUnpackSubscriptionFailureNoTransaction")
 	const subReqCount int = 1
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 1},
+		Counter{cRestSubRespToXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cSubReqTimerExpiry, 2},
+		Counter{cSubReReqToE2, 1},
+		Counter{cSubFailFromE2, 2},
+		Counter{cRestSubFailNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelReqTimerExpiry, 2},
+		Counter{cSubDelReReqToE2, 1},
+		Counter{cSubDelRespFromE2, 2},
+	})
 
 	// Req
 	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
@@ -6428,6 +6571,7 @@ func TestRESTUnpackSubscriptionFailureNoTransaction(t *testing.T) {
 	e2termConn1.TestMsgChanEmpty(t)
 	mainCtrl.wait_registry_empty(t, 10)
 	mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyCounterValues(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -6450,19 +6594,36 @@ func TestRESTUnpackSubscriptionFailureNoTransaction(t *testing.T) {
 //     |                 | SubDelReq    |
 //     |                 |------------->|
 //     |                 |              |
-//     |                 |   SubDelResp | ASN.1 decode fails
-//     |                 |<-------------|
+//     |                 |   SubDelResp | ASN.1 decode fails.
+//     |                 |<-------------| Decode failed. More data needed. This will result timer expiry and resending
 //     |                 |              |
 //     |                 | SubDelReq    |
 //     |                 |------------->|
 //     |                 |              |
-//     |                 |   SubDelFail | Subscription does exist any more
+//     |                 |   SubDelFail | Subscription does exist any more in E2 node
 //     |                 |<-------------|
+//     |                 |              |
+//     |           [SUBS DELETE]        |
 //     |                 |              |
 //
 //-----------------------------------------------------------------------------
 func TestRESTUnpackSubscriptionDeleteResponseDecodeFail(t *testing.T) {
 	xapp.Logger.Debug("TEST: TestRESTUnpackSubscriptionDeleteResponseDecodeFail")
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 1},
+		Counter{cRestSubRespToXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cSubRespFromE2, 1},
+		Counter{cRestSubNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelReqTimerExpiry, 1},
+		Counter{cSubDelReReqToE2, 1},
+		Counter{cSubDelFailFromE2, 1},
+		Counter{cSubDelRespFromE2, 1},
+	})
 
 	// Req
 	var params *teststube2ap.RESTSubsReqParams = nil
@@ -6475,7 +6636,7 @@ func TestRESTUnpackSubscriptionDeleteResponseDecodeFail(t *testing.T) {
 	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
 
 	// Decode of this response fails which will result resending original request
-	e2termConn1.SendInvalidE2Asn1Resp(t, delmsg, xapp.RIC_SUB_DEL_REQ)
+	e2termConn1.SendInvalidE2Asn1Resp(t, delmsg, xapp.RIC_SUB_DEL_RESP)
 
 	// E2t: Receive 2nd SubsDelReq and send SubsDelResp
 	delreq, delmsg = e2termConn1.RecvSubsDelReq(t)
@@ -6490,6 +6651,7 @@ func TestRESTUnpackSubscriptionDeleteResponseDecodeFail(t *testing.T) {
 	e2termConn1.TestMsgChanEmpty(t)
 	mainCtrl.wait_registry_empty(t, 10)
 	mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyCounterValues(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -6513,17 +6675,34 @@ func TestRESTUnpackSubscriptionDeleteResponseDecodeFail(t *testing.T) {
 //     |                 |------------->|
 //     |                 |              |
 //     |                 |   SubDelResp | Unknown instanceId
-//     |                 |<-------------|
+//     |                 |<-------------| No valid subscription found with subIds [0]. This will result timer expiry and resending
 //     |                 |              |
 //     |                 | SubDelReq    |
 //     |                 |------------->|
 //     |                 |              |
-//     |                 |   SubDelFail | Subscription does exist any more
+//     |                 |   SubDelFail | Subscription does exist any more in E2 node
 //     |                 |<-------------|
-//
+//     |                 |              |
+//     |           [SUBS DELETE]        |
+//     |                 |              |
 //-----------------------------------------------------------------------------
 func TestRESTUnpackSubscriptionDeleteResponseUnknownInstanceId(t *testing.T) {
 	xapp.Logger.Debug("TEST: TestRESTUnpackSubscriptionDeleteResponseUnknownInstanceId")
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 1},
+		Counter{cRestSubRespToXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cSubRespFromE2, 1},
+		Counter{cRestSubNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelReqTimerExpiry, 1},
+		Counter{cSubDelReReqToE2, 1},
+		Counter{cSubDelRespFromE2, 1},
+		Counter{cSubDelFailFromE2, 1},
+	})
 
 	// Req
 	var params *teststube2ap.RESTSubsReqParams = nil
@@ -6552,6 +6731,7 @@ func TestRESTUnpackSubscriptionDeleteResponseUnknownInstanceId(t *testing.T) {
 	e2termConn1.TestMsgChanEmpty(t)
 	mainCtrl.wait_registry_empty(t, 10)
 	mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyCounterValues(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -6575,17 +6755,34 @@ func TestRESTUnpackSubscriptionDeleteResponseUnknownInstanceId(t *testing.T) {
 //     |                 |------------->|
 //     |                 |              |
 //     |                 |   SubDelResp | No transaction for the response
-//     |                 |<-------------|
+//     |                 |<-------------| Ongoing transaction not found. This will result timer expiry and resending
 //     |                 |              |
 //     |                 | SubDelReq    |
 //     |                 |------------->|
 //     |                 |              |
-//     |                 |   SubDelFail | Subscription does exist any more
-//     |                 |<-------------|
-//
+//     |                 |   SubDelFail | Subscription does exist any more in E2 node
+//     |                 |<-------------| Ongoing transaction not found. This will result timer expiry
+//     |                 |              |
+//     |           [SUBS DELETE]        |
+//     |                 |              |
 //-----------------------------------------------------------------------------
 func TestRESTUnpackSubscriptionDeleteResponseNoTransaction(t *testing.T) {
 	xapp.Logger.Debug("TEST: TestRESTUnpackSubscriptionDeleteResponseNoTransaction")
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 1},
+		Counter{cRestSubRespToXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cSubRespFromE2, 1},
+		Counter{cRestSubNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelReqTimerExpiry, 2},
+		Counter{cSubDelReReqToE2, 1},
+		Counter{cSubDelRespFromE2, 1},
+		Counter{cSubDelFailFromE2, 1},
+	})
 
 	// Req
 	var params *teststube2ap.RESTSubsReqParams = nil
@@ -6615,6 +6812,7 @@ func TestRESTUnpackSubscriptionDeleteResponseNoTransaction(t *testing.T) {
 	e2termConn1.TestMsgChanEmpty(t)
 	mainCtrl.wait_registry_empty(t, 10)
 	mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyCounterValues(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -6638,17 +6836,33 @@ func TestRESTUnpackSubscriptionDeleteResponseNoTransaction(t *testing.T) {
 //     |                 |------------->|
 //     |                 |              |
 //     |                 |   SubDelFail | ASN.1 decode fails
-//     |                 |<-------------|
+//     |                 |<-------------| Decode failed. More data needed. This will result timer expiry and resending
 //     |                 |              |
 //     |                 | SubDelReq    |
 //     |                 |------------->|
 //     |                 |              |
-//     |                 |   SubDelFail | Subscription does exist any more
+//     |                 |   SubDelFail | Subscription does exist any more in E2 node
 //     |                 |<-------------|
-//
+//     |                 |              |
+//     |           [SUBS DELETE]        |
+//     |                 |              |
 //-----------------------------------------------------------------------------
 func TestRESTUnpackSubscriptionDeleteFailureDecodeFail(t *testing.T) {
 	xapp.Logger.Debug("TEST: TestRESTUnpackSubscriptionDeleteFailureDecodeFail")
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 1},
+		Counter{cRestSubRespToXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cSubRespFromE2, 1},
+		Counter{cRestSubNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelReqTimerExpiry, 1},
+		Counter{cSubDelReReqToE2, 1},
+		Counter{cSubDelFailFromE2, 2},
+	})
 
 	// Req
 	var params *teststube2ap.RESTSubsReqParams = nil
@@ -6676,6 +6890,7 @@ func TestRESTUnpackSubscriptionDeleteFailureDecodeFail(t *testing.T) {
 	e2termConn1.TestMsgChanEmpty(t)
 	mainCtrl.wait_registry_empty(t, 10)
 	mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyCounterValues(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -6699,17 +6914,33 @@ func TestRESTUnpackSubscriptionDeleteFailureDecodeFail(t *testing.T) {
 //     |                 |------------->|
 //     |                 |              |
 //     |                 |   SubDelFail | Unknown instanceId
-//     |                 |<-------------|
+//     |                 |<-------------| No valid subscription found with subIds [0]. This will result timer expiry and resending
 //     |                 |              |
 //     |                 | SubDelReq    |
 //     |                 |------------->|
 //     |                 |              |
-//     |                 |   SubDelFail | Subscription does exist any more
-//     |                 |<-------------|
-//
+//     |                 |   SubDelFail | Subscription does exist any more in E2 node
+//     |                 |<-------------| No valid subscription found with subIds [0].
+//     |                 |              |
+//     |           [SUBS DELETE]        |
+//     |                 |              |
 //-----------------------------------------------------------------------------
 func TestRESTUnpackSubscriptionDeleteailureUnknownInstanceId(t *testing.T) {
 	xapp.Logger.Debug("TEST: TestRESTUnpackSubscriptionDeleteailureUnknownInstanceId")
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 1},
+		Counter{cRestSubRespToXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cSubRespFromE2, 1},
+		Counter{cRestSubNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelReqTimerExpiry, 1},
+		Counter{cSubDelReReqToE2, 1},
+		Counter{cSubDelFailFromE2, 2},
+	})
 
 	// Req
 	var params *teststube2ap.RESTSubsReqParams = nil
@@ -6721,14 +6952,14 @@ func TestRESTUnpackSubscriptionDeleteailureUnknownInstanceId(t *testing.T) {
 	// E2t: Receive 1st SubsDelReq
 	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
 
-	// Unknown instanceId in this response which will result resending original request
+	// Unknown instanceId 0 in this response which will result resending original request
 	delreq.RequestId.InstanceId = 0
 	e2termConn1.SendSubsDelFail(t, delreq, delmsg)
 
 	// E2t: Receive 2nd SubsDelReq
 	delreq, delmsg = e2termConn1.RecvSubsDelReq(t)
 
-	// Subscription does not exist in in E2 Node.
+	// Subscription does not exist in in E2 Node. E2 Node responds with failure but there is also same unknown instanceId 0
 	e2termConn1.SendSubsDelFail(t, delreq, delmsg)
 
 	// Wait that subs is cleaned
@@ -6738,6 +6969,7 @@ func TestRESTUnpackSubscriptionDeleteailureUnknownInstanceId(t *testing.T) {
 	e2termConn1.TestMsgChanEmpty(t)
 	mainCtrl.wait_registry_empty(t, 10)
 	mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyCounterValues(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -6761,17 +6993,33 @@ func TestRESTUnpackSubscriptionDeleteailureUnknownInstanceId(t *testing.T) {
 //     |                 |------------->|
 //     |                 |              |
 //     |                 |   SubDelFail | No transaction for the response
-//     |                 |<-------------|
+//     |                 |<-------------| Ongoing transaction not found. This will result timer expiry and resending
 //     |                 |              |
 //     |                 | SubDelReq    |
 //     |                 |------------->|
 //     |                 |              |
-//     |                 |   SubDelFail | Subscription does exist any more
-//     |                 |<-------------|
-//
+//     |                 |   SubDelFail | Subscription does exist any more in E2 node
+//     |                 |<-------------| Ongoing transaction not found. This will result timer expiry
+//     |                 |              |
+//     |           [SUBS DELETE]        |
+//     |                 |              |
 //-----------------------------------------------------------------------------
 func TestRESTUnpackSubscriptionDeleteFailureNoTransaction(t *testing.T) {
 	xapp.Logger.Debug("TEST: TestRESTUnpackSubscriptionDeleteFailureNoTransaction")
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 1},
+		Counter{cRestSubRespToXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cSubRespFromE2, 1},
+		Counter{cRestSubNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelReqTimerExpiry, 2},
+		Counter{cSubDelReReqToE2, 1},
+		Counter{cSubDelFailFromE2, 2},
+	})
 
 	// Req
 	var params *teststube2ap.RESTSubsReqParams = nil
@@ -6801,6 +7049,7 @@ func TestRESTUnpackSubscriptionDeleteFailureNoTransaction(t *testing.T) {
 	e2termConn1.TestMsgChanEmpty(t)
 	mainCtrl.wait_registry_empty(t, 10)
 	mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyCounterValues(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -6865,8 +7114,8 @@ func TestRESTSubReqFailAsn1PackSubReqError(t *testing.T) {
 
 	// Wait that subs is cleaned
 	waitSubsCleanup(t, e2SubsId, 10)
-	mainCtrl.VerifyCounterValues(t)
 	mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyCounterValues(t)
 }
 
 func TestRESTSubReqPolicyUpdateTimeoutAndSubDelOkSameAction(t *testing.T) {
@@ -6924,9 +7173,8 @@ func TestRESTSubReqPolicyUpdateTimeoutAndSubDelOkSameAction(t *testing.T) {
 	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
 
 	waitSubsCleanup(t, e2SubsId, 10)
-
-	mainCtrl.VerifyCounterValues(t)
 	mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyCounterValues(t)
 }
 
 //-----------------------------------------------------------------------------
