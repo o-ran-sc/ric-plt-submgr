@@ -2983,19 +2983,21 @@ func TestRESTSubReqRetransmissionV2(t *testing.T) {
 
 	queryXappSubscription(t, int64(e2SubsId), "RAN_NAME_1", []string{"localhost:13560"})
 
+	mainCtrl.WaitOngoingRequestMapEmpty()
+
 	//1.st resend
 	restSubId_resend := xappConn1.SendRESTSubsReq(t, params)
 
 	assert.Equal(t, restSubId_resend, restSubId)
 
-	<-time.After(100 * time.Millisecond)
+	mainCtrl.WaitOngoingRequestMapEmpty()
 
 	//2.nd resend
 	restSubId_resend2 := xappConn1.SendRESTSubsReq(t, params)
 
 	assert.Equal(t, restSubId_resend2, restSubId)
 
-	<-time.After(100 * time.Millisecond)
+	mainCtrl.WaitOngoingRequestMapEmpty()
 
 	deleteSubscription(t, xappConn1, e2termConn1, &restSubId)
 
@@ -3067,7 +3069,7 @@ func TestRESTSubReqRetransmissionV3(t *testing.T) {
 
 	queryXappSubscription(t, int64(e2SubsId), "RAN_NAME_1", []string{"localhost:13560"})
 
-	<-time.After(100 * time.Millisecond)
+	mainCtrl.WaitOngoingRequestMapEmpty()
 
 	//1.st resend with subscription ID
 	params.SetSubscriptionID(&restSubId)
@@ -3075,7 +3077,7 @@ func TestRESTSubReqRetransmissionV3(t *testing.T) {
 
 	assert.Equal(t, restSubId_resend, restSubId)
 
-	<-time.After(100 * time.Millisecond)
+	mainCtrl.WaitOngoingRequestMapEmpty()
 
 	//2.nd resend without subscription ID (faking app restart)
 	params = xappConn1.GetRESTSubsReqReportParams(subReqCount)
@@ -3083,7 +3085,7 @@ func TestRESTSubReqRetransmissionV3(t *testing.T) {
 
 	assert.Equal(t, restSubId_resend2, restSubId)
 
-	<-time.After(100 * time.Millisecond)
+	mainCtrl.WaitOngoingRequestMapEmpty()
 
 	deleteSubscription(t, xappConn1, e2termConn1, &restSubId)
 
@@ -3169,7 +3171,7 @@ func TestRESTSubReqRetransmissionV4(t *testing.T) {
 
 	restSubId, e2SubsId := createSubscription(t, xappConn1, e2termConn1, params)
 
-	<-time.After(100 * time.Millisecond)
+	mainCtrl.WaitOngoingRequestMapEmpty()
 
 	// Send modified  requst, this time with e2 subscriptions.
 	params2 := xappConn1.GetRESTSubsReqReportParams(subReqCount + 1)
@@ -3190,7 +3192,7 @@ func TestRESTSubReqRetransmissionV4(t *testing.T) {
 	e2SubsId2 := xappConn1.WaitRESTNotification(t, restSubId_resend)
 	assert.NotEqual(t, e2SubsId2, 0)
 
-	<-time.After(100 * time.Millisecond)
+	mainCtrl.WaitOngoingRequestMapEmpty()
 
 	xapp.Subscription.SetResponseCB(xappConn1.SubscriptionRespHandler)
 	params = xappConn1.GetRESTSubsReqReportParams(subReqCount)
@@ -3202,6 +3204,8 @@ func TestRESTSubReqRetransmissionV4(t *testing.T) {
 
 	e2SubsId1 = xappConn1.WaitAnyRESTNotification(t)
 	assert.Equal(t, e2SubsId, e2SubsId1)
+
+	mainCtrl.WaitOngoingRequestMapEmpty()
 
 	// Delete both e2 subscriptions
 	xappConn1.SendRESTSubsDelReq(t, &restSubId)
@@ -3290,7 +3294,7 @@ func TestRESTSubReqRetransmissionV5(t *testing.T) {
 
 	restSubId, e2SubsId := createSubscription(t, xappConn1, e2termConn1, params)
 
-	<-time.After(100 * time.Millisecond)
+	mainCtrl.WaitOngoingRequestMapEmpty()
 
 	// Send modified  requst, this time with e2 subscriptions.
 	params2 := xappConn1.GetRESTSubsReqReportParams(subReqCount + 1)
@@ -3313,7 +3317,7 @@ func TestRESTSubReqRetransmissionV5(t *testing.T) {
 	e2SubsId2 := xappConn1.WaitRESTNotification(t, restSubId_resend)
 	assert.NotEqual(t, e2SubsId2, 0)
 
-	<-time.After(100 * time.Millisecond)
+	mainCtrl.WaitOngoingRequestMapEmpty()
 
 	xapp.Subscription.SetResponseCB(xappConn1.SubscriptionRespHandler)
 	params = xappConn1.GetRESTSubsReqReportParams(subReqCount)
@@ -3325,6 +3329,8 @@ func TestRESTSubReqRetransmissionV5(t *testing.T) {
 
 	e2SubsId1 = xappConn1.WaitAnyRESTNotification(t)
 	assert.Equal(t, e2SubsId, e2SubsId1)
+
+	mainCtrl.WaitOngoingRequestMapEmpty()
 
 	// Delete both e2 subscriptions
 	xappConn1.SendRESTSubsDelReq(t, &restSubId)
@@ -3422,7 +3428,7 @@ func TestRESTSubReqRetransmissionV6(t *testing.T) {
 
 	restSubId, e2SubsId := createSubscription(t, xappConn1, e2termConn1, params)
 
-	<-time.After(100 * time.Millisecond)
+	mainCtrl.WaitOngoingRequestMapEmpty()
 
 	// Send modified  requst, this time with e2 subscriptions.
 	params2 := xappConn1.GetRESTSubsReqReportParams(subReqCount + 1)
@@ -3443,7 +3449,7 @@ func TestRESTSubReqRetransmissionV6(t *testing.T) {
 	e2SubsId2 := xappConn1.WaitRESTNotification(t, restSubId_resend)
 	assert.NotEqual(t, e2SubsId2, 0)
 
-	<-time.After(100 * time.Millisecond)
+	mainCtrl.WaitOngoingRequestMapEmpty()
 
 	// Delete both e2 subscriptions
 	xappConn1.SendRESTSubsDelReq(t, &restSubId)
@@ -3457,7 +3463,7 @@ func TestRESTSubReqRetransmissionV6(t *testing.T) {
 	// fresh create.
 	restSubId, e2SubsId = createSubscription(t, xappConn1, e2termConn1, params)
 
-	<-time.After(100 * time.Millisecond)
+	mainCtrl.WaitOngoingRequestMapEmpty()
 
 	deleteSubscription(t, xappConn1, e2termConn1, &restSubId)
 

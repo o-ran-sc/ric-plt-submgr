@@ -298,7 +298,7 @@ func (mc *testingSubmgrControl) VerifyAllClean(t *testing.T) {
 			}
 		}
 		<-time.After(time.Millisecond * 100)
-		mc.TestLog(t, "VerifyAllClean delay plus 100ms")
+		xapp.Logger.Debug("VerifyAllClean delay plus 100ms")
 	}
 
 	assert.Equal(t, 0, len(mainCtrl.c.registry.register))
@@ -311,6 +311,15 @@ func (mc *testingSubmgrControl) VerifyAllClean(t *testing.T) {
 	}
 	verifyRESTKeyCount(t, 0)
 	verifyE2KeyCount(t, 0)
+}
+
+func (mc *testingSubmgrControl) WaitOngoingRequestMapEmpty() {
+	for i := 0; i < 100; i++ {
+		if len(mainCtrl.c.restDuplicateCtrl.ongoingRequestMap) != 0 {
+			<-time.After(time.Millisecond * 100)
+			xapp.Logger.Debug("WaitOngoingRequestMapEmpty delay plus 100ms")
+		}
+	}
 }
 
 func (mc *testingSubmgrControl) GetMetrics(t *testing.T) (string, error) {
