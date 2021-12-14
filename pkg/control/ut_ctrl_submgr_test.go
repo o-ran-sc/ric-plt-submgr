@@ -297,8 +297,8 @@ func (mc *testingSubmgrControl) VerifyAllClean(t *testing.T) {
 				break
 			}
 		}
+		xapp.Logger.Debug("VerifyAllClean. Adding 100ms more delay to complete")
 		<-time.After(time.Millisecond * 100)
-		xapp.Logger.Debug("VerifyAllClean delay plus 100ms")
 	}
 
 	assert.Equal(t, 0, len(mainCtrl.c.registry.register))
@@ -317,7 +317,17 @@ func (mc *testingSubmgrControl) WaitOngoingRequestMapEmpty() {
 	for i := 0; i < 100; i++ {
 		if len(mainCtrl.c.restDuplicateCtrl.ongoingRequestMap) != 0 {
 			<-time.After(time.Millisecond * 100)
-			xapp.Logger.Debug("WaitOngoingRequestMapEmpty delay plus 100ms")
+			xapp.Logger.Debug("WaitOngoingRequestMapEmpty. Adding 100ms more delay to complete")
+		}
+	}
+}
+
+func (mc *testingSubmgrControl) WaitRESTSubscriptionDelete(restSubsId string) {
+	for i := 0; i < 100; i++ {
+		restSubscription, _ := mainCtrl.c.registry.GetRESTSubscription(restSubsId, false)
+		if restSubscription != nil {
+			xapp.Logger.Debug("WaitRESTSubscriptionDelete. Adding 100ms more delay to complete")
+			<-time.After(time.Millisecond * 100)
 		}
 	}
 }

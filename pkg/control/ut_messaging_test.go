@@ -5259,12 +5259,9 @@ func TestRESTSubReqAndSubDelOkSameActionWithRestartsInMiddle(t *testing.T) {
 	<-time.After(time.Second * 1)
 
 	// Delete subscription 1, and wait until it has removed the first endpoint
-	subepcnt := mainCtrl.get_subs_entrypoint_cnt(t, e2SubsId1)
 	xappConn1.SendRESTSubsDelReq(t, &restSubId1)
-	mainCtrl.wait_subs_entrypoint_cnt_change(t, e2SubsId1, subepcnt, 10)
-
+	mainCtrl.WaitRESTSubscriptionDelete(restSubId1)
 	// Above wait does not work correctly anymore as this delay makes this test case work
-	//<-time.After(time.Second * 1)
 
 	mainCtrl.SimulateRestart(t)
 	xapp.Logger.Debug("mainCtrl.SimulateRestart done 2")
