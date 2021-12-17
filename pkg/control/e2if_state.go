@@ -67,7 +67,8 @@ func (e *E2IfState) NotificationCb(ch string, events ...string) {
 		return
 	}
 
-	if strings.Contains(events[0], "_CONNECTED") {
+	if strings.Contains(events[0], "_CONNECTED") && !strings.Contains(events[0], "_CONNECTED_SETUP_FAILED") {
+		e.control.UpdateCounter(cE2StateChangedToUp)
 		nbId, err := ExtractNbiIdFromString(events[0])
 		if err != nil {
 			xapp.Logger.Error("NotificationCb CONNECTED len(nbId) == 0 ")
@@ -76,6 +77,7 @@ func (e *E2IfState) NotificationCb(ch string, events ...string) {
 		xapp.Logger.Debug("E2 CONNECTED. NbId=%s", nbId)
 		e.NbIdMap[nbId] = nbId
 	} else if strings.Contains(events[0], "_DISCONNECTED") {
+		e.control.UpdateCounter(cE2StateChangedToDown)
 		nbId, err := ExtractNbiIdFromString(events[0])
 		if err != nil {
 			xapp.Logger.Error("NotificationCb DISCONNECTED len(nbId) == 0 ")
@@ -113,7 +115,6 @@ func (e *E2IfState) ReadE2ConfigurationFromRnib() {
 		if e.isNodeBActive(nbIdentity.InventoryName) == false {
 			if _, ok := e.NbIdMap[nbIdentity.InventoryName]; ok {
 				delete(e.NbIdMap, nbIdentity.InventoryName)
-				e.control.UpdateCounter(cE2StateChangedToDown)
 				xapp.Logger.Debug("E2 connection DISCONNETED: %v", nbIdentity.InventoryName)
 
 				// Delete all subscriptions related to InventoryName/nbId
@@ -124,7 +125,6 @@ func (e *E2IfState) ReadE2ConfigurationFromRnib() {
 
 		if _, ok := e.NbIdMap[nbIdentity.InventoryName]; !ok {
 			e.NbIdMap[nbIdentity.InventoryName] = nbIdentity.InventoryName
-			e.control.UpdateCounter(cE2StateChangedToDown)
 			xapp.Logger.Debug("E2 connection CONNECTED: %v", nbIdentity.InventoryName)
 		}
 	}

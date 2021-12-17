@@ -46,6 +46,10 @@ func TestSuiteSetup(t *testing.T) {
 }
 func TestRanStatusChangeViaSDLNotification(t *testing.T) {
 
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cE2StateChangedToUp, 3},
+	})
+
 	// Current UT test cases use these ran names
 	xappRnibMock.CreateGnb("RAN_NAME_1", entities.ConnectionStatus_DISCONNECTED)
 	xappRnibMock.CreateGnb("RAN_NAME_11", entities.ConnectionStatus_DISCONNECTED)
@@ -57,6 +61,8 @@ func TestRanStatusChangeViaSDLNotification(t *testing.T) {
 	mainCtrl.SetE2State(t, "RAN_NAME_1_CONNECTED")
 	mainCtrl.SetE2State(t, "RAN_NAME_2_CONNECTED")
 	mainCtrl.SetE2State(t, "RAN_NAME_11_CONNECTED")
+
+	mainCtrl.VerifyCounterValues(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -83,6 +89,8 @@ func TestRESTSubReqAfterE2ConnBreak(t *testing.T) {
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 1},
 		Counter{cRestReqRejDueE2Down, 1},
+		Counter{cE2StateChangedToDown, 1},
+		Counter{cE2StateChangedToUp, 1},
 	})
 
 	// E2 disconnect after E2term has received response
@@ -95,8 +103,8 @@ func TestRESTSubReqAfterE2ConnBreak(t *testing.T) {
 	// Restore E2 connection for following test cases
 	mainCtrl.SetE2State(t, "RAN_NAME_1_CONNECTED")
 
-	mainCtrl.VerifyCounterValues(t)
 	mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyCounterValues(t)
 	//os.Exit(0)
 }
 
@@ -135,6 +143,8 @@ func TestRESTSubReqE2ConnBreak(t *testing.T) {
 		Counter{cSubReqToE2, 1},
 		Counter{cSubRespFromE2, 1},
 		Counter{cRestSubFailNotifToXapp, 1},
+		Counter{cE2StateChangedToDown, 1},
+		Counter{cE2StateChangedToUp, 1},
 	})
 
 	// Req
@@ -212,6 +222,8 @@ func TestRESTSubscriptionDeleteAfterE2ConnectionBreak(t *testing.T) {
 		Counter{cRestSubNotifToXapp, 1},
 		Counter{cRestSubDelReqFromXapp, 1},
 		Counter{cRestSubDelRespToXapp, 1},
+		Counter{cE2StateChangedToDown, 1},
+		Counter{cE2StateChangedToUp, 1},
 	})
 
 	// Req
@@ -289,6 +301,7 @@ func TestRESTOtherE2ConnectionChanges(t *testing.T) {
 		Counter{cSubDelReqToE2, 1},
 		Counter{cSubDelRespFromE2, 1},
 		Counter{cRestSubDelRespToXapp, 1},
+		Counter{cE2StateChangedToUp, 1},
 	})
 
 	// Req
@@ -300,7 +313,7 @@ func TestRESTOtherE2ConnectionChanges(t *testing.T) {
 	e2termConn1.SendSubsResp(t, crereq, cremsg)
 	e2SubsId := xappConn1.WaitRESTNotification(t, restSubId)
 
-	// Submgr should not react any other connection state changes than CONNECTED and DISCONNECTED
+	// Submgr should not react to any other connection state changes than CONNECTED and DISCONNECTED
 	mainCtrl.SetE2State(t, "RAN_NAME_1_CONNECTED_SETUP_FAILED")
 	mainCtrl.SetE2State(t, "RAN_NAME_1_CONNECTING")
 	mainCtrl.SetE2State(t, "RAN_NAME_1_SHUTTING_DOWN")
