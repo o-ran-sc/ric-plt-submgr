@@ -202,7 +202,7 @@ func (c *Control) ReadE2Subscriptions() error {
 		} else {
 			c.registry.subIds = subIds
 			c.registry.register = register
-			c.HandleUncompletedSubscriptions(register)
+			go c.HandleUncompletedSubscriptions(register)
 			return nil
 		}
 	}

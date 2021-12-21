@@ -83,15 +83,14 @@ func (mc *testingSubmgrControl) SimulateRestart(t *testing.T) {
 	mainCtrl.c.restDuplicateCtrl.Init()
 
 	// Read subIds and subscriptions from database
-	go mainCtrl.c.ReadE2Subscriptions() // This needs to be run in own go routine when called from here <<--- improve this
+	mainCtrl.c.ReadE2Subscriptions()
 	mc.TestLog(t, "mainCtrl.c.registry.register:")
-	/*
-		for subId, subs := range mainCtrl.c.registry.register {
-			mc.TestLog(t, "  subId=%v", subId)
-			mc.TestLog(t, "  subs.SubRespRcvd=%v", subs.SubRespRcvd)
-			mc.TestLog(t, "  subs=%v\n", subs)
-		}
-	*/
+	for subId, subs := range mainCtrl.c.registry.register {
+		mc.TestLog(t, "  subId=%v", subId)
+		mc.TestLog(t, "  subs.SubRespRcvd=%v", subs.SubRespRcvd)
+		mc.TestLog(t, "  subs=%v\n", subs)
+	}
+
 	// Read REST subIds and REST subscriptions from database
 	mainCtrl.c.ReadRESTSubscriptions()
 	mc.TestLog(t, "mainCtrl.c.registry.restSubscriptions:")
@@ -99,7 +98,6 @@ func (mc *testingSubmgrControl) SimulateRestart(t *testing.T) {
 		mc.TestLog(t, "  restSubId=%v", restSubId)
 		mc.TestLog(t, "  restSubs=%v\n", restSubs)
 	}
-	//go mainCtrl.c.HandleUncompletedSubscriptions(mainCtrl.c.registry.register) // This needs to be run in own go routine when called from here
 }
 
 func (mc *testingSubmgrControl) MakeTransactionNil(t *testing.T, subId uint32) {
@@ -123,7 +121,7 @@ func (mc *testingSubmgrControl) removeExistingSubscriptions(t *testing.T) {
 	mainCtrl.c.registry.Initialize()
 }
 
-func PringSubscriptionQueryResult(resp models.SubscriptionList) {
+func PrintSubscriptionQueryResult(resp models.SubscriptionList) {
 	for _, item := range resp {
 		fmt.Printf("item.SubscriptionID=%v\n", item.SubscriptionID)
 		fmt.Printf("item.Meid=%v\n", item.Meid)
