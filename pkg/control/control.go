@@ -990,7 +990,6 @@ func (c *Control) handleXAPPSubscriptionRequest(params *xapp.RMRParams) {
 		return
 	}
 
-	//TODO handle subscription toward e2term inside AssignToSubscription / hide handleSubscriptionCreate in it?
 	subs, _, err := c.registry.AssignToSubscription(trans, subReqMsg, c.ResetTestFlag, c, true)
 	if err != nil {
 		xapp.Logger.Error("XAPP-SubReq: %s", idstring(err, trans))
@@ -1034,7 +1033,6 @@ func (c *Control) wakeSubscriptionRequest(subs *Subscription, trans *Transaction
 		}
 	}
 	xapp.Logger.Debug("XAPP-SubReq: failed %s", idstring(err, trans, subs))
-	//c.registry.RemoveFromSubscription(subs, trans, 5*time.Second)
 }
 
 //-------------------------------------------------------------------
@@ -1100,9 +1098,6 @@ func (c *Control) handleXAPPSubscriptionDeleteRequest(params *xapp.RMRParams) {
 		c.UpdateCounter(cSubDelRespToXapp)
 		c.rmrSendToXapp("", subs, trans)
 	}
-
-	//TODO handle subscription toward e2term insiged RemoveFromSubscription / hide handleSubscriptionDelete in it?
-	//c.registry.RemoveFromSubscription(subs, trans, 5*time.Second)
 }
 
 //-------------------------------------------------------------------
@@ -1161,7 +1156,7 @@ func (c *Control) handleSubscriptionCreate(subs *Subscription, parentTrans *Tran
 		c.sendE2TSubscriptionDeleteRequest(subs, trans, parentTrans)
 	}
 
-	//Now RemoveFromSubscription in here to avoid race conditions (mostly concerns delete)
+	// Now RemoveFromSubscription in here to avoid race conditions (mostly concerns delete)
 	if valid == false {
 		c.registry.RemoveFromSubscription(subs, parentTrans, waitRouteCleanupTime, c)
 	}
@@ -1191,9 +1186,8 @@ func (c *Control) handleSubscriptionDelete(subs *Subscription, parentTrans *Tran
 	} else {
 		subs.mutex.Unlock()
 	}
-	//Now RemoveFromSubscription in here to avoid race conditions (mostly concerns delete)
-	//  If parallel deletes ongoing both might pass earlier sendE2TSubscriptionDeleteRequest(...) if
-	//  RemoveFromSubscription locates in caller side (now in handleXAPPSubscriptionDeleteRequest(...))
+
+	// Now RemoveFromSubscription in here to avoid race conditions (mostly concerns delete)
 	c.registry.RemoveFromSubscription(subs, parentTrans, waitRouteCleanupTime, c)
 	parentTrans.SendEvent(nil, 0)
 }

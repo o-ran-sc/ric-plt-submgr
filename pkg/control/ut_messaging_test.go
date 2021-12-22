@@ -20,7 +20,6 @@
 package control
 
 import (
-	//"os"
 	"strings"
 	"testing"
 	"time"
@@ -32,6 +31,10 @@ import (
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"github.com/stretchr/testify/assert"
 )
+
+// In below test cases there is done only one retry for E2 messages
+// In Helm chart retry count is currently 2 By default. Retry count
+// used in test cases is defined in submgr-config.yaml file.
 
 func TestSuiteSetup(t *testing.T) {
 	// The effect of this call shall endure though the UT suite!
@@ -84,7 +87,6 @@ func TestRanStatusChangeViaSDLNotification(t *testing.T) {
 //-----------------------------------------------------------------------------
 
 func TestRESTSubReqAfterE2ConnBreak(t *testing.T) {
-	CaseBegin("TestRESTSubReqAfterE2ConnBreak")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 1},
@@ -105,7 +107,6 @@ func TestRESTSubReqAfterE2ConnBreak(t *testing.T) {
 
 	mainCtrl.VerifyAllClean(t)
 	mainCtrl.VerifyCounterValues(t)
-	//os.Exit(0)
 }
 
 //-----------------------------------------------------------------------------
@@ -135,7 +136,6 @@ func TestRESTSubReqAfterE2ConnBreak(t *testing.T) {
 //
 //-----------------------------------------------------------------------------
 func TestRESTSubReqE2ConnBreak(t *testing.T) {
-	CaseBegin("TestRESTSubReqE2ConnBreak")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 1},
@@ -2670,7 +2670,6 @@ func TestGetRestSubscriptions(t *testing.T) {
 //     |<----------------|              |
 //     |                 | RouteCreate  |
 //     |                 |------------->|
-//     |                 |              |
 //     |                 | RouteCreate  |
 //     |                 |  status:400  |
 //     |                 |(Bad request) |
@@ -2687,7 +2686,6 @@ func TestGetRestSubscriptions(t *testing.T) {
 //
 //-----------------------------------------------------------------------------
 func TestRESTSubReqAndRouteNok(t *testing.T) {
-	CaseBegin("TestRESTSubReqAndRouteNok")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 1},
@@ -2723,8 +2721,54 @@ func TestRESTSubReqAndRouteNok(t *testing.T) {
 	mainCtrl.VerifyAllClean(t)
 }
 
+//-----------------------------------------------------------------------------
+// TestRESTSubReqAndRouteUpdateNok
+//
+//   stub        stub                         stub           stub
+// +-------+   +-------+    +---------+    +---------+    +---------+
+// | xapp1 |   | xapp2 |    | submgr  |    | rtmgr   |    | e2term  |
+// +-------+   +-------+    +---------+    +---------+    +---------+
+//     |           |             |              |              |
+//     | RESTSubReq1             |              |              |
+//     |------------------------>|              |              |
+//     |     RESTSubResp2        |              |              |
+//     |<------------------------|              |              |
+//     |           |             |              |              |
+//     |           |             | RouteCreate  |              |
+//     |           |             |------------->|              |
+//     |           |             | CreateResp   |              |
+//     |           |             |<-------------|              |
+//     |           |             | SubReq       |              |
+//     |           |             |---------------------------->|
+//     |           |             |      SubResp |              |
+//     |           |             |<----------------------------|
+//     |      RESTNotif1         |              |              |
+//     |<------------------------|              |              |
+//     |           |             |              |              |
+//     |           | RESTSubReq2 |              |              |
+//     |           |------------>|              |              |
+//     |           | RESTSubResp2|              |              |
+//     |           |<------------|              |              |
+//     |           |             | RouteUpdate  |              |
+//     |           |             |------------->|              |
+//     |           |             | RouteUpdate  |              |
+//     |           |             |  status:400  |              |
+//     |           |             |(Bad request) |              |
+//     |           |             |<-------------|              |
+//     |           | RESTNotif2(unsuccessful)   |              |
+//     |           |<------------|              |              |
+//     |           |             |              |              |
+//     |          [SUBS INT DELETE]             |              |
+//     |           |             |              |              |
+//     | RESTSubDelReq1          |              |              |
+//     |------------------------>|              |              |
+//     |  RESTSubDelResp1        |              |              |
+//     |<------------------------|              |              |
+//     |           |             |              |              |
+//     |           |             |        [SUBS DELETE]        |
+//
+//-----------------------------------------------------------------------------
 func TestRESTSubReqAndRouteUpdateNok(t *testing.T) {
-	CaseBegin("TestSubReqAndRouteUpdateNok")
 
 	//Init counter check
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
@@ -2743,7 +2787,7 @@ func TestRESTSubReqAndRouteUpdateNok(t *testing.T) {
 
 	var params *teststube2ap.RESTSubsReqParams = nil
 
-	//Subs Create
+	// Subs create for xapp1
 	restSubId, e2SubsId := createSubscription(t, xappConn1, e2termConn1, params)
 
 	queryXappSubscription(t, int64(e2SubsId), "RAN_NAME_1", []string{"localhost:13560"})
@@ -2772,8 +2816,45 @@ func TestRESTSubReqAndRouteUpdateNok(t *testing.T) {
 	mainCtrl.VerifyAllClean(t)
 }
 
+//-----------------------------------------------------------------------------
+// TestRESTSubDelReqAndRouteDeleteNok
+//
+//   stub                             stub           stub
+// +-------+        +---------+    +---------+    +---------+
+// | xapp  |        | submgr  |    | rtmgr   |    | e2term  |
+// +-------+        +---------+    +---------+    +---------+
+//     |                 |              |              |
+//     | RESTSubReq      |              |              |
+//     |---------------->|              |              |
+//     |                 |              |              |
+//     |     RESTSubResp |              |              |
+//     |<----------------|              |              |
+//     |                 | SubReq       |              |
+//     |                 |---------------------------->|
+//     |                 | SubResp      |              |
+//     |                 |<----------------------------|
+//     |       RESTNotif |              |              |
+//     |<----------------|              |              |
+//     |                 |              |              |
+//     |                 |              |              |
+//     | RESTSubDelReq   |              |              |
+//     |---------------->|              |              |
+//     |  RESTSubDelResp |              |              |
+//     |<----------------|              |              |
+//     |                 | SubSelReq    |              |
+//     |                 |---------------------------->|
+//     |                 | SubSelResp   |              |
+//     |                 |<----------------------------|
+//     |                 | RouteDelete  |              |
+//     |                 |------------->|              |
+//     |                 | Routedelete  |              |
+//     |                 |  status:400  |              |
+//     |                 |(Bad request) |              |
+//     |                 |<-------------|              |
+//
+//-----------------------------------------------------------------------------
+
 func TestRESTSubDelReqAndRouteDeleteNok(t *testing.T) {
-	CaseBegin("TestRESTSubDelReqAndRouteDeleteNok")
 
 	// Init counter check
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
@@ -2807,8 +2888,78 @@ func TestRESTSubDelReqAndRouteDeleteNok(t *testing.T) {
 	mainCtrl.VerifyAllClean(t)
 }
 
+//-----------------------------------------------------------------------------
+// TestRESTSubMergeDelAndRouteUpdateNok
+//
+//   stub        stub                         stub           stub
+// +-------+   +-------+    +---------+    +---------+    +---------+
+// | xapp1 |   | xapp2 |    | submgr  |    | rtmgr   |    | e2term  |
+// +-------+   +-------+    +---------+    +---------+    +---------+
+//     |           |             |              |              |
+//     | RESTSubReq1             |              |              |
+//     |------------------------>|              |              |
+//     |     RESTSubResp2        |              |              |
+//     |<------------------------|              |              |
+//     |           |             |              |              |
+//     |           |             | RouteCreate  |              |
+//     |           |             |------------->|              |
+//     |           |             | CreateResp   |              |
+//     |           |             |<-------------|              |
+//     |           |             | SubReq       |              |
+//     |           |             |---------------------------->|
+//     |           |             |      SubResp |              |
+//     |           |             |<----------------------------|
+//     |      RESTNotif1         |              |              |
+//     |<------------------------|              |              |
+//     |           |             |              |              |
+//     |           | RESTSubReq2 |              |              |
+//     |           |------------>|              |              |
+//     |           | RESTSubResp2|              |              |
+//     |           |<------------|              |              |
+//     |           |             | RouteCreate  |              |
+//     |           |             |------------->|              |
+//     |           |             | CreateResp   |              |
+//     |           |             |<-------------|              |
+//     |           |             | SubReq       |              |
+//     |           |             |---------------------------->|
+//     |           |             |      SubResp |              |
+//     |           |             |<----------------------------|
+//     |           | RESTNotif2  |              |              |
+//     |           |<------------|              |              |
+//     |           |             |              |              |
+//     |          [SUBS INT DELETE]             |              |
+//     |           |             |              |              |
+//     | RESTSubDelReq1          |              |              |
+//     |------------------------>|              |              |
+//     |  RESTSubDelResp1        |              |              |
+//     |<------------------------|              |              |
+//     |           |             | SubDelReq    |              |
+//     |           |             |---------------------------->|
+//     |           |             | SubDelResp   |              |
+//     |           |             |<----------------------------|
+//     |           |             | RouteUpdate  |              |
+//     |           |             |------------->|              |
+//     |           |             | RouteUpdate  |              |
+//     |           |             |  status:400  |              |
+//     |           |             |(Bad request) |              |
+//     |           |             |<-------------|              |
+//     |           |             |              |              |
+//     |           | RESTSubDelReq2             |              |
+//     |           |------------>|              |              |
+//     |           | RESTSubDelResp2            |              |
+//     |           |<------------|              |              |
+//     |           |             | SubDelReq    |              |
+//     |           |             |---------------------------->|
+//     |           |             | SubdelResp   |              |
+//     |           |             |<----------------------------|
+//     |           |             | RouteDelete  |              |
+//     |           |             |------------->|              |
+//     |           |             | Deleteresp   |              |
+//     |           |             |<-------------|              |
+
+//-----------------------------------------------------------------------------
+
 func TestRESTSubMergeDelAndRouteUpdateNok(t *testing.T) {
-	CaseBegin("TestRESTSubMergeDelAndRouteUpdateNok")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 2},
@@ -2883,7 +3034,6 @@ func TestRESTSubMergeDelAndRouteUpdateNok(t *testing.T) {
 //-----------------------------------------------------------------------------
 
 func TestRESTSubReqRetransmission(t *testing.T) {
-	CaseBegin("TestRESTSubReqRetransmission")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 2},
@@ -2974,7 +3124,6 @@ func TestRESTSubReqRetransmission(t *testing.T) {
 //-----------------------------------------------------------------------------
 
 func TestRESTSubReqRetransmissionV2(t *testing.T) {
-	CaseBegin("TestRESTSubReqRetransmissionV2")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 3},
@@ -3060,7 +3209,6 @@ func TestRESTSubReqRetransmissionV2(t *testing.T) {
 //
 //-----------------------------------------------------------------------------
 func TestRESTSubReqRetransmissionV3(t *testing.T) {
-	CaseBegin("TestRESTSubReqRetransmissionV3")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 3},
@@ -3164,7 +3312,6 @@ func TestRESTSubReqRetransmissionV3(t *testing.T) {
 //-----------------------------------------------------------------------------
 
 func TestRESTSubReqRetransmissionV4(t *testing.T) {
-	CaseBegin("TestRESTSubReqRetransmissionV4")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 3},
@@ -3287,7 +3434,6 @@ func TestRESTSubReqRetransmissionV4(t *testing.T) {
 //-----------------------------------------------------------------------------
 
 func TestRESTSubReqRetransmissionV5(t *testing.T) {
-	CaseBegin("TestRESTSubReqRetransmissionV5")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 3},
@@ -3421,7 +3567,6 @@ func TestRESTSubReqRetransmissionV5(t *testing.T) {
 //
 //-----------------------------------------------------------------------------
 func TestRESTSubReqRetransmissionV6(t *testing.T) {
-	CaseBegin("TestRESTSubReqRetransmissionV6")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 3},
@@ -3484,8 +3629,43 @@ func TestRESTSubReqRetransmissionV6(t *testing.T) {
 	mainCtrl.VerifyAllClean(t)
 }
 
+//-----------------------------------------------------------------------------
+// TestRESTSubDelReqRetransmission
+//
+//   stub                             stub
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//     |                 |              |
+//     | RESTSubReq      |              |
+//     |---------------->|              |
+//     |                 |              |
+//     |     RESTSubResp |              |
+//     |<----------------|              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |      SubResp |
+//     |                 |<-------------|
+//     |      RESTNotif1 |              |
+//     |<----------------|              |
+//     |                 |              |
+//     | RESTSubDelReq   |              |
+//     |---------------->|              |
+//     |  RESTSubDelResp |              |
+//     |<----------------|              |
+//     |                 | SubDelReq    |
+//     |                 |------------->|
+//     | RESTSubDelReq   |              |
+//     |---------------->|              |
+//     |  RESTSubDelResp |              |
+//     |<----------------|              |
+//     |                 |   SubDelResp |
+//     |                 |<-------------|
+//     |                 |              |
+//
+//-----------------------------------------------------------------------------
+
 func TestRESTSubDelReqRetransmission(t *testing.T) {
-	CaseBegin("TestRESTSubDelReqRetransmission")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 1},
@@ -3510,10 +3690,12 @@ func TestRESTSubDelReqRetransmission(t *testing.T) {
 	xappConn1.SendRESTSubsDelReq(t, &restSubId)
 	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
 
+	//Resend delete req
 	seqBef := mainCtrl.get_msgcounter(t)
 	xappConn1.SendRESTSubsDelReq(t, &restSubId)
 	mainCtrl.wait_msgcounter_change(t, seqBef, 10)
 
+	// Del resp
 	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
 
 	waitSubsCleanup(t, e2SubsId, 10)
@@ -3551,7 +3733,6 @@ func TestRESTSubDelReqRetransmission(t *testing.T) {
 //
 //-----------------------------------------------------------------------------
 func TestRESTSubReqDelReq(t *testing.T) {
-	CaseBegin("TestRESTSubReqDelReq")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 1},
@@ -3593,12 +3774,48 @@ func TestRESTSubReqDelReq(t *testing.T) {
 	mainCtrl.VerifyAllClean(t)
 }
 
-func TestRESTSubDelReqCollision(t *testing.T) {
-	CaseBegin("TestRESTSubDelReqCollision - not relevant for REST API")
-}
+//-----------------------------------------------------------------------------
+// TestRESTSubReqAndSubDelOkTwoParallel
+//
+//   stub       stub                          stub
+// +-------+  +-------+     +---------+    +---------+
+// | xapp2 |  | xapp1 |     | submgr  |    | e2term  |
+// +-------+  +-------+     +---------+    +---------+
+//     |          |              |              |
+//     |          | RESTSubReq1  |              |
+//     |          |------------->|              |
+//     |          | RESTSubResp1 |              |
+//     |          |<-------------|              |
+//     |          |              |              |
+//     |          |              | SubReq1      |
+//     |          |              |------------->|
+//     |          |              |              |
+//     |       RESTSubReq2       |              |
+//     |------------------------>|              |
+//     |       RESTSubResp2      |              |
+//     |<------------------------|              |
+//     |          |              |              |
+//     |          |              | SubReq2      |
+//     |          |              |------------->|
+//     |          |              |              |
+//     |          |              |    SubResp1  |
+//     |          |              |<-------------|
+//     |          | RESTNotif1   |              |
+//     |          |<-------------|              |
+//     |          |              |              |
+//     |          |              |    SubResp2  |
+//     |          |              |<-------------|
+//     |       RESTNotif2        |              |
+//     |<------------------------|              |
+//     |          |              |              |
+//     |          |        [SUBS 1 DELETE]      |
+//     |          |              |              |
+//     |          |        [SUBS 2 DELETE]      |
+//     |          |              |              |
+//
+//-----------------------------------------------------------------------------
 
 func TestRESTSubReqAndSubDelOkTwoParallel(t *testing.T) {
-	CaseBegin("TestRESTSubReqAndSubDelOkTwoParallel")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 2},
@@ -3651,8 +3868,51 @@ func TestRESTSubReqAndSubDelOkTwoParallel(t *testing.T) {
 	mainCtrl.VerifyAllClean(t)
 }
 
+//-----------------------------------------------------------------------------
+// TestRESTSameSubsDiffRan
+// Same subscription to different RANs
+//
+//   stub                          stub
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//     |                 |              |
+//     | RESTSubReq(r1)  |              |
+//     |---------------->|              |
+//     | RESTSubResp(r1) |              |
+//     |<----------------|              |
+//     |                 |              |
+//     |                 | SubReq(r1)   |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 | SubResp(r1)  |
+//     |                 |<-------------|
+//     |                 |              |
+//     | RESTNotif(r1)   |              |
+//     |<----------------|              |
+//     |                 |              |
+//     | RESTSubReq(r2)  |              |
+//     |---------------->|              |
+//     |                 |              |
+//     | RESTSubResp(r2) |              |
+//     |<----------------|              |
+//     |                 | SubReq(r2)   |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 | SubResp(r2)  |
+//     |                 |<-------------|
+//     |                 |              |
+//     | RESTNotif(r2)   |              |
+//     |<----------------|              |
+//     |                 |              |
+//     |          [SUBS r1 DELETE]      |
+//     |                 |              |
+//     |          [SUBS r2 DELETE]      |
+//     |                 |              |
+//
+//-----------------------------------------------------------------------------
+
 func TestRESTSameSubsDiffRan(t *testing.T) {
-	CaseBegin("TestRESTSameSubsDiffRan")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 2},
@@ -3688,8 +3948,35 @@ func TestRESTSameSubsDiffRan(t *testing.T) {
 	mainCtrl.VerifyAllClean(t)
 }
 
+//-----------------------------------------------------------------------------
+// TestRESTSubReqRetryInSubmgr
+//
+//   stub                          stub
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//     |                 |              |
+//     | RESTSubReq      |              |
+//     |---------------->|              |
+//     | RESTSubResp     |              |
+//     |<----------------|              |
+//     |                 | SubReq       |
+//     |                 |              |
+//     |                 |              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 | SubResp      |
+//     |                 |<-------------|
+//     |                 |              |
+//     | RESTNotif       |              |
+//     |<----------------|              |
+//     |                 |              |
+//     |           [SUBS DELETE]        |
+//     |                 |              |
+//
+//-----------------------------------------------------------------------------
+
 func TestRESTSubReqRetryInSubmgr(t *testing.T) {
-	CaseBegin("TestRESTSubReqRetryInSubmgr start")
 
 	// Init counter check
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
@@ -3723,6 +4010,7 @@ func TestRESTSubReqRetryInSubmgr(t *testing.T) {
 
 	queryXappSubscription(t, int64(e2SubsId), "RAN_NAME_1", []string{"localhost:13560"})
 
+	// Del
 	deleteSubscription(t, xappConn1, e2termConn1, &restSubId)
 
 	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
@@ -3773,7 +4061,6 @@ func TestRESTSubReqRetryInSubmgr(t *testing.T) {
 //-----------------------------------------------------------------------------
 
 func TestRESTSubReqRetryNoRespSubDelRespInSubmgr(t *testing.T) {
-	CaseBegin("TestRESTSubReqTwoRetriesNoRespSubDelRespInSubmgr start")
 
 	// Init counter check
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
@@ -3812,8 +4099,41 @@ func TestRESTSubReqRetryNoRespSubDelRespInSubmgr(t *testing.T) {
 	mainCtrl.VerifyAllClean(t)
 }
 
+//-----------------------------------------------------------------------------
+// TestREST2eTermNotRespondingToSubReq
+//
+//   stub                          stub
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//     |                 |              |
+//     | RESTSubReq      |              |
+//     |---------------->|              |
+//     | RESTSubResp     |              |
+//     |<----------------|              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 | SubDelReq    |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 | SubDelReq    |
+//     |                 |------------->|
+//     | RESTNotif(Unsuccessful)        |
+//     |<----------------|              |
+//     |                 |              |
+//     | RESTSubDelReq   |              |
+//     |---------------->|              |
+//     | RESTSubDelResp  |              |
+//     |<----------------|              |
+//     |                 |              |
+//
+//-----------------------------------------------------------------------------
+
 func TestREST2eTermNotRespondingToSubReq(t *testing.T) {
-	CaseBegin("TestREST2eTermNotRespondingToSubReq start")
 
 	// Init counter check
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
@@ -3895,7 +4215,6 @@ func TestREST2eTermNotRespondingToSubReq(t *testing.T) {
 //
 //-----------------------------------------------------------------------------
 func TestRESTSubReqTwoRetriesNoRespAtAllInSubmgr(t *testing.T) {
-	CaseBegin("TestRESTSubReqTwoRetriesNoRespAtAllInSubmgr start")
 
 	// Init counter check
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
@@ -3965,8 +4284,8 @@ func TestRESTSubReqTwoRetriesNoRespAtAllInSubmgr(t *testing.T) {
 //     |                 |              |
 //
 //-----------------------------------------------------------------------------
+
 func TestRESTSubReqSubFailRespInSubmgr(t *testing.T) {
-	CaseBegin("TestRESTSubReqSubFailRespInSubmgr")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 1},
@@ -4034,7 +4353,6 @@ func TestRESTSubReqSubFailRespInSubmgr(t *testing.T) {
 //
 //-----------------------------------------------------------------------------
 func TestRESTSubDelReqRetryInSubmgr(t *testing.T) {
-	CaseBegin("TestRESTSubDelReqRetryInSubmgr")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 1},
@@ -4095,8 +4413,8 @@ func TestRESTSubDelReqRetryInSubmgr(t *testing.T) {
 //     |                 |              |
 //
 //-----------------------------------------------------------------------------
+
 func TestRESTSubDelReqTwoRetriesNoRespInSubmgr(t *testing.T) {
-	CaseBegin("TestRESTSubDelReTwoRetriesNoRespInSubmgr")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 1},
@@ -4157,8 +4475,8 @@ func TestRESTSubDelReqTwoRetriesNoRespInSubmgr(t *testing.T) {
 //     |                 |              |
 //
 //-----------------------------------------------------------------------------
+
 func TestRESTSubDelReqSubDelFailRespInSubmgr(t *testing.T) {
-	CaseBegin("TestRESTSubDelReqSubDelFailRespInSubmgr")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 1},
@@ -4240,8 +4558,8 @@ func TestRESTSubDelReqSubDelFailRespInSubmgr(t *testing.T) {
 //     |             |                 |              |
 //
 //-----------------------------------------------------------------------------
+
 func TestRESTSubReqAndSubDelOkSameAction(t *testing.T) {
-	CaseBegin("TestRESTSubReqAndSubDelOkSameAction")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 2},
@@ -4339,7 +4657,6 @@ func TestRESTSubReqAndSubDelOkSameAction(t *testing.T) {
 //     |<---------------------------|              |
 //
 func TestRESTSubReqAndSubDelOkSameActionParallel(t *testing.T) {
-	CaseBegin("TestRESTSubReqAndSubDelOkSameActionParallel")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 2},
@@ -4436,8 +4753,8 @@ func TestRESTSubReqAndSubDelOkSameActionParallel(t *testing.T) {
 //     |<------------------------------|              |
 //
 //-----------------------------------------------------------------------------
+
 func TestRESTSubReqAndSubDelNoAnswerSameActionParallel(t *testing.T) {
-	CaseBegin("TestRESTSubReqAndSubDelNoAnswerSameActionParallel")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 2},
@@ -4539,8 +4856,8 @@ func TestRESTSubReqAndSubDelNoAnswerSameActionParallel(t *testing.T) {
 //     |<------------------------------|              |
 //
 //-----------------------------------------------------------------------------
+
 func TestRESTSubReqAndSubDelNokSameActionParallel(t *testing.T) {
-	CaseBegin("TestRESTSubReqAndSubDelNokSameActionParallel")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 2},
@@ -4592,8 +4909,44 @@ func TestRESTSubReqAndSubDelNokSameActionParallel(t *testing.T) {
 	mainCtrl.VerifyAllClean(t)
 }
 
+//-----------------------------------------------------------------------------
+// TestRESTSubReqPolicyAndSubDelOk
+//
+//   stub                          stub
+// +-------+       +---------+    +---------+
+// | xapp  |       | submgr  |    | e2term  |
+// +-------+       +---------+    +---------+
+//     |                |              |
+//     | RESTSubReq     |              |
+//     |--------------->|              |
+//     |  RESTSubResp   |              |
+//     |<---------------|              |
+//     |                |              |
+//     |                | SubReq       |
+//     |                |------------->|
+//     |                |              |
+//     |                |      SubResp |
+//     |                |<-------------|
+//     |                |              |
+//     |  RESTNotif     |              |
+//     |<---------------|              |
+//     |                |              |
+//     |                |              |
+//     | RESTSubDelReq  |              |
+//     |--------------->|              |
+//     | RESTSubDelResp |              |
+//     |<---------------|              |
+//     |                |              |
+//     |                | SubDelReq    |
+//     |                |------------->|
+//     |                |              |
+//     |                |   SubDelResp |
+//     |                |<-------------|
+//     |                |              |
+//
+//-----------------------------------------------------------------------------
+
 func TestRESTSubReqPolicyAndSubDelOk(t *testing.T) {
-	CaseBegin("TestRESTSubReqPolicyAndSubDelOk")
 
 	// Init counter check
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
@@ -4677,8 +5030,8 @@ func TestRESTSubReqPolicyAndSubDelOk(t *testing.T) {
 //     |<----------------|              |
 //
 //-----------------------------------------------------------------------------
+
 func TestRESTSubReqPolicyChangeAndSubDelOk(t *testing.T) {
-	CaseBegin("TestRESTSubReqPolicyAndSubDelOk")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 2},
@@ -4763,8 +5116,8 @@ func TestRESTSubReqPolicyChangeAndSubDelOk(t *testing.T) {
 //     |<----------------|              |
 //
 //-----------------------------------------------------------------------------
+
 func TestRESTSubReqPolicyChangeNOk(t *testing.T) {
-	CaseBegin("TestRESTSubReqPolicyChangeNOk")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 2},
@@ -4846,8 +5199,8 @@ func TestRESTSubReqPolicyChangeNOk(t *testing.T) {
 //     |                 |              |              |
 //
 //-----------------------------------------------------------------------------
+
 func TestRESTSubReqAndSubDelOkTwoE2termParallel(t *testing.T) {
-	CaseBegin("TestRESTSubReqAndSubDelOkTwoE2termParallel")
 
 	// Init counter check
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
@@ -4910,35 +5263,6 @@ func TestRESTSubReqAndSubDelOkTwoE2termParallel(t *testing.T) {
 }
 
 //-----------------------------------------------------------------------------
-// TestRESTSubReqAsn1EncodeFail
-//
-// In this case submgr send RICSubscriptionDeleteRequest after encode failure which should not happen!
-//   stub                             stub
-// +-------+        +---------+    +---------+
-// | xapp  |        | submgr  |    | e2term  |
-// +-------+        +---------+    +---------+
-//     |                 |              |
-//     | RESTSubReq      |              |
-//     |---------------->|              |
-//     |                 |              |
-//     |     RESTSubResp |              |
-//     |<----------------|              |
-//     | RESTSubDelReq   |              |
-//     |---------------->|              |
-//     |  RESTSubDelResp |              |
-//     |     unsuccess   |              |
-//     |<----------------|              |
-//     |                 |              |
-//
-//-----------------------------------------------------------------------------
-func TestRESTSubReqAsn1EncodeFail(t *testing.T) {
-	CaseBegin("TestRESTSubReqAsn1EncodeFail")
-
-	xapp.Logger.Debug("Xapp-frame, v0.8.1 sufficient REST API validation")
-
-}
-
-//-----------------------------------------------------------------------------
 // TestRESTSubReqInsertAndSubDelOk
 //
 //   stub                             stub
@@ -4974,8 +5298,8 @@ func TestRESTSubReqAsn1EncodeFail(t *testing.T) {
 //     |<----------------|              |
 //
 //-----------------------------------------------------------------------------
+
 func TestRESTSubReqInsertAndSubDelOk(t *testing.T) {
-	CaseBegin("TestRESTInsertSubReqAndSubDelOk")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 1},
@@ -5048,8 +5372,8 @@ func TestRESTSubReqInsertAndSubDelOk(t *testing.T) {
 //     |<-------------|              |
 //
 //-----------------------------------------------------------------------------
+
 func TestRESTSubReqNokAndSubDelOkWithRestartInMiddle(t *testing.T) {
-	CaseBegin("TestRESTSubReqNokAndSubDelOkWithRestartInMiddle")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 1},
@@ -5133,7 +5457,6 @@ func TestRESTSubReqNokAndSubDelOkWithRestartInMiddle(t *testing.T) {
 //-----------------------------------------------------------------------------
 
 func TestRESTSubReqAndSubDelOkWithRestartInMiddle(t *testing.T) {
-	CaseBegin("TestRESTSubReqAndSubDelOkWithRestartInMiddle")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 1},
@@ -5230,7 +5553,6 @@ func TestRESTSubReqAndSubDelOkWithRestartInMiddle(t *testing.T) {
 //
 //-----------------------------------------------------------------------------
 func TestRESTSubReqAndSubDelOkSameActionWithRestartsInMiddle(t *testing.T) {
-	CaseBegin("TestRESTSubReqAndSubDelOkSameActionWithRestartsInMiddle")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 2},
@@ -5315,7 +5637,7 @@ func TestRESTSubReqAndSubDelOkSameActionWithRestartsInMiddle(t *testing.T) {
 //     |                 |<-------------|
 //     | RESTNotif       |              |
 //     |<----------------|              |
-//     |                 | SubReq       |
+//     |                 | SubReq       |   // Only one request sent in the teat case
 //     |                 |------------->|
 //     |                 |              |
 //     |                 |      SubResp |
@@ -5340,7 +5662,6 @@ func TestRESTSubReqAndSubDelOkSameActionWithRestartsInMiddle(t *testing.T) {
 //-----------------------------------------------------------------------------
 
 func TestRESTReportSubReqAndSubDelOk(t *testing.T) {
-	CaseBegin("TestRESTReportSubReqAndSubDelOk")
 	const subReqCount int = 1
 	testIndex := 1
 	RESTReportSubReqAndSubDelOk(t, subReqCount, testIndex)
@@ -5401,66 +5722,54 @@ func RESTReportSubReqAndSubDelOk(t *testing.T, subReqCount int, testIndex int) {
 	mainCtrl.VerifyCounterValues(t)
 }
 
-/*
-func TestRESTPolicySubReqAndSubDelOk(t *testing.T) {  //Was in comments already. Next case is not run!
-	CaseBegin("TestRESTPolicySubReqAndSubDelOk")
-
-	subReqCount := 2
-	testIndex := 1
-	RESTPolicySubReqAndSubDelOk(t, subReqCount, testIndex)
-
-	subReqCount = 19
-	testIndex = 2
-	RESTPolicySubReqAndSubDelOk(t, subReqCount, testIndex)
-}
-*/
-func RESTPolicySubReqAndSubDelOk(t *testing.T, subReqCount int, testIndex int) {
-	xapp.Logger.Debug("TEST: TestRESTPolicySubReqAndSubDelOk with testIndex %v", testIndex)
-
-	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
-		Counter{cRestSubReqFromXapp, 1},
-		Counter{cRestSubRespToXapp, 1},
-		Counter{cSubReqToE2, uint64(subReqCount)},
-		Counter{cSubRespFromE2, uint64(subReqCount)},
-		Counter{cRestSubNotifToXapp, 1},
-		Counter{cRestSubDelReqFromXapp, 1},
-		Counter{cRestSubDelRespToXapp, 1},
-		Counter{cSubDelReqToE2, uint64(subReqCount)},
-		Counter{cSubDelRespFromE2, uint64(subReqCount)},
-	})
-
-	// Req
-	params := xappConn1.GetRESTSubsReqPolicyParams(subReqCount)
-	restSubId := xappConn1.SendRESTSubsReq(t, params)
-
-	var e2SubsId []uint32
-	for i := 0; i < subReqCount; i++ {
-		crereq, cremsg := e2termConn1.RecvSubsReq(t)
-		xappConn1.ExpectRESTNotification(t, restSubId)
-		e2termConn1.SendSubsResp(t, crereq, cremsg)
-		instanceId := xappConn1.WaitRESTNotification(t, restSubId)
-		xapp.Logger.Debug("TEST: REST notification received e2SubsId=%v", instanceId)
-		e2SubsId = append(e2SubsId, instanceId)
-	}
-
-	// Del
-	xappConn1.SendRESTSubsDelReq(t, &restSubId)
-
-	for i := 0; i < subReqCount; i++ {
-		delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
-		e2termConn1.SendSubsDelResp(t, delreq, delmsg)
-	}
-
-	// Wait that subs is cleaned
-	for i := 0; i < subReqCount; i++ {
-		mainCtrl.wait_subs_clean(t, e2SubsId[i], 10)
-	}
-	xappConn1.TestMsgChanEmpty(t)
-	e2termConn1.TestMsgChanEmpty(t)
-	mainCtrl.wait_registry_empty(t, 10)
-	mainCtrl.VerifyAllClean(t)
-	mainCtrl.VerifyCounterValues(t)
-}
+//-----------------------------------------------------------------------------
+// TestRESTTwoPolicySubReqAndSubDelOk
+//
+//   stub                             stub
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//     |                 |              |
+//     | RestSubReq      |              |
+//     |---------------->|              |
+//     |                 |              |
+//     |     RESTSubResp |              |
+//     |<----------------|              |
+//     |                 |              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |      SubResp |
+//     |                 |<-------------|
+//     | RESTNotif       |              |
+//     |<----------------|              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |      SubResp |
+//     |                 |<-------------|
+//     | RESTNotif       |              |
+//     |<----------------|              |
+//     |                 |              |
+//     | RESTSubDelReq   |              |
+//     |---------------->|              |
+//     |                 |              |
+//     |   RESTSubDelResp|              |
+//     |<----------------|              |
+//     |                 | SubDelReq    |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |   SubDelResp |
+//     |                 |<-------------|
+//     |                 |              |
+//     |                 | SubDelReq    |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |   SubDelResp |
+//     |                 |<-------------|
+//     |                 |              |
+//
+//-----------------------------------------------------------------------------
 
 func TestRESTTwoPolicySubReqAndSubDelOk(t *testing.T) {
 
@@ -5496,7 +5805,45 @@ func TestRESTTwoPolicySubReqAndSubDelOk(t *testing.T) {
 	mainCtrl.VerifyCounterValues(t)
 	mainCtrl.VerifyAllClean(t)
 }
-func TestRESTPolicySubReqAndSubDelOkFullAmount(t *testing.T) {
+
+//-----------------------------------------------------------------------------
+// TestRESTPolicySubReqAndSubDelOk19E2Subs
+//
+//   stub                             stub
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//     |                 |              |
+//     | RestSubReq      |              |
+//     |---------------->|              |
+//     |                 |              |
+//     |     RESTSubResp |              |
+//     |<----------------|              |
+//     |                 |              |  ------
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |              |   E2 subscription x 19
+//     |                 |      SubResp |
+//     |                 |<-------------|
+//     | RESTNotif       |              |
+//     |<----------------|              |
+//     |                 |              |  ------
+//     | RESTSubDelReq   |              |
+//     |---------------->|              |
+//     |                 |              |
+//     |   RESTSubDelResp|              |
+//     |<----------------|              |
+//     |                 | SubDelReq    |  ------
+//     |                 |------------->|
+//     |                 |              |   E2 subscription delete x 19
+//     |                 |   SubDelResp |
+//     |                 |<-------------|
+//     |                 |              |  ------
+//     |                 |              |
+//
+//-----------------------------------------------------------------------------
+
+func TestRESTPolicySubReqAndSubDelOk19E2Subs(t *testing.T) {
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 1},
@@ -5528,6 +5875,55 @@ func TestRESTPolicySubReqAndSubDelOkFullAmount(t *testing.T) {
 	mainCtrl.VerifyCounterValues(t)
 	mainCtrl.VerifyAllClean(t)
 }
+
+//-----------------------------------------------------------------------------
+// TestRESTTwoPolicySubReqAndSubDelOk
+//
+//   stub                             stub
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//     |                 |              |
+//     | RestSubReq      |              |
+//     |---------------->|              |
+//     |                 |              |
+//     |     RESTSubResp |              |
+//     |<----------------|              |
+//     |                 |              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |      SubResp |
+//     |                 |<-------------|
+//     | RESTNotif       |              |
+//     |<----------------|              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |      SubResp |
+//     |                 |<-------------|
+//     | RESTNotif       |              |
+//     |<----------------|              |
+//     |                 |              |
+//     | RESTSubDelReq   |              |
+//     |---------------->|              |
+//     |                 |              |
+//     |   RESTSubDelResp|              |
+//     |<----------------|              |
+//     |                 | SubDelReq    |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |   SubDelResp |
+//     |                 |<-------------|
+//     |                 |              |
+//     |                 | SubDelReq    |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |   SubDelResp |
+//     |                 |<-------------|
+//     |                 |              |
+//
+//-----------------------------------------------------------------------------
 
 func TestRESTTwoReportSubReqAndSubDelOk(t *testing.T) {
 
@@ -5564,6 +5960,55 @@ func TestRESTTwoReportSubReqAndSubDelOk(t *testing.T) {
 	mainCtrl.VerifyAllClean(t)
 }
 
+//-----------------------------------------------------------------------------
+// TestRESTTwoReportSubReqAndSubDelOkNoActParams
+//
+//   stub                             stub
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//     |                 |              |
+//     | RestSubReq      |              |
+//     |---------------->|              |
+//     |                 |              |
+//     |     RESTSubResp |              |
+//     |<----------------|              |
+//     |                 |              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |      SubResp |
+//     |                 |<-------------|
+//     | RESTNotif       |              |
+//     |<----------------|              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |      SubResp |
+//     |                 |<-------------|
+//     | RESTNotif       |              |
+//     |<----------------|              |
+//     |                 |              |
+//     | RESTSubDelReq   |              |
+//     |---------------->|              |
+//     |                 |              |
+//     |   RESTSubDelResp|              |
+//     |<----------------|              |
+//     |                 | SubDelReq    |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |   SubDelResp |
+//     |                 |<-------------|
+//     |                 |              |
+//     |                 | SubDelReq    |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |   SubDelResp |
+//     |                 |<-------------|
+//     |                 |              |
+//
+//-----------------------------------------------------------------------------
+
 func TestRESTTwoReportSubReqAndSubDelOkNoActParams(t *testing.T) {
 
 	subReqCount := 2
@@ -5599,7 +6044,44 @@ func TestRESTTwoReportSubReqAndSubDelOkNoActParams(t *testing.T) {
 	mainCtrl.VerifyAllClean(t)
 }
 
-func TestRESTFullAmountReportSubReqAndSubDelOk(t *testing.T) {
+//-----------------------------------------------------------------------------
+// TestRESTReportSubReqAndSubDelOk19E2Subs
+//
+//   stub                             stub
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//     |                 |              |
+//     | RestSubReq      |              |
+//     |---------------->|              |
+//     |                 |              |
+//     |     RESTSubResp |              |
+//     |<----------------|              |
+//     |                 |              |  ------
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |              |   E2 subscription x 19
+//     |                 |      SubResp |
+//     |                 |<-------------|
+//     | RESTNotif       |              |
+//     |<----------------|              |
+//     |                 |              |  ------
+//     | RESTSubDelReq   |              |
+//     |---------------->|              |
+//     |                 |              |
+//     |   RESTSubDelResp|              |
+//     |<----------------|              |
+//     |                 | SubDelReq    |  ------
+//     |                 |------------->|
+//     |                 |              |   E2 subscription delete x 19
+//     |                 |   SubDelResp |
+//     |                 |<-------------|
+//     |                 |              |  ------
+//     |                 |              |
+//
+//-----------------------------------------------------------------------------
+
+func TestRESTReportSubReqAndSubDelOk19E2Subs(t *testing.T) {
 
 	subReqCount := 19
 
@@ -5634,8 +6116,48 @@ func TestRESTFullAmountReportSubReqAndSubDelOk(t *testing.T) {
 	mainCtrl.VerifyAllClean(t)
 }
 
+//-----------------------------------------------------------------------------
+// TestRESTSubReqReportSameActionDiffEventTriggerDefinitionLen
+//
+//   stub       stub                          stub
+// +-------+  +-------+     +---------+    +---------+
+// | xapp2 |  | xapp1 |     | submgr  |    | e2term  |
+// +-------+  +-------+     +---------+    +---------+
+//     |          |              |              |
+//     |          | RESTSubReq1  |              |
+//     |          |------------->|              |
+//     |          | RESTSubResp1 |              |
+//     |          |<-------------|              |
+//     |          |              |              |
+//     |          |              | SubReq1      |
+//     |          |              |------------->|
+//     |          |              |              |
+//     |       RESTSubReq2       |              |
+//     |------------------------>|              |
+//     |       RESTSubResp2      |              |
+//     |<------------------------|              |
+//     |          |              |              |
+//     |          |              | SubReq2      |
+//     |          |              |------------->|
+//     |          |              |              |
+//     |          |              |    SubResp1  |
+//     |          |              |<-------------|
+//     |          | RESTNotif1   |              |
+//     |          |<-------------|              |
+//     |          |              |              |
+//     |          |              |    SubResp2  |
+//     |          |              |<-------------|
+//     |       RESTNotif2        |              |
+//     |<------------------------|              |
+//     |          |              |              |
+//     |          |        [SUBS 1 DELETE]      |
+//     |          |              |              |
+//     |          |        [SUBS 2 DELETE]      |
+//     |          |              |              |
+//
+//-----------------------------------------------------------------------------
+
 func TestRESTSubReqReportSameActionDiffEventTriggerDefinitionLen(t *testing.T) {
-	CaseBegin("TestRESTSubReqReportSameActionDiffEventTriggerDefinitionLen")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 2},
@@ -5681,8 +6203,48 @@ func TestRESTSubReqReportSameActionDiffEventTriggerDefinitionLen(t *testing.T) {
 	mainCtrl.VerifyAllClean(t)
 }
 
+//-----------------------------------------------------------------------------
+// TestRESTSubReqReportSameActionDiffActionListLen
+//
+//   stub       stub                          stub
+// +-------+  +-------+     +---------+    +---------+
+// | xapp2 |  | xapp1 |     | submgr  |    | e2term  |
+// +-------+  +-------+     +---------+    +---------+
+//     |          |              |              |
+//     |          | RESTSubReq1  |              |
+//     |          |------------->|              |
+//     |          | RESTSubResp1 |              |
+//     |          |<-------------|              |
+//     |          |              |              |
+//     |          |              | SubReq1      |
+//     |          |              |------------->|
+//     |          |              |              |
+//     |       RESTSubReq2       |              |
+//     |------------------------>|              |
+//     |       RESTSubResp2      |              |
+//     |<------------------------|              |
+//     |          |              |              |
+//     |          |              | SubReq2      |
+//     |          |              |------------->|
+//     |          |              |              |
+//     |          |              |    SubResp1  |
+//     |          |              |<-------------|
+//     |          | RESTNotif1   |              |
+//     |          |<-------------|              |
+//     |          |              |              |
+//     |          |              |    SubResp2  |
+//     |          |              |<-------------|
+//     |       RESTNotif2        |              |
+//     |<------------------------|              |
+//     |          |              |              |
+//     |          |        [SUBS 1 DELETE]      |
+//     |          |              |              |
+//     |          |        [SUBS 2 DELETE]      |
+//     |          |              |              |
+//
+//-----------------------------------------------------------------------------
+
 func TestRESTSubReqReportSameActionDiffActionListLen(t *testing.T) {
-	CaseBegin("TestRESTSubReqReportSameActionDiffActionListLen")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 2},
@@ -5733,8 +6295,48 @@ func TestRESTSubReqReportSameActionDiffActionListLen(t *testing.T) {
 	mainCtrl.VerifyAllClean(t)
 }
 
+//-----------------------------------------------------------------------------
+// TestRESTSubReqReportSameActionDiffActionID
+//
+//   stub       stub                          stub
+// +-------+  +-------+     +---------+    +---------+
+// | xapp2 |  | xapp1 |     | submgr  |    | e2term  |
+// +-------+  +-------+     +---------+    +---------+
+//     |          |              |              |
+//     |          | RESTSubReq1  |              |
+//     |          |------------->|              |
+//     |          | RESTSubResp1 |              |
+//     |          |<-------------|              |
+//     |          |              |              |
+//     |          |              | SubReq1      |
+//     |          |              |------------->|
+//     |          |              |              |
+//     |       RESTSubReq2       |              |
+//     |------------------------>|              |
+//     |       RESTSubResp2      |              |
+//     |<------------------------|              |
+//     |          |              |              |
+//     |          |              | SubReq2      |
+//     |          |              |------------->|
+//     |          |              |              |
+//     |          |              |    SubResp1  |
+//     |          |              |<-------------|
+//     |          | RESTNotif1   |              |
+//     |          |<-------------|              |
+//     |          |              |              |
+//     |          |              |    SubResp2  |
+//     |          |              |<-------------|
+//     |       RESTNotif2        |              |
+//     |<------------------------|              |
+//     |          |              |              |
+//     |          |        [SUBS 1 DELETE]      |
+//     |          |              |              |
+//     |          |        [SUBS 2 DELETE]      |
+//     |          |              |              |
+//
+//-----------------------------------------------------------------------------
+
 func TestRESTSubReqReportSameActionDiffActionID(t *testing.T) {
-	CaseBegin("TestRESTSubReqReportSameActionDiffActionID")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 2},
@@ -5779,8 +6381,48 @@ func TestRESTSubReqReportSameActionDiffActionID(t *testing.T) {
 	mainCtrl.VerifyAllClean(t)
 }
 
+//-----------------------------------------------------------------------------
+// TestRESTSubReqDiffActionType
+//
+//   stub       stub                          stub
+// +-------+  +-------+     +---------+    +---------+
+// | xapp2 |  | xapp1 |     | submgr  |    | e2term  |
+// +-------+  +-------+     +---------+    +---------+
+//     |          |              |              |
+//     |          | RESTSubReq1  |              |
+//     |          |------------->|              |
+//     |          | RESTSubResp1 |              |
+//     |          |<-------------|              |
+//     |          |              |              |
+//     |          |              | SubReq1      |
+//     |          |              |------------->|
+//     |          |              |              |
+//     |       RESTSubReq2       |              |
+//     |------------------------>|              |
+//     |       RESTSubResp2      |              |
+//     |<------------------------|              |
+//     |          |              |              |
+//     |          |              | SubReq2      |
+//     |          |              |------------->|
+//     |          |              |              |
+//     |          |              |    SubResp1  |
+//     |          |              |<-------------|
+//     |          | RESTNotif1   |              |
+//     |          |<-------------|              |
+//     |          |              |              |
+//     |          |              |    SubResp2  |
+//     |          |              |<-------------|
+//     |       RESTNotif2        |              |
+//     |<------------------------|              |
+//     |          |              |              |
+//     |          |        [SUBS 1 DELETE]      |
+//     |          |              |              |
+//     |          |        [SUBS 2 DELETE]      |
+//     |          |              |              |
+//
+//-----------------------------------------------------------------------------
+
 func TestRESTSubReqDiffActionType(t *testing.T) {
-	CaseBegin("TestRESTSubReqDiffActionType")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 2},
@@ -5830,8 +6472,48 @@ func TestRESTSubReqDiffActionType(t *testing.T) {
 	mainCtrl.VerifyAllClean(t)
 }
 
+//-----------------------------------------------------------------------------
+// TestRESTSubReqPolicyAndSubDelOkSameAction
+//
+//   stub       stub                          stub
+// +-------+  +-------+     +---------+    +---------+
+// | xapp2 |  | xapp1 |     | submgr  |    | e2term  |
+// +-------+  +-------+     +---------+    +---------+
+//     |          |              |              |
+//     |          | RESTSubReq1  |              |
+//     |          |------------->|              |
+//     |          | RESTSubResp1 |              |
+//     |          |<-------------|              |
+//     |          |              |              |
+//     |          |              | SubReq1      |
+//     |          |              |------------->|
+//     |          |              |              |
+//     |       RESTSubReq2       |              |
+//     |------------------------>|              |
+//     |       RESTSubResp2      |              |
+//     |<------------------------|              |
+//     |          |              |              |
+//     |          |              | SubReq2      |
+//     |          |              |------------->|
+//     |          |              |              |
+//     |          |              |    SubResp1  |
+//     |          |              |<-------------|
+//     |          | RESTNotif1   |              |
+//     |          |<-------------|              |
+//     |          |              |              |
+//     |          |              |    SubResp2  |
+//     |          |              |<-------------|
+//     |       RESTNotif2        |              |
+//     |<------------------------|              |
+//     |          |              |              |
+//     |          |        [SUBS 1 DELETE]      |
+//     |          |              |              |
+//     |          |        [SUBS 2 DELETE]      |
+//     |          |              |              |
+//
+//-----------------------------------------------------------------------------
+
 func TestRESTSubReqPolicyAndSubDelOkSameAction(t *testing.T) {
-	CaseBegin("TestRESTSubReqPolicyAndSubDelOkSameAction")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 2},
@@ -5881,8 +6563,48 @@ func TestRESTSubReqPolicyAndSubDelOkSameAction(t *testing.T) {
 	mainCtrl.VerifyAllClean(t)
 }
 
+//-----------------------------------------------------------------------------
+// TestRESTSubReqReportSameActionDiffActionDefinitionLen
+//
+//   stub       stub                          stub
+// +-------+  +-------+     +---------+    +---------+
+// | xapp2 |  | xapp1 |     | submgr  |    | e2term  |
+// +-------+  +-------+     +---------+    +---------+
+//     |          |              |              |
+//     |          | RESTSubReq1  |              |
+//     |          |------------->|              |
+//     |          | RESTSubResp1 |              |
+//     |          |<-------------|              |
+//     |          |              |              |
+//     |          |              | SubReq1      |
+//     |          |              |------------->|
+//     |          |              |              |
+//     |       RESTSubReq2       |              |
+//     |------------------------>|              |
+//     |       RESTSubResp2      |              |
+//     |<------------------------|              |
+//     |          |              |              |
+//     |          |              | SubReq2      |
+//     |          |              |------------->|
+//     |          |              |              |
+//     |          |              |    SubResp1  |
+//     |          |              |<-------------|
+//     |          | RESTNotif1   |              |
+//     |          |<-------------|              |
+//     |          |              |              |
+//     |          |              |    SubResp2  |
+//     |          |              |<-------------|
+//     |       RESTNotif2        |              |
+//     |<------------------------|              |
+//     |          |              |              |
+//     |          |        [SUBS 1 DELETE]      |
+//     |          |              |              |
+//     |          |        [SUBS 2 DELETE]      |
+//     |          |              |              |
+//
+//-----------------------------------------------------------------------------
+
 func TestRESTSubReqReportSameActionDiffActionDefinitionLen(t *testing.T) {
-	CaseBegin("TestRESTSubReqReportSameActionDiffActionDefinitionLen")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 2},
@@ -5928,8 +6650,48 @@ func TestRESTSubReqReportSameActionDiffActionDefinitionLen(t *testing.T) {
 	mainCtrl.VerifyAllClean(t)
 }
 
+//-----------------------------------------------------------------------------
+// TestRESTSubReqReportSameActionDiffActionDefinitionContents
+//
+//   stub       stub                          stub
+// +-------+  +-------+     +---------+    +---------+
+// | xapp2 |  | xapp1 |     | submgr  |    | e2term  |
+// +-------+  +-------+     +---------+    +---------+
+//     |          |              |              |
+//     |          | RESTSubReq1  |              |
+//     |          |------------->|              |
+//     |          | RESTSubResp1 |              |
+//     |          |<-------------|              |
+//     |          |              |              |
+//     |          |              | SubReq1      |
+//     |          |              |------------->|
+//     |          |              |              |
+//     |       RESTSubReq2       |              |
+//     |------------------------>|              |
+//     |       RESTSubResp2      |              |
+//     |<------------------------|              |
+//     |          |              |              |
+//     |          |              | SubReq2      |
+//     |          |              |------------->|
+//     |          |              |              |
+//     |          |              |    SubResp1  |
+//     |          |              |<-------------|
+//     |          | RESTNotif1   |              |
+//     |          |<-------------|              |
+//     |          |              |              |
+//     |          |              |    SubResp2  |
+//     |          |              |<-------------|
+//     |       RESTNotif2        |              |
+//     |<------------------------|              |
+//     |          |              |              |
+//     |          |        [SUBS 1 DELETE]      |
+//     |          |              |              |
+//     |          |        [SUBS 2 DELETE]      |
+//     |          |              |              |
+//
+//-----------------------------------------------------------------------------
+
 func TestRESTSubReqReportSameActionDiffActionDefinitionContents(t *testing.T) {
-	CaseBegin("TestRESTSubReqReportSameActionDiffActionDefinitionContents")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 2},
@@ -5975,8 +6737,48 @@ func TestRESTSubReqReportSameActionDiffActionDefinitionContents(t *testing.T) {
 	mainCtrl.VerifyAllClean(t)
 }
 
+//-----------------------------------------------------------------------------
+// TestRESTSubReqReportSameActionDiffSubsAction
+//
+//   stub       stub                          stub
+// +-------+  +-------+     +---------+    +---------+
+// | xapp2 |  | xapp1 |     | submgr  |    | e2term  |
+// +-------+  +-------+     +---------+    +---------+
+//     |          |              |              |
+//     |          | RESTSubReq1  |              |
+//     |          |------------->|              |
+//     |          | RESTSubResp1 |              |
+//     |          |<-------------|              |
+//     |          |              |              |
+//     |          |              | SubReq1      |
+//     |          |              |------------->|
+//     |          |              |              |
+//     |       RESTSubReq2       |              |
+//     |------------------------>|              |
+//     |       RESTSubResp2      |              |
+//     |<------------------------|              |
+//     |          |              |              |
+//     |          |              | SubReq2      |
+//     |          |              |------------->|
+//     |          |              |              |
+//     |          |              |    SubResp1  |
+//     |          |              |<-------------|
+//     |          | RESTNotif1   |              |
+//     |          |<-------------|              |
+//     |          |              |              |
+//     |          |              |    SubResp2  |
+//     |          |              |<-------------|
+//     |       RESTNotif2        |              |
+//     |<------------------------|              |
+//     |          |              |              |
+//     |          |        [SUBS 1 DELETE]      |
+//     |          |              |              |
+//     |          |        [SUBS 2 DELETE]      |
+//     |          |              |              |
+//
+//-----------------------------------------------------------------------------
+
 func TestRESTSubReqReportSameActionDiffSubsAction(t *testing.T) {
-	CaseBegin("TestRESTSubReqReportSameActionDiffSubsAction")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 2},
@@ -6054,7 +6856,6 @@ func TestRESTSubReqReportSameActionDiffSubsAction(t *testing.T) {
 //-----------------------------------------------------------------------------
 
 func TestRESTUnpackSubscriptionResponseDecodeFail(t *testing.T) {
-	xapp.Logger.Debug("TEST: TestRESTUnpackSubscriptionResponseDecodeFail")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 1},
@@ -6143,7 +6944,6 @@ func TestRESTUnpackSubscriptionResponseDecodeFail(t *testing.T) {
 //-----------------------------------------------------------------------------
 
 func TestRESTUnpackSubscriptionResponseUnknownInstanceId(t *testing.T) {
-	xapp.Logger.Debug("TEST: TestRESTUnpackSubscriptionResponseUnknownInstanceId")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 1},
@@ -6244,8 +7044,8 @@ func TestRESTUnpackSubscriptionResponseUnknownInstanceId(t *testing.T) {
 //     |                 |              |
 //
 //-----------------------------------------------------------------------------
+
 func TestRESTUnpackSubscriptionResponseNoTransaction(t *testing.T) {
-	xapp.Logger.Debug("TEST: TestRESTUnpackSubscriptionResponseNoTransaction")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 1},
@@ -6340,8 +7140,8 @@ func TestRESTUnpackSubscriptionResponseNoTransaction(t *testing.T) {
 //     |                 |              |
 //
 //-----------------------------------------------------------------------------
+
 func TestRESTUnpackSubscriptionFailureDecodeFail(t *testing.T) {
-	xapp.Logger.Debug("TEST: TestRESTUnpackSubscriptionFailureDecodeFail")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 1},
@@ -6429,7 +7229,7 @@ func TestRESTUnpackSubscriptionFailureDecodeFail(t *testing.T) {
 //
 //-----------------------------------------------------------------------------
 func TestRESTUnpackSubscriptionFailureUnknownInstanceId(t *testing.T) {
-	xapp.Logger.Debug("TEST: TestRESTUnpackSubscriptionFailureUnknownInstanceId")
+
 	const subReqCount int = 1
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
@@ -6527,8 +7327,9 @@ func TestRESTUnpackSubscriptionFailureUnknownInstanceId(t *testing.T) {
 //     |                 |              |
 //
 //-----------------------------------------------------------------------------
+
 func TestRESTUnpackSubscriptionFailureNoTransaction(t *testing.T) {
-	xapp.Logger.Debug("TEST: TestRESTUnpackSubscriptionFailureNoTransaction")
+
 	const subReqCount int = 1
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
@@ -6623,8 +7424,8 @@ func TestRESTUnpackSubscriptionFailureNoTransaction(t *testing.T) {
 //     |                 |              |
 //
 //-----------------------------------------------------------------------------
+
 func TestRESTUnpackSubscriptionDeleteResponseDecodeFail(t *testing.T) {
-	xapp.Logger.Debug("TEST: TestRESTUnpackSubscriptionDeleteResponseDecodeFail")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 1},
@@ -6702,8 +7503,8 @@ func TestRESTUnpackSubscriptionDeleteResponseDecodeFail(t *testing.T) {
 //     |           [SUBS DELETE]        |
 //     |                 |              |
 //-----------------------------------------------------------------------------
+
 func TestRESTUnpackSubscriptionDeleteResponseUnknownInstanceId(t *testing.T) {
-	xapp.Logger.Debug("TEST: TestRESTUnpackSubscriptionDeleteResponseUnknownInstanceId")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 1},
@@ -6782,8 +7583,8 @@ func TestRESTUnpackSubscriptionDeleteResponseUnknownInstanceId(t *testing.T) {
 //     |           [SUBS DELETE]        |
 //     |                 |              |
 //-----------------------------------------------------------------------------
+
 func TestRESTUnpackSubscriptionDeleteResponseNoTransaction(t *testing.T) {
-	xapp.Logger.Debug("TEST: TestRESTUnpackSubscriptionDeleteResponseNoTransaction")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 1},
@@ -6863,8 +7664,8 @@ func TestRESTUnpackSubscriptionDeleteResponseNoTransaction(t *testing.T) {
 //     |           [SUBS DELETE]        |
 //     |                 |              |
 //-----------------------------------------------------------------------------
+
 func TestRESTUnpackSubscriptionDeleteFailureDecodeFail(t *testing.T) {
-	xapp.Logger.Debug("TEST: TestRESTUnpackSubscriptionDeleteFailureDecodeFail")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 1},
@@ -6941,8 +7742,8 @@ func TestRESTUnpackSubscriptionDeleteFailureDecodeFail(t *testing.T) {
 //     |           [SUBS DELETE]        |
 //     |                 |              |
 //-----------------------------------------------------------------------------
+
 func TestRESTUnpackSubscriptionDeleteailureUnknownInstanceId(t *testing.T) {
-	xapp.Logger.Debug("TEST: TestRESTUnpackSubscriptionDeleteailureUnknownInstanceId")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 1},
@@ -7020,8 +7821,8 @@ func TestRESTUnpackSubscriptionDeleteailureUnknownInstanceId(t *testing.T) {
 //     |           [SUBS DELETE]        |
 //     |                 |              |
 //-----------------------------------------------------------------------------
+
 func TestRESTUnpackSubscriptionDeleteFailureNoTransaction(t *testing.T) {
-	xapp.Logger.Debug("TEST: TestRESTUnpackSubscriptionDeleteFailureNoTransaction")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 1},
@@ -7098,6 +7899,7 @@ func TestRESTUnpackSubscriptionDeleteFailureNoTransaction(t *testing.T) {
 //     |                 |              |
 //
 //-----------------------------------------------------------------------------
+
 func TestRESTSubReqFailAsn1PackSubReqError(t *testing.T) {
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
@@ -7134,8 +7936,55 @@ func TestRESTSubReqFailAsn1PackSubReqError(t *testing.T) {
 	mainCtrl.VerifyCounterValues(t)
 }
 
+//-----------------------------------------------------------------------------
+// TestRESTSubReqPolicyUpdateTimeoutAndSubDelOkSameAction
+//
+//   stub                             stub
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//     |                 |              |
+//     | RESTSubReq      |              |
+//     |---------------->|              |
+//     |                 |              |
+//     |     RESTSubResp |              |
+//     |<----------------|              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |      SubResp |
+//     |                 |<-------------|
+//     |                 |              |
+//     |       RESTNotif |              |
+//     |<----------------|              |
+//     |                 |              |
+//     | RESTSubReq      |              |  Policy modification
+//     |---------------->|              |
+//     |                 |              |
+//     |     RESTSubResp |              |
+//     |<----------------|              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |              |
+//     |       RESTNotif(Unsuccessful)  |  E2 timeout
+//     |<----------------|              |
+//     |                 |              |
+//     | RESTSubDelReq   |              |
+//     |---------------->|              |
+//     |                 |              |
+//     |                 | SubDelReq    |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |   SubDelResp |
+//     |                 |<-------------|
+//     |                 |              |
+//     |  RESTSubDelResp |              |
+//     |<----------------|              |
+//
+//-----------------------------------------------------------------------------
+
 func TestRESTSubReqPolicyUpdateTimeoutAndSubDelOkSameAction(t *testing.T) {
-	CaseBegin("TestRESTSubReqPolicyUpdateTimeoutAndSubDelOkSameAction")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 2},
@@ -7240,7 +8089,6 @@ func TestRESTSubReqPolicyUpdateTimeoutAndSubDelOkSameAction(t *testing.T) {
 //-----------------------------------------------------------------------------
 
 func TestPolicyUpdateRESTSubReqAndSubDelOkWithRestartInMiddle(t *testing.T) {
-	CaseBegin("TestPolicyUpdateRESTSubReqAndSubDelOkWithRestartInMiddle")
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
 		Counter{cRestSubReqFromXapp, 2},
