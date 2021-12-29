@@ -20,6 +20,7 @@
 package control
 
 import (
+	"encoding/json"
 	"fmt"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"strings"
@@ -57,6 +58,31 @@ func (e *E2IfState) Init(c *Control) {
 	e.NbIdMap = make(map[string]string, 0)
 	e.ReadE2ConfigurationFromRnib()
 	e.SubscribeChannels()
+}
+
+func (e *E2IfState) GetE2NodesJson() []byte {
+
+	e.mutex.Lock()
+	defer e.mutex.Unlock()
+
+	// Map contains something like this{"RAN_NAME_1":"RAN_NAME_1","RAN_NAME_11":"RAN_NAME_11","RAN_NAME_2":"RAN_NAME_2"}
+	var ranNameList []string
+	for _, ranName := range e.NbIdMap {
+		ranNameList = append(ranNameList, ranName)
+	}
+
+	e2NodesJson, err := json.Marshal(ranNameList)
+	if err != nil {
+		xapp.Logger.Error("GetE2Node() json.Marshal error: %v", err)
+	}
+	return e2NodesJson
+}
+
+func (e *E2IfState) GetAllE2Nodes() map[string]string {
+
+	e.mutex.Lock()
+	defer e.mutex.Unlock()
+	return e.NbIdMap
 }
 
 func (e *E2IfState) NotificationCb(ch string, events ...string) {

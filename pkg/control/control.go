@@ -22,9 +22,6 @@ package control
 import (
 	"fmt"
 	"net/http"
-	"os"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -35,7 +32,6 @@ import (
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
-	"github.com/gorilla/mux"
 	"github.com/segmentio/ksuid"
 	"github.com/spf13/viper"
 )
@@ -158,9 +154,19 @@ func NewControl() *Control {
 	c.ReadConfigParameters("")
 
 	// Register REST handler for testing support
+	xapp.Resource.InjectRoute("/ric/v1/symptomdata", c.SymptomDataHandler, "GET")
 	xapp.Resource.InjectRoute("/ric/v1/test/{testId}", c.TestRestHandler, "POST")
 	xapp.Resource.InjectRoute("/ric/v1/restsubscriptions", c.GetAllRestSubscriptions, "GET")
-	xapp.Resource.InjectRoute("/ric/v1/symptomdata", c.SymptomDataHandler, "GET")
+
+	xapp.Resource.InjectRoute("/ric/v1/get_all_e2nodes", c.GetAllE2Nodes, "GET")
+	xapp.Resource.InjectRoute("/ric/v1/get_e2node_rest_subscriptions/{ranName}", c.GetAllE2NodeRestSubscriptions, "GET")
+
+	xapp.Resource.InjectRoute("/ric/v1/get_all_xapps", c.GetAllXapps, "GET")
+	xapp.Resource.InjectRoute("/ric/v1/get_xapp_rest_restsubscriptions/{xappServiceName}", c.GetAllXappRestSubscriptions, "GET")
+	xapp.Resource.InjectRoute("/ric/v1/get_e2subscriptions/{restId}", c.GetE2Subscriptions, "GET")
+
+	xapp.Resource.InjectRoute("/ric/v1/delete_all_e2node_subscriptions/{ranName}", c.DeleteAllE2nodeSubscriptions, "GET")
+	xapp.Resource.InjectRoute("/ric/v1/delete_all_xapp_subscriptions/{xappServiceName}", c.DeleteAllXappSubscriptions, "GET")
 
 	if readSubsFromDb == "true" {
 		// Read subscriptions from db
@@ -180,10 +186,12 @@ func (c *Control) SymptomDataHandler(w http.ResponseWriter, r *http.Request) {
 //-------------------------------------------------------------------
 //
 //-------------------------------------------------------------------
-func (c *Control) GetAllRestSubscriptions(w http.ResponseWriter, r *http.Request) {
-	xapp.Logger.Debug("GetAllRestSubscriptions() called")
-	response := c.registry.GetAllRestSubscriptions()
-	w.Write(response)
+func (c *Control) RESTQueryHandler() (models.SubscriptionList, error) {
+	xapp.Logger.Debug("RESTQueryHandler() called")
+
+	c.CntRecvMsg++
+
+	return c.registry.QueryHandler()
 }
 
 //-------------------------------------------------------------------
@@ -357,7 +365,7 @@ func (c *Control) Run() {
 //-------------------------------------------------------------------
 //
 //-------------------------------------------------------------------
-func (c *Control) GetOrCreateRestSubscription(p *models.SubscriptionParams, md5sum string, xAppRmrEndpoint string) (*RESTSubscription, string, error) {
+func (c *Control) GetOrCreateRestSubscription(p *models.SubscriptionParams, md5sum string, xAppRmrEndpoint string, xAppServiceName string) (*RESTSubscription, string, error) {
 
 	var restSubId string
 	var restSubscription *RESTSubscription
@@ -384,7 +392,7 @@ func (c *Control) GetOrCreateRestSubscription(p *models.SubscriptionParams, md5s
 
 		if restSubscription == nil {
 			restSubId = ksuid.New().String()
-			restSubscription = c.registry.CreateRESTSubscription(&restSubId, &xAppRmrEndpoint, p.Meid)
+			restSubscription = c.registry.CreateRESTSubscription(&restSubId, &xAppServiceName, &xAppRmrEndpoint, p.Meid)
 		}
 	} else {
 		// Subscription contains REST subscription Id
@@ -449,7 +457,7 @@ func (c *Control) RESTSubscriptionHandler(params interface{}) (*models.Subscript
 		xapp.Logger.Error("Failed to generate md5sum from incoming request - %s", err.Error())
 	}
 
-	restSubscription, restSubId, err := c.GetOrCreateRestSubscription(p, md5sum, xAppRmrEndpoint)
+	restSubscription, restSubId, err := c.GetOrCreateRestSubscription(p, md5sum, xAppRmrEndpoint, p.ClientEndpoint.Host)
 	if err != nil {
 		xapp.Logger.Error("Subscription with id in REST request does not exist")
 		return nil, common.SubscribeNotFoundCode
@@ -834,50 +842,6 @@ func (c *Control) SubscriptionDeleteHandler(restSubId *string, endPoint *string,
 	c.registry.RemoveFromSubscription(subs, trans, waitRouteCleanup_ms, c)
 
 	return xAppEventInstanceID, nil
-}
-
-//-------------------------------------------------------------------
-//
-//-------------------------------------------------------------------
-func (c *Control) RESTQueryHandler() (models.SubscriptionList, error) {
-	xapp.Logger.Debug("RESTQueryHandler() called")
-
-	c.CntRecvMsg++
-
-	return c.registry.QueryHandler()
-}
-
-func (c *Control) TestRestHandler(w http.ResponseWriter, r *http.Request) {
-	xapp.Logger.Debug("RESTTestRestHandler() called")
-
-	pathParams := mux.Vars(r)
-	s := pathParams["testId"]
-
-	// This can be used to delete single subscription from db
-	if contains := strings.Contains(s, "deletesubid="); contains == true {
-		var splits = strings.Split(s, "=")
-		if subId, err := strconv.ParseInt(splits[1], 10, 64); err == nil {
-			xapp.Logger.Debug("RemoveSubscriptionFromSdl() called. subId = %v", subId)
-			c.RemoveSubscriptionFromSdl(uint32(subId))
-			return
-		}
-	}
-
-	// This can be used to remove all subscriptions db from
-	if s == "emptydb" {
-		xapp.Logger.Debug("RemoveAllSubscriptionsFromSdl() called")
-		c.RemoveAllSubscriptionsFromSdl()
-		c.RemoveAllRESTSubscriptionsFromSdl()
-		return
-	}
-
-	// This is meant to cause submgr's restart in testing
-	if s == "restart" {
-		xapp.Logger.Debug("os.Exit(1) called")
-		os.Exit(1)
-	}
-
-	xapp.Logger.Debug("Unsupported rest command received %s", s)
 }
 
 //-------------------------------------------------------------------

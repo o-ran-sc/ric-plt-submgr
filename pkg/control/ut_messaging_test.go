@@ -20,6 +20,7 @@
 package control
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 	"time"
@@ -2632,27 +2633,315 @@ func TestSubReqAndSubDelOkSameActionWithRestartsInMiddle(t *testing.T) {
 //     |              |
 func TestGetSubscriptions(t *testing.T) {
 
-	mainCtrl.sendGetRequest(t, "localhost:8088", "/ric/v1/subscriptions")
+	mainCtrl.SendGetRequest(t, "localhost:8088", "/ric/v1/subscriptions")
 }
 
 func TestGetSymptomData(t *testing.T) {
 
-	mainCtrl.sendGetRequest(t, "localhost:8080", "/ric/v1/symptomdata")
+	mainCtrl.SendGetRequest(t, "localhost:8080", "/ric/v1/symptomdata")
 }
 
 func TestPostdeleteSubId(t *testing.T) {
 
-	mainCtrl.sendPostRequest(t, "localhost:8080", "/ric/v1/test/deletesubid=1")
+	mainCtrl.SendPostRequest(t, "localhost:8080", "/ric/v1/test/deletesubid=1")
 }
 
 func TestPostEmptyDb(t *testing.T) {
 
-	mainCtrl.sendPostRequest(t, "localhost:8080", "/ric/v1/test/emptydb")
+	mainCtrl.SendPostRequest(t, "localhost:8080", "/ric/v1/test/emptydb")
 }
 
 func TestGetRestSubscriptions(t *testing.T) {
 
-	mainCtrl.sendGetRequest(t, "localhost:8080", "/ric/v1/restsubscriptions")
+	mainCtrl.SendGetRequest(t, "localhost:8080", "/ric/v1/restsubscriptions")
+}
+
+//-----------------------------------------------------------------------------
+// TestDelAllE2nodeSubsViaDebugIf
+//
+//   stub                             stub          stub
+// +-------+        +---------+    +---------+   +---------+
+// | xapp  |        | submgr  |    | e2term  |   |  rtmgr  |
+// +-------+        +---------+    +---------+   +---------+
+//     |                 |              |             |
+//     | RESTSubReq      |              |             |
+//     |---------------->|              |             |
+//     |     RESTSubResp |              |             |
+//     |<----------------|              |             |
+//     |                 | RouteCreate  |             |
+//     |                 |--------------------------->|
+//     |                 | RouteResponse|             |
+//     |                 |<---------------------------|
+//     |                 | SubReq       |             |
+//     |                 |------------->|             |
+//     |                 |      SubResp |             |
+//     |                 |<-------------|             |
+//     |      RESTNotif1 |              |             |
+//     |<----------------|              |             |
+//     |                 |              |             |
+//     | REST get_all_e2nodes           |             |
+//     |---------------->|              |             |
+//     |    OK 200       |              |             |
+//     |<----------------|              |             |
+//     | REST delete_all_e2node_subscriptions         | ranName = RAN_NAME_1
+//     |---------------->|              |             |
+//     |    OK 200       |              |             |
+//     |<----------------|              |             |
+//     |                 | SubDelReq    |             |
+//     |                 |------------->|             |
+//     |                 |   SubDelResp |             |
+//     |                 |<-------------|             |
+//     |                 |              |             |
+//     |                 | RouteDelete  |             |
+//     |                 |--------------------------->|
+//     |                 | RouteResponse|             |
+//     |                 |<---------------------------|
+//
+//-----------------------------------------------------------------------------
+
+func TestDelAllE2nodeSubsViaDebugIf(t *testing.T) {
+
+	// Init counter check
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 1},
+		Counter{cRestSubRespToXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cSubRespFromE2, 1},
+		Counter{cRestSubNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelRespFromE2, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+	})
+
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
+	restSubId := xappConn1.SendRESTSubsReq(t, params)
+	xapp.Logger.Debug("Send REST Policy subscriber request for subscriberId : %v", restSubId)
+
+	crereq1, cremsg1 := e2termConn1.RecvSubsReq(t)
+	xappConn1.ExpectRESTNotification(t, restSubId)
+	e2termConn1.SendSubsResp(t, crereq1, cremsg1)
+	e2SubsId := xappConn1.WaitRESTNotification(t, restSubId)
+	xapp.Logger.Debug("REST notification received e2SubsId=%v", e2SubsId)
+
+	e2nodesJson := mainCtrl.SendGetRequest(t, "localhost:8080", "/ric/v1/get_all_e2nodes")
+
+	var e2nodesList []string
+	err := json.Unmarshal(e2nodesJson, &e2nodesList)
+	if err != nil {
+		t.Errorf("Unmarshal error: %s", err)
+	}
+	assert.Equal(t, true, mainCtrl.VerifyStringExistInSlice("RAN_NAME_1", e2nodesList))
+
+	e2RestSubsJson := mainCtrl.SendGetRequest(t, "localhost:8080", "/ric/v1/get_e2node_rest_subscriptions/RAN_NAME_1") // RAN_NAME_1 = ranName
+	var e2RestSubsMap map[string]RESTSubscription
+	err = json.Unmarshal(e2RestSubsJson, &e2RestSubsMap)
+	if err != nil {
+		t.Errorf("Unmarshal error: %s", err)
+	}
+
+	if len(e2RestSubsMap) != 1 {
+		t.Errorf("Incorrect e2RestSubsMap length %v", len(e2RestSubsMap))
+	}
+
+	// Simulate deletion through REST test and debug interface
+	mainCtrl.SendGetRequest(t, "localhost:8080", "/ric/v1/delete_all_e2node_subscriptions/RAN_NAME_1") // RAN_NAME_1 = ranName
+	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
+
+	// Wait that subs is cleaned
+	waitSubsCleanup(t, e2SubsId, 10)
+	mainCtrl.VerifyCounterValues(t)
+	mainCtrl.VerifyAllClean(t)
+}
+
+//-----------------------------------------------------------------------------
+// TestDelAllxAppSubsViaDebugIf
+//
+//   stub                             stub          stub
+// +-------+        +---------+    +---------+   +---------+
+// | xapp  |        | submgr  |    | e2term  |   |  rtmgr  |
+// +-------+        +---------+    +---------+   +---------+
+//     |                 |              |             |
+//     | RESTSubReq      |              |             |
+//     |---------------->|              |             |
+//     |     RESTSubResp |              |             |
+//     |<----------------|              |             |
+//     |                 | RouteCreate  |             |
+//     |                 |--------------------------->|
+//     |                 | RouteResponse|             |
+//     |                 |<---------------------------|
+//     |                 | SubReq       |             |
+//     |                 |------------->|             |
+//     |                 |      SubResp |             |
+//     |                 |<-------------|             |
+//     |      RESTNotif1 |              |             |
+//     |<----------------|              |             |
+//     |                 |              |             |
+//     | REST get_all_xapps             |             |
+//     |---------------->|              |             |
+//     |    OK 200       |              |             |
+//     |<----------------|              |             |
+//     | REST delete_all_xapp_subscriptions           |  xappServiceName = localhost
+//     |---------------->|              |             |
+//     |    OK 200       |              |             |
+//     |<----------------|              |             |
+//     |                 | SubDelReq    |             |
+//     |                 |------------->|             |
+//     |                 |   SubDelResp |             |
+//     |                 |<-------------|             |
+//     |                 |              |             |
+//     |                 | RouteDelete  |             |
+//     |                 |--------------------------->|
+//     |                 | RouteResponse|             |
+//     |                 |<---------------------------|
+//
+//-----------------------------------------------------------------------------
+
+func TestDelAllxAppSubsViaDebugIf(t *testing.T) {
+
+	// Init counter check
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 1},
+		Counter{cRestSubRespToXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cSubRespFromE2, 1},
+		Counter{cRestSubNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelRespFromE2, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+	})
+
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
+	restSubId := xappConn1.SendRESTSubsReq(t, params)
+	xapp.Logger.Debug("Send REST Policy subscriber request for subscriberId : %v", restSubId)
+
+	crereq1, cremsg1 := e2termConn1.RecvSubsReq(t)
+	xappConn1.ExpectRESTNotification(t, restSubId)
+	e2termConn1.SendSubsResp(t, crereq1, cremsg1)
+	e2SubsId := xappConn1.WaitRESTNotification(t, restSubId)
+	xapp.Logger.Debug("REST notification received e2SubsId=%v", e2SubsId)
+
+	xappsJson := mainCtrl.SendGetRequest(t, "localhost:8080", "/ric/v1/get_all_xapps")
+
+	var xappList []string
+	err := json.Unmarshal(xappsJson, &xappList)
+	if err != nil {
+		t.Errorf("Unmarshal error: %s", err)
+	}
+	assert.Equal(t, true, mainCtrl.VerifyStringExistInSlice("localhost", xappList))
+
+	// Simulate deletion through REST test and debug interface
+	mainCtrl.SendGetRequest(t, "localhost:8080", "/ric/v1/delete_all_xapp_subscriptions/localhost") // localhost = xappServiceName
+	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
+
+	// Wait that subs is cleaned
+	waitSubsCleanup(t, e2SubsId, 10)
+	mainCtrl.VerifyCounterValues(t)
+	mainCtrl.VerifyAllClean(t)
+}
+
+//-----------------------------------------------------------------------------
+// TestDelViaxAppSubsIf
+//
+//   stub                             stub          stub
+// +-------+        +---------+    +---------+   +---------+
+// | xapp  |        | submgr  |    | e2term  |   |  rtmgr  |
+// +-------+        +---------+    +---------+   +---------+
+//     |                 |              |             |
+//     | RESTSubReq      |              |             |
+//     |---------------->|              |             |
+//     |     RESTSubResp |              |             |
+//     |<----------------|              |             |
+//     |                 | RouteCreate  |             |
+//     |                 |--------------------------->|
+//     |                 | RouteResponse|             |
+//     |                 |<---------------------------|
+//     |                 | SubReq       |             |
+//     |                 |------------->|             |
+//     |                 |      SubResp |             |
+//     |                 |<-------------|             |
+//     |      RESTNotif1 |              |             |
+//     |<----------------|              |             |
+//     |                 |              |             |
+//     | REST get_xapp_rest_restsubscriptions         |
+//     |---------------->|              |             |
+//     |    OK 200       |              |             |
+//     |<----------------|              |             |
+//     | RESTSudDel      |              |             |
+//     |---------------->|              |             | Via user curl command (port 8088)
+//     |     RESTSudDel  |              |             |
+//     |<----------------|              |             |
+//     |                 | SubDelReq    |             |
+//     |                 |------------->|             |
+//     |                 |   SubDelResp |             |
+//     |                 |<-------------|             |
+//     |                 |              |             |
+//     |                 | RouteDelete  |             |
+//     |                 |--------------------------->|
+//     |                 | RouteResponse|             |
+//     |                 |<---------------------------|
+//
+//-----------------------------------------------------------------------------
+
+func TestDelViaxAppSubsIf(t *testing.T) {
+
+	// Init counter check
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 1},
+		Counter{cRestSubRespToXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cSubRespFromE2, 1},
+		Counter{cRestSubNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelRespFromE2, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+	})
+
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
+	restSubId := xappConn1.SendRESTSubsReq(t, params)
+	xapp.Logger.Debug("Send REST Policy subscriber request for subscriberId : %v", restSubId)
+
+	crereq1, cremsg1 := e2termConn1.RecvSubsReq(t)
+	xappConn1.ExpectRESTNotification(t, restSubId)
+	e2termConn1.SendSubsResp(t, crereq1, cremsg1)
+	e2SubsId := xappConn1.WaitRESTNotification(t, restSubId)
+	xapp.Logger.Debug("REST notification received e2SubsId=%v", e2SubsId)
+
+	restSubsListJson := mainCtrl.SendGetRequest(t, "localhost:8080", "/ric/v1/get_xapp_rest_restsubscriptions/localhost") // localhost = xappServiceName
+
+	var restSubsMap map[string]RESTSubscription
+	err := json.Unmarshal(restSubsListJson, &restSubsMap)
+	if err != nil {
+		t.Errorf("Unmarshal error: %s", err)
+	}
+	_, ok := restSubsMap[restSubId]
+	if !ok {
+		t.Errorf("REST subscription not found. restSubId=%s", restSubId)
+	}
+
+	var e2Subscriptions []Subscription
+	e2SubscriptionsJson := mainCtrl.SendGetRequest(t, "localhost:8080", "/ric/v1/get_e2subscriptions/"+restSubId)
+	err = json.Unmarshal(e2SubscriptionsJson, &e2Subscriptions)
+	if err != nil {
+		t.Errorf("Unmarshal error: %s", err)
+	}
+	if len(e2Subscriptions) != 1 {
+		t.Errorf("Incorrect e2Subscriptions length %v", len(e2Subscriptions))
+	}
+
+	// Simulate deletion through xapp REST test interface
+	mainCtrl.SendDeleteRequest(t, "localhost:8088", "/ric/v1/subscriptions/"+restSubId)
+	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
+
+	// Wait that subs is cleaned
+	waitSubsCleanup(t, e2SubsId, 10)
+	mainCtrl.VerifyCounterValues(t)
+	mainCtrl.VerifyAllClean(t)
 }
 
 //-----------------------------------------------------------------------------
@@ -3961,6 +4250,7 @@ func TestRESTSameSubsDiffRan(t *testing.T) {
 //     | RESTSubResp     |              |
 //     |<----------------|              |
 //     |                 | SubReq       |
+//     |                 |------------->|
 //     |                 |              |
 //     |                 |              |
 //     |                 | SubReq       |

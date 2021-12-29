@@ -449,20 +449,21 @@ func (mc *testingSubmgrControl) GetCurrentCounterValues(t *testing.T, chekedCoun
 	return retCounterMap
 }
 
-func (mc *testingSubmgrControl) sendGetRequest(t *testing.T, addr string, path string) {
+func (mc *testingSubmgrControl) SendGetRequest(t *testing.T, addr string, path string) []byte {
 
 	mc.TestLog(t, "GET http://"+addr+"%v", path)
 	req, err := http.NewRequest("GET", "http://"+addr+path, nil)
 	if err != nil {
 		mc.TestError(t, "Error reading request. %v", err)
-		return
+		return nil
 	}
-	req.Header.Set("Cache-Control", "no-cache")
+
+	req.Header.Set("accept", "application/json")
 	client := &http.Client{Timeout: time.Second * 2}
 	resp, err := client.Do(req)
 	if err != nil {
 		mc.TestError(t, "Error reading response. %v", err)
-		return
+		return nil
 	}
 	defer resp.Body.Close()
 
@@ -470,19 +471,19 @@ func (mc *testingSubmgrControl) sendGetRequest(t *testing.T, addr string, path s
 	mc.TestLog(t, "Response Headers: %v", resp.Header)
 	if !strings.Contains(resp.Status, "200 OK") {
 		mc.TestError(t, "Wrong response status")
-		return
+		return nil
 	}
 
 	respBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		mc.TestError(t, "Error reading body. %v", err)
-		return
+		return nil
 	}
 	mc.TestLog(t, "%s", respBody)
-	return
+	return respBody
 }
 
-func (mc *testingSubmgrControl) sendPostRequest(t *testing.T, addr string, path string) {
+func (mc *testingSubmgrControl) SendPostRequest(t *testing.T, addr string, path string) {
 
 	mc.TestLog(t, "POST http://"+addr+"%v", path)
 	req, err := http.NewRequest("POST", "http://"+addr+path, nil)
@@ -490,6 +491,7 @@ func (mc *testingSubmgrControl) sendPostRequest(t *testing.T, addr string, path 
 		mc.TestError(t, "Error reading request. %v", err)
 		return
 	}
+	req.Header.Set("accept", "application/json")
 	client := &http.Client{Timeout: time.Second * 2}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -514,12 +516,52 @@ func (mc *testingSubmgrControl) sendPostRequest(t *testing.T, addr string, path 
 	return
 }
 
-//-----------------------------------------------------------------------------
-//
-//-----------------------------------------------------------------------------
+func (mc *testingSubmgrControl) SendDeleteRequest(t *testing.T, addr string, path string) {
+
+	mc.TestLog(t, "DELETE http://"+addr+"%v", path)
+	req, err := http.NewRequest("DELETE", "http://"+addr+path, nil)
+	if err != nil {
+		mc.TestError(t, "Error reading request. %v", err)
+		return
+	}
+	req.Header.Set("accept", "application/json")
+	client := &http.Client{Timeout: time.Second * 2}
+	resp, err := client.Do(req)
+	if err != nil {
+		mc.TestError(t, "Error reading response. %v", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	mc.TestLog(t, "Response status: %v", resp.Status)
+	mc.TestLog(t, "Response Headers: %v", resp.Header)
+	if !strings.Contains(resp.Status, "204 No Content") {
+		mc.TestError(t, "Wrong response status")
+		return
+	}
+
+	respBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		mc.TestError(t, "Error reading body. %v", err)
+		return
+	}
+	mc.TestLog(t, "%s", respBody)
+	return
+}
+
 func (mc *testingSubmgrControl) SetE2State(t *testing.T, ranNameState string) {
 
 	if err := mc.c.e2IfStateDb.XappRnibStoreAndPublish("RAN_CONNECTION_STATUS_CHANGE", ranNameState, "key1", "data1"); err != nil {
 		t.Errorf("XappRnibStoreAndPublish failed: %v", err)
 	}
+}
+
+func (mc *testingSubmgrControl) VerifyStringExistInSlice(verifiedString string, list []string) bool {
+
+	for _, listItem := range list {
+		if listItem == verifiedString {
+			return true
+		}
+	}
+	return false
 }

@@ -36,6 +36,8 @@ import (
 //-----------------------------------------------------------------------------
 
 type RESTSubscription struct {
+	Created          time.Time
+	xAppServiceName  string
 	xAppRmrEndPoint  string
 	Meid             string
 	InstanceIds      []uint32
@@ -107,20 +109,132 @@ func (r *Registry) Initialize() {
 	}
 }
 
-func (r *Registry) GetAllRestSubscriptions() []byte {
+func (r *Registry) GetAllRestSubscriptionsJson() []byte {
+
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 	restSubscriptionsJson, err := json.Marshal(r.restSubscriptions)
 	if err != nil {
-		xapp.Logger.Error("GetAllRestSubscriptions(): %v", err)
+		xapp.Logger.Error("GetAllRestSubscriptions() json.Marshal error: %v", err)
 	}
 	return restSubscriptionsJson
 }
 
-func (r *Registry) CreateRESTSubscription(restSubId *string, xAppRmrEndPoint *string, maid *string) *RESTSubscription {
+func (r *Registry) GetAllE2NodeRestSubscriptionsJson(ranName string) []byte {
+
+	restSubscriptions := r.GetAllE2NodeRestSubscriptions(ranName)
+	e2NodeRestSubscriptionsJson, err := json.Marshal(restSubscriptions)
+	if err != nil {
+		xapp.Logger.Error("GetE2NodeRestSubscriptions() json.Marshal error: %v", err)
+	}
+	return e2NodeRestSubscriptionsJson
+}
+
+func (r *Registry) GetAllE2NodeRestSubscriptions(ranName string) map[string]RESTSubscription {
+
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	var restSubscriptions map[string]RESTSubscription
+	restSubscriptions = make(map[string]RESTSubscription)
+	for restSubsId, restSubscription := range r.restSubscriptions {
+		if restSubscription.Meid == ranName {
+			restSubscriptions[restSubsId] = *restSubscription
+		}
+	}
+	return restSubscriptions
+}
+
+func (r *Registry) GetAllXappsJson() []byte {
+
+	r.mutex.Lock()
+	var xappList []string
+	var xappsMap map[string]string
+	xappsMap = make(map[string]string)
+	for _, restSubscription := range r.restSubscriptions {
+		_, ok := xappsMap[restSubscription.xAppServiceName]
+		if !ok {
+			xappsMap[restSubscription.xAppServiceName] = restSubscription.xAppServiceName
+			xappList = append(xappList, restSubscription.xAppServiceName)
+		}
+	}
+	r.mutex.Unlock()
+
+	xappsJson, err := json.Marshal(xappList)
+	if err != nil {
+		xapp.Logger.Error("GetXapps() json.Marshal error: %v", err)
+	}
+	return xappsJson
+}
+
+func (r *Registry) GetAllXapps() map[string]string {
+
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	var xappsMap map[string]string
+	xappsMap = make(map[string]string)
+	for _, restSubscription := range r.restSubscriptions {
+		_, ok := xappsMap[restSubscription.xAppServiceName]
+		if !ok {
+			xappsMap[restSubscription.xAppServiceName] = restSubscription.xAppServiceName
+		}
+	}
+	return xappsMap
+}
+
+func (r *Registry) GetAllXappRestSubscriptionsJson(xAppServiceName string) []byte {
+
+	xappRestSubscriptions := r.GetAllXappRestSubscriptions(xAppServiceName)
+	xappRestSubscriptionsJson, err := json.Marshal(xappRestSubscriptions)
+	if err != nil {
+		xapp.Logger.Error("GetXappRestSubscriptions() json.Marshal error: %v", err)
+	}
+	return xappRestSubscriptionsJson
+}
+
+func (r *Registry) GetAllXappRestSubscriptions(xAppServiceName string) map[string]RESTSubscription {
+
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	var xappRestSubscriptions map[string]RESTSubscription
+	xappRestSubscriptions = make(map[string]RESTSubscription)
+	for restSubsId, xappRestSubscription := range r.restSubscriptions {
+		if xappRestSubscription.xAppServiceName == xAppServiceName {
+			xappRestSubscriptions[restSubsId] = *xappRestSubscription
+		}
+	}
+	return xappRestSubscriptions
+}
+
+func (r *Registry) GetE2SubscriptionsJson(restSubsId string) ([]byte, error) {
+
+	// Get all E2 subscriptions of a REST subscription
+	restSubs, err := r.GetRESTSubscription(restSubsId, false)
+	if err != nil {
+		return nil, err
+	}
+
+	r.mutex.Lock()
+	var e2Subscriptions []Subscription
+	for _, e2SubId := range restSubs.InstanceIds {
+		e2Subscription, ok := r.register[e2SubId]
+		if ok {
+			e2Subscriptions = append(e2Subscriptions, *e2Subscription)
+		}
+	}
+	r.mutex.Unlock()
+	e2SubscriptionsJson, err := json.Marshal(e2Subscriptions)
+	if err != nil {
+		xapp.Logger.Error("GetE2Subscriptions() json.Marshal error: %v", err)
+	}
+	return e2SubscriptionsJson, nil
+}
+
+func (r *Registry) CreateRESTSubscription(restSubId *string, xappServiceName *string, xAppRmrEndPoint *string, maid *string) *RESTSubscription {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 	newRestSubscription := RESTSubscription{}
+	newRestSubscription.Created = time.Now()
+	newRestSubscription.xAppServiceName = *xappServiceName
 	newRestSubscription.xAppRmrEndPoint = *xAppRmrEndPoint
 	newRestSubscription.Meid = *maid
 	newRestSubscription.SubReqOngoing = true

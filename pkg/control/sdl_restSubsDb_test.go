@@ -89,6 +89,7 @@ func CreateRESTSubscription(t *testing.T) *RESTSubscription {
 	t.Log("TEST: Creating REST subscription")
 
 	restSubscription := &RESTSubscription{}
+	restSubscription.xAppServiceName = "localhost"
 	restSubscription.xAppRmrEndPoint = "localhost:13560"
 	restSubscription.Meid = "RAN_NAME_1"
 	restSubscription.SubReqOngoing = true
@@ -100,6 +101,7 @@ func CreateRESTSubscription(t *testing.T) *RESTSubscription {
 
 func PrintRESTSubscriptionData(t *testing.T, restSubs *RESTSubscription) {
 	t.Log("TEST: RESTSubscription data")
+	t.Logf("TEST: restSubs.xAppServiceName = %v", restSubs.xAppServiceName)
 	t.Logf("TEST: restSubs.xAppRmrEndPoint = %v", restSubs.xAppRmrEndPoint)
 	t.Logf("TEST: restSubs.Meid = %v", restSubs.Meid)
 	t.Logf("TEST: restSubs.InstanceIds = %v", restSubs.InstanceIds)

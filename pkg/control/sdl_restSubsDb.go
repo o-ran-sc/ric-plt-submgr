@@ -22,6 +22,7 @@ package control
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	sdl "gerrit.o-ran-sc.org/r/ric-plt/sdlgo"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
@@ -30,6 +31,8 @@ import (
 const restSubSdlNs = "submgr_restSubsDb"
 
 type RESTSubscriptionInfo struct {
+	Created          time.Time
+	XAppServiceName  string
 	XAppRmrEndPoint  string
 	Meid             string
 	InstanceIds      []uint32
@@ -46,6 +49,8 @@ func CreateRESTSdl() Sdlnterface {
 func (c *Control) WriteRESTSubscriptionToSdl(restSubId string, restSubs *RESTSubscription) error {
 
 	var restSubscriptionInfo RESTSubscriptionInfo
+	restSubscriptionInfo.Created = restSubs.Created
+	restSubscriptionInfo.XAppServiceName = restSubs.xAppServiceName
 	restSubscriptionInfo.XAppRmrEndPoint = restSubs.xAppRmrEndPoint
 	restSubscriptionInfo.Meid = restSubs.Meid
 	restSubscriptionInfo.InstanceIds = restSubs.InstanceIds
@@ -104,6 +109,8 @@ func (c *Control) ReadRESTSubscriptionFromSdl(restSubId string) (*RESTSubscripti
 func (c *Control) CreateRESTSubscription(restSubscriptionInfo *RESTSubscriptionInfo, jsonSubscriptionInfo *string) *RESTSubscription {
 
 	restSubs := &RESTSubscription{}
+	restSubs.Created = restSubscriptionInfo.Created
+	restSubs.xAppServiceName = restSubscriptionInfo.XAppServiceName
 	restSubs.xAppRmrEndPoint = restSubscriptionInfo.XAppRmrEndPoint
 	restSubs.Meid = restSubscriptionInfo.Meid
 	restSubs.InstanceIds = restSubscriptionInfo.InstanceIds
