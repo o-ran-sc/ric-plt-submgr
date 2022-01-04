@@ -36,7 +36,7 @@ import (
 //-----------------------------------------------------------------------------
 
 type RESTSubscription struct {
-	Created          time.Time
+	Created          string
 	xAppServiceName  string
 	xAppRmrEndPoint  string
 	Meid             string
@@ -233,7 +233,7 @@ func (r *Registry) CreateRESTSubscription(restSubId *string, xappServiceName *st
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 	newRestSubscription := RESTSubscription{}
-	newRestSubscription.Created = time.Now()
+	newRestSubscription.Created = time.Now().Format("2006-01-02 15:04:05.000")
 	newRestSubscription.xAppServiceName = *xappServiceName
 	newRestSubscription.xAppRmrEndPoint = *xAppRmrEndPoint
 	newRestSubscription.Meid = *maid

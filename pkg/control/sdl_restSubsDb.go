@@ -22,7 +22,6 @@ package control
 import (
 	"encoding/json"
 	"fmt"
-	"time"
 
 	sdl "gerrit.o-ran-sc.org/r/ric-plt/sdlgo"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
@@ -31,7 +30,7 @@ import (
 const restSubSdlNs = "submgr_restSubsDb"
 
 type RESTSubscriptionInfo struct {
-	Created          time.Time
+	Created          string
 	XAppServiceName  string
 	XAppRmrEndPoint  string
 	Meid             string

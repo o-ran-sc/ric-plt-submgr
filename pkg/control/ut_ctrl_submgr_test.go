@@ -535,7 +535,10 @@ func (mc *testingSubmgrControl) SendDeleteRequest(t *testing.T, addr string, pat
 
 	mc.TestLog(t, "Response status: %v", resp.Status)
 	mc.TestLog(t, "Response Headers: %v", resp.Header)
-	if !strings.Contains(resp.Status, "204 No Content") {
+
+	// Note that xapp gets '204 No Content' response through Swagger generated delete route.
+	// Inject route returns '200 OK'
+	if !(strings.Contains(resp.Status, "204 No Content") || strings.Contains(resp.Status, "200 OK")) {
 		mc.TestError(t, "Wrong response status")
 		return
 	}

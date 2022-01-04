@@ -2745,7 +2745,7 @@ func TestDelAllE2nodeSubsViaDebugIf(t *testing.T) {
 	}
 
 	// Simulate deletion through REST test and debug interface
-	mainCtrl.SendGetRequest(t, "localhost:8080", "/ric/v1/delete_all_e2node_subscriptions/RAN_NAME_1") // RAN_NAME_1 = ranName
+	mainCtrl.SendDeleteRequest(t, "localhost:8080", "/ric/v1/delete_all_e2node_subscriptions/RAN_NAME_1") // RAN_NAME_1 = ranName
 	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
 	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
 
@@ -2833,7 +2833,7 @@ func TestDelAllxAppSubsViaDebugIf(t *testing.T) {
 	assert.Equal(t, true, mainCtrl.VerifyStringExistInSlice("localhost", xappList))
 
 	// Simulate deletion through REST test and debug interface
-	mainCtrl.SendGetRequest(t, "localhost:8080", "/ric/v1/delete_all_xapp_subscriptions/localhost") // localhost = xappServiceName
+	mainCtrl.SendDeleteRequest(t, "localhost:8080", "/ric/v1/delete_all_xapp_subscriptions/localhost") // localhost = xappServiceName
 	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
 	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
 
