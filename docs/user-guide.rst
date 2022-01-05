@@ -545,9 +545,9 @@ REST interface for debugging and testing
 
  .. code-block:: none
 
-  Syntax: curl -X DELETE "http://10.244.0.181:8088/ric/v1/subscriptions/{restSubId}" -H accept": "application/json
+  Syntax: curl -X DELETE "http://10.244.0.181:8088/ric/v1/subscriptions/{restSubId}" -H "accept: application/json"
  
-  Example: curl -X DELETE "http://10.244.0.181:8088/ric/v1/subscriptions/22znlx1XCYqhD0tDHIIqSauBCf3" -H accept": "application/json
+  Example: curl -X DELETE "http://10.244.0.181:8088/ric/v1/subscriptions/22znlx1XCYqhD0tDHIIqSauBCf3" -H "accept: application/json"
 
  Below commands are mostly useful only for testing Subscription Manager, except the last command to get Subscription Manager's log writings.
 
