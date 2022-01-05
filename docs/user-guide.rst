@@ -445,13 +445,20 @@ Configurable parameters
 
  The parameters can be changed on the fly via Kubernetes Configmap. Default parameters values are defined in Helm chart
 
- Use following command to open Subscription Manager's Configmap in Nano editor. First change parameter and then store the
- change by pressing first Ctrl + o. Close editor by pressing the Ctrl + x. The change is visible in Subscription Manager's
- log after some 20 - 30 seconds. Note that some of the parameters maybe be useful just for testing purpose.
+ Use following command to open Subscription Manager's Configmap in editor. First change parameter and then store the
+ change. The change is visible in Subscription Manager's log after some 20 - 30 seconds. Note that some of the parameters
+ maybe be useful only for testing purpose.
  
  .. code-block:: none
 
+  Open in default editor:
+
+  kubectl edit cm configmap-ricplt-submgr-submgrcfg -n ricplt
+
+  Open in Nano editor:
+
   KUBE_EDITOR="nano" kubectl edit cm configmap-ricplt-submgr-submgrcfg -n ricplt
+
 
 REST interface for debugging and testing
 ----------------------------------------
@@ -462,20 +469,95 @@ REST interface for debugging and testing
   kubectl get pods -A -o wide | grep submgr
   ricplt        submgr-6d5f487777-2bc4t        1/1     Running   0       6d13h   10.244.0.181   my-ubuntu-18   <none>       <none>
 
+ Give following commands to get xApp's service names. xApp's Http Service Name is needed in some of the below commands.
+
+ .. code-block:: none
+
+  kubectl get services -n ricxapp | grep ueec
+  service-ricxapp-ueec-http   ClusterIP   10.101.161.66   <none>        8080/TCP            20s
+  service-ricxapp-ueec-rmr    ClusterIP   10.110.67.7     <none>        4560/TCP,4561/TCP   21s
 
  Get metrics
 
  .. code-block:: none
 
-  Example: curl -s GET "http://10.244.0.181:8080/ric/v1/metrics"
+  Example: curl -X GET "http://10.244.0.181:8080/ric/v1/metrics"
 
- Get REST subscriptions.
+ Get all E2Nodes in subscription manager
+
+ .. code-block:: none
+
+  Example: curl -X GET "http://10.244.0.181:8080/ric/v1/get_all_e2nodes"
+
+ Get all REST subscriptions of one E2Node in Subscription manager
+
+ .. code-block:: none
+
+  Syntax: curl -X GET "10.244.0.181:8080/ric/v1/get_e2node_rest_subscriptions/{ranName}" 
+
+  Example: curl -X GET "10.244.0.181:8080/ric/v1/get_e2node_rest_subscriptions/gnb_208_092_303030" 
+
+ Get all xApps in subscription manager
+
+ .. code-block:: none
+
+  Example: curl -X GET "http://10.244.0.181:8080/ric/v1/get_all_xapps"
+
+ Get all subscriptions of a xApp in Subscription manager
+
+ .. code-block:: none
+
+  Syntax: curl -X GET "http://10.244.0.181:8080/ric/v1/get_xapp_rest_restsubscriptions/{xappHttpServiceName.ricxapp}"
+
+  Example: curl -X GET "http://10.244.0.181:8080/ric/v1/get_xapp_rest_restsubscriptions/service-ricxapp-ueec-http.ricxapp"
+
+ Get all E2 subscriptions of a REST subscription
+
+ .. code-block:: none
+
+  Syntax: curl -X GET "http://10.244.0.181:8080/ric/v1/get_e2subscriptions/{restSubId}"
+
+  Example: curl -X GET "http://10.244.0.181:8080/ric/v1/get_e2subscriptions/22znlx1XCYqhD0tDHIIqSauBCf3"
+
+ Delete all subscriptions of one E2Node. Deletion is done the same way as xApp would request deletion, i.e. subscription is tried to
+ delete also from E2 node and route(s) created for subscription is deleted. xApp will not get any information about subscription
+ deletion as it is not notified anyway!
+
+ .. code-block:: none
+
+  Syntax: curl -X DELETE "10.244.0.181:8080/ric/v1/delete_all_e2node_subscriptions/{ranName}"
+
+  Example: curl -X DELETE "10.244.0.181:8080/ric/v1/delete_all_e2node_subscriptions/gnb_208_092_303030"
+
+ Delete all subscriptions of a xApp. Deletion is done the same way as xApp would request deletion, i.e. subscription is tried to
+ delete also from E2 node and route(s) created for subscription is deleted. xApp will not get any information about subscription
+ deletion as it is not notified anyway!
+
+ .. code-block:: none
+
+  Syntax: curl -X DELETE "http://10.244.0.181:8080/ric/v1/delete_all_xapp_subscriptions/{xappHttpServiceName.ricxapp}"
+
+  Example: curl -X DELETE "http://10.244.0.181:8080/ric/v1/delete_all_xapp_subscriptions/service-ricxapp-ueec-http.ricxapp"
+
+ Delete one REST subscription like xApp does it. Note that port number is 8088 in this command! Deletion is done the same way as xApp
+ would request deletion, i.e. subscription is tried to delete also from E2 node and route(s) created for subscription is deleted. xApp
+ will not get any information about subscription deletion as it is not notified anyway!
+
+ .. code-block:: none
+
+  Syntax: curl -X DELETE "http://10.244.0.181:8088/ric/v1/subscriptions/{restSubId}" -H accept": "application/json
+ 
+  Example: curl -X DELETE "http://10.244.0.181:8088/ric/v1/subscriptions/22znlx1XCYqhD0tDHIIqSauBCf3" -H accept": "application/json
+
+ Below commands are mostly useful only for testing Subscription Manager, except the last command to get Subscription Manager's log writings.
+
+ Get all REST subscriptions.
 
  .. code-block:: none
 
   Example: curl -X GET "http://10.244.0.181:8080/ric/v1/restsubscriptions"
 
- Get E2 subscriptions.
+ Get all E2 subscriptions.
 
  .. code-block:: none
 
@@ -497,7 +579,7 @@ REST interface for debugging and testing
 
   Example: curl -X POST "http://10.244.0.181:8080/ric/v1/test/emptydb"
 
- Make Subscription Manager restart.
+ Make Subscription Manager restart. Code executes Exit command and then Kubernetes restarts the pod.
 
  .. code-block:: none
 
