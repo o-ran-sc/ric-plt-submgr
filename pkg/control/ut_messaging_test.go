@@ -432,7 +432,7 @@ func TestRESTSubReqAndE1apDeleteReqPackingError(t *testing.T) {
 }
 
 //-----------------------------------------------------------------------------
-// TestRESTSubReqAndE1apDeleteRespUnpackingError
+// TestRESTSubReqAndE2APDeleteRespUnpackingError
 //
 //   stub                             stub          stub
 // +-------+        +---------+    +---------+   +---------+
@@ -476,7 +476,7 @@ func TestRESTSubReqAndE1apDeleteReqPackingError(t *testing.T) {
 //
 //-----------------------------------------------------------------------------
 
-func TestRESTSubReqAndE1apDeleteRespUnpackingError(t *testing.T) {
+func TestRESTSubReqAndE2APDeleteRespUnpackingError(t *testing.T) {
 
 	restSubId, e2SubsId := createSubscription(t, xappConn1, e2termConn1, nil)
 

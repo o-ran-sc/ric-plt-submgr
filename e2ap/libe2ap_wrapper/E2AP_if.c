@@ -323,7 +323,7 @@ uint64_t packRICSubscriptionResponse(size_t* pDataBufferSize, byte* pDataBuffer,
                         pRICaction_NotAdmitted_ItemIEs->value.choice.RICaction_NotAdmitted_Item.ricActionID =
                           pRICSubscriptionResponse->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].ricActionID;
 
-                        // RICCause
+                        // Cause
                         if (pRICSubscriptionResponse->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.content == Cause_PR_ricRequest) {
                             pRICaction_NotAdmitted_ItemIEs->value.choice.RICaction_NotAdmitted_Item.cause.present = Cause_PR_ricRequest;
                             pRICaction_NotAdmitted_ItemIEs->value.choice.RICaction_NotAdmitted_Item.cause.choice.ricRequest =
@@ -332,6 +332,11 @@ uint64_t packRICSubscriptionResponse(size_t* pDataBufferSize, byte* pDataBuffer,
                         else if (pRICSubscriptionResponse->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.content == Cause_PR_ricService) {
                             pRICaction_NotAdmitted_ItemIEs->value.choice.RICaction_NotAdmitted_Item.cause.present = Cause_PR_ricService;
                             pRICaction_NotAdmitted_ItemIEs->value.choice.RICaction_NotAdmitted_Item.cause.choice.ricService =
+                              pRICSubscriptionResponse->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.causeVal;
+                        }
+                        else if (pRICSubscriptionResponse->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.content == Cause_PR_e2Node) {
+                            pRICaction_NotAdmitted_ItemIEs->value.choice.RICaction_NotAdmitted_Item.cause.present = Cause_PR_e2Node;
+                            pRICaction_NotAdmitted_ItemIEs->value.choice.RICaction_NotAdmitted_Item.cause.choice.e2Node =
                               pRICSubscriptionResponse->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.causeVal;
                         }
                         else if (pRICSubscriptionResponse->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.content == Cause_PR_transport) {
@@ -403,63 +408,46 @@ uint64_t packRICSubscriptionFailure(size_t* pDataBufferSize, byte* pDataBuffer, 
         else
             return e2err_RICSubscriptionFailureAllocRANfunctionIDFail;
 
-        // RICaction-NotAdmitted list
+        // Cause
         pRICsubscriptionFailure_IEs = calloc(1, sizeof(RICsubscriptionFailure_IEs_t));
         if (pRICsubscriptionFailure_IEs) {
-            pRICsubscriptionFailure_IEs->id = ProtocolIE_ID_id_RICactions_NotAdmitted;
+            pRICsubscriptionFailure_IEs->id = ProtocolIE_ID_id_Cause;
             pRICsubscriptionFailure_IEs->criticality = Criticality_reject;
-            pRICsubscriptionFailure_IEs->value.present = RICsubscriptionFailure_IEs__value_PR_RICaction_NotAdmitted_List;
-
-            uint64_t index = 0;
-            while (index < pRICSubscriptionFailure->ricActionNotAdmittedList.contentLength && index < maxofRICactionID) {
-
-                RICaction_NotAdmitted_ItemIEs_t* pRICaction_NotAdmitted_ItemIEs = calloc(1, sizeof (RICaction_NotAdmitted_ItemIEs_t));
-                if (pRICaction_NotAdmitted_ItemIEs)
-                {
-                    pRICaction_NotAdmitted_ItemIEs->id = ProtocolIE_ID_id_RICaction_NotAdmitted_Item;
-                    pRICaction_NotAdmitted_ItemIEs->criticality = Criticality_reject;
-                    pRICaction_NotAdmitted_ItemIEs->value.present = RICaction_NotAdmitted_ItemIEs__value_PR_RICaction_NotAdmitted_Item;
-
-                    // RICActionID
-                    pRICaction_NotAdmitted_ItemIEs->value.choice.RICaction_NotAdmitted_Item.ricActionID =
-                      pRICSubscriptionFailure->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].ricActionID;
-
-                    // RICCause
-                    if (pRICSubscriptionFailure->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.content == Cause_PR_ricRequest) {
-                        pRICaction_NotAdmitted_ItemIEs->value.choice.RICaction_NotAdmitted_Item.cause.present = Cause_PR_ricRequest;
-                        pRICaction_NotAdmitted_ItemIEs->value.choice.RICaction_NotAdmitted_Item.cause.choice.ricRequest =
-                          pRICSubscriptionFailure->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.causeVal;
-                    }
-                    else if (pRICSubscriptionFailure->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.content == Cause_PR_ricService) {
-                        pRICaction_NotAdmitted_ItemIEs->value.choice.RICaction_NotAdmitted_Item.cause.present = Cause_PR_ricService;
-                        pRICaction_NotAdmitted_ItemIEs->value.choice.RICaction_NotAdmitted_Item.cause.choice.ricService =
-                          pRICSubscriptionFailure->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.causeVal;
-                    }
-                    else if (pRICSubscriptionFailure->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.content == Cause_PR_transport) {
-                        pRICaction_NotAdmitted_ItemIEs->value.choice.RICaction_NotAdmitted_Item.cause.present = Cause_PR_transport;
-                        pRICaction_NotAdmitted_ItemIEs->value.choice.RICaction_NotAdmitted_Item.cause.choice.transport =
-                          pRICSubscriptionFailure->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.causeVal;
-                    }
-                    else if (pRICSubscriptionFailure->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.content == Cause_PR_protocol) {
-                        pRICaction_NotAdmitted_ItemIEs->value.choice.RICaction_NotAdmitted_Item.cause.present = Cause_PR_protocol;
-                        pRICaction_NotAdmitted_ItemIEs->value.choice.RICaction_NotAdmitted_Item.cause.choice.protocol =
-                          pRICSubscriptionFailure->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.causeVal;
-                    }
-                    else if (pRICSubscriptionFailure->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.content == Cause_PR_misc) {
-                        pRICaction_NotAdmitted_ItemIEs->value.choice.RICaction_NotAdmitted_Item.cause.present = Cause_PR_misc;
-                        pRICaction_NotAdmitted_ItemIEs->value.choice.RICaction_NotAdmitted_Item.cause.choice.misc =
-                          pRICSubscriptionFailure->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.causeVal;
-                    }
-                    ASN_SEQUENCE_ADD(&pRICsubscriptionFailure_IEs->value.choice.RICaction_NotAdmitted_List.list, pRICaction_NotAdmitted_ItemIEs);
-                }
-                else
-                    return e2err_RICSubscriptionFailureAllocRICaction_NotAdmitted_ItemIEsFail;
-                index++;
+            pRICsubscriptionFailure_IEs->value.present = RICsubscriptionFailure_IEs__value_PR_Cause;
+            if (pRICSubscriptionFailure->cause.content == Cause_PR_ricRequest) {
+                pRICsubscriptionFailure_IEs->value.choice.Cause.present = Cause_PR_ricRequest;
+                pRICsubscriptionFailure_IEs->value.choice.Cause.choice.ricRequest =
+                  pRICSubscriptionFailure->cause.causeVal;
+            }
+            else if (pRICSubscriptionFailure->cause.content == Cause_PR_ricService) {
+                pRICsubscriptionFailure_IEs->value.choice.Cause.present = Cause_PR_ricService;
+                pRICsubscriptionFailure_IEs->value.choice.Cause.choice.ricService =
+                  pRICSubscriptionFailure->cause.causeVal;
+            }
+            else if (pRICSubscriptionFailure->cause.content == Cause_PR_e2Node) {
+                pRICsubscriptionFailure_IEs->value.choice.Cause.present = Cause_PR_e2Node;
+                pRICsubscriptionFailure_IEs->value.choice.Cause.choice.e2Node =
+                  pRICSubscriptionFailure->cause.causeVal;
+            }
+            else if (pRICSubscriptionFailure->cause.content == Cause_PR_transport) {
+                pRICsubscriptionFailure_IEs->value.choice.Cause.present = Cause_PR_transport;
+                pRICsubscriptionFailure_IEs->value.choice.Cause.choice.transport =
+                  pRICSubscriptionFailure->cause.causeVal;
+            }
+            else if (pRICSubscriptionFailure->cause.content == Cause_PR_protocol) {
+                pRICsubscriptionFailure_IEs->value.choice.Cause.present = Cause_PR_protocol;
+                pRICsubscriptionFailure_IEs->value.choice.Cause.choice.protocol =
+                  pRICSubscriptionFailure->cause.causeVal;
+            }
+            else if (pRICSubscriptionFailure->cause.content == Cause_PR_misc) {
+                pRICsubscriptionFailure_IEs->value.choice.Cause.present = Cause_PR_misc;
+                pRICsubscriptionFailure_IEs->value.choice.Cause.choice.misc =
+                  pRICSubscriptionFailure->cause.causeVal;
             }
             ASN_SEQUENCE_ADD(&pE2AP_PDU->choice.unsuccessfulOutcome.value.choice.RICsubscriptionFailure.protocolIEs.list, pRICsubscriptionFailure_IEs);
         }
         else
-            return e2err_RICSubscriptionFailureAllocRICActionAdmittedListFail;
+            return e2err_RICSubscriptionFailureAllocCauseFail;
 
         // CriticalityDiagnostics, OPTIONAL. Not used in RIC
 
@@ -597,7 +585,7 @@ uint64_t packRICSubscriptionDeleteFailure(size_t* pDataBufferSize, byte* pDataBu
         else
             return e2err_RICSubscriptionDeleteFailureAllocRANfunctionIDFail;
 
-        // RICcause
+        // Cause
         pRICsubscriptionDeleteFailure_IEs = calloc(1, sizeof(RICsubscriptionDeleteFailure_IEs_t));
         if (pRICsubscriptionDeleteFailure_IEs) {
             pRICsubscriptionDeleteFailure_IEs->id = ProtocolIE_ID_id_Cause;
@@ -611,6 +599,11 @@ uint64_t packRICSubscriptionDeleteFailure(size_t* pDataBufferSize, byte* pDataBu
             else if (pRICSubscriptionDeleteFailure->cause.content == Cause_PR_ricService) {
                 pRICsubscriptionDeleteFailure_IEs->value.choice.Cause.present = Cause_PR_ricService;
                 pRICsubscriptionDeleteFailure_IEs->value.choice.Cause.choice.ricService =
+                  pRICSubscriptionDeleteFailure->cause.causeVal;
+            }
+            else if (pRICSubscriptionDeleteFailure->cause.content == Cause_PR_e2Node) {
+                pRICsubscriptionDeleteFailure_IEs->value.choice.Cause.present = Cause_PR_e2Node;
+                pRICsubscriptionDeleteFailure_IEs->value.choice.Cause.choice.e2Node =
                   pRICSubscriptionDeleteFailure->cause.causeVal;
             }
             else if (pRICSubscriptionDeleteFailure->cause.content == Cause_PR_transport) {
@@ -920,7 +913,7 @@ uint64_t getRICSubscriptionResponseData(e2ap_pdu_ptr_t* pE2AP_PDU_pointer, RICSu
                 pRICSubscriptionResponse->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].ricActionID =
                   pRICaction_NotAdmitted_ItemIEs->value.choice.RICaction_NotAdmitted_Item.ricActionID;
 
-                //  RICcause
+                //  Cause
                 if (pRICaction_NotAdmitted_ItemIEs->value.choice.RICaction_NotAdmitted_Item.cause.present == Cause_PR_ricRequest) {
                     pRICSubscriptionResponse->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.content = Cause_PR_ricRequest;
                     pRICSubscriptionResponse->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.causeVal =
@@ -930,6 +923,11 @@ uint64_t getRICSubscriptionResponseData(e2ap_pdu_ptr_t* pE2AP_PDU_pointer, RICSu
                     pRICSubscriptionResponse->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.content = Cause_PR_ricService;
                     pRICSubscriptionResponse->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.causeVal =
                       pRICaction_NotAdmitted_ItemIEs->value.choice.RICaction_NotAdmitted_Item.cause.choice.ricService;
+                }
+                else if (pRICaction_NotAdmitted_ItemIEs->value.choice.RICaction_NotAdmitted_Item.cause.present == Cause_PR_e2Node) {
+                    pRICSubscriptionResponse->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.content = Cause_PR_e2Node;
+                    pRICSubscriptionResponse->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.causeVal =
+                      pRICaction_NotAdmitted_ItemIEs->value.choice.RICaction_NotAdmitted_Item.cause.choice.e2Node;
                 }
                 else if (pRICaction_NotAdmitted_ItemIEs->value.choice.RICaction_NotAdmitted_Item.cause.present == Cause_PR_transport) {
                     pRICSubscriptionResponse->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.content = Cause_PR_transport;
@@ -990,56 +988,46 @@ uint64_t getRICSubscriptionFailureData(e2ap_pdu_ptr_t* pE2AP_PDU_pointer, RICSub
         return e2err_RICsubscriptionFailureRANfunctionIDMissing;
     }
 
-    // RICaction-NotAdmitted-List
+    // Cause
     if (asnRicSubscriptionFailure->protocolIEs.list.count > 2 &&
-        asnRicSubscriptionFailure->protocolIEs.list.array[2]->id == ProtocolIE_ID_id_RICactions_NotAdmitted) {
+        asnRicSubscriptionFailure->protocolIEs.list.array[2]->id == ProtocolIE_ID_id_Cause) {
         pRICsubscriptionFailure_IEs = asnRicSubscriptionFailure->protocolIEs.list.array[2];
-        uint64_t index = 0;
-        while ((index < maxofRICactionID) && (index < pRICsubscriptionFailure_IEs->value.choice.RICaction_NotAdmitted_List.list.count)) {
-            RICaction_NotAdmitted_ItemIEs_t* pRICaction_NotAdmitted_ItemIEs =
-              (RICaction_NotAdmitted_ItemIEs_t*)pRICsubscriptionFailure_IEs->value.choice.RICaction_NotAdmitted_List.list.array[index];
-
-            // RICActionID
-            pRICSubscriptionFailure->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].ricActionID =
-              pRICaction_NotAdmitted_ItemIEs->value.choice.RICaction_NotAdmitted_Item.ricActionID;
-
-            //  RICcause
-            if (pRICaction_NotAdmitted_ItemIEs->value.choice.RICaction_NotAdmitted_Item.cause.present == Cause_PR_ricRequest) {
-                pRICSubscriptionFailure->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.content = Cause_PR_ricRequest;
-                pRICSubscriptionFailure->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.causeVal =
-                  pRICaction_NotAdmitted_ItemIEs->value.choice.RICaction_NotAdmitted_Item.cause.choice.ricRequest;
-            }
-            else if (pRICaction_NotAdmitted_ItemIEs->value.choice.RICaction_NotAdmitted_Item.cause.present == Cause_PR_ricService) {
-                pRICSubscriptionFailure->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.content = Cause_PR_ricService;
-                pRICSubscriptionFailure->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.causeVal =
-                  pRICaction_NotAdmitted_ItemIEs->value.choice.RICaction_NotAdmitted_Item.cause.choice.ricService;
-            }
-            else if (pRICaction_NotAdmitted_ItemIEs->value.choice.RICaction_NotAdmitted_Item.cause.present == Cause_PR_transport) {
-                pRICSubscriptionFailure->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.content = Cause_PR_transport;
-                pRICSubscriptionFailure->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.causeVal =
-                  pRICaction_NotAdmitted_ItemIEs->value.choice.RICaction_NotAdmitted_Item.cause.choice.transport;
-            }
-            else if (pRICaction_NotAdmitted_ItemIEs->value.choice.RICaction_NotAdmitted_Item.cause.present == Cause_PR_protocol) {
-                pRICSubscriptionFailure->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.content = Cause_PR_protocol;
-                pRICSubscriptionFailure->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.causeVal =
-                  pRICaction_NotAdmitted_ItemIEs->value.choice.RICaction_NotAdmitted_Item.cause.choice.protocol;
-            }
-            else if(pRICaction_NotAdmitted_ItemIEs->value.choice.RICaction_NotAdmitted_Item.cause.present == Cause_PR_misc) {
-                pRICSubscriptionFailure->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.content = Cause_PR_misc;
-                pRICSubscriptionFailure->ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.causeVal =
-                  pRICaction_NotAdmitted_ItemIEs->value.choice.RICaction_NotAdmitted_Item.cause.choice.misc;
-            }
-            index++;
+        if (pRICsubscriptionFailure_IEs->value.choice.Cause.present == Cause_PR_ricRequest) {
+            pRICSubscriptionFailure->cause.content = Cause_PR_ricRequest;
+            pRICSubscriptionFailure->cause.causeVal =
+              pRICsubscriptionFailure_IEs->value.choice.Cause.choice.ricRequest;
         }
-        pRICSubscriptionFailure->ricActionNotAdmittedList.contentLength = index;
-
-        // CriticalityDiagnostics. OPTIONAL
-
+        else if (pRICsubscriptionFailure_IEs->value.choice.Cause.present == Cause_PR_ricService) {
+            pRICSubscriptionFailure->cause.content = Cause_PR_ricService;
+            pRICSubscriptionFailure->cause.causeVal =
+              pRICsubscriptionFailure_IEs->value.choice.Cause.choice.ricService;
+        }
+        else if (pRICsubscriptionFailure_IEs->value.choice.Cause.present == Cause_PR_e2Node) {
+            pRICSubscriptionFailure->cause.content = Cause_PR_e2Node;
+            pRICSubscriptionFailure->cause.causeVal =
+              pRICsubscriptionFailure_IEs->value.choice.Cause.choice.e2Node;
+        }
+        else if (pRICsubscriptionFailure_IEs->value.choice.Cause.present == Cause_PR_transport) {
+            pRICSubscriptionFailure->cause.content = Cause_PR_transport;
+            pRICSubscriptionFailure->cause.causeVal =
+              pRICsubscriptionFailure_IEs->value.choice.Cause.choice.transport;
+        }
+        else if (pRICsubscriptionFailure_IEs->value.choice.Cause.present == Cause_PR_protocol) {
+            pRICSubscriptionFailure->cause.content = Cause_PR_protocol;
+            pRICSubscriptionFailure->cause.causeVal =
+              pRICsubscriptionFailure_IEs->value.choice.Cause.choice.protocol;
+        }
+        else if(pRICsubscriptionFailure_IEs->value.choice.Cause.present == Cause_PR_misc) {
+            pRICSubscriptionFailure->cause.content = Cause_PR_misc;
+            pRICSubscriptionFailure->cause.causeVal =
+              pRICsubscriptionFailure_IEs->value.choice.Cause.choice.misc;
+        }
     }
     else {
         ASN_STRUCT_FREE(asn_DEF_E2AP_PDU, pE2AP_PDU);
-        return e2err_RICsubscriptionFailureRICaction_NotAdmitted_ListMissing;
+        return e2err_RICsubscriptionFailureCauseMissing;
     }
+
     ASN_STRUCT_FREE(asn_DEF_E2AP_PDU, pE2AP_PDU);
     return e2err_OK;
 }
@@ -1143,7 +1131,7 @@ uint64_t getRICSubscriptionDeleteFailureData(e2ap_pdu_ptr_t* pE2AP_PDU_pointer, 
         return e2err_RICsubscriptionDeleteFailureRANfunctionIDMissing;
     }
 
-    // RICcause
+    // Cause
     if (asnRicSubscriptionDeleteFailure->protocolIEs.list.count > 2 &&
         asnRicSubscriptionDeleteFailure->protocolIEs.list.array[2]->id == ProtocolIE_ID_id_Cause) {
         pRICsubscriptionDeleteFailure_IEs = asnRicSubscriptionDeleteFailure->protocolIEs.list.array[2];
@@ -1156,6 +1144,11 @@ uint64_t getRICSubscriptionDeleteFailureData(e2ap_pdu_ptr_t* pE2AP_PDU_pointer, 
             pRICSubscriptionDeleteFailure->cause.content = Cause_PR_ricService;
             pRICSubscriptionDeleteFailure->cause.causeVal =
               pRICsubscriptionDeleteFailure_IEs->value.choice.Cause.choice.ricService;
+        }
+        else if (pRICsubscriptionDeleteFailure_IEs->value.choice.Cause.present == Cause_PR_e2Node) {
+            pRICSubscriptionDeleteFailure->cause.content = Cause_PR_e2Node;
+            pRICSubscriptionDeleteFailure->cause.causeVal =
+              pRICsubscriptionDeleteFailure_IEs->value.choice.Cause.choice.e2Node;
         }
         else if (pRICsubscriptionDeleteFailure_IEs->value.choice.Cause.present == Cause_PR_transport) {
             pRICSubscriptionDeleteFailure->cause.content = Cause_PR_transport;
@@ -1182,4 +1175,3 @@ uint64_t getRICSubscriptionDeleteFailureData(e2ap_pdu_ptr_t* pE2AP_PDU_pointer, 
     ASN_STRUCT_FREE(asn_DEF_E2AP_PDU, pE2AP_PDU);
     return e2err_OK;
 }
-

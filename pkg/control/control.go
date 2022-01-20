@@ -641,8 +641,8 @@ func (c *Control) handleSubscriptionRequest(trans *TransactionXapp, subReqMsg *e
 				errorInfo.SetInfo(err.Error(), models.SubscriptionInstanceErrorSourceE2Node, "")
 			}
 		case *e2ap.E2APSubscriptionFailure:
-			err = fmt.Errorf("E2 RICSubscriptionFailure received")
-			errorInfo = c.e2ap.CheckActionNotAdmittedList(xapp.RIC_SUB_FAILURE, themsg.ActionNotAdmittedList, c)
+			err = fmt.Errorf("RICSubscriptionFailure. E2NodeCause: (Cause:%v, Value %v)", themsg.Cause.Content, themsg.Cause.Value)
+			errorInfo.SetInfo(err.Error(), models.SubscriptionInstanceErrorSourceE2Node, "")
 		case *PackSubscriptionRequestErrortEvent:
 			err = fmt.Errorf("E2 RICSubscriptionRequest pack failure")
 			errorInfo = themsg.ErrorInfo

@@ -30,7 +30,6 @@ import (
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap_wrapper"
 	"gerrit.o-ran-sc.org/r/ric-plt/submgr/pkg/teststub"
 	clientmodel "gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/clientmodel"
-	//"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/models"
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 )
 
@@ -177,24 +176,14 @@ func (p *E2StubSubsFailParams) Set(req *e2ap.E2APSubscriptionRequest) {
 	p.Fail.RequestId.Id = p.Req.RequestId.Id
 	p.Fail.RequestId.InstanceId = p.Req.RequestId.InstanceId
 	p.Fail.FunctionId = p.Req.FunctionId
-	p.Fail.ActionNotAdmittedList.Items = make([]e2ap.ActionNotAdmittedItem, len(p.Req.ActionSetups))
-	for index := int(0); index < len(p.Fail.ActionNotAdmittedList.Items); index++ {
-		p.Fail.ActionNotAdmittedList.Items[index].ActionId = p.Req.ActionSetups[index].ActionId
-		p.SetCauseVal(index, 5, 1)
-	}
+	p.Fail.Cause.Content = e2ap.E2AP_CauseContent_RICrequest
+	p.Fail.Cause.Value = e2ap.E2AP_CauseValue_RICrequest_control_message_invalid
 }
 
 func (p *E2StubSubsFailParams) SetCauseVal(ind int, content uint8, causeval uint8) {
 
-	if ind < 0 {
-		for index := int(0); index < len(p.Fail.ActionNotAdmittedList.Items); index++ {
-			p.Fail.ActionNotAdmittedList.Items[index].Cause.Content = content
-			p.Fail.ActionNotAdmittedList.Items[index].Cause.Value = causeval
-		}
-		return
-	}
-	p.Fail.ActionNotAdmittedList.Items[ind].Cause.Content = content
-	p.Fail.ActionNotAdmittedList.Items[ind].Cause.Value = causeval
+	p.Fail.Cause.Content = content
+	p.Fail.Cause.Value = causeval
 }
 
 //-----------------------------------------------------------------------------

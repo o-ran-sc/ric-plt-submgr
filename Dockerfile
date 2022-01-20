@@ -91,7 +91,7 @@ ENV CFLAGS="-DASN_DISABLE_OER_SUPPORT"
 ENV CGO_CFLAGS="-DASN_DISABLE_OER_SUPPORT"
 
 COPY 3rdparty 3rdparty
-RUN cd 3rdparty/E2AP-v01.00.00 && \
+RUN cd 3rdparty/E2AP-v02.00.00 && \
     gcc -c ${CFLAGS} -I. -g -fPIC *.c  && \
     gcc *.o -g -shared -o libe2ap.so && \
     cp libe2ap.so /usr/local/lib/ && \
@@ -99,7 +99,7 @@ RUN cd 3rdparty/E2AP-v01.00.00 && \
     ldconfig
 
 
-RUN echo "E2AP         E2AP-v01.00.00" >> /manifests/versions.txt
+RUN echo "E2AP         E2AP-v02.00.00" >> /manifests/versions.txt
 
 
 COPY e2ap e2ap
