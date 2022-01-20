@@ -52,6 +52,6 @@ type E2APSubscriptionResponse struct {
 type E2APSubscriptionFailure struct {
 	RequestId
 	FunctionId
-	ActionNotAdmittedList
+	Cause
 	CriticalityDiagnostics
 }

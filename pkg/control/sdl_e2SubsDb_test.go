@@ -158,6 +158,8 @@ func GetSubsFailure(t *testing.T, req *e2ap.E2APSubscriptionRequest) *e2ap.E2APS
 	fail.RequestId.Id = req.RequestId.Id
 	fail.RequestId.InstanceId = req.RequestId.InstanceId
 	fail.FunctionId = req.FunctionId
+	fail.Cause.Content = e2ap.E2AP_CauseContent_RICrequest
+	fail.Cause.Value = e2ap.E2AP_CauseValue_RICrequest_control_message_invalid
 	return fail
 }
 

@@ -801,9 +801,8 @@ func (e2apMsg *e2apMsgPackerSubscriptionFailure) Pack(data *e2ap.E2APSubscriptio
 	if err := (&e2apEntryRequestID{entry: &e2apMsg.msgC.ricRequestID}).set(&e2apMsg.msgG.RequestId); err != nil {
 		return err, nil
 	}
-	if err := (&e2apEntryNotAdmittedList{entry: &e2apMsg.msgC.ricActionNotAdmittedList}).set(&e2apMsg.msgG.ActionNotAdmittedList); err != nil {
-		return err, nil
-	}
+	e2apMsg.msgC.cause.content = (C.uchar)(e2apMsg.msgG.Cause.Content)
+	e2apMsg.msgC.cause.causeVal = (C.uchar)(e2apMsg.msgG.Cause.Value)
 	e2apMsg.msgC.criticalityDiagnosticsPresent = false
 	if e2apMsg.msgG.CriticalityDiagnostics.Present {
 		e2apMsg.msgC.criticalityDiagnosticsPresent = true
@@ -835,9 +834,8 @@ func (e2apMsg *e2apMsgPackerSubscriptionFailure) UnPack(msg *e2ap.PackedData) (e
 	if err := (&e2apEntryRequestID{entry: &e2apMsg.msgC.ricRequestID}).get(&e2apMsg.msgG.RequestId); err != nil {
 		return err, e2apMsg.msgG
 	}
-	if err := (&e2apEntryNotAdmittedList{entry: &e2apMsg.msgC.ricActionNotAdmittedList}).get(&e2apMsg.msgG.ActionNotAdmittedList); err != nil {
-		return err, e2apMsg.msgG
-	}
+	e2apMsg.msgG.Cause.Content = (uint8)(e2apMsg.msgC.cause.content)
+	e2apMsg.msgG.Cause.Value = (uint8)(e2apMsg.msgC.cause.causeVal)
 	if e2apMsg.msgC.criticalityDiagnosticsPresent == true {
 		e2apMsg.msgG.CriticalityDiagnostics.Present = true
 		if err := (&e2apEntryCriticalityDiagnostic{entry: &e2apMsg.msgC.criticalityDiagnostics}).get(&e2apMsg.msgG.CriticalityDiagnostics); err != nil {
@@ -855,15 +853,9 @@ func (e2apMsg *e2apMsgPackerSubscriptionFailure) String() string {
 	fmt.Fprintln(&b, "    ricInstanceID =", e2apMsg.msgC.ricRequestID.ricInstanceID)
 	fmt.Fprintln(&b, "  ranFunctionID =", e2apMsg.msgC.ranFunctionID)
 	fmt.Fprintln(&b, "  ricActionNotAdmittedList.")
-	fmt.Fprintln(&b, "    contentLength =", e2apMsg.msgC.ricActionNotAdmittedList.contentLength)
-	var index uint8
-	index = 0
-	for (C.uchar)(index) < e2apMsg.msgC.ricActionNotAdmittedList.contentLength {
-		fmt.Fprintln(&b, "    RICActionNotAdmittedItem[index].ricActionID =", e2apMsg.msgC.ricActionNotAdmittedList.RICActionNotAdmittedItem[index].ricActionID)
-		fmt.Fprintln(&b, "    RICActionNotAdmittedItem[index].cause.content =", e2apMsg.msgC.ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.content)
-		fmt.Fprintln(&b, "    RICActionNotAdmittedItem[index].cause.causeVal =", e2apMsg.msgC.ricActionNotAdmittedList.RICActionNotAdmittedItem[index].cause.causeVal)
-		index++
-	}
+	fmt.Fprintln(&b, "    cause.content =", e2apMsg.msgC.cause.content)
+	fmt.Fprintln(&b, "    cause.causeVal =", e2apMsg.msgC.cause.causeVal)
+
 	/* NOT SUPPORTED
 	if e2apMsg.msgC.criticalityDiagnosticsPresent {
 		fmt.Fprintln(&b, "  criticalityDiagnosticsPresent =", e2apMsg.msgC.criticalityDiagnosticsPresent)

@@ -156,14 +156,9 @@ func (testCtxt *E2ApTests) E2ApTestMsgSubscriptionFailure(t *testing.T) {
 	afailenc := e2ap.E2APSubscriptionFailure{}
 	afailenc.RequestId.Id = 1
 	afailenc.RequestId.InstanceId = 22
-	afailenc.FunctionId = 33
-	for index := uint64(0); index < 16; index++ {
-		item := e2ap.ActionNotAdmittedItem{}
-		item.ActionId = index
-		item.Cause.Content = 1
-		item.Cause.Value = 1
-		afailenc.ActionNotAdmittedList.Items = append(afailenc.ActionNotAdmittedList.Items, item)
-	}
+	afailenc.Cause.Content = e2ap.E2AP_CauseContent_RICrequest
+	afailenc.Cause.Value = e2ap.E2AP_CauseValue_RICrequest_control_message_invalid
+
 	// NOT SUPPORTED CURRENTLY
 	afailenc.CriticalityDiagnostics.Present = false
 	//	afailenc.CriticalityDiagnostics.ProcCodePresent = true

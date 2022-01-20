@@ -32,15 +32,7 @@
 extern "C" {
 #endif
 
-extern const int cCauseRICRequest;
-extern const int cCauseRICService;
-extern const int cCauseTransport;
-extern const int cCauseProtocol;
-extern const int cCauseMisc;
-
 typedef unsigned char byte;
-
-//extern const int64_t cMaxNrOfErrors;
 
 extern const uint64_t cMaxSizeOfOctetString;
 
@@ -74,7 +66,6 @@ enum RICActionType_t {
      RICActionType_insert,
      RICActionType_policy
 };
-
 
 enum RICSubsequentActionType_t {
 	RICSubsequentActionType_Continue,
@@ -162,9 +153,6 @@ enum InterfaceDirection__t {
 
 typedef uint8_t ProcedureCode__t;
 
-
-static const uint64_t cMaxofProtocolIE = 15;
-
 typedef struct {
     OctetString_t octetString;   // This element is E2AP spec format
 } RICEventTriggerDefinition_t;
@@ -178,12 +166,6 @@ typedef struct {
     uint8_t contentLength;
 	RICActionID_t ricActionID[16]; // Table size is const cMaxofRICactionID
 } RICActionAdmittedList_t;
-
-extern const int cCauseRIC; // This is content of type CauseRIC_t
-extern const int cCauseRICService; // This is content of type CauseRICservice_t
-extern const int cRICCauseTransport; // This is content of type CauseTransport_t
-extern const int cRICCauseProtocol; // This is content of type CauseProtocol_t
-extern const int cRICCauseMisc; // This is content of type CauseMisc_t
 
 typedef struct {
     uint8_t content; // See above constants
@@ -269,7 +251,7 @@ enum e2err {
     e2err_RICSubscriptionFailureAllocRICrequestIDFail,
     e2err_RICSubscriptionFailureAllocRANfunctionIDFail,
     e2err_RICSubscriptionFailureAllocRICaction_NotAdmitted_ItemIEsFail,
-    e2err_RICSubscriptionFailureAllocRICActionAdmittedListFail,
+    e2err_RICSubscriptionFailureAllocCauseFail,
     e2err_RICSubscriptionFailureEncodeFail,
     e2err_RICSubscriptionFailureAllocE2AP_PDUFail,
     e2err_RICSubscriptionDeleteRequestAllocRICrequestIDFail,
@@ -293,7 +275,7 @@ enum e2err {
     e2err_RICsubscriptionResponseRICaction_Admitted_ListMissing,
     e2err_RICsubscriptionFailureRICrequestIDMissing,
     e2err_RICsubscriptionFailureRANfunctionIDMissing,
-    e2err_RICsubscriptionFailureRICaction_NotAdmitted_ListMissing,
+    e2err_RICsubscriptionFailureCauseMissing,
     e2err_RICsubscriptionDeleteRequestRICrequestIDMissing,
     e2err_RICsubscriptionDeleteRequestRANfunctionIDMissing,
     e2err_RICsubscriptionDeleteResponseRICrequestIDMissing,
@@ -325,7 +307,7 @@ static const char* const E2ErrorStrings[] = {
     "e2err_RICSubscriptionFailureAllocRICrequestIDFail",
     "e2err_RICSubscriptionFailureAllocRANfunctionIDFail",
     "e2err_RICSubscriptionFailureAllocRICaction_NotAdmitted_ItemIEsFail",
-    "e2err_RICSubscriptionFailureAllocRICActionAdmittedListFail",
+    "e2err_RICSubscriptionFailureAllocCauseFail",
     "e2err_RICSubscriptionFailureEncodeFail",
     "e2err_RICSubscriptionFailureAllocE2AP_PDUFail",
     "e2err_RICSubscriptionDeleteRequestAllocRICrequestIDFail",
@@ -349,7 +331,7 @@ static const char* const E2ErrorStrings[] = {
     "e2err_RICsubscriptionResponseRICaction_Admitted_ListMissing",
     "e2err_RICsubscriptionFailureRICrequestIDMissing",
     "e2err_RICsubscriptionFailureRANfunctionIDMissing",
-    "e2err_RICsubscriptionFailureRICaction_NotAdmitted_ListMissing",
+    "e2err_RICsubscriptionFailureCauseMissing",
     "e2err_RICsubscriptionDeleteRequestRICrequestIDMissing",
     "e2err_RICsubscriptionDeleteRequestRANfunctionIDMissing",
     "e2err_RICsubscriptionDeleteResponseRICrequestIDMissing",
@@ -403,7 +385,7 @@ typedef struct {
 typedef struct {
     RICRequestID_t ricRequestID;
     RANFunctionID_t ranFunctionID;
-    RICActionNotAdmittedList_t ricActionNotAdmittedList;
+    RICCause_t cause;
     bool criticalityDiagnosticsPresent;
     CriticalityDiagnostics__t criticalityDiagnostics;
 } RICSubscriptionFailure_t;

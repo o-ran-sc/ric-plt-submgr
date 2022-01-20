@@ -306,41 +306,32 @@ type ActionToBeSetupItem struct {
 //
 //-----------------------------------------------------------------------------
 
+// Cause CHOICE, E2AP-v02.00
 const (
-	E2AP_CauseContent_RadioNetwork uint8 = 1
-	E2AP_CauseContent_Transport    uint8 = 2
-	E2AP_CauseContent_Protocol     uint8 = 3
-	E2AP_CauseContent_Misc         uint8 = 4
-	E2AP_CauseContent_Ric          uint8 = 5
+	E2AP_CauseContent_RICrequest uint8 = 1
+	E2AP_CauseContent_RICservice uint8 = 2
+	E2AP_CauseContent_E2node     uint8 = 3
+	E2AP_CauseContent_Transport  uint8 = 4
+	E2AP_CauseContent_Protocol   uint8 = 5
+	E2AP_CauseContent_Misc       uint8 = 6
 )
 
-//const (
-//	E2AP_CauseValue_RadioNetwork_ uint8 = 0
-//)
-//const (
-//	E2AP_CauseValue_Transport_ uint8 = 0
-//)
-//const (
-//	E2AP_CauseValue_Protocol_ uint8 = 0
-//)
-//const (
-//	E2AP_CauseValue_Misc_ uint8 = 0
-//)
-
+// CauseRICrequest ENUMERATED, E2AP-v02.00
 const (
-	E2AP_CauseValue_Ric_function_id_Invalid                            uint8 = 0
-	E2AP_CauseValue_Ric_action_not_supported                           uint8 = 1
-	E2AP_CauseValue_Ric_excessive_actions                              uint8 = 2
-	E2AP_CauseValue_Ric_duplicate_action                               uint8 = 3
-	E2AP_CauseValue_Ric_duplicate_event                                uint8 = 4
-	E2AP_CauseValue_Ric_function_resource_limit                        uint8 = 5
-	E2AP_CauseValue_Ric_request_id_unknown                             uint8 = 6
-	E2AP_CauseValue_Ric_inconsistent_action_subsequent_action_sequence uint8 = 7
-	E2AP_CauseValue_Ric_control_message_invalid                        uint8 = 8
-	E2AP_CauseValue_Ric_call_process_id_invalid                        uint8 = 9
-	E2AP_CauseValue_Ric_function_not_required                          uint8 = 10
-	E2AP_CauseValue_Ric_excessive_functions                            uint8 = 11
-	E2AP_CauseValue_Ric_ric_resource_limi                              uint8 = 12
+	E2AP_CauseValue_RICrequest_function_id_Invalid                            uint8 = 0
+	E2AP_CauseValue_RICrequest_action_not_supported                           uint8 = 1
+	E2AP_CauseValue_RICrequest_excessive_actions                              uint8 = 2
+	E2AP_CauseValue_RICrequest_duplicate_action                               uint8 = 3
+	E2AP_CauseValue_RICrequest_duplicate_event_trigger                        uint8 = 4
+	E2AP_CauseValue_RICrequest_function_resource_limit                        uint8 = 5
+	E2AP_CauseValue_RICrequest_request_id_unknown                             uint8 = 6
+	E2AP_CauseValue_RICrequest_inconsistent_action_subsequent_action_sequence uint8 = 7
+	E2AP_CauseValue_RICrequest_control_message_invalid                        uint8 = 8
+	E2AP_CauseValue_RICrequest_ric_call_process_id_invalid                    uint8 = 9
+	E2AP_CauseValue_RICrequest_control_timer_expired                          uint8 = 10
+	E2AP_CauseValue_RICrequest_control_failed_to_execute                      uint8 = 11
+	E2AP_CauseValue_RICrequest_system_not_ready                               uint8 = 12
+	E2AP_CauseValue_RICrequest_unspecified                                    uint8 = 13
 )
 
 type Cause struct {

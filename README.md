@@ -39,31 +39,31 @@
 
   Latest version of the tool should be used. Follow Build and Install instructions for the tool on the page.
 
-  Generated ASN1 C-codes are stored in submgr/3rdparty/E2AP-v01.00.00 directory. Directory is name based in the specification version.
+  Generated ASN1 C-codes are stored in submgr/3rdparty/E2AP-v02.00.00 directory. Directory is name based in the specification version.
 
   Note that any E2AP specifications are not allowed to store in ORAN Gerrit repo! Only generated C-code from the specification can
   be stored there.
 
-  Example: Update current E2AP-v01.00.00 version to E2AP-v01.00.01 version.
+  Example: Update current E2AP-v02.00.00 version to E2AP-v02.00.01 version.
   
   Create following directory structure:
 
-    E2AP-v01.00.01
+    E2AP-v02.00.01
      |
      - spec
         |
-        - e2ap-v01.00.01.asn
+        - e2ap-v02.00.01.asn
     
-  e2ap-v01.00.01.asn file contains the E2AP v01.00.01 specification's data structures in ASN1 format.
+  e2ap-v02.00.01.asn file contains the E2AP v02.00.01 specification's data structures in ASN1 format.
 
-  To generate the ASN.1 C-codes give following command in E2AP-v01.00.01 dir:
-  asn1c -pdu=auto -fincludes-quoted -fcompound-names -fno-include-deps -gen-PER -no-gen-OER -no-gen-example spec/e2ap-v01.00.01.asn
+  To generate the ASN.1 C-codes give following command in E2AP-v02.00.01 dir:
+  asn1c -pdu=auto -fincludes-quoted -fcompound-names -fno-include-deps -gen-PER -no-gen-OER -no-gen-example spec/e2ap-v02.00.01.asn
 
-  Copy E2AP-v01.00.01 directory with the generated C-codes under submgr/3rdparty directory.
+  Copy E2AP-v02.00.01 directory with the generated C-codes under submgr/3rdparty directory.
 
-  Remove spec directory under E2AP-v01.00.01 directory.
+  Remove spec directory under E2AP-v02.00.01 directory.
 
-  Remove old submgr/3rdparty/E2AP-v01.00.00 directory.
+  Remove old submgr/3rdparty/E2AP-v02.00.00 directory.
 
 ## License
 
