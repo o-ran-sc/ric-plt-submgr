@@ -26,6 +26,7 @@ import "C"
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 
 	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
@@ -50,14 +51,14 @@ type E2ap struct {
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-func (c *E2ap) SetASN1DebugPrintStatus(logLevel int) {
+func (e *E2ap) SetASN1DebugPrintStatus(logLevel int) {
 	e2ap_wrapper.SetASN1DebugPrintStatus(logLevel)
 }
 
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-func (c *E2ap) FillSubscriptionReqMsgs(params interface{}, subreqList *e2ap.SubscriptionRequestList, restSubscription *RESTSubscription) error {
+func (e *E2ap) FillSubscriptionReqMsgs(params interface{}, subreqList *e2ap.SubscriptionRequestList, restSubscription *RESTSubscription) error {
 	xapp.Logger.Debug("FillSubscriptionReqMsgs")
 
 	p := params.(*models.SubscriptionParams)
@@ -107,7 +108,35 @@ func (c *E2ap) FillSubscriptionReqMsgs(params interface{}, subreqList *e2ap.Subs
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-func (c *E2ap) UnpackSubscriptionRequest(payload []byte) (*e2ap.E2APSubscriptionRequest, error) {
+func (e *E2ap) CheckActionNotAdmittedList(msgType int, actionNotAdmittedList e2ap.ActionNotAdmittedList, c *Control) ErrorInfo {
+
+	var prefixString string
+	var errorInfo ErrorInfo
+	var actionNotAdmittedString string
+	if len(actionNotAdmittedList.Items) > 0 {
+		if msgType == xapp.RIC_SUB_RESP {
+			prefixString = "RICSubscriptionResponse partially accepted:"
+			c.UpdateCounter(cPartialSubRespFromE2)
+		} else if msgType == xapp.RIC_SUB_FAILURE {
+			prefixString = "RICSubscriptionFailure:"
+		}
+		jsonActionNotAdmittedList, err := json.Marshal(actionNotAdmittedList.Items)
+		if err != nil {
+			actionNotAdmittedString = "ActionNotAdmittedList > 0. Submgr json.Marshal error"
+			xapp.Logger.Error("CheckActionNotAdmittedList() json.Marshal error %s", err.Error())
+		} else {
+			actionNotAdmittedString = "ActionNotAdmittedList: " + string(jsonActionNotAdmittedList)
+		}
+	}
+	err := fmt.Errorf("%s %s", prefixString, actionNotAdmittedString)
+	errorInfo.SetInfo(err.Error(), models.SubscriptionInstanceErrorSourceE2Node, "")
+	return errorInfo
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+func (e *E2ap) UnpackSubscriptionRequest(payload []byte) (*e2ap.E2APSubscriptionRequest, error) {
 	e2SubReq := packerif.NewPackerSubscriptionRequest()
 	err, subReq := e2SubReq.UnPack(&e2ap.PackedData{payload})
 	if err != nil {
@@ -128,7 +157,7 @@ func (c *E2ap) PackSubscriptionRequest(req *e2ap.E2APSubscriptionRequest) (int, 
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-func (c *E2ap) UnpackSubscriptionResponse(payload []byte) (*e2ap.E2APSubscriptionResponse, error) {
+func (e *E2ap) UnpackSubscriptionResponse(payload []byte) (*e2ap.E2APSubscriptionResponse, error) {
 	e2SubResp := packerif.NewPackerSubscriptionResponse()
 	err, subResp := e2SubResp.UnPack(&e2ap.PackedData{payload})
 	if err != nil {
@@ -137,7 +166,7 @@ func (c *E2ap) UnpackSubscriptionResponse(payload []byte) (*e2ap.E2APSubscriptio
 	return subResp, nil
 }
 
-func (c *E2ap) PackSubscriptionResponse(req *e2ap.E2APSubscriptionResponse) (int, *e2ap.PackedData, error) {
+func (e *E2ap) PackSubscriptionResponse(req *e2ap.E2APSubscriptionResponse) (int, *e2ap.PackedData, error) {
 	e2SubResp := packerif.NewPackerSubscriptionResponse()
 	err, packedData := e2SubResp.Pack(req)
 	if err != nil {
@@ -149,7 +178,7 @@ func (c *E2ap) PackSubscriptionResponse(req *e2ap.E2APSubscriptionResponse) (int
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-func (c *E2ap) UnpackSubscriptionFailure(payload []byte) (*e2ap.E2APSubscriptionFailure, error) {
+func (e *E2ap) UnpackSubscriptionFailure(payload []byte) (*e2ap.E2APSubscriptionFailure, error) {
 	e2SubFail := packerif.NewPackerSubscriptionFailure()
 	err, subFail := e2SubFail.UnPack(&e2ap.PackedData{payload})
 	if err != nil {
@@ -158,7 +187,7 @@ func (c *E2ap) UnpackSubscriptionFailure(payload []byte) (*e2ap.E2APSubscription
 	return subFail, nil
 }
 
-func (c *E2ap) PackSubscriptionFailure(req *e2ap.E2APSubscriptionFailure) (int, *e2ap.PackedData, error) {
+func (e *E2ap) PackSubscriptionFailure(req *e2ap.E2APSubscriptionFailure) (int, *e2ap.PackedData, error) {
 	e2SubFail := packerif.NewPackerSubscriptionFailure()
 	err, packedData := e2SubFail.Pack(req)
 	if err != nil {
@@ -170,7 +199,7 @@ func (c *E2ap) PackSubscriptionFailure(req *e2ap.E2APSubscriptionFailure) (int, 
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-func (c *E2ap) UnpackSubscriptionDeleteRequest(payload []byte) (*e2ap.E2APSubscriptionDeleteRequest, error) {
+func (e *E2ap) UnpackSubscriptionDeleteRequest(payload []byte) (*e2ap.E2APSubscriptionDeleteRequest, error) {
 	e2SubDelReq := packerif.NewPackerSubscriptionDeleteRequest()
 	err, subDelReq := e2SubDelReq.UnPack(&e2ap.PackedData{payload})
 	if err != nil {
@@ -179,7 +208,7 @@ func (c *E2ap) UnpackSubscriptionDeleteRequest(payload []byte) (*e2ap.E2APSubscr
 	return subDelReq, nil
 }
 
-func (c *E2ap) PackSubscriptionDeleteRequest(req *e2ap.E2APSubscriptionDeleteRequest) (int, *e2ap.PackedData, error) {
+func (e *E2ap) PackSubscriptionDeleteRequest(req *e2ap.E2APSubscriptionDeleteRequest) (int, *e2ap.PackedData, error) {
 	e2SubDelReq := packerif.NewPackerSubscriptionDeleteRequest()
 	err, packedData := e2SubDelReq.Pack(req)
 	if err != nil {
@@ -191,7 +220,7 @@ func (c *E2ap) PackSubscriptionDeleteRequest(req *e2ap.E2APSubscriptionDeleteReq
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-func (c *E2ap) UnpackSubscriptionDeleteResponse(payload []byte) (*e2ap.E2APSubscriptionDeleteResponse, error) {
+func (e *E2ap) UnpackSubscriptionDeleteResponse(payload []byte) (*e2ap.E2APSubscriptionDeleteResponse, error) {
 	e2SubDelResp := packerif.NewPackerSubscriptionDeleteResponse()
 	err, subDelResp := e2SubDelResp.UnPack(&e2ap.PackedData{payload})
 	if err != nil {
@@ -200,7 +229,7 @@ func (c *E2ap) UnpackSubscriptionDeleteResponse(payload []byte) (*e2ap.E2APSubsc
 	return subDelResp, nil
 }
 
-func (c *E2ap) PackSubscriptionDeleteResponse(req *e2ap.E2APSubscriptionDeleteResponse) (int, *e2ap.PackedData, error) {
+func (e *E2ap) PackSubscriptionDeleteResponse(req *e2ap.E2APSubscriptionDeleteResponse) (int, *e2ap.PackedData, error) {
 	e2SubDelResp := packerif.NewPackerSubscriptionDeleteResponse()
 	err, packedData := e2SubDelResp.Pack(req)
 	if err != nil {
@@ -212,7 +241,7 @@ func (c *E2ap) PackSubscriptionDeleteResponse(req *e2ap.E2APSubscriptionDeleteRe
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-func (c *E2ap) UnpackSubscriptionDeleteFailure(payload []byte) (*e2ap.E2APSubscriptionDeleteFailure, error) {
+func (e *E2ap) UnpackSubscriptionDeleteFailure(payload []byte) (*e2ap.E2APSubscriptionDeleteFailure, error) {
 	e2SubDelFail := packerif.NewPackerSubscriptionDeleteFailure()
 	err, subDelFail := e2SubDelFail.UnPack(&e2ap.PackedData{payload})
 	if err != nil {
@@ -222,7 +251,7 @@ func (c *E2ap) UnpackSubscriptionDeleteFailure(payload []byte) (*e2ap.E2APSubscr
 }
 
 /*
-func (c *E2ap) PackSubscriptionDeleteFailure(req *e2ap.E2APSubscriptionDeleteFailure) (int, *e2ap.PackedData, error) {
+func (e *E2ap) PackSubscriptionDeleteFailure(req *e2ap.E2APSubscriptionDeleteFailure) (int, *e2ap.PackedData, error) {
 	e2SubDelFail := packerif.NewPackerSubscriptionDeleteFailure()
 	err, packedData := e2SubDelFail.Pack(req)
 	if err != nil {

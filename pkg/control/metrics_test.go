@@ -39,6 +39,7 @@ func TestAddAllCountersOnce(t *testing.T) {
 		Counter{cSubReqToE2, 1},
 		Counter{cSubReReqToE2, 1},
 		Counter{cSubRespFromE2, 1},
+		Counter{cPartialSubRespFromE2, 1},
 		Counter{cSubFailFromE2, 1},
 		Counter{cSubReqTimerExpiry, 1},
 		Counter{cRouteCreateFail, 1},
@@ -76,6 +77,7 @@ func TestAddAllCountersOnce(t *testing.T) {
 	mainCtrl.c.UpdateCounter(cSubReqToE2)
 	mainCtrl.c.UpdateCounter(cSubReReqToE2)
 	mainCtrl.c.UpdateCounter(cSubRespFromE2)
+	mainCtrl.c.UpdateCounter(cPartialSubRespFromE2)
 	mainCtrl.c.UpdateCounter(cSubFailFromE2)
 	mainCtrl.c.UpdateCounter(cSubReqTimerExpiry)
 	mainCtrl.c.UpdateCounter(cRouteCreateFail)

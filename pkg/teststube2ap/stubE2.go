@@ -298,12 +298,69 @@ func (tc *E2Stub) SendSubsResp(t *testing.T, req *e2ap.E2APSubscriptionRequest, 
 		resp.ActionAdmittedList.Items[index].ActionId = req.ActionSetups[index].ActionId
 	}
 
-	for index := uint64(0); index < 1; index++ {
-		item := e2ap.ActionNotAdmittedItem{}
-		item.ActionId = index
-		item.Cause.Content = 1
-		item.Cause.Value = 1
-		resp.ActionNotAdmittedList.Items = append(resp.ActionNotAdmittedList.Items, item)
+	packerr, packedMsg := e2SubsResp.Pack(resp)
+	if packerr != nil {
+		tc.TestError(t, "pack NOK %s", packerr.Error())
+	}
+	tc.Debug("%s", e2SubsResp.String())
+
+	params := &xapp.RMRParams{}
+	params.Mtype = xapp.RIC_SUB_RESP
+	//params.SubId = msg.SubId
+	params.SubId = -1
+	params.Payload = packedMsg.Buf
+	params.PayloadLen = len(packedMsg.Buf)
+	params.Meid = msg.Meid
+	//params.Xid = msg.Xid
+	params.Mbuf = nil
+
+	tc.Debug("SEND SUB RESP: %s", params.String())
+	snderr := tc.SendWithRetry(params, false, 5)
+	if snderr != nil {
+		tc.TestError(t, "RMR SEND FAILED: %s", snderr.Error())
+	}
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+func (tc *E2Stub) SendPartialSubsResp(t *testing.T, req *e2ap.E2APSubscriptionRequest, msg *xapp.RMRParams, actionNotAdmittedList e2ap.ActionNotAdmittedList) {
+	tc.Debug("SendPartialSubsResp")
+
+	if len(actionNotAdmittedList.Items) == 0 {
+		tc.TestError(t, "SendPartialSubsResp() Empty actionNotAdmittedList.Items")
+		return
+	}
+
+	e2SubsResp := e2asnpacker.NewPackerSubscriptionResponse()
+
+	//---------------------------------
+	// e2term activity: Send Subs Resp
+	//---------------------------------
+	resp := &e2ap.E2APSubscriptionResponse{}
+
+	resp.RequestId.Id = req.RequestId.Id
+	resp.RequestId.InstanceId = req.RequestId.InstanceId
+	resp.FunctionId = req.FunctionId
+
+	for index, actionNotAdmittedItem := range actionNotAdmittedList.Items {
+		for _, ActionToBeSetupItem := range req.ActionSetups {
+			if ActionToBeSetupItem.ActionId == actionNotAdmittedItem.ActionId {
+				actionNotAdmittedItem := e2ap.ActionNotAdmittedItem{}
+				actionNotAdmittedItem.ActionId = ActionToBeSetupItem.ActionId
+				actionNotAdmittedItem.Cause.Content = 1
+				actionNotAdmittedItem.Cause.Value = 8
+				resp.ActionNotAdmittedList.Items = append(resp.ActionNotAdmittedList.Items, actionNotAdmittedItem)
+				// Remove the element
+				req.ActionSetups = append(req.ActionSetups[:index], req.ActionSetups[index+1:]...)
+
+			}
+		}
+	}
+	for _, ActionToBeSetupItem := range req.ActionSetups {
+		actionAdmittedItem := e2ap.ActionAdmittedItem{}
+		actionAdmittedItem.ActionId = ActionToBeSetupItem.ActionId
+		resp.ActionAdmittedList.Items = append(resp.ActionAdmittedList.Items, actionAdmittedItem)
 	}
 
 	packerr, packedMsg := e2SubsResp.Pack(resp)

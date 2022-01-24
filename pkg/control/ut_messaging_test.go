@@ -4616,6 +4616,83 @@ func TestRESTSubReqSubFailRespInSubmgr(t *testing.T) {
 }
 
 //-----------------------------------------------------------------------------
+// TestRESTSubReqPartialResp
+//
+//   stub                          stub
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//     |                 |              |
+//     | RESTSubReq      |              |
+//     |---------------->|              |
+//     | RESTSubResp     |              |
+//     |<----------------|              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 | SubResp      | Partially accepted
+//     |                 |<-------------|
+//     |                 |              |
+//     | RESTNotif       |              |
+//     |<----------------|              |
+//     |                 |              |
+//     |           [SUBS DELETE]        |
+//     |                 |              |
+//
+//-----------------------------------------------------------------------------
+
+func TestRESTSubReqPartialResp(t *testing.T) {
+
+	// Init counter check
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 1},
+		Counter{cRestSubRespToXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cSubRespFromE2, 1},
+		Counter{cPartialSubRespFromE2, 1},
+		Counter{cRestSubNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelRespFromE2, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+	})
+
+	// Req
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
+
+	actionId := int64(2)
+	actionType := "report"
+	actionDefinition := []int64{5678, 1}
+	subsequestActionType := "continue"
+	timeToWait := "w10ms"
+	params.AppendActionToActionToBeSetupList(actionId, actionType, actionDefinition, subsequestActionType, timeToWait)
+
+	restSubId := xappConn1.SendRESTSubsReq(t, params)
+	crereq, cremsg := e2termConn1.RecvSubsReq(t)
+	xappConn1.ExpectRESTNotification(t, restSubId)
+
+	actionNotAdmittedItem := e2ap.ActionNotAdmittedItem{}
+	actionNotAdmittedItem.ActionId = 1
+	actionNotAdmittedItem.Cause.Content = 1
+	actionNotAdmittedItem.Cause.Value = 8
+	actionNotAdmittedList := e2ap.ActionNotAdmittedList{}
+	actionNotAdmittedList.Items = append(actionNotAdmittedList.Items, actionNotAdmittedItem)
+	e2termConn1.SendPartialSubsResp(t, crereq, cremsg, actionNotAdmittedList)
+	e2SubsId := xappConn1.WaitRESTNotification(t, restSubId)
+
+	queryXappSubscription(t, int64(e2SubsId), "RAN_NAME_1", []string{"localhost:13560"})
+
+	// Del
+	deleteSubscription(t, xappConn1, e2termConn1, &restSubId)
+
+	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
+	//Wait that subs is cleaned
+	waitSubsCleanup(t, e2SubsId, 10)
+
+	mainCtrl.VerifyCounterValues(t)
+	mainCtrl.VerifyAllClean(t)
+}
+
+//-----------------------------------------------------------------------------
 // TestRESTSubDelReqRetryInSubmgr
 //
 //   stub                             stub

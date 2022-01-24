@@ -17,6 +17,7 @@ const (
 	cSubReqToE2             string = "SubReqToE2"
 	cSubReReqToE2           string = "SubReReqToE2"
 	cSubRespFromE2          string = "SubRespFromE2"
+	cPartialSubRespFromE2   string = "PartialSubRespFromE2"
 	cSubFailFromE2          string = "SubFailFromE2"
 	cSubReqTimerExpiry      string = "SubReqTimerExpiry"
 	cRouteCreateFail        string = "RouteCreateFail"
@@ -58,6 +59,7 @@ func GetMetricsOpts() []xapp.CounterOpts {
 		{Name: cRestSubFailNotifToXapp, Help: "The total number of failure Rest SubscriptionNotification messages sent to xApp"},
 		{Name: cSubReqToE2, Help: "The total number of SubscriptionRequest messages sent to E2Term"},
 		{Name: cSubReReqToE2, Help: "The total number of SubscriptionRequest messages resent to E2Term"},
+		{Name: cPartialSubRespFromE2, Help: "The total number of partial SubscriptionResponse messages from E2Term"},
 		{Name: cSubRespFromE2, Help: "The total number of SubscriptionResponse messages from E2Term"},
 		{Name: cSubFailFromE2, Help: "The total number of SubscriptionFailure messages from E2Term"},
 		{Name: cSubReqTimerExpiry, Help: "The total number of SubscriptionRequest timer expires"},

@@ -381,6 +381,7 @@ Metrics
 		- SubReqToE2: The total number of SubscriptionRequest messages sent to E2Term
 		- SubReReqToE2: The total number of SubscriptionRequest messages resent to E2Term
 		- SubRespFromE2: The total number of SubscriptionResponse messages from E2Term
+		- PartialSubRespFromE2: The total number of partial SubscriptionResponse messages from E2Term
 		- SubFailFromE2: The total number of SubscriptionFailure messages from E2Term
 		- SubReqTimerExpiry: The total number of SubscriptionRequest timer expires
 		- RouteCreateFail: The total number of subscription route create failure
@@ -629,3 +630,17 @@ Recommendations for xApps
      all E2 subscriptions sent in REST subscription request. Maximum time to complete all E2 subscriptions in Subscription Manager can be calculated like this:
      t >= 3 * 2s * count_of_subscriptions in the REST request. Length of supervising timers in Subscription Manager for the requests it sends to E2 Node is by
      default 2 seconds. There can be only one ongoing E2 subscription request towards per E2 Node other requests are queued in Subscription Manager.
+
+Special notes
+-------------
+ According to E2 specification E2Node may accept subscription partially. This in not properly supported in REST interface between xApp and Subscription Manager.
+ The interface specification yaml lacks ActionNotAdmittedList IE for RICSubscriptionResponse and RICSubscriptionFailure messages. That information in now embedded as
+ workaround in the descriptive error string as a valid JSON string. Missing ActionNotAdmittedList will be added in the REST interface in some coming update.
+
+ Example descriptive error string for RICSubscriptionResponse:
+
+   Error cause RICSubscriptionResponse partially accepted: ActionNotAdmittedList: [{\"ActionId\":1,\"Cause\":{\"Content\":1,\"Value\":8}}]
+
+ Example descriptive error string for RICSubscriptionFailure:
+
+   Error cause RICSubscriptionFailure: ActionNotAdmittedList: [{\"ActionId\":1,\"Cause\":{\"Content\":5,\"Value\":1}}]

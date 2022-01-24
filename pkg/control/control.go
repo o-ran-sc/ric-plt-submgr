@@ -578,7 +578,7 @@ func (c *Control) processSubscriptionRequests(restSubscription *RESTSubscription
 			restSubscription.AddMd5Sum(md5sum)
 			xapp.Logger.Debug("SubscriptionRequest index=%v processed successfullyfor %s. endpoint=%v:%v, XappEventInstanceID=%v, E2EventInstanceID=%v, %s",
 				index, *restSubId, clientEndpoint.Host, *clientEndpoint.HTTPPort, xAppEventInstanceID, e2EventInstanceID, idstring(nil, trans))
-			c.sendSuccesfullResponseNotification(restSubId, restSubscription, xAppEventInstanceID, e2EventInstanceID, clientEndpoint, trans)
+			c.sendSuccesfullResponseNotification(restSubId, restSubscription, xAppEventInstanceID, e2EventInstanceID, clientEndpoint, trans, errorInfo)
 		}
 	}
 }
@@ -632,6 +632,7 @@ func (c *Control) handleSubscriptionRequest(trans *TransactionXapp, subReqMsg *e
 		case *e2ap.E2APSubscriptionResponse:
 			trans.Release()
 			if c.e2IfState.IsE2ConnectionUp(meid) == true {
+				errorInfo = c.e2ap.CheckActionNotAdmittedList(xapp.RIC_SUB_RESP, themsg.ActionNotAdmittedList, c)
 				return themsg, &errorInfo, nil
 			} else {
 				c.registry.RemoveFromSubscription(subs, trans, waitRouteCleanup_ms, c)
@@ -640,10 +641,10 @@ func (c *Control) handleSubscriptionRequest(trans *TransactionXapp, subReqMsg *e
 				errorInfo.SetInfo(err.Error(), models.SubscriptionInstanceErrorSourceE2Node, "")
 			}
 		case *e2ap.E2APSubscriptionFailure:
-			err = fmt.Errorf("E2 SubscriptionFailure received")
-			errorInfo.SetInfo(err.Error(), models.SubscriptionInstanceErrorSourceE2Node, "")
+			err = fmt.Errorf("E2 RICSubscriptionFailure received")
+			errorInfo = c.e2ap.CheckActionNotAdmittedList(xapp.RIC_SUB_FAILURE, themsg.ActionNotAdmittedList, c)
 		case *PackSubscriptionRequestErrortEvent:
-			err = fmt.Errorf("E2 SubscriptionRequest pack failure")
+			err = fmt.Errorf("E2 RICSubscriptionRequest pack failure")
 			errorInfo = themsg.ErrorInfo
 		case *SDLWriteErrortEvent:
 			err = fmt.Errorf("SDL write failure")
@@ -659,7 +660,7 @@ func (c *Control) handleSubscriptionRequest(trans *TransactionXapp, subReqMsg *e
 		}
 	} else {
 		// Timer expiry
-		err = fmt.Errorf("E2 subscription response timeout")
+		err = fmt.Errorf("E2 RICSubscriptionResponse timeout")
 		errorInfo.SetInfo(err.Error(), "", models.SubscriptionInstanceTimeoutTypeE2Timeout)
 		if subs.PolicyUpdate == true {
 			return nil, &errorInfo, err
@@ -697,10 +698,10 @@ func (c *Control) sendUnsuccesfullResponseNotification(restSubId *string, restSu
 	restSubscription.SetProcessed(err)
 	c.UpdateRESTSubscriptionInDB(*restSubId, restSubscription, false)
 	if trans != nil {
-		xapp.Logger.Debug("Sending unsuccessful REST notification (cause %s) to endpoint=%v:%v, XappEventInstanceID=%v, E2EventInstanceID=%v, %s",
+		xapp.Logger.Debug("Sending unsuccessful REST notification (Error cause %s) to endpoint=%v:%v, XappEventInstanceID=%v, E2EventInstanceID=%v, %s",
 			errorInfo.ErrorCause, clientEndpoint.Host, *clientEndpoint.HTTPPort, xAppEventInstanceID, e2EventInstanceID, idstring(nil, trans))
 	} else {
-		xapp.Logger.Debug("Sending unsuccessful REST notification (cause %s) to endpoint=%v:%v, XappEventInstanceID=%v, E2EventInstanceID=%v",
+		xapp.Logger.Debug("Sending unsuccessful REST notification (Error cause %s) to endpoint=%v:%v, XappEventInstanceID=%v, E2EventInstanceID=%v",
 			errorInfo.ErrorCause, clientEndpoint.Host, *clientEndpoint.HTTPPort, xAppEventInstanceID, e2EventInstanceID)
 	}
 
@@ -718,7 +719,7 @@ func (c *Control) sendUnsuccesfullResponseNotification(restSubId *string, restSu
 //
 //-------------------------------------------------------------------
 func (c *Control) sendSuccesfullResponseNotification(restSubId *string, restSubscription *RESTSubscription, xAppEventInstanceID int64, e2EventInstanceID int64,
-	clientEndpoint *models.SubscriptionParamsClientEndpoint, trans *TransactionXapp) {
+	clientEndpoint *models.SubscriptionParamsClientEndpoint, trans *TransactionXapp, errorInfo *ErrorInfo) {
 
 	// Store successfully processed InstanceId for deletion
 	restSubscription.AddE2InstanceId((uint32)(e2EventInstanceID))
@@ -729,16 +730,21 @@ func (c *Control) sendSuccesfullResponseNotification(restSubId *string, restSubs
 		SubscriptionID: restSubId,
 		SubscriptionInstances: []*models.SubscriptionInstance{
 			&models.SubscriptionInstance{E2EventInstanceID: &e2EventInstanceID,
-				ErrorCause:          "",
+				ErrorCause:          errorInfo.ErrorCause,
+				ErrorSource:         errorInfo.ErrorSource,
 				XappEventInstanceID: &xAppEventInstanceID},
 		},
 	}
 	// Mark REST subscription request processesd.
 	restSubscription.SetProcessed(nil)
 	c.UpdateRESTSubscriptionInDB(*restSubId, restSubscription, false)
-	xapp.Logger.Debug("Sending successful REST notification to endpoint=%v:%v, XappEventInstanceID=%v, E2EventInstanceID=%v, %s",
-		clientEndpoint.Host, *clientEndpoint.HTTPPort, xAppEventInstanceID, e2EventInstanceID, idstring(nil, trans))
-
+	if errorInfo.ErrorCause != " " {
+		xapp.Logger.Debug("Sending successful REST notification (Error cause %s) to endpoint=%v:%v, XappEventInstanceID=%v, E2EventInstanceID=%v, %s",
+			errorInfo.ErrorCause, clientEndpoint.Host, *clientEndpoint.HTTPPort, xAppEventInstanceID, e2EventInstanceID, idstring(nil, trans))
+	} else {
+		xapp.Logger.Debug("Sending successful REST notification to endpoint=%v:%v, XappEventInstanceID=%v, E2EventInstanceID=%v, %s",
+			clientEndpoint.Host, *clientEndpoint.HTTPPort, xAppEventInstanceID, e2EventInstanceID, idstring(nil, trans))
+	}
 	c.UpdateCounter(cRestSubNotifToXapp)
 	xapp.Subscription.Notify(resp, *clientEndpoint)
 
