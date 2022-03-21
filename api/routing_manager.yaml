@@ -1,4 +1,3 @@
-#
 #==================================================================================
 #   Copyright (c) 2019 AT&T Intellectual Property.
 #   Copyright (c) 2019 Nokia
@@ -38,6 +37,8 @@ tags:
 #    url: "http://127.0.0.1"
 - name: "health"
   description: "Health of the system"
+- name: "debug"
+  description: "Debug Information"
 schemes:
 #- "https"
 - "http"
@@ -60,6 +61,24 @@ paths:
           description: "The health of the system"
           schema:
             "$ref": "#/definitions/health-status"
+  /getdebuginfo:
+    get:
+      tags:
+      - "debug"
+      summary: "Get Information for debugging"
+      description: "By performing a GET method, API caller is able to get the dump of routes tables, subcription list and E2T's"
+      operationId: "get_debuginfo"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "Debug Info from routing manager"
+          schema:
+            "$ref": "#/definitions/debuginfo"
+        201:
+          description: "Error while fetching Debug data"    
   /handles:
     get:
       tags:
@@ -276,6 +295,53 @@ paths:
           description: "Invalid data"
         201:
           description: "ran instances disociated"
+  /handles/addrmrroute:
+    post:
+      tags:
+      - "handle"
+      summary: "API to add RMR routes"
+      description: "By performing a POST method to add RMR routes"
+      operationId: "add_rmr_route"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+        - in: body
+          name: routes-list
+          description: "list of routes to add"
+          required: true
+          schema:
+           $ref: "#/definitions/routelist"
+      responses:
+        400:
+          description: "Invalid data"
+        201:
+          description: "rmr routes added"     
+          
+  /handles/delrmrroute:
+    delete:
+      tags:
+      - "handle"
+      summary: "API to delete RMR routes"
+      description: "By performing a DELETE method to add RMR routes"
+      operationId: "del_rmr_route"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+        - in: body
+          name: routes-list
+          description: "list of routes to delete"
+          required: true
+          schema:
+           $ref: "#/definitions/routelist"
+      responses:
+        400:
+          description: "Invalid data"
+        201:
+          description: "rmr routes added" 
 definitions:
   health-status:
     type: "object"
@@ -368,10 +434,53 @@ definitions:
         $ref: '#/definitions/ranNamelist'
       ranAssocList:
         $ref: "#/definitions/ran-e2t-map"
-          
+  endpoint:
+    type: "object"
+    properties:
+      EndPointName:
+        type: "string"
+      EndPointFqdn:
+        type: "string"
+      EndPointPort:
+        type: "integer"
+        format: "uint16"
+        minimum: 0
+        maximum: 65535
+    
+  debuginfo:
+    type: "object"
+    required:
+      - "RouteTable"
+    properties:
+      RouteTable:
+        type: "array"
+        items:
+          type: "string"
+      RouteConfigs:
+        type: "string"
 
+  add-rmr-route:
+    type: "object"
+    required:
+      - "TargetEndPoint"
+      - "MessageType"
+    properties:
+      TargetEndPoint:
+        type: "string"
+      MessageType:
+        type: "integer"
+        format: "uint32"      
+      SenderEndPoint:
+        type: "string"
+      SubscriptionID:
+        type: "integer"
+        format: "int32"      
+  
+  routelist:
+    type: "array"
+    items:
+      $ref: '#/definitions/add-rmr-route'
+        
 externalDocs:
   description: "Routing Manager"
   url: "http://placeholder"
-
-

@@ -25,21 +25,15 @@
 ###########################################################
 FROM nexus3.o-ran-sc.org:10002/o-ran-sc/bldr-ubuntu20-c-go:1.0.0 as submgrcore
 
-ARG g14="1.14.4"
-ARG GOVERSION="1.14"
-RUN wget -nv https://dl.google.com/go/go${g14}.linux-amd64.tar.gz \
-     && tar -xf go${g14}.linux-amd64.tar.gz \
+ARG GOVERSION="1.17.8"
+RUN wget -nv https://dl.google.com/go/go${GOVERSION}.linux-amd64.tar.gz \
+     && tar -xf go${GOVERSION}.linux-amd64.tar.gz \
      && mv go /opt/go/${GOVERSION} \
      && rm -f go*.gz
 
+
 ENV DEFAULTPATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 ENV PATH=$DEFAULTPATH:/usr/local/go/bin:/opt/go/${GOVERSION}/bin:/root/go/bin
-
-# Update CA certificates
-RUN apt update && apt install --reinstall -y \
-  ca-certificates \
-  && \
-  update-ca-certificates
 
 RUN apt update && apt install -y iputils-ping net-tools curl tcpdump gdb valgrind
 
@@ -66,9 +60,7 @@ RUN wget --quiet ${SWAGGERURL} \
 # GO DELVE
 #
 RUN export GOBIN=/usr/local/bin/ ; \
-    go get -u github.com/go-delve/delve/cmd/dlv \
-    && go install github.com/go-delve/delve/cmd/dlv
-
+  go install github.com/go-delve/delve/cmd/dlv@latest
 
 #
 # RMR
@@ -81,7 +73,7 @@ RUN wget --content-disposition ${RMRDEVURL} && dpkg -i rmr-dev_${RMRVERSION}_amd
 RUN rm -f rmr_${RMRVERSION}_amd64.deb rmr-dev_${RMRVERSION}_amd64.deb
 
 
-RUN mkdir /manifests/
+RUN mkdir -p /manifests/
 RUN echo "rmrlib ${RMRVERSION} ${RMRLIBURL}" >> /manifests/versions.txt
 RUN echo "rmrdev ${RMRVERSION} ${RMRDEVURL}" >> /manifests/versions.txt
 RUN echo "swagger ${SWAGGERVERSION} ${SWAGGERURL}" >> /manifests/versions.txt
@@ -145,14 +137,11 @@ RUN go mod download
 RUN mkdir pkg
 COPY api api
 
-
-ARG RTMGRVERSION=cd7867c8f527f46fd8702b0b8d6b380a8e134bea
-
+ARG RTMGRVERSION=8becf0c4e06bc89b13d217a102eb7a50470cddc5
 RUN git clone "https://gerrit.o-ran-sc.org/r/ric-plt/rtmgr" \
     && git -C "rtmgr" checkout $RTMGRVERSION \
     && cp rtmgr/api/routing_manager.yaml api/ \
     && rm -rf rtmgr
-
 
 RUN mkdir -p /root/go && \
     swagger generate client -f api/routing_manager.yaml -t pkg/ -m rtmgr_models -c rtmgr_client
