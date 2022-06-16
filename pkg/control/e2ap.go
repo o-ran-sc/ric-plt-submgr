@@ -128,6 +128,12 @@ func (e *E2ap) CheckActionNotAdmittedList(msgType int, actionNotAdmittedList e2a
 			actionNotAdmittedString = "ActionNotAdmittedList: " + string(jsonActionNotAdmittedList)
 		}
 	}
+
+	if msgType == xapp.RIC_SUB_FAILURE {
+		prefixString = "RICSubscriptionFailure"
+		err := fmt.Errorf("%s", prefixString)
+		errorInfo.SetInfo(err.Error(), models.SubscriptionInstanceErrorSourceE2Node, "")
+	}
 	err := fmt.Errorf("%s %s", prefixString, actionNotAdmittedString)
 	errorInfo.SetInfo(err.Error(), models.SubscriptionInstanceErrorSourceE2Node, "")
 	return errorInfo

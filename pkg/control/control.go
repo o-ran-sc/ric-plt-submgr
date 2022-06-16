@@ -445,6 +445,12 @@ func (c *Control) RESTSubscriptionHandler(params interface{}) (*models.Subscript
 		return nil, common.SubscribeBadRequestCode
 	}
 
+	e2SubscriptionDirectives, err := c.GetE2SubscriptionDirectives(p)
+	if err != nil {
+		xapp.Logger.Error("%s", err)
+		c.UpdateCounter(cRestSubFailToXapp)
+		return nil, common.SubscribeBadRequestCode
+	}
 	_, xAppRmrEndpoint, err := ConstructEndpointAddresses(*p.ClientEndpoint)
 	if err != nil {
 		xapp.Logger.Error("%s", err.Error())
@@ -484,12 +490,6 @@ func (c *Control) RESTSubscriptionHandler(params interface{}) (*models.Subscript
 	}
 
 	c.WriteRESTSubscriptionToDb(restSubId, restSubscription)
-	e2SubscriptionDirectives, err := c.GetE2SubscriptionDirectives(p)
-	if err != nil {
-		xapp.Logger.Error("%s", err)
-		c.registry.DeleteRESTSubscription(&restSubId)
-		return nil, common.SubscribeBadRequestCode
-	}
 	go c.processSubscriptionRequests(restSubscription, &subReqList, p.ClientEndpoint, p.Meid, &restSubId, xAppRmrEndpoint, md5sum, e2SubscriptionDirectives)
 
 	c.UpdateCounter(cRestSubRespToXapp)
@@ -698,11 +698,11 @@ func (c *Control) sendUnsuccesfullResponseNotification(restSubId *string, restSu
 	restSubscription.SetProcessed(err)
 	c.UpdateRESTSubscriptionInDB(*restSubId, restSubscription, false)
 	if trans != nil {
-		xapp.Logger.Debug("Sending unsuccessful REST notification (Error cause %s) to endpoint=%v:%v, XappEventInstanceID=%v, E2EventInstanceID=%v, %s",
-			errorInfo.ErrorCause, clientEndpoint.Host, *clientEndpoint.HTTPPort, xAppEventInstanceID, e2EventInstanceID, idstring(nil, trans))
+		xapp.Logger.Debug("Sending unsuccessful REST notification: ErrorCause:%s, ErrorSource:%s, TimeoutType:%s, to Endpoint=%v:%v, XappEventInstanceID=%v, E2EventInstanceID=%v, %s",
+			errorInfo.ErrorCause, errorInfo.ErrorSource, errorInfo.TimeoutType, clientEndpoint.Host, *clientEndpoint.HTTPPort, xAppEventInstanceID, e2EventInstanceID, idstring(nil, trans))
 	} else {
-		xapp.Logger.Debug("Sending unsuccessful REST notification (Error cause %s) to endpoint=%v:%v, XappEventInstanceID=%v, E2EventInstanceID=%v",
-			errorInfo.ErrorCause, clientEndpoint.Host, *clientEndpoint.HTTPPort, xAppEventInstanceID, e2EventInstanceID)
+		xapp.Logger.Debug("Sending unsuccessful REST notification: ErrorCause:%s, ErrorSource:%s, TimeoutType:%s, to Endpoint=%v:%v, XappEventInstanceID=%v, E2EventInstanceID=%v",
+			errorInfo.ErrorCause, errorInfo.ErrorSource, errorInfo.TimeoutType, clientEndpoint.Host, *clientEndpoint.HTTPPort, xAppEventInstanceID, e2EventInstanceID)
 	}
 
 	c.UpdateCounter(cRestSubFailNotifToXapp)
@@ -738,13 +738,8 @@ func (c *Control) sendSuccesfullResponseNotification(restSubId *string, restSubs
 	// Mark REST subscription request processesd.
 	restSubscription.SetProcessed(nil)
 	c.UpdateRESTSubscriptionInDB(*restSubId, restSubscription, false)
-	if errorInfo.ErrorCause != " " {
-		xapp.Logger.Debug("Sending successful REST notification (Error cause %s) to endpoint=%v:%v, XappEventInstanceID=%v, E2EventInstanceID=%v, %s",
-			errorInfo.ErrorCause, clientEndpoint.Host, *clientEndpoint.HTTPPort, xAppEventInstanceID, e2EventInstanceID, idstring(nil, trans))
-	} else {
-		xapp.Logger.Debug("Sending successful REST notification to endpoint=%v:%v, XappEventInstanceID=%v, E2EventInstanceID=%v, %s",
-			clientEndpoint.Host, *clientEndpoint.HTTPPort, xAppEventInstanceID, e2EventInstanceID, idstring(nil, trans))
-	}
+	xapp.Logger.Debug("Sending successful REST notification: ErrorCause:%s, ErrorSource:%s, TimeoutType:%s, to Endpoint=%v:%v, XappEventInstanceID=%v, E2EventInstanceID=%v, %s",
+		errorInfo.ErrorCause, errorInfo.ErrorSource, errorInfo.TimeoutType, clientEndpoint.Host, *clientEndpoint.HTTPPort, xAppEventInstanceID, e2EventInstanceID, idstring(nil, trans))
 	c.UpdateCounter(cRestSubNotifToXapp)
 	xapp.Subscription.Notify(resp, *clientEndpoint)
 
