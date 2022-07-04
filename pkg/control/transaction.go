@@ -200,6 +200,9 @@ func (t *TransactionXapp) Release() {
 	t.mutex.Unlock()
 
 	if tracker != nil && xappkey != nil {
-		tracker.UnTrackTransaction(*xappkey)
+		_, err := tracker.UnTrackTransaction(*xappkey)
+		if err != nil {
+			xapp.Logger.Error("tracker.UnTrackTransaction() failed:%s", err.Error())
+		}
 	}
 }

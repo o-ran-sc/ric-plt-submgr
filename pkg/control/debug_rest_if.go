@@ -47,8 +47,14 @@ func (c *Control) TestRestHandler(w http.ResponseWriter, r *http.Request) {
 	// This can be used to remove all subscriptions db from
 	if s == "emptydb" {
 		xapp.Logger.Debug("RemoveAllSubscriptionsFromSdl() called")
-		c.RemoveAllSubscriptionsFromSdl()
-		c.RemoveAllRESTSubscriptionsFromSdl()
+		err := c.RemoveAllSubscriptionsFromSdl()
+		if err != nil {
+			xapp.Logger.Error("RemoveAllSubscriptionsFromSdl() RemoveAllSubscriptionsFromSdl() failure: %s", err.Error())
+		}
+		err = c.RemoveAllRESTSubscriptionsFromSdl()
+		if err != nil {
+			xapp.Logger.Error("RemoveAllRESTSubscriptionsFromSdl() RemoveAllSubscriptionsFromSdl() failure: %s", err.Error())
+		}
 		return
 	}
 
@@ -68,7 +74,10 @@ func (c *Control) GetAllRestSubscriptions(w http.ResponseWriter, r *http.Request
 
 	// Get all REST Subscriptions in subscription manager
 	xapp.Logger.Debug("GetAllRestSubscriptions() called")
-	w.Write(c.registry.GetAllRestSubscriptionsJson())
+	_, err := w.Write(c.registry.GetAllRestSubscriptionsJson())
+	if err != nil {
+		xapp.Logger.Error("GetAllRestSubscriptions() w.Write failure: %s", err.Error())
+	}
 }
 
 func (c *Control) GetAllE2Nodes(w http.ResponseWriter, r *http.Request) {
@@ -86,7 +95,10 @@ func (c *Control) GetAllE2NodeRestSubscriptions(w http.ResponseWriter, r *http.R
 	ranName := pathParams["ranName"]
 	xapp.Logger.Debug("GetAllE2NodeRestSubscriptions() ranName=%s", ranName)
 	if ranName != "" {
-		w.Write(c.registry.GetAllE2NodeRestSubscriptionsJson(ranName))
+		_, err := w.Write(c.registry.GetAllE2NodeRestSubscriptionsJson(ranName))
+		if err != nil {
+			xapp.Logger.Error("GetAllE2NodeRestSubscriptions() w.Write failure: %s", err.Error())
+		}
 	} else {
 		xapp.Logger.Debug("GetAllE2NodeRestSubscriptions() Invalid path %s", ranName)
 		w.WriteHeader(400) // Bad request
@@ -97,7 +109,10 @@ func (c *Control) GetAllXapps(w http.ResponseWriter, r *http.Request) {
 
 	// Get all xApps in subscription manager
 	xapp.Logger.Debug("GetAllXapps() called: Req= %v", r.URL.Path)
-	w.Write(c.registry.GetAllXappsJson())
+	_, err := w.Write(c.registry.GetAllXappsJson())
+	if err != nil {
+		xapp.Logger.Error("GetAllXapps() w.Write failure: %s", err.Error())
+	}
 }
 
 func (c *Control) GetAllXappRestSubscriptions(w http.ResponseWriter, r *http.Request) {
@@ -108,7 +123,10 @@ func (c *Control) GetAllXappRestSubscriptions(w http.ResponseWriter, r *http.Req
 	xappServiceName := pathParams["xappServiceName"]
 	xapp.Logger.Debug("GetAllXappRestSubscriptions() xappServiceName=%s", xappServiceName)
 	if xappServiceName != "" {
-		w.Write(c.registry.GetAllXappRestSubscriptionsJson(xappServiceName))
+		_, err := w.Write(c.registry.GetAllXappRestSubscriptionsJson(xappServiceName))
+		if err != nil {
+			xapp.Logger.Error("GetAllXappRestSubscriptions() w.Write failure: %s", err.Error())
+		}
 	} else {
 		xapp.Logger.Debug("GetAllXappRestSubscriptions() Invalid path %s", xappServiceName)
 		w.WriteHeader(400) // Bad request
@@ -177,6 +195,9 @@ func (c *Control) GetE2Subscriptions(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(404) // Not found
 	} else {
-		w.Write(e2Subscriptions)
+		_, err := w.Write(e2Subscriptions)
+		if err != nil {
+			xapp.Logger.Error("GetE2Subscriptions() w.Write failure: %s", err.Error())
+		}
 	}
 }

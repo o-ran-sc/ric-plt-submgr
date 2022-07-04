@@ -57,7 +57,10 @@ func (d *DuplicateCtrl) SetMd5sumFromLastOkRequest(restSubsId string, md5sum str
 		return
 	}
 
-	d.removeOngoingTransaction(md5sum)
+	err := d.removeOngoingTransaction(md5sum)
+	if err != nil {
+		xapp.Logger.Error("removeOngoingTransaction() failed:%s", err.Error())
+	}
 
 	prevRestSubsId, exists := d.previousRequestMap[md5sum]
 

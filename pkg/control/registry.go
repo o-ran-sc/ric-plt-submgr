@@ -530,7 +530,9 @@ func (r *Registry) RemoveFromSubscription(subs *Subscription, trans *Transaction
 	if waitRouteClean > 0 {
 		// Wait here that response is delivered to xApp via RMR before route is cleaned
 		xapp.Logger.Debug("Pending %v in order to wait route cleanup", waitRouteClean)
+		r.mutex.Unlock()
 		time.Sleep(waitRouteClean)
+		r.mutex.Lock()
 	}
 
 	xapp.Logger.Debug("CLEAN %s", subs.String())
@@ -567,7 +569,10 @@ func (r *Registry) RemoveFromSubscription(subs *Subscription, trans *Transaction
 
 		// Endpoint of merged subscription is being deleted
 		xapp.Logger.Debug("Subscription route update WriteSubscriptionToDb")
-		c.WriteSubscriptionToDb(subs)
+		err := c.WriteSubscriptionToDb(subs)
+		if err != nil {
+			xapp.Logger.Error("tracker.UnTrackTransaction() failed:%s", err.Error())
+		}
 		c.UpdateCounter(cUnmergedSubscriptions)
 	}
 	return nil

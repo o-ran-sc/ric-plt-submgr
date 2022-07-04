@@ -170,8 +170,14 @@ func NewControl() *Control {
 
 	if readSubsFromDb == "true" {
 		// Read subscriptions from db
-		c.ReadE2Subscriptions()
-		c.ReadRESTSubscriptions()
+		err := c.ReadE2Subscriptions()
+		if err != nil {
+			xapp.Logger.Error("ReadE2Subscriptions() failed %s", err.Error())
+		}
+		err = c.ReadRESTSubscriptions()
+		if err != nil {
+			xapp.Logger.Error("ReadRESTSubscriptions() failed %s", err.Error())
+		}
 	}
 
 	go xapp.Subscription.Listen(c.RESTSubscriptionHandler, c.RESTQueryHandler, c.RESTSubscriptionDeleteHandler)
@@ -179,7 +185,11 @@ func NewControl() *Control {
 }
 
 func (c *Control) SymptomDataHandler(w http.ResponseWriter, r *http.Request) {
-	subscriptions, _ := c.registry.QueryHandler()
+	subscriptions, err := c.registry.QueryHandler()
+	if err != nil {
+		xapp.Logger.Error("QueryHandler() failed %s", err.Error())
+	}
+
 	xapp.Resource.SendSymptomDataJson(w, r, subscriptions, "platform/subscriptions.json")
 }
 
@@ -237,7 +247,10 @@ func (c *Control) ReadRESTSubscriptions() error {
 			for restSubId, restSubscription := range restSubscriptions {
 				restSubscription.SubReqOngoing = false
 				restSubscription.SubDelReqOngoing = false
-				c.WriteRESTSubscriptionToSdl(restSubId, restSubscription)
+				err := c.WriteRESTSubscriptionToSdl(restSubId, restSubscription)
+				if err != nil {
+					xapp.Logger.Error("WriteRESTSubscriptionToSdl() failed:%s", err.Error())
+				}
 			}
 			c.registry.restSubscriptions = restSubscriptions
 			return nil
@@ -667,8 +680,11 @@ func (c *Control) handleSubscriptionRequest(trans *TransactionXapp, subReqMsg *e
 		}
 	}
 
-	xapp.Logger.Error("XAPP-SubReq E2 subscription failed %s", idstring(err, trans, subs))
-	c.registry.RemoveFromSubscription(subs, trans, waitRouteCleanup_ms, c)
+	xapp.Logger.Error("XAPP-SubReq E2 subscription failed: %s", idstring(err, trans, subs))
+	err2 := c.registry.RemoveFromSubscription(subs, trans, waitRouteCleanup_ms, c)
+	if err2 != nil {
+		xapp.Logger.Error("RemoveFromSubscription failed: %s", err2.Error())
+	}
 	return nil, &errorInfo, err
 }
 
@@ -706,7 +722,10 @@ func (c *Control) sendUnsuccesfullResponseNotification(restSubId *string, restSu
 	}
 
 	c.UpdateCounter(cRestSubFailNotifToXapp)
-	xapp.Subscription.Notify(resp, *clientEndpoint)
+	err = xapp.Subscription.Notify(resp, *clientEndpoint)
+	if err != nil {
+		xapp.Logger.Error("xapp.Subscription.Notify failed %s", err.Error())
+	}
 
 	// E2 is down. Delete completely processed request safely now
 	if c.e2IfState.IsE2ConnectionUp(&restSubscription.Meid) == false && restSubscription.SubReqOngoing == false {
@@ -741,7 +760,10 @@ func (c *Control) sendSuccesfullResponseNotification(restSubId *string, restSubs
 	xapp.Logger.Debug("Sending successful REST notification: ErrorCause:%s, ErrorSource:%s, TimeoutType:%s, to Endpoint=%v:%v, XappEventInstanceID=%v, E2EventInstanceID=%v, %s",
 		errorInfo.ErrorCause, errorInfo.ErrorSource, errorInfo.TimeoutType, clientEndpoint.Host, *clientEndpoint.HTTPPort, xAppEventInstanceID, e2EventInstanceID, idstring(nil, trans))
 	c.UpdateCounter(cRestSubNotifToXapp)
-	xapp.Subscription.Notify(resp, *clientEndpoint)
+	err := xapp.Subscription.Notify(resp, *clientEndpoint)
+	if err != nil {
+		xapp.Logger.Error("xapp.Subscription.Notify failed %s", err.Error())
+	}
 
 	// E2 is down. Delete completely processed request safely now
 	if c.e2IfState.IsE2ConnectionUp(&restSubscription.Meid) == false && restSubscription.SubReqOngoing == false {
@@ -840,7 +862,10 @@ func (c *Control) SubscriptionDeleteHandler(restSubId *string, endPoint *string,
 
 	xapp.Logger.Debug("XAPP-SubDelReq: Handling event %s ", idstring(nil, trans, subs))
 
-	c.registry.RemoveFromSubscription(subs, trans, waitRouteCleanup_ms, c)
+	err = c.registry.RemoveFromSubscription(subs, trans, waitRouteCleanup_ms, c)
+	if err != nil {
+		xapp.Logger.Error("XAPP-SubDelReq %s:", idstring(fmt.Errorf("RemoveFromSubscription faliled"), trans, subs))
+	}
 
 	return xAppEventInstanceID, nil
 }
@@ -983,7 +1008,10 @@ func (c *Control) wakeSubscriptionRequest(subs *Subscription, trans *Transaction
 			if err == nil {
 				trans.Release()
 				c.UpdateCounter(cSubRespToXapp)
-				c.rmrSendToXapp("", subs, trans)
+				err := c.rmrSendToXapp("", subs, trans)
+				if err != nil {
+					xapp.Logger.Error("rmrSendToXapp() failed:%s", err.Error())
+				}
 				return
 			}
 		case *e2ap.E2APSubscriptionFailure:
@@ -1061,7 +1089,10 @@ func (c *Control) handleXAPPSubscriptionDeleteRequest(params *xapp.RMRParams) {
 	trans.Mtype, trans.Payload, err = c.e2ap.PackSubscriptionDeleteResponse(subDelRespMsg)
 	if err == nil {
 		c.UpdateCounter(cSubDelRespToXapp)
-		c.rmrSendToXapp("", subs, trans)
+		err := c.rmrSendToXapp("", subs, trans)
+		if err != nil {
+			xapp.Logger.Error("rmrSendToXapp() failed:%s", err.Error())
+		}
 	}
 }
 
@@ -1119,11 +1150,15 @@ func (c *Control) handleSubscriptionCreate(subs *Subscription, parentTrans *Tran
 	if err != nil {
 		valid = false
 		c.sendE2TSubscriptionDeleteRequest(subs, trans, parentTrans)
+
 	}
 
 	// Now RemoveFromSubscription in here to avoid race conditions (mostly concerns delete)
 	if valid == false {
-		c.registry.RemoveFromSubscription(subs, parentTrans, waitRouteCleanupTime, c)
+		err = c.registry.RemoveFromSubscription(subs, parentTrans, waitRouteCleanupTime, c)
+		if err != nil {
+			xapp.Logger.Error("RemoveFromSubscription() failed:%s", err.Error())
+		}
 	}
 
 	parentTrans.SendEvent(subRfMsg, 0)
@@ -1198,7 +1233,11 @@ func (c *Control) sendE2TSubscriptionRequest(subs *Subscription, trans *Transact
 		} else {
 			c.UpdateCounter(cSubReReqToE2)
 		}
-		c.rmrSendToE2T(desc, subs, trans)
+		err := c.rmrSendToE2T(desc, subs, trans)
+		if err != nil {
+			xapp.Logger.Error("rmrSendToE2T() failed:%s", err.Error())
+		}
+
 		if subs.DoNotWaitSubResp == false {
 			event, timedOut = trans.WaitEvent(e2SubscriptionDirectives.E2TimeoutTimerValue)
 			if timedOut {
@@ -1243,7 +1282,10 @@ func (c *Control) sendE2TSubscriptionDeleteRequest(subs *Subscription, trans *Tr
 		} else {
 			c.UpdateCounter(cSubDelReReqToE2)
 		}
-		c.rmrSendToE2T(desc, subs, trans)
+		err := c.rmrSendToE2T(desc, subs, trans)
+		if err != nil {
+			xapp.Logger.Error("SUBS-SubDelReq: rmrSendToE2T failure: %s", idstring(err, trans, subs, parentTrans))
+		}
 		event, timedOut = trans.WaitEvent(e2tSubDelReqTime)
 		if timedOut {
 			c.UpdateCounter(cSubDelReqTimerExpiry)
@@ -1320,7 +1362,7 @@ func (c *Control) handleE2TSubscriptionFailure(params *xapp.RMRParams) {
 //-------------------------------------------------------------------
 // handle from E2T Subscription Delete Response
 //-------------------------------------------------------------------
-func (c *Control) handleE2TSubscriptionDeleteResponse(params *xapp.RMRParams) (err error) {
+func (c *Control) handleE2TSubscriptionDeleteResponse(params *xapp.RMRParams) {
 	xapp.Logger.Debug("MSG from E2T: %s", params.String())
 	c.UpdateCounter(cSubDelRespFromE2)
 	subDelRespMsg, err := c.e2ap.UnpackSubscriptionDeleteResponse(params.Payload)

@@ -57,7 +57,10 @@ func (e *E2IfState) Init(c *Control) {
 	e.control = c
 	e.NbIdMap = make(map[string]string, 0)
 	e.ReadE2ConfigurationFromRnib()
-	e.SubscribeChannels()
+	err := e.SubscribeChannels()
+	if err != nil {
+		xapp.Logger.Error("Init(): SubscribeChannels() failed: %v", err)
+	}
 }
 
 func (e *E2IfState) GetE2NodesJson() []byte {
