@@ -657,15 +657,17 @@ func (r *Registry) DeleteAllE2Subscriptions(ranName string, c *Control) {
 
 	// Delete REST subscription from registry and db
 	for restSubId, restSubs := range r.restSubscriptions {
-		if restSubs.Meid == ranName && restSubs.SubReqOngoing == true || restSubs.SubDelReqOngoing == true {
-			// Subscription creation or deletion processes need to be processed gracefully till the end.
-			// Subscription is deleted at end of the process in both cases.
-			xapp.Logger.Debug("Registry: REST subscription under prosessing ongoing cannot delete it yet. RestSubId=%v, SubReqOngoing=%v, SubDelReqOngoing=%v", restSubId, restSubs.SubReqOngoing, restSubs.SubDelReqOngoing)
-			continue
-		} else {
-			xapp.Logger.Debug("Registry: REST subscription delete. subId=%v", restSubId)
-			delete(r.restSubscriptions, restSubId)
-			c.RemoveRESTSubscriptionFromDb(restSubId)
+		if restSubs.Meid == ranName {
+			if restSubs.SubReqOngoing == true || restSubs.SubDelReqOngoing == true {
+				// Subscription creation or deletion processes need to be processed gracefully till the end.
+				// Subscription is deleted at end of the process in both cases.
+				xapp.Logger.Debug("Registry: REST subscription under prosessing ongoing cannot delete it yet. RestSubId=%v, SubReqOngoing=%v, SubDelReqOngoing=%v", restSubId, restSubs.SubReqOngoing, restSubs.SubDelReqOngoing)
+				continue
+			} else {
+				xapp.Logger.Debug("Registry: REST subscription delete. subId=%v", restSubId)
+				delete(r.restSubscriptions, restSubId)
+				c.RemoveRESTSubscriptionFromDb(restSubId)
+			}
 		}
 	}
 }
