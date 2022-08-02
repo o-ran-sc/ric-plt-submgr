@@ -39,7 +39,10 @@ func (c *Control) TestRestHandler(w http.ResponseWriter, r *http.Request) {
 		var splits = strings.Split(s, "=")
 		if subId, err := strconv.ParseInt(splits[1], 10, 64); err == nil {
 			xapp.Logger.Debug("RemoveSubscriptionFromSdl() called. subId = %v", subId)
-			c.RemoveSubscriptionFromSdl(uint32(subId))
+			err := c.RemoveSubscriptionFromSdl(uint32(subId))
+			if err != nil {
+				xapp.Logger.Error("c.RemoveSubscriptionFromSdl failure: %s", err.Error())
+			}
 			return
 		}
 	}
@@ -84,7 +87,10 @@ func (c *Control) GetAllE2Nodes(w http.ResponseWriter, r *http.Request) {
 
 	// Get all E2Nodes in subscription manager
 	xapp.Logger.Debug("GetAllE2Nodes() called")
-	w.Write(c.e2IfState.GetE2NodesJson())
+	_, err := w.Write(c.e2IfState.GetE2NodesJson())
+	if err != nil {
+		xapp.Logger.Error("w.Write failure: %s", err.Error())
+	}
 }
 
 func (c *Control) GetAllE2NodeRestSubscriptions(w http.ResponseWriter, r *http.Request) {

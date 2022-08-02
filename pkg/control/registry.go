@@ -511,7 +511,7 @@ func (r *Registry) CheckActionTypes(subReqMsg *e2ap.E2APSubscriptionRequest) (ui
 	return e2ap.E2AP_ActionTypeInvalid, fmt.Errorf("Invalid action type in RICactions-ToBeSetup-List")
 }
 
-func (r *Registry) RemoveFromSubscription(subs *Subscription, trans *TransactionXapp, waitRouteClean time.Duration, c *Control) error {
+func (r *Registry) RemoveFromSubscription(subs *Subscription, trans *TransactionXapp, waitRouteClean time.Duration, c *Control) {
 
 	xapp.Logger.Debug("RemoveFromSubscription %s", idstring(nil, trans, subs, trans))
 	r.mutex.Lock()
@@ -524,7 +524,7 @@ func (r *Registry) RemoveFromSubscription(subs *Subscription, trans *Transaction
 
 	subId := subs.ReqId.InstanceId
 	if delStatus == false {
-		return nil
+		return
 	}
 
 	if waitRouteClean > 0 {
@@ -575,7 +575,7 @@ func (r *Registry) RemoveFromSubscription(subs *Subscription, trans *Transaction
 		}
 		c.UpdateCounter(cUnmergedSubscriptions)
 	}
-	return nil
+	return
 }
 
 func (r *Registry) RouteDelete(subs *Subscription, trans *TransactionXapp, c *Control) {
