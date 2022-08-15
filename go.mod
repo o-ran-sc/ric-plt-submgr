@@ -1,6 +1,6 @@
 module gerrit.o-ran-sc.org/r/ric-plt/submgr
 
-go 1.17
+go 1.18
 
 replace gerrit.o-ran-sc.org/r/ric-plt/sdlgo => gerrit.o-ran-sc.org/r/ric-plt/sdlgo.git v0.8.0
 
