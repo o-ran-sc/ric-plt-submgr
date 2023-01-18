@@ -74,6 +74,15 @@ type E2APMsgPackerSubscriptionDeleteFailureIf interface {
 }
 
 //-----------------------------------------------------------------------------
+// Changes to support "RIC_SUB_DEL_REQUIRED"
+//-----------------------------------------------------------------------------
+type E2APMsgPackerSubscriptionDeleteRequiredIf interface {
+	Pack(list *SubscriptionDeleteRequiredList) (error, *PackedData)
+	UnPack(msg *PackedData) (error, *SubscriptionDeleteRequiredList)
+	String() string
+}
+
+//-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
 type E2APPackerIf interface {
@@ -83,6 +92,7 @@ type E2APPackerIf interface {
 	NewPackerSubscriptionDeleteRequest() E2APMsgPackerSubscriptionDeleteRequestIf
 	NewPackerSubscriptionDeleteResponse() E2APMsgPackerSubscriptionDeleteResponseIf
 	NewPackerSubscriptionDeleteFailure() E2APMsgPackerSubscriptionDeleteFailureIf
+	NewPackerSubscriptionDeleteRequired() E2APMsgPackerSubscriptionDeleteRequiredIf
 	//UnPack(*PackedData) (error, interface{})
 	//Pack(interface{}, *PackedData) (error, *PackedData)
 }
