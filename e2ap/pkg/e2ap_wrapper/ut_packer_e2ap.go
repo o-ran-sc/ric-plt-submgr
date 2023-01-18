@@ -231,6 +231,32 @@ func (e2apMsg *utMsgPackerSubscriptionDeleteFailure) String() string {
 }
 
 //-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type utMsgPackerSubscriptionDeleteRequired struct {
+	e2apMsgPackerSubscriptionDeleteFailure
+}
+
+func (e2apMsg *utMsgPackerSubscriptionDeleteRequired) init() {
+}
+
+func (e2apMsg *utMsgPackerSubscriptionDeleteRequired) Pack(data *e2ap.SubscriptionDeleteRequiredList) (error, *e2ap.PackedData) {
+	if allowAction[SUB_DEL_FAILURE] {
+		e2sub := origPackerif.NewPackerSubscriptionDeleteRequired()
+		return e2sub.Pack(data)
+	}
+	return fmt.Errorf("Error: Set to be fail by UT"), nil
+}
+
+func (e2apMsg *utMsgPackerSubscriptionDeleteRequired) UnPack(msg *e2ap.PackedData) (error, *e2ap.SubscriptionDeleteRequiredList) {
+	if allowAction[SUB_DEL_FAILURE] {
+		e2sub := origPackerif.NewPackerSubscriptionDeleteRequired()
+		return e2sub.UnPack(msg)
+	}
+	return fmt.Errorf("Error: Set to be fail by UT"), nil
+}
+
+//-----------------------------------------------------------------------------
 // Public E2AP packer creators
 //-----------------------------------------------------------------------------
 
@@ -258,6 +284,10 @@ func (*utAsn1E2APPacker) NewPackerSubscriptionDeleteResponse() e2ap.E2APMsgPacke
 
 func (*utAsn1E2APPacker) NewPackerSubscriptionDeleteFailure() e2ap.E2APMsgPackerSubscriptionDeleteFailureIf {
 	return &utMsgPackerSubscriptionDeleteFailure{}
+}
+
+func (p *utAsn1E2APPacker) NewPackerSubscriptionDeleteRequired() e2ap.E2APMsgPackerSubscriptionDeleteRequiredIf {
+	return &utMsgPackerSubscriptionDeleteRequired{}
 }
 
 func NewUtAsn1E2APPacker() e2ap.E2APPackerIf {

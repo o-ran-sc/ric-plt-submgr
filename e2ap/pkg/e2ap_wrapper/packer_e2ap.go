@@ -43,6 +43,9 @@ package e2ap_wrapper
 // void initSubsDeleteFailure(RICSubscriptionDeleteFailure_t *data){
 //   bzero(data,sizeof(RICSubscriptionDeleteFailure_t));
 // }
+// void initSubsDeleteRequired(RICSubsDeleteRequired_t *data){
+//	 bzero(data,sizeof(RICSubsDeleteRequired_t));
+// }
 //
 import "C"
 
@@ -1108,6 +1111,96 @@ func (e2apMsg *e2apMsgPackerSubscriptionDeleteFailure) String() string {
 }
 
 //-----------------------------------------------------------------------------
+// Changes to support "RIC_SUB_DEL_REQUIRED"
+//-----------------------------------------------------------------------------
+type e2apMsgPackerSubscriptionDeleteRequired struct {
+	e2apMessagePacker
+	msgC *C.RICSubsDeleteRequired_t
+	msgG *e2ap.SubscriptionDeleteRequiredList
+}
+
+func (e2apMsg *e2apMsgPackerSubscriptionDeleteRequired) init() {
+	e2apMsg.e2apMessagePacker.init(C.E2MessageInfo_t{C.cE2InitiatingMessage, C.cRICSubscriptionDeleteRequired})
+	e2apMsg.msgC = &C.RICSubsDeleteRequired_t{}
+	e2apMsg.msgG = &e2ap.SubscriptionDeleteRequiredList{}
+	C.initSubsDeleteRequired(e2apMsg.msgC)
+}
+
+func (e2apMsg *e2apMsgPackerSubscriptionDeleteRequired) Pack(data *e2ap.SubscriptionDeleteRequiredList) (error, *e2ap.PackedData) {
+	e2apMsg.init()
+	defer e2apMsg.fini()
+	e2apMsg.msgG = data
+
+	e2apMsg.msgC.noOfRanSubscriptions = C.int(len(e2apMsg.msgG.E2APSubscriptionDeleteRequiredRequests))
+	for idx, subs := range e2apMsg.msgG.E2APSubscriptionDeleteRequiredRequests {
+
+		// RIC Request ID
+		e2apMsg.msgC.ranSubscriptionsDelRequired[idx].ricRequestID.ricInstanceID = (C.uint32_t)(subs.RequestId.InstanceId)
+		e2apMsg.msgC.ranSubscriptionsDelRequired[idx].ricRequestID.ricRequestorID = (C.uint32_t)(subs.RequestId.Id)
+
+		// RAN Function ID
+		e2apMsg.msgC.ranSubscriptionsDelRequired[idx].ranFunctionID = (C.uint16_t)(subs.FunctionId)
+
+		// RIC Cause
+		e2apMsg.msgC.ranSubscriptionsDelRequired[idx].cause.content = (C.uint8_t)(subs.Cause.Content)
+		e2apMsg.msgC.ranSubscriptionsDelRequired[idx].cause.causeVal = (C.uint8_t)(subs.Cause.Value)
+
+	}
+
+	errorNro := C.packRICSubscriptionDeleteRequired(&e2apMsg.plen, (*C.uchar)(e2apMsg.p), (*C.char)(unsafe.Pointer(&e2apMsg.lb[0])), e2apMsg.msgC)
+	if err := e2apMsg.checkerr(errorNro); err != nil {
+		fmt.Printf("ERROR: %s", err.Error())
+		return err, nil
+	}
+	return nil, e2apMsg.packeddata()
+}
+
+func (e2apMsg *e2apMsgPackerSubscriptionDeleteRequired) UnPack(msg *e2ap.PackedData) (error, *e2ap.SubscriptionDeleteRequiredList) {
+	e2apMsg.init()
+	defer e2apMsg.fini()
+
+	if err := e2apMsg.e2apMessagePacker.unpacktopdu(msg); err != nil {
+		return err, e2apMsg.msgG
+	}
+	errorNro := C.getRICSubscriptionDeleteRequiredData(e2apMsg.e2apMessagePacker.pdu, e2apMsg.msgC)
+	if err := e2apMsg.checkerr(errorNro); err != nil {
+		return err, e2apMsg.msgG
+	}
+
+	//TODO: Fill List of RIC Subscriptions to be Removed
+	for idx := 0; idx < int(e2apMsg.msgC.noOfRanSubscriptions); idx++ {
+		var ricSubsToBeRemove e2ap.E2APSubscriptionDeleteRequired
+		// RIC RequestID
+		if err := (&e2apEntryRequestID{entry: &e2apMsg.msgC.ranSubscriptionsDelRequired[idx].ricRequestID}).get(&ricSubsToBeRemove.RequestId); err != nil {
+			return err, e2apMsg.msgG
+		}
+		// RAN Function ID
+		ricSubsToBeRemove.FunctionId = (e2ap.FunctionId)(e2apMsg.msgC.ranSubscriptionsDelRequired[idx].ranFunctionID)
+
+		// RIC Cause
+		ricSubsToBeRemove.Cause.Content = (uint8)(e2apMsg.msgC.ranSubscriptionsDelRequired[idx].cause.content)
+		ricSubsToBeRemove.Cause.Value = (uint8)(e2apMsg.msgC.ranSubscriptionsDelRequired[idx].cause.causeVal)
+
+		e2apMsg.msgG.E2APSubscriptionDeleteRequiredRequests = append(e2apMsg.msgG.E2APSubscriptionDeleteRequiredRequests, ricSubsToBeRemove)
+	}
+
+	return nil, e2apMsg.msgG
+}
+
+func (e2apMsg *e2apMsgPackerSubscriptionDeleteRequired) String() string {
+	var b bytes.Buffer
+	for idx := 0; idx < int(e2apMsg.msgC.noOfRanSubscriptions); idx++ {
+		fmt.Fprintln(&b, "ricSubscriptionDeleteRequired.")
+		fmt.Fprintln(&b, "  ricRequestID.")
+		fmt.Fprintln(&b, "    ricRequestorID =", e2apMsg.msgC.ranSubscriptionsDelRequired[idx].ricRequestID.ricRequestorID)
+		fmt.Fprintln(&b, "    ricInstanceID =", e2apMsg.msgC.ranSubscriptionsDelRequired[idx].ricRequestID.ricInstanceID)
+		fmt.Fprintln(&b, "  ranFunctionID =", e2apMsg.msgC.ranSubscriptionsDelRequired[idx].ranFunctionID)
+	}
+
+	return b.String()
+}
+
+//-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
 func SetASN1DebugPrintStatus(logLevel int) {
@@ -1148,6 +1241,11 @@ func (*cppasn1E2APPacker) NewPackerSubscriptionDeleteResponse() e2ap.E2APMsgPack
 
 func (*cppasn1E2APPacker) NewPackerSubscriptionDeleteFailure() e2ap.E2APMsgPackerSubscriptionDeleteFailureIf {
 	return &e2apMsgPackerSubscriptionDeleteFailure{}
+}
+
+// Changes to support "RIC_SUB_DEL_REQUIRED"
+func (*cppasn1E2APPacker) NewPackerSubscriptionDeleteRequired() e2ap.E2APMsgPackerSubscriptionDeleteRequiredIf {
+	return &e2apMsgPackerSubscriptionDeleteRequired{}
 }
 
 func NewAsn1E2Packer() e2ap.E2APPackerIf {

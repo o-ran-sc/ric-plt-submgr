@@ -55,6 +55,7 @@ const uint64_t cE2UnsuccessfulOutcome = 3;
 // Initiating message
 const uint64_t cRICSubscriptionRequest = 1;
 const uint64_t cRICSubscriptionDeleteRequest = 2;
+const uint64_t cRICSubscriptionDeleteRequired = 3;
 
 // Successful outcome
 const uint64_t cRICSubscriptionResponse = 1;
@@ -1175,3 +1176,158 @@ uint64_t getRICSubscriptionDeleteFailureData(e2ap_pdu_ptr_t* pE2AP_PDU_pointer, 
     ASN_STRUCT_FREE(asn_DEF_E2AP_PDU, pE2AP_PDU);
     return e2err_OK;
 }
+
+//**************************************************************************************************************************
+uint64_t packRICSubscriptionDeleteRequired(size_t* pDataBufferSize, byte* pDataBuffer, char* pLogBuffer, RICSubsDeleteRequired_t* pRICSubscriptionDeleteRequired) {
+
+    E2AP_PDU_t *pE2AP_PDU = calloc(1, sizeof(E2AP_PDU_t));
+    if (pE2AP_PDU) {
+        pE2AP_PDU->present = E2AP_PDU_PR_initiatingMessage;
+        pE2AP_PDU->choice.initiatingMessage.procedureCode = ProcedureCode_id_RICsubscriptionDeleteRequired;
+        pE2AP_PDU->choice.initiatingMessage.criticality = Criticality_ignore;
+        pE2AP_PDU->choice.initiatingMessage.value.present = InitiatingMessage__value_PR_RICsubscriptionDeleteRequired;
+
+        {
+            RICsubscriptionDeleteRequired_IEs_t *ricSubsDeleteRequiredIEs = calloc(1,
+                                                                                   sizeof(RICsubscriptionDeleteRequired_IEs_t));
+            ricSubsDeleteRequiredIEs->id = ProtocolIE_ID_id_RICsubscriptionToBeRemoved;
+            ricSubsDeleteRequiredIEs->criticality = Criticality_ignore;
+            ricSubsDeleteRequiredIEs->value.present = RICsubscriptionDeleteRequired_IEs__value_PR_RICsubscription_List_withCause;
+
+            for (int idx = 0; idx < pRICSubscriptionDeleteRequired->noOfRanSubscriptions; idx++) {
+                RICsubscription_withCause_ItemIEs_t *ricSubsListWithCauseItem = calloc(1,
+                                                                                       sizeof(RICsubscription_withCause_ItemIEs_t));
+                ricSubsListWithCauseItem->id = ProtocolIE_ID_id_RICsubscription_withCause_Item;
+                ricSubsListWithCauseItem->criticality = Criticality_ignore;
+                ricSubsListWithCauseItem->value.present = RICsubscription_withCause_ItemIEs__value_PR_RICsubscription_withCause_Item;
+
+                // RIC RequestID
+                ricSubsListWithCauseItem->value.choice.RICsubscription_withCause_Item.ricRequestID.ricRequestorID =
+                        pRICSubscriptionDeleteRequired->ranSubscriptionsDelRequired[idx].ricRequestID.ricRequestorID;
+                ricSubsListWithCauseItem->value.choice.RICsubscription_withCause_Item.ricRequestID.ricInstanceID =
+                        pRICSubscriptionDeleteRequired->ranSubscriptionsDelRequired[idx].ricRequestID.ricInstanceID;
+
+                // RANFunctionID
+                ricSubsListWithCauseItem->value.choice.RICsubscription_withCause_Item.ranFunctionID =
+                        pRICSubscriptionDeleteRequired->ranSubscriptionsDelRequired[idx].ranFunctionID;
+
+                // RICCause
+                if (pRICSubscriptionDeleteRequired->ranSubscriptionsDelRequired[idx].cause.content ==
+                    Cause_PR_ricRequest) {
+                    ricSubsListWithCauseItem->value.choice.RICsubscription_withCause_Item.cause.present = Cause_PR_ricRequest;
+                    ricSubsListWithCauseItem->value.choice.RICsubscription_withCause_Item.cause.choice.ricRequest =
+                            pRICSubscriptionDeleteRequired->ranSubscriptionsDelRequired[idx].cause.causeVal;
+                } else if (pRICSubscriptionDeleteRequired->ranSubscriptionsDelRequired[idx].cause.content ==
+                           Cause_PR_ricService) {
+                    ricSubsListWithCauseItem->value.choice.RICsubscription_withCause_Item.cause.present = Cause_PR_ricService;
+                    ricSubsListWithCauseItem->value.choice.RICsubscription_withCause_Item.cause.choice.ricService =
+                            pRICSubscriptionDeleteRequired->ranSubscriptionsDelRequired[idx].cause.causeVal;
+                } else if (pRICSubscriptionDeleteRequired->ranSubscriptionsDelRequired[idx].cause.content ==
+                           Cause_PR_e2Node) {
+                    ricSubsListWithCauseItem->value.choice.RICsubscription_withCause_Item.cause.present = Cause_PR_e2Node;
+                    ricSubsListWithCauseItem->value.choice.RICsubscription_withCause_Item.cause.choice.e2Node =
+                            pRICSubscriptionDeleteRequired->ranSubscriptionsDelRequired[idx].cause.causeVal;
+                } else if (pRICSubscriptionDeleteRequired->ranSubscriptionsDelRequired[idx].cause.content ==
+                           Cause_PR_protocol) {
+                    ricSubsListWithCauseItem->value.choice.RICsubscription_withCause_Item.cause.present = Cause_PR_protocol;
+                    ricSubsListWithCauseItem->value.choice.RICsubscription_withCause_Item.cause.choice.protocol =
+                            pRICSubscriptionDeleteRequired->ranSubscriptionsDelRequired[idx].cause.causeVal;
+                } else if (pRICSubscriptionDeleteRequired->ranSubscriptionsDelRequired[idx].cause.content ==
+                           Cause_PR_transport) {
+                    ricSubsListWithCauseItem->value.choice.RICsubscription_withCause_Item.cause.present = Cause_PR_transport;
+                    ricSubsListWithCauseItem->value.choice.RICsubscription_withCause_Item.cause.choice.transport =
+                            pRICSubscriptionDeleteRequired->ranSubscriptionsDelRequired[idx].cause.causeVal;
+                } else if (pRICSubscriptionDeleteRequired->ranSubscriptionsDelRequired[idx].cause.content ==
+                           Cause_PR_misc) {
+                    ricSubsListWithCauseItem->value.choice.RICsubscription_withCause_Item.cause.present = Cause_PR_misc;
+                    ricSubsListWithCauseItem->value.choice.RICsubscription_withCause_Item.cause.choice.misc =
+                            pRICSubscriptionDeleteRequired->ranSubscriptionsDelRequired[idx].cause.causeVal;
+                }
+                asn_sequence_add(&ricSubsDeleteRequiredIEs->value.choice.RICsubscription_List_withCause.list,
+                                 ricSubsListWithCauseItem);
+            }
+            asn_sequence_add(
+                    &pE2AP_PDU->choice.initiatingMessage.value.choice.RICsubscriptionDeleteRequired.protocolIEs.list,
+                    ricSubsDeleteRequiredIEs);
+
+            if (E2encode(pE2AP_PDU, pDataBufferSize, pDataBuffer, pLogBuffer))
+                return e2err_OK;
+            else
+                return e2err_RICSubscriptionDeleteRequiredEncodeFail;
+        }
+    }
+    else
+        return e2err_RICSubscriptionDeleteRequiredAllocE2AP_PDUFail;
+}
+
+//**************************************************************************************************************************
+uint64_t getRICSubscriptionDeleteRequiredData(e2ap_pdu_ptr_t *pE2AP_PDU_pointer,
+                                                  RICSubsDeleteRequired_t *pRICSubscriptionDeleteRequired) {
+
+        E2AP_PDU_t *pE2AP_PDU = (E2AP_PDU_t *) pE2AP_PDU_pointer;
+
+        RICsubscriptionDeleteRequired_t *asnRicSubscriptionDeleteRequired = &pE2AP_PDU->choice.initiatingMessage.value.choice.RICsubscriptionDeleteRequired;
+
+        if (asnRicSubscriptionDeleteRequired->protocolIEs.list.count > 0 &&
+            asnRicSubscriptionDeleteRequired->protocolIEs.list.array[0]->id ==
+            ProtocolIE_ID_id_RICsubscriptionToBeRemoved) {
+            if (asnRicSubscriptionDeleteRequired->protocolIEs.list.array[0]->value.present ==
+                RICsubscriptionDeleteRequired_IEs__value_PR_RICsubscription_List_withCause) {
+                RICsubscription_List_withCause_t riCsubscriptionListWithCause = asnRicSubscriptionDeleteRequired->protocolIEs.list.array[0]->value.choice.RICsubscription_List_withCause;
+                pRICSubscriptionDeleteRequired->noOfRanSubscriptions = riCsubscriptionListWithCause.list.count;
+                for (int idx = 0; idx < riCsubscriptionListWithCause.list.count; idx++) {
+                    RICsubscription_withCause_ItemIEs_t *riCsubscriptionWithCauseItemIEs = (RICsubscription_withCause_ItemIEs_t*)riCsubscriptionListWithCause.list.array[idx];
+                    if (riCsubscriptionWithCauseItemIEs->id == ProtocolIE_ID_id_RICsubscription_withCause_Item &&
+                            riCsubscriptionWithCauseItemIEs->value.present ==
+                        RICsubscription_withCause_ItemIEs__value_PR_RICsubscription_withCause_Item) {
+                        // RIC RequestID
+                        pRICSubscriptionDeleteRequired->ranSubscriptionsDelRequired[idx].ricRequestID.ricRequestorID = riCsubscriptionWithCauseItemIEs->value.choice.RICsubscription_withCause_Item.ricRequestID.ricRequestorID;
+                        pRICSubscriptionDeleteRequired->ranSubscriptionsDelRequired[idx].ricRequestID.ricInstanceID = riCsubscriptionWithCauseItemIEs->value.choice.RICsubscription_withCause_Item.ricRequestID.ricInstanceID;
+
+                        // RANFunctionID
+                        pRICSubscriptionDeleteRequired->ranSubscriptionsDelRequired[idx].ranFunctionID = riCsubscriptionWithCauseItemIEs->value.choice.RICsubscription_withCause_Item.ranFunctionID;
+
+                        // RICCause
+                        if (riCsubscriptionWithCauseItemIEs->value.choice.RICsubscription_withCause_Item.cause.present ==
+                            Cause_PR_ricRequest) {
+                            pRICSubscriptionDeleteRequired->ranSubscriptionsDelRequired[idx].cause.content = Cause_PR_ricRequest;
+                            pRICSubscriptionDeleteRequired->ranSubscriptionsDelRequired[idx].cause.causeVal =
+                                    riCsubscriptionWithCauseItemIEs->value.choice.RICsubscription_withCause_Item.cause.choice.ricRequest;
+                        }
+                            //TODO : RIC Cause
+                        else if (riCsubscriptionWithCauseItemIEs->value.choice.RICsubscription_withCause_Item.cause.present ==
+                                 Cause_PR_ricService) {
+                            pRICSubscriptionDeleteRequired->ranSubscriptionsDelRequired[idx].cause.content = Cause_PR_ricService;
+                            pRICSubscriptionDeleteRequired->ranSubscriptionsDelRequired[idx].cause.causeVal =
+                                    riCsubscriptionWithCauseItemIEs->value.choice.RICsubscription_withCause_Item.cause.choice.ricService;
+                        } else if (
+                                riCsubscriptionWithCauseItemIEs->value.choice.RICsubscription_withCause_Item.cause.present ==
+                                Cause_PR_transport) {
+                            pRICSubscriptionDeleteRequired->ranSubscriptionsDelRequired[idx].cause.content = Cause_PR_transport;
+                            pRICSubscriptionDeleteRequired->ranSubscriptionsDelRequired[idx].cause.causeVal =
+                                    riCsubscriptionWithCauseItemIEs->value.choice.RICsubscription_withCause_Item.cause.choice.transport;
+                        } else if (
+                                riCsubscriptionWithCauseItemIEs->value.choice.RICsubscription_withCause_Item.cause.present ==
+                                Cause_PR_protocol) {
+                            pRICSubscriptionDeleteRequired->ranSubscriptionsDelRequired[idx].cause.content = Cause_PR_protocol;
+                            pRICSubscriptionDeleteRequired->ranSubscriptionsDelRequired[idx].cause.causeVal =
+                                    riCsubscriptionWithCauseItemIEs->value.choice.RICsubscription_withCause_Item.cause.choice.protocol;
+                        } else if (
+                                riCsubscriptionWithCauseItemIEs->value.choice.RICsubscription_withCause_Item.cause.present ==
+                                Cause_PR_misc) {
+                            pRICSubscriptionDeleteRequired->ranSubscriptionsDelRequired[idx].cause.content = Cause_PR_misc;
+                            pRICSubscriptionDeleteRequired->ranSubscriptionsDelRequired[idx].cause.causeVal =
+                                    riCsubscriptionWithCauseItemIEs->value.choice.RICsubscription_withCause_Item.cause.choice.misc;
+                        }
+                    }
+                }
+
+            }
+
+        }
+
+
+        ASN_STRUCT_FREE(asn_DEF_E2AP_PDU, pE2AP_PDU);
+        return e2err_OK;
+    }
+
