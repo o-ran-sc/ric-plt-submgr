@@ -55,6 +55,7 @@ func TestAddAllCountersOnce(t *testing.T) {
 		Counter{cSubDelRespFromE2, 1},
 		Counter{cSubDelFailFromE2, 1},
 		Counter{cSubDelReqTimerExpiry, 1},
+		Counter{cSubDelRequFromE2, 1},
 		Counter{cRouteDeleteFail, 1},
 		Counter{cRouteDeleteUpdateFail, 1},
 		Counter{cUnmergedSubscriptions, 1},
@@ -93,6 +94,7 @@ func TestAddAllCountersOnce(t *testing.T) {
 	mainCtrl.c.UpdateCounter(cSubDelRespFromE2)
 	mainCtrl.c.UpdateCounter(cSubDelFailFromE2)
 	mainCtrl.c.UpdateCounter(cSubDelReqTimerExpiry)
+	mainCtrl.c.UpdateCounter(cSubDelRequFromE2)
 	mainCtrl.c.UpdateCounter(cRouteDeleteFail)
 	mainCtrl.c.UpdateCounter(cRouteDeleteUpdateFail)
 	mainCtrl.c.UpdateCounter(cUnmergedSubscriptions)
