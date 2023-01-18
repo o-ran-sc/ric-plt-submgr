@@ -44,3 +44,19 @@ type E2APSubscriptionDeleteFailure struct {
 	Cause
 	CriticalityDiagnostics
 }
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type SubscriptionDeleteRequiredList struct {
+	E2APSubscriptionDeleteRequiredRequests []E2APSubscriptionDeleteRequired
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type E2APSubscriptionDeleteRequired struct {
+	RequestId
+	FunctionId
+	Cause
+}

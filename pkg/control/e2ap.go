@@ -266,3 +266,24 @@ func (e *E2ap) PackSubscriptionDeleteFailure(req *e2ap.E2APSubscriptionDeleteFai
 	return xapp.RIC_SUB_DEL_FAILURE, packedData, nil
 }
 */
+
+//-----------------------------------------------------------------------------
+// Changes to support "RIC_SUB_DEL_REQUIRED"
+//-----------------------------------------------------------------------------
+func (c *E2ap) UnpackSubscriptionDeleteRequired(payload []byte) (*e2ap.SubscriptionDeleteRequiredList, error) {
+	e2SubDelRequ := packerif.NewPackerSubscriptionDeleteRequired()
+	err, subsToBeRemove := e2SubDelRequ.UnPack(&e2ap.PackedData{payload})
+	if err != nil {
+		return nil, fmt.Errorf("%s buf[%s]", err.Error(), hex.EncodeToString(payload))
+	}
+	return subsToBeRemove, nil
+}
+
+func (c *E2ap) PackSubscriptionDeleteRequired(req *e2ap.SubscriptionDeleteRequiredList) (int, *e2ap.PackedData, error) {
+	e2SubDelRequ := packerif.NewPackerSubscriptionDeleteRequired()
+	err, packedData := e2SubDelRequ.Pack(req)
+	if err != nil {
+		return 0, nil, err
+	}
+	return xapp.RIC_SUB_DEL_REQUIRED, packedData, nil
+}
