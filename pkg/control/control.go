@@ -362,7 +362,7 @@ func (c *Control) HandleUncompletedSubscriptions(register map[uint32]*Subscripti
 			if subs.PolicyUpdate == false {
 				subs.NoRespToXapp = true
 				xapp.Logger.Debug("SendSubscriptionDeleteReq. subId = %v", subId)
-				c.SendSubscriptionDeleteReq(subs)
+				c.SendSubscriptionDeleteReq(subs, false)
 			}
 		}
 	}
@@ -944,6 +944,8 @@ func (c *Control) Consume(msg *xapp.RMRParams) (err error) {
 		go c.handleE2TSubscriptionDeleteResponse(msg)
 	case xapp.RIC_SUB_DEL_FAILURE:
 		go c.handleE2TSubscriptionDeleteFailure(msg)
+	case xapp.RIC_SUB_DEL_REQUIRED:
+		go c.handleE2TSubscriptionDeleteRequired(msg)
 	default:
 		xapp.Logger.Debug("Unknown Message Type '%d', discarding", msg.Mtype)
 	}
@@ -1521,7 +1523,7 @@ func (c *Control) RemoveRESTSubscriptionFromDb(restSubId string) {
 	}
 }
 
-func (c *Control) SendSubscriptionDeleteReq(subs *Subscription) {
+func (c *Control) SendSubscriptionDeleteReq(subs *Subscription, e2SubsDelRequired bool) {
 
 	if c.UTTesting == true {
 		// Reqistry mutex is not locked after real restart but it can be when restart is simulated in unit tests
@@ -1553,7 +1555,11 @@ func (c *Control) SendSubscriptionDeleteReq(subs *Subscription) {
 			params.Payload = payload.Buf
 			params.Mbuf = nil
 			subs.DeleteFromDb = true
-			c.handleXAPPSubscriptionDeleteRequest(params)
+			if !e2SubsDelRequired {
+				c.handleXAPPSubscriptionDeleteRequest(params)
+			} else {
+				c.SendSubscriptionDeleteReqToE2T(subs, params)
+			}
 		}
 	}
 }
@@ -1625,5 +1631,87 @@ func (c *Control) PrintRESTSubscriptionRequest(p *models.SubscriptionParams) {
 				fmt.Println("  SubscriptionDetail.ActionToBeSetup.SubsequentAction = nil")
 			}
 		}
+	}
+}
+
+//-------------------------------------------------------------------
+// handle from E2T Subscription Delete Required
+//-------------------------------------------------------------------
+func (c *Control) handleE2TSubscriptionDeleteRequired(params *xapp.RMRParams) {
+	xapp.Logger.Info("MSG from E2T: %s", params.String())
+	c.UpdateCounter(cSubDelRequFromE2)
+	subsDelRequMsg, err := c.e2ap.UnpackSubscriptionDeleteRequired(params.Payload)
+	if err != nil {
+		xapp.Logger.Error("MSG-SubDelRequired: %s", idstring(err, params))
+		//c.sendE2TErrorIndication(nil)
+		return
+	}
+	var subscriptions = map[string][]e2ap.E2APSubscriptionDeleteRequired{}
+	var subDB = []*Subscription{}
+	for _, subsTobeRemove := range subsDelRequMsg.E2APSubscriptionDeleteRequiredRequests {
+		subs, err := c.registry.GetSubscriptionFirstMatch([]uint32{subsTobeRemove.RequestId.InstanceId})
+		if err != nil {
+			xapp.Logger.Error("MSG-SubDelFail: %s", idstring(err, params))
+			continue
+		}
+		// Check if Delete Subscription Already triggered
+		if subs.OngoingDelCount > 0 {
+			continue
+		}
+		subDB = append(subDB, subs)
+		for _, endpoint := range subs.EpList.Endpoints {
+			subscriptions[endpoint.Addr] = append(subscriptions[endpoint.Addr], subsTobeRemove)
+		}
+		// Sending Subscription Delete Request to E2T
+		//	c.SendSubscriptionDeleteReq(subs, true)
+	}
+	for _, subsTobeRemove := range subDB {
+		// Sending Subscription Delete Request to E2T
+		c.SendSubscriptionDeleteReq(subsTobeRemove, true)
+	}
+
+}
+
+
+//	-----------------------------------------------------------------
+//	Initiate RIC Subscription Delete Request after receiving
+//	RIC Subscription Delete Required from E2T
+//-----------------------------------------------------------------
+func (c *Control) SendSubscriptionDeleteReqToE2T(subs *Subscription, params *xapp.RMRParams) {
+	xapp.Logger.Debug("MSG TO E2T: %s", params.String())
+	c.UpdateCounter(cSubDelReqToE2)
+
+	if c.e2IfState.IsE2ConnectionUp(&params.Meid.RanName) == false {
+		xapp.Logger.Error("No E2 connection for ranName %v", params.Meid.RanName)
+		return
+	}
+
+	trans := c.tracker.NewXappTransaction(xapp.NewRmrEndpoint(params.Src), params.Xid, subs.ReqId.RequestId, params.Meid)
+	if trans == nil {
+		xapp.Logger.Error("XAPP-SubDelReq: %s", idstring(fmt.Errorf("transaction not created"), params))
+		return
+	}
+	defer trans.Release()
+
+	err := c.tracker.Track(trans)
+	if err != nil {
+		xapp.Logger.Error("XAPP-SubReq: %s", idstring(err, trans))
+		return
+	}
+
+	//
+	// Wake subs delete
+	//
+	subs.OngoingDelCount++
+	go c.handleSubscriptionDelete(subs, trans, waitRouteCleanup_ms)
+	trans.WaitEvent(0) //blocked wait as timeout is handled in subs side
+	subs.OngoingDelCount--
+
+	xapp.Logger.Debug("XAPP-SubDelReq: Handling event %s ", idstring(nil, trans, subs))
+
+	if subs.NoRespToXapp == true {
+		// Do no send delete responses to xapps due to submgr restart is deleting uncompleted subscriptions
+		xapp.Logger.Debug("XAPP-SubDelReq: subs.NoRespToXapp == true")
+		return
 	}
 }
