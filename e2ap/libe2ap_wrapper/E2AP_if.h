@@ -282,7 +282,12 @@ enum e2err {
     e2err_RICsubscriptionDeleteResponseRANfunctionIDMissing,
     e2err_RICsubscriptionDeleteFailureRICrequestIDMissing,
     e2err_RICsubscriptionDeleteFailureRANfunctionIDMissing,
-    e2err_RICsubscriptionDeleteFailureRICcauseMissing
+    e2err_RICsubscriptionDeleteFailureRICcauseMissing,
+    e2err_RICSubscriptionDeleteRequiredRICrequestIDMissing,
+    e2err_RICSubscriptionDeleteRequiredRANfunctionIDMissing,
+    e2err_RICSubscriptionDeleteRequiredRICcauseMissing,
+    e2err_RICSubscriptionDeleteRequiredEncodeFail,
+    e2err_RICSubscriptionDeleteRequiredAllocE2AP_PDUFail
 };
 
 static const char* const E2ErrorStrings[] = {
@@ -338,7 +343,12 @@ static const char* const E2ErrorStrings[] = {
     "e2err_RICsubscriptionDeleteResponseRANfunctionIDMissing",
     "e2err_RICsubscriptionDeleteFailureRICrequestIDMissing",
     "e2err_RICsubscriptionDeleteFailureRANfunctionIDMissing",
-    "e2err_RICsubscriptionDeleteFailureRICcauseMissing"
+    "e2err_RICsubscriptionDeleteFailureRICcauseMissing",
+    "e2err_RICSubscriptionDeleteRequiredRICrequestIDMissing",
+    "e2err_RICSubscriptionDeleteRequiredRANfunctionIDMissing",
+    "e2err_RICSubscriptionDeleteRequiredRICcauseMissing",
+    "e2err_RICSubscriptionDeleteRequiredEncodeFail",
+    "e2err_RICSubscriptionDeleteRequiredAllocE2AP_PDUFail",
 };
 
 typedef struct {
@@ -359,6 +369,7 @@ extern const uint64_t cE2UnsuccessfulOutcome;
 // Initiating message
 extern const uint64_t cRICSubscriptionRequest;
 extern const uint64_t cRICSubscriptionDeleteRequest;
+extern const uint64_t cRICSubscriptionDeleteRequired;
 
 // Successful outcome
 extern const uint64_t cRICSubscriptionResponse;
@@ -408,6 +419,18 @@ typedef struct  {
     CriticalityDiagnostics__t criticalityDiagnostics; // OPTIONAL. Not used in RIC currently
 } RICSubscriptionDeleteFailure_t;
 
+typedef struct {
+    RICRequestID_t ricRequestID;
+    RANFunctionID_t ranFunctionID;
+    RICCause_t cause;
+} RICSubscriptionDeleteRequired_t;
+
+typedef struct {
+    int noOfRanSubscriptions;
+    RICSubscriptionDeleteRequired_t ranSubscriptionsDelRequired[1024];
+
+} RICSubsDeleteRequired_t;
+
 //////////////////////////////////////////////////////////////////////
 // Function declarations
 
@@ -423,6 +446,7 @@ uint64_t packRICSubscriptionFailure(size_t*, byte*, char*,RICSubscriptionFailure
 uint64_t packRICSubscriptionDeleteRequest(size_t*, byte*, char*,RICSubscriptionDeleteRequest_t*);
 uint64_t packRICSubscriptionDeleteResponse(size_t*, byte*, char*,RICSubscriptionDeleteResponse_t*);
 uint64_t packRICSubscriptionDeleteFailure(size_t*, byte*, char*,RICSubscriptionDeleteFailure_t*);
+uint64_t packRICSubscriptionDeleteRequired(size_t*, byte*, char*,RICSubsDeleteRequired_t*);
 
 e2ap_pdu_ptr_t* unpackE2AP_pdu(const size_t, const byte*, char*, E2MessageInfo_t*);
 uint64_t getRICSubscriptionRequestData(e2ap_pdu_ptr_t*, RICSubscriptionRequest_t*);
@@ -431,7 +455,7 @@ uint64_t getRICSubscriptionFailureData(e2ap_pdu_ptr_t*, RICSubscriptionFailure_t
 uint64_t getRICSubscriptionDeleteRequestData(e2ap_pdu_ptr_t*, RICSubscriptionDeleteRequest_t*);
 uint64_t getRICSubscriptionDeleteResponseData(e2ap_pdu_ptr_t*, RICSubscriptionDeleteResponse_t*);
 uint64_t getRICSubscriptionDeleteFailureData(e2ap_pdu_ptr_t*, RICSubscriptionDeleteFailure_t*);
-
+uint64_t getRICSubscriptionDeleteRequiredData(e2ap_pdu_ptr_t*, RICSubsDeleteRequired_t*);
 
 #if DEBUG
 bool TestRICSubscriptionRequest();
@@ -440,6 +464,7 @@ bool TestRICSubscriptionFailure();
 bool TestRICSubscriptionDeleteRequest();
 bool TestRICSubscriptionDeleteResponse();
 bool TestRICSubscriptionDeleteFailure();
+bool TestRICSubscriptionDeleteRequired();
 
 void printRICSubscriptionRequest(const RICSubscriptionRequest_t*);
 void printRICSubscriptionResponse(const RICSubscriptionResponse_t*);
@@ -447,6 +472,7 @@ void printRICSubscriptionFailure(const RICSubscriptionFailure_t*);
 void printRICSubscriptionDeleteRequest(const RICSubscriptionDeleteRequest_t*);
 void printRICSubscriptionDeleteResponse(const RICSubscriptionDeleteResponse_t*);
 void printRICSubscriptionDeleteFailure(const RICSubscriptionDeleteFailure_t*);
+void printRICSubscriptionDeleteRequired(const RICSubsDeleteRequired_t*);
 #endif
 
 #ifdef	__cplusplus
