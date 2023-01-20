@@ -1,6 +1,23 @@
 {
   "comments": [
     {
+      "unresolved": true,
+      "key": {
+        "uuid": "2d103702_39cb158e",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 1
+      },
+      "lineNbr": 10,
+      "author": {
+        "id": 1000108
+      },
+      "writtenOn": "2023-01-20T09:01:00Z",
+      "side": 1,
+      "message": "could you add a reference to https://jira.o-ran-sc.org/browse/RIC-851 here. Same style as in this review: https://gerrit.o-ran-sc.org/r/c/ric-plt/xapp-frame-cpp/+/9973 (in the heading somewhere) and also in the body of the commit message. \n\nI know some people don\u0027t like this, but it helps finding additional information from JIRA.",
+      "revId": "00b7b7603c7e9128992c8b8af155f87a7607943f",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
+    },
+    {
       "unresolved": false,
       "key": {
         "uuid": "55db8785_401760d7",
@@ -14,6 +31,29 @@
       "writtenOn": "2023-01-19T03:56:28Z",
       "side": 1,
       "message": "Review request is marked as Not Verified.\nChanges for Message Type “RIC_SUB_DEL_REQUIRED” is submitted as part of another review request for xapp-frame.\nWhen the Jenkins is compiling the submitted code for submgr it might be picking the dependent library component which is already committed in the repo and is not having RIC_SUB_DEL_REQUIRED defined\n\nSuggest if any corrective action is required for this review request.\n",
+      "revId": "00b7b7603c7e9128992c8b8af155f87a7607943f",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "09cf58da_08b93348",
+        "filename": "pkg/control/control.go",
+        "patchSetId": 1
+      },
+      "lineNbr": 1669,
+      "author": {
+        "id": 1000108
+      },
+      "writtenOn": "2023-01-20T09:01:00Z",
+      "side": 1,
+      "message": "I am fine if this part is not implemented. The E2 arch spec O-RAN.WG3.RICARCH shows this step (sending \"E2 Subscription Delete Query\" and waiting for a reply) as optional, but if we do it we also have to wait for the reply (with some timer) and handle it correctly.\n\nAs the spec leaves the possibility that a valid RIC implementation does not sent \"E2 Subscription Delete Query\" - and just deletes the subscriptions, I think, it would be good to have a config parameter for the sub mgr that defines whether to send these \"E2 Subscription Delete Query\" messages to xApps or whether to just delete the subscriptions for which the E2 node send a \"delete required\".\n\nBut as mentioned above, I think, an implementation is already good if it just deletes the subscriptions without further xApp involvement (other than the post-fact notification that the subscription has been successfully removed).",
+      "range": {
+        "startLine": 1669,
+        "startChar": 13,
+        "endLine": 1669,
+        "endChar": 35
+      },
       "revId": "00b7b7603c7e9128992c8b8af155f87a7607943f",
       "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
     }
