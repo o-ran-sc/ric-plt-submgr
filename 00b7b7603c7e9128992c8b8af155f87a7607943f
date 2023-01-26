@@ -80,6 +80,30 @@
       },
       "revId": "00b7b7603c7e9128992c8b8af155f87a7607943f",
       "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "a61ef1d1_d1c14b60",
+        "filename": "pkg/control/control.go",
+        "patchSetId": 1
+      },
+      "lineNbr": 1669,
+      "author": {
+        "id": 1000108
+      },
+      "writtenOn": "2023-01-26T14:13:47Z",
+      "side": 1,
+      "message": "The code related to \"Delete _required_\" - which right now seems to consist only of the TODO comment - is ok to delete. I don\u0027t see this capability as a high value-add or at least it does not seem to justify the effort. I also doubt that there will be many xApps that actually do anything else than say \"ok, pls. proceed to remove\".",
+      "parentUuid": "652ba18b_c7cbc04c",
+      "range": {
+        "startLine": 1669,
+        "startChar": 13,
+        "endLine": 1669,
+        "endChar": 35
+      },
+      "revId": "00b7b7603c7e9128992c8b8af155f87a7607943f",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
     }
   ]
 }

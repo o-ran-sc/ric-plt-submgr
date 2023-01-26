@@ -16,6 +16,24 @@
       "message": "Thanks for your feedback. We will update the code for removing the xApp involvement as mentioned in the shared feedback.\n\nFor sending notification to xApp ( once subscription gets deleted by subscription manager) an E2 API: E2 Subscription Delete Notification needs to be sent to xApp but this API is not yet defined in E2AP 3.0 specification\n\nSo for now shall we just remove the piece of code related to xApps involvement ?",
       "revId": "ec6039753a2e9a8406fb77e399200a74de56fd5a",
       "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "fb5f88d0_081290c9",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1000108
+      },
+      "writtenOn": "2023-01-26T14:13:47Z",
+      "side": 1,
+      "message": "I think that\u0027s something useful, and we DO have a channel to the xApp over which to send such a notification. I think it makes sense to implement. It actually relates to a similar notification (or maybe even the same) that isn\u0027t implemented either yet. That\u0027s the https://jira.o-ran-sc.org/browse/RIC-928 notification that should be sent to xApps once their subscription delete request has been successfully proceessed. \n\nThe current interface towards xApps is based on REST and I expect that we will anyway have to adapt once the overall xApp-to-platform interface is defined (which I hope will eventually be based on GRPC (the other solution set in the standard plans).\n\nSo, I think, it\u0027s good to implement. If not we need to keep track of it as separate left over JIRA item. Your call if you want to implement or not.",
+      "parentUuid": "2489ed7c_c320ab2e",
+      "revId": "ec6039753a2e9a8406fb77e399200a74de56fd5a",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
     }
   ]
 }
