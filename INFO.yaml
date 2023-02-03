@@ -34,16 +34,16 @@ repositories:
     - ric-plt/submgr
 committers:
     - <<: *oran_ric_plt_submgr_ptl
-    - name: 'Anssi Mannila'
-      email: 'anssi.mannila@nokia.com'
-      company: 'Europe/Helsinki'
-      id: 'amannila'
-      timezone: 'Unknown/Unknown'
-    - name: 'Juha Hyttinen'
-      email: 'juha.hyttinen@nokia.com'
+    - name: 'Manoj Manoj'
+      email: 'manoj.1.manoj@nokia.com'
       company: 'nokia'
-      id: 'juhhytti'
-      timezone: 'Europe/Helsinki'
+      id: 'manoj1'
+      timezone: 'Unknown/Unknown'
+    - name: 'Appalanaidu Chandaka'
+      email: 'appalanaidu.chandaka@nokia.com'
+      company: 'nokia'
+      id: 'appalanaidu8'
+      timezone: 'Unknown/Unknown'
 tsc:
     # yamllint disable rule:line-length
     approval: 'https://lists.o-ran-sc.org/g/main/topic/toc_oran_sc_new_repo_and/44124573?p=,,,100,0,0,0::recentpostdate%2Fsticky,,,100,2,0,44124573'
