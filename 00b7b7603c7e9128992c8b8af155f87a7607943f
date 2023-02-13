@@ -104,6 +104,30 @@
       },
       "revId": "00b7b7603c7e9128992c8b8af155f87a7607943f",
       "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "df2199f8_296df24c",
+        "filename": "pkg/control/control.go",
+        "patchSetId": 1
+      },
+      "lineNbr": 1669,
+      "author": {
+        "id": 1002076
+      },
+      "writtenOn": "2023-02-13T10:07:56Z",
+      "side": 1,
+      "message": "Removed the xApp involvement for this procedure. Please review the changes",
+      "parentUuid": "a61ef1d1_d1c14b60",
+      "range": {
+        "startLine": 1669,
+        "startChar": 13,
+        "endLine": 1669,
+        "endChar": 35
+      },
+      "revId": "00b7b7603c7e9128992c8b8af155f87a7607943f",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
     }
   ]
 }
