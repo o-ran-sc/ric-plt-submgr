@@ -33,6 +33,41 @@
       "message": "The CI run says this: \n\npkg/control/control.go:947:12: undefined: xapp.RIC_SUB_DEL_REQUIRED\npkg/control/e2ap.go:288:14: undefined: xapp.RIC_SUB_DEL_REQUIRED\n\ncould you fix this so that the CI run goes through?\n\nThoralf",
       "revId": "c35d7bbff99b263982300ca3af528d1fab494fff",
       "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "d4841df6_33d5d3d8",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 3
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1002076
+      },
+      "writtenOn": "2023-02-13T14:42:59Z",
+      "side": 1,
+      "message": "Changes in xapp-frame is already submitted for review as part of https://gerrit.o-ran-sc.org/r/c/ric-plt/xapp-frame/+/10288",
+      "parentUuid": "b7b88102_8f884f6f",
+      "revId": "c35d7bbff99b263982300ca3af528d1fab494fff",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "f48dc35d_8ab0ba95",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 3
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1002076
+      },
+      "writtenOn": "2023-02-13T14:42:59Z",
+      "side": 1,
+      "message": "Changes in xapp-frame is already submitted for review as part of https://gerrit.o-ran-sc.org/r/c/ric-plt/xapp-frame/+/10288",
+      "revId": "c35d7bbff99b263982300ca3af528d1fab494fff",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
     }
   ]
 }
