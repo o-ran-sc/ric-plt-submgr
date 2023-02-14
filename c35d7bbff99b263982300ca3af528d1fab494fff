@@ -85,6 +85,24 @@
       "message": "looks good for me",
       "revId": "c35d7bbff99b263982300ca3af528d1fab494fff",
       "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "949364c3_6446e814",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 3
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1002076
+      },
+      "writtenOn": "2023-02-14T05:54:21Z",
+      "side": 1,
+      "message": "Thanks, please confirm if any other action is expected from Capgemini\u0027s team.\n\nBuild is failing as it is having dependency on RMR and xApp-framework changes.\nReview request for these modules has already been raised",
+      "parentUuid": "48766c87_43c253e7",
+      "revId": "c35d7bbff99b263982300ca3af528d1fab494fff",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
     }
   ]
 }
