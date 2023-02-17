@@ -16,6 +16,24 @@
       "message": "Please confirm if any other changes are expected in this merge request",
       "revId": "aa515513c35ea813d9f4b23740aeb9c560f4c302",
       "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "9b7dc8d4_2b57884f",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 7
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1000108
+      },
+      "writtenOn": "2023-02-17T12:40:27Z",
+      "side": 1,
+      "message": "as discussed by e-mail, we can merge this once there\u0027s some unit testing added",
+      "parentUuid": "cccb42a3_79f8625f",
+      "revId": "aa515513c35ea813d9f4b23740aeb9c560f4c302",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
     }
   ]
 }
