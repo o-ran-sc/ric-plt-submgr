@@ -16,6 +16,29 @@
       "message": "Added UT cases",
       "revId": "00802d230ef3aff50d9bbcd492a4e539112d4729",
       "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "4d24f1a6_6cf8344e",
+        "filename": "control_test.go",
+        "patchSetId": 8
+      },
+      "lineNbr": 1,
+      "author": {
+        "id": 1000108
+      },
+      "writtenOn": "2023-03-03T11:47:41Z",
+      "side": 1,
+      "message": "By placing the file into the base directory it seems not to actually run as part of \"go test pkg/control\". Could you relocate and check if it runs in CI build report, i.e., in the log files of the Gerrit automatic build verification step?",
+      "range": {
+        "startLine": 1,
+        "startChar": 7,
+        "endLine": 1,
+        "endChar": 16
+      },
+      "revId": "00802d230ef3aff50d9bbcd492a4e539112d4729",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
     }
   ]
 }
