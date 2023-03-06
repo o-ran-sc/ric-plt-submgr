@@ -34,6 +34,7 @@ const (
 	cSubDelRespFromE2       string = "SubDelRespFromE2"
 	cSubDelFailFromE2       string = "SubDelFailFromE2"
 	cSubDelReqTimerExpiry   string = "SubDelReqTimerExpiry"
+	cSubDelRequFromE2       string = "SubDelRequiredFromE2"
 	cRouteDeleteFail        string = "RouteDeleteFail"
 	cRouteDeleteUpdateFail  string = "RouteDeleteUpdateFail"
 	cUnmergedSubscriptions  string = "UnmergedSubscriptions"
@@ -79,6 +80,7 @@ func GetMetricsOpts() []xapp.CounterOpts {
 		{Name: cSubDelRespFromE2, Help: "The total number of SubscriptionDeleteResponse messages from E2Term"},
 		{Name: cSubDelFailFromE2, Help: "The total number of SubscriptionDeleteFailure messages from E2Term"},
 		{Name: cSubDelReqTimerExpiry, Help: "The total number of SubscriptionDeleteRequest timer expires"},
+		{Name: cSubDelRequFromE2, Help: "The total number of SubscriptionDeleteRequired messages from E2Term"},
 		{Name: cRouteDeleteFail, Help: "The total number of subscription route delete failure"},
 		{Name: cRouteDeleteUpdateFail, Help: "The total number of subscription route delete update failure"},
 		{Name: cUnmergedSubscriptions, Help: "The total number of unmerged Subscriptions"},
