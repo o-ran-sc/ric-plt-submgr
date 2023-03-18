@@ -94,9 +94,13 @@ func (e *E2ap) FillSubscriptionReqMsgs(params interface{}, subreqList *e2ap.Subs
 
 			}
 			if actionToBeSetup.SubsequentAction != nil {
+				xapp.Logger.Info("Entered the if CASE SubsequentAction is present")
 				actionToBeSetupItem.SubsequentAction.Present = true
 				actionToBeSetupItem.SubsequentAction.Type = e2ap.E2AP_SubSeqActionTypeStrMap[*actionToBeSetup.SubsequentAction.SubsequentActionType]
 				actionToBeSetupItem.SubsequentAction.TimetoWait = e2ap.E2AP_TimeToWaitStrMap[*actionToBeSetup.SubsequentAction.TimeToWait]
+			} else {
+				xapp.Logger.Info("Entering the ELSE if SubsequentAction is not present")
+				actionToBeSetupItem.SubsequentAction.Present = false
 			}
 			subReqMsg.ActionSetups = append(subReqMsg.ActionSetups, actionToBeSetupItem)
 		}

@@ -144,6 +144,8 @@ func (e2Item *e2apEntryActionToBeSetupItem) set(id *e2ap.ActionToBeSetupItem) er
 		e2Item.entry.ricSubsequentActionPresent = true
 		e2Item.entry.ricSubsequentAction.ricSubsequentActionType = (C.uint64_t)(id.SubsequentAction.Type)
 		e2Item.entry.ricSubsequentAction.ricTimeToWait = (C.uint64_t)(id.SubsequentAction.TimetoWait)
+	} else {
+		e2Item.entry.ricSubsequentActionPresent = false
 	}
 	return nil
 }

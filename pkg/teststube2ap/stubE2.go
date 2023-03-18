@@ -959,6 +959,52 @@ type RESTSubsReqParams struct {
 	SubsReqParams clientmodel.SubscriptionParams
 }
 
+func (tc *E2Stub) GetRESTSubsReqReportParamsWithoutSubsequentAction(subReqCount int) *RESTSubsReqParams {
+
+	reportParams := RESTSubsReqParams{}
+	reportParams.GetRESTSubsReqReportParamsWithoutSubsequentAction(subReqCount, &tc.clientEndpoint, &tc.meid)
+	tc.requestCount = subReqCount
+	return &reportParams
+}
+
+func (p *RESTSubsReqParams) GetRESTSubsReqReportParamsWithoutSubsequentAction(subReqCount int, clientEndpoint *clientmodel.SubscriptionParamsClientEndpoint, meid *string) {
+
+	// E2SM-gNB-X2
+	p.SubsReqParams.ClientEndpoint = clientEndpoint
+	p.SubsReqParams.Meid = meid
+	var rANFunctionID int64 = 33
+	p.SubsReqParams.RANFunctionID = &rANFunctionID
+
+	actionId := int64(1)
+	actionType := "report"
+	//subsequestActioType := "continue"
+	//timeToWait := "w10ms"
+
+	for requestCount := 0; requestCount < subReqCount; requestCount++ {
+		reqId := int64(requestCount) + 1
+		subscriptionDetail := &clientmodel.SubscriptionDetail{
+			XappEventInstanceID: &reqId,
+			EventTriggers: clientmodel.EventTriggerDefinition{
+				int64(1234 + requestCount),
+			},
+			ActionToBeSetupList: clientmodel.ActionsToBeSetup{
+				&clientmodel.ActionToBeSetup{
+					ActionID:   &actionId,
+					ActionType: &actionType,
+					ActionDefinition: clientmodel.ActionDefinition{
+						int64(5678 + requestCount),
+					},
+					/*SubsequentAction: &clientmodel.SubsequentAction{
+						SubsequentActionType: &subsequestActioType,
+						TimeToWait:           &timeToWait,
+					},*/
+				},
+			},
+		}
+		p.SubsReqParams.SubscriptionDetails = append(p.SubsReqParams.SubscriptionDetails, subscriptionDetail)
+	}
+
+}
 func (p *RESTSubsReqParams) GetRESTSubsReqReportParams(subReqCount int, clientEndpoint *clientmodel.SubscriptionParamsClientEndpoint, meid *string) {
 
 	// E2SM-gNB-X2

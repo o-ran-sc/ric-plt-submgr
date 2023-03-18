@@ -8303,6 +8303,73 @@ func TestRESTSubReqFailAsn1PackSubReqError(t *testing.T) {
 	mainCtrl.VerifyCounterValues(t)
 }
 
+// -----------------------------------------------------------------------------
+// TestRESTSubReqFailAsn1PackSubReqError
+//
+//	stub                             stub
+//
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//
+//	|                 |              |
+//	| RESTSubReq      |              |
+//	|---------------->|              |
+//	|                 |              |
+//	|     RESTSubResp |              |
+//	|<----------------|              |
+//	|                 |              |
+//	|        ASN.1 encode fails      |
+//	|                 |              |
+//	|                 | SubDelReq    |
+//	|                 |------------->|
+//	|                 |              |
+//	|                 |  SubDelFail  |
+//	|                 |<-------------|
+//	|                 |              |
+//	|       RESTNotif |              |
+//	|       unsuccess |              |
+//	|<----------------|              |
+//	|                 |              |
+//	|            [SUBS DELETE]       |
+//	|                 |              |
+//
+// -----------------------------------------------------------------------------
+func TestRESTSubReqFailAsn1PackSubReqErrorWithoutSubsequentAction(t *testing.T) {
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 1},
+		Counter{cRestSubRespToXapp, 1},
+		Counter{cRestSubFailNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+	})
+
+	const subReqCount int = 1
+
+	var params *teststube2ap.RESTSubsReqParams = nil
+	params = xappConn1.GetRESTSubsReqReportParamsWithoutSubsequentAction(subReqCount)
+	e2ap_wrapper.AllowE2apToProcess(e2ap_wrapper.SUB_REQ, false)
+
+	// Req
+	restSubId := xappConn1.SendRESTSubsReq(t, params)
+	xapp.Logger.Debug("Send REST subscriber request for subscriberId : %v", restSubId)
+
+	// E2t: Receive SubsDelReq
+	xappConn1.ExpectRESTNotificationNok(t, restSubId, "allFail")
+
+	e2SubsId := xappConn1.WaitRESTNotification(t, restSubId)
+	xapp.Logger.Debug("TEST: REST notification received e2SubsId=%v", e2SubsId)
+
+	e2ap_wrapper.AllowE2apToProcess(e2ap_wrapper.SUB_REQ, true)
+
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+
+	// Wait that subs is cleaned
+	waitSubsCleanup(t, e2SubsId, 10)
+	mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyCounterValues(t)
+}
 //-----------------------------------------------------------------------------
 // TestRESTSubReqPolicyUpdateTimeoutAndSubDelOkSameAction
 //
