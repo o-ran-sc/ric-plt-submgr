@@ -43,6 +43,7 @@ const (
 	cSDLRemoveFailure       string = "SDLRemoveFailure"
 	cE2StateChangedToUp     string = "E2StateChangedToUp"
 	cE2StateChangedToDown   string = "E2StateChangedToDown"
+	cE2StateUnderReset      string = "E2StateChangedToUnderReset"
 )
 
 func GetMetricsOpts() []xapp.CounterOpts {
@@ -93,6 +94,7 @@ func GetMetricsOpts() []xapp.CounterOpts {
 		// E2 interface state counters
 		{Name: cE2StateChangedToUp, Help: "The total number of E2 interface change connected state"},
 		{Name: cE2StateChangedToDown, Help: "The total number of E2 interface change disconnected state"},
+		{Name: cE2StateUnderReset, Help: "The total number of E2 interface change under reset state"},
 	}
 }
 
