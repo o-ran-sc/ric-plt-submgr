@@ -624,6 +624,49 @@ func (r *Registry) SetResetTestFlag(resetTestFlag bool, subs *Subscription) {
 	}
 }
 
+func (r *Registry) DeleteUncompeletedE2nodeSubscriptionsForGivenRan(ranName string, c *Control) {
+	for subId, subs := range r.register {
+		if subs.Meid.RanName == ranName {
+			if subs.SubRespRcvd == false {
+				// If policy subscription has already been made successfully unsuccessful update should not be deleted.
+				if subs.PolicyUpdate == false {
+					subs.NoRespToXapp = true
+					xapp.Logger.Debug("SendSubscriptionDeleteReq. subId = %v", subId)
+					c.SendSubscriptionDeleteReq(subs, false)
+				}
+			} else if subs.OngoingReqCount != 0 || subs.OngoingDelCount != 0 {
+				// Delete route
+				if subs.RMRRouteCreated == true {
+					for _, ep := range subs.EpList.Endpoints {
+						tmpList := xapp.RmrEndpointList{}
+						tmpList.AddEndpoint(&ep)
+						subRouteAction := SubRouteInfo{tmpList, uint16(subs.ReqId.InstanceId)}
+						if err := r.rtmgrClient.SubscriptionRequestDelete(subRouteAction); err != nil {
+							c.UpdateCounter(cRouteDeleteFail)
+						}
+					}
+				}
+				// Delete E2 subscription from registry and db
+				xapp.Logger.Debug("Registry: Subscription delete. subId=%v", subId)
+				delete(r.register, subId)
+				r.subIds = append(r.subIds, subId)
+				c.RemoveSubscriptionFromDb(subs)
+			}
+		}
+	}
+
+	// Delete REST subscription from registry and db
+	for restSubId, restSubs := range r.restSubscriptions {
+		if restSubs.Meid == ranName {
+			if restSubs.SubReqOngoing == true || restSubs.SubDelReqOngoing == true {
+				xapp.Logger.Debug("Registry: REST subscription delete. subId=%v", restSubId)
+				delete(r.restSubscriptions, restSubId)
+				c.RemoveRESTSubscriptionFromDb(restSubId)
+			}
+		}
+	}
+}
+
 func (r *Registry) DeleteAllE2Subscriptions(ranName string, c *Control) {
 
 	xapp.Logger.Debug("Registry: DeleteAllE2Subscriptions()")

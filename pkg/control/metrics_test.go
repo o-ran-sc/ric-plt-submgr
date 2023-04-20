@@ -64,6 +64,7 @@ func TestAddAllCountersOnce(t *testing.T) {
 		Counter{cSDLRemoveFailure, 1},
 		Counter{cE2StateChangedToUp, 1},
 		Counter{cE2StateChangedToDown, 1},
+		Counter{cE2StateUnderReset, 1},
 	})
 
 	mainCtrl.c.UpdateCounter(cSubReqFromXapp)
@@ -103,6 +104,7 @@ func TestAddAllCountersOnce(t *testing.T) {
 	mainCtrl.c.UpdateCounter(cSDLRemoveFailure)
 	mainCtrl.c.UpdateCounter(cE2StateChangedToUp)
 	mainCtrl.c.UpdateCounter(cE2StateChangedToDown)
+	mainCtrl.c.UpdateCounter(cE2StateUnderReset)
 
 	mainCtrl.VerifyCounterValues(t)
 }

@@ -22,9 +22,10 @@ package control
 import (
 	"encoding/json"
 	"fmt"
-	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"strings"
 	"sync"
+
+	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 )
 
 type XappRnibIf struct {
@@ -117,6 +118,19 @@ func (e *E2IfState) NotificationCb(ch string, events ...string) {
 			delete(e.NbIdMap, nbId)
 			e.control.registry.DeleteAllE2Subscriptions(nbId, e.control)
 		}
+	} else if strings.Contains(events[0], "_UNDER_RESET") {
+		xapp.Logger.Debug("NotificationCb UNDER_RESET len(nbId) == 0 ")
+		e.control.UpdateCounter(cE2StateUnderReset)
+		nbId, err := ExtractNbiIdFromString(events[0])
+		if err != nil {
+			xapp.Logger.Error("NotificationCb _UNDER_RESET %v ", err)
+			return
+		}
+		xapp.Logger.Debug("E2 Under Reset. NbId=%s", nbId)
+		if _, ok := e.NbIdMap[nbId]; ok {
+			delete(e.NbIdMap, nbId)
+			e.control.registry.DeleteUncompeletedE2nodeSubscriptionsForGivenRan(nbId, e.control)
+		}
 	}
 }
 
@@ -196,6 +210,9 @@ func ExtractNbiIdFromString(s string) (string, error) {
 		nbId = splitStringTbl[0]
 	} else if strings.Contains(s, "_DISCONNECTED") {
 		splitStringTbl := strings.Split(s, "_DISCONNECTED")
+		nbId = splitStringTbl[0]
+	} else if strings.Contains(s, "_UNDER_RESET") {
+		splitStringTbl := strings.Split(s, "_UNDER_RESET")
 		nbId = splitStringTbl[0]
 	}
 	if len(nbId) == 0 {
