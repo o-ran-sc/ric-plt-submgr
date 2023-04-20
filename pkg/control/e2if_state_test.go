@@ -71,6 +71,7 @@ func TestMock(t *testing.T) {
 	xappRnibMock.CreateGnb("gnb_369_11105_aaaaa3", entities.ConnectionStatus_SHUTTING_DOWN)
 	xappRnibMock.CreateGnb("gnb_369_11105_aaaaa3", entities.ConnectionStatus_SHUT_DOWN)
 	xappRnibMock.CreateGnb("gnb_369_11105_aaaaa3", entities.ConnectionStatus_DISCONNECTED)
+	xappRnibMock.CreateGnb("gnb_369_11105_aaaaa3", entities.ConnectionStatus_UNDER_RESET)
 
 	mainCtrl.c.e2IfState.ReadE2ConfigurationFromRnib()
 	mainCtrl.c.e2IfState.SubscribeChannels()
@@ -90,6 +91,9 @@ func TestMock(t *testing.T) {
 		t.Errorf("XappRnibStoreAndPublish failed: %v", err)
 	}
 	if err := xappRnibMock.XappRnibStoreAndPublish("RAN_CONNECTION_STATUS_CHANGE", "gnb_369_11105_aaaaa3_DISCONNECTED", "key1", "data1"); err != nil {
+		t.Errorf("XappRnibStoreAndPublish failed: %v", err)
+	}
+	if err := xappRnibMock.XappRnibStoreAndPublish("RAN_CONNECTION_STATUS_CHANGE", "gnb_369_11105_aaaaa3_UNDER_RESET", "key1", "data1"); err != nil {
 		t.Errorf("XappRnibStoreAndPublish failed: %v", err)
 	}
 }
@@ -236,6 +240,10 @@ func ExtratNbIdAndConnectionStatus(s string) (string, entities.ConnectionStatus,
 	} else if strings.Contains(s, "_SHUT_DOWN") {
 		connectionStatus = entities.ConnectionStatus_SHUT_DOWN
 		splitStringTbl := strings.Split(s, "_SHUT_DOWN")
+		nbId = splitStringTbl[0]
+	} else if strings.Contains(s, "_UNDER_RESET") {
+		connectionStatus = entities.ConnectionStatus_UNDER_RESET
+		splitStringTbl := strings.Split(s, "_UNDER_RESET")
 		nbId = splitStringTbl[0]
 	} else {
 		return "", 0, fmt.Errorf("XappRnibMock: Invalid connection status. %s", s)
