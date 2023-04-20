@@ -12,7 +12,7 @@ replace gerrit.o-ran-sc.org/r/ric-plt/e2ap => ./e2ap/
 
 require (
 	gerrit.o-ran-sc.org/r/ric-plt/e2ap v0.0.0-00010101000000-000000000000
-	gerrit.o-ran-sc.org/r/ric-plt/nodeb-rnib.git/entities v1.2.1
+	gerrit.o-ran-sc.org/r/ric-plt/nodeb-rnib.git/entities v1.2.8
 	gerrit.o-ran-sc.org/r/ric-plt/sdlgo v0.8.0
 	gerrit.o-ran-sc.org/r/ric-plt/xapp-frame v0.0.0-00010101000000-000000000000
 	github.com/go-openapi/runtime v0.19.4
