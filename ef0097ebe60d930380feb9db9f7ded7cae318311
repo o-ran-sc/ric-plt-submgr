@@ -16,6 +16,75 @@
       "message": "Kindly review and merge",
       "revId": "ef0097ebe60d930380feb9db9f7ded7cae318311",
       "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "93f805ba_148e5122",
+        "filename": "pkg/control/e2if_state.go",
+        "patchSetId": 2
+      },
+      "lineNbr": 123,
+      "author": {
+        "id": 1000475
+      },
+      "writtenOn": "2023-05-08T05:49:12Z",
+      "side": 1,
+      "message": "remove one of it",
+      "range": {
+        "startLine": 123,
+        "startChar": 2,
+        "endLine": 123,
+        "endChar": 65
+      },
+      "revId": "ef0097ebe60d930380feb9db9f7ded7cae318311",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "2d1eb73e_aa5137b0",
+        "filename": "pkg/control/e2if_state.go",
+        "patchSetId": 2
+      },
+      "lineNbr": 124,
+      "author": {
+        "id": 1000475
+      },
+      "writtenOn": "2023-05-08T05:49:12Z",
+      "side": 1,
+      "message": "check if counter is initialized.",
+      "range": {
+        "startLine": 124,
+        "startChar": 12,
+        "endLine": 124,
+        "endChar": 45
+      },
+      "revId": "ef0097ebe60d930380feb9db9f7ded7cae318311",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "9c7acbda_1617e88c",
+        "filename": "pkg/control/e2if_state.go",
+        "patchSetId": 2
+      },
+      "lineNbr": 127,
+      "author": {
+        "id": 1000475
+      },
+      "writtenOn": "2023-05-08T05:49:12Z",
+      "side": 1,
+      "message": "log the err",
+      "range": {
+        "startLine": 127,
+        "startChar": 5,
+        "endLine": 127,
+        "endChar": 67
+      },
+      "revId": "ef0097ebe60d930380feb9db9f7ded7cae318311",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
     }
   ]
 }
