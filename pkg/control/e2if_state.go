@@ -49,14 +49,16 @@ func CreateXappRnibIfInstance() XappRnibInterface {
 }
 
 type E2IfState struct {
-	mutex   sync.Mutex
-	control *Control
-	NbIdMap map[string]string
+	mutex         sync.Mutex
+	control       *Control
+	NbIdMap       map[string]string
+	NbIdStatusMap map[string]string
 }
 
 func (e *E2IfState) Init(c *Control) {
 	e.control = c
 	e.NbIdMap = make(map[string]string, 0)
+	e.NbIdStatusMap = make(map[string]string, 0)
 	e.ReadE2ConfigurationFromRnib()
 	err := e.SubscribeChannels()
 	if err != nil {
@@ -126,6 +128,7 @@ func (e *E2IfState) NotificationCb(ch string, events ...string) {
 			xapp.Logger.Error("NotificationCb _UNDER_RESET %v ", err)
 			return
 		}
+		e.NbIdStatusMap[nbId] = "UNDER_RESET"
 		xapp.Logger.Debug("E2 Under Reset. NbId=%s", nbId)
 		if _, ok := e.NbIdMap[nbId]; ok {
 			e.control.registry.DeleteUncompeletedE2nodeSubscriptionsForGivenRan(nbId, e.control)
@@ -189,6 +192,15 @@ func (e *E2IfState) IsE2ConnectionUp(nbId *string) bool {
 	}
 
 	if _, ok := e.NbIdMap[*nbId]; ok {
+		return true
+	} else {
+		return false
+	}
+}
+
+func (e *E2IfState) IsE2ConnectionUnderReset(nbId *string) bool {
+
+	if status := e.NbIdStatusMap[*nbId]; status == "UNDER_RESET" {
 		return true
 	} else {
 		return false
