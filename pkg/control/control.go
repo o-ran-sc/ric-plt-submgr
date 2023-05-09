@@ -450,8 +450,12 @@ func (c *Control) RESTSubscriptionHandler(params interface{}) (*models.Subscript
 		c.PrintRESTSubscriptionRequest(p)
 	}
 
-	if c.e2IfState.IsE2ConnectionUp(p.Meid) == false {
-		xapp.Logger.Error("No E2 connection for ranName %v", *p.Meid)
+	if c.e2IfState.IsE2ConnectionUp(p.Meid) == false || c.e2IfState.IsE2ConnectionUnderReset(p.Meid) == true {
+		if c.e2IfState.IsE2ConnectionUp(p.Meid) == false {
+			xapp.Logger.Error("No E2 connection for ranName %v", *p.Meid)
+		} else if c.e2IfState.IsE2ConnectionUnderReset(p.Meid) == true {
+			xapp.Logger.Error("E2 Node for ranName %v UNDER RESET", *p.Meid)
+		}
 		c.UpdateCounter(cRestReqRejDueE2Down)
 		return nil, common.SubscribeServiceUnavailableCode
 	}
