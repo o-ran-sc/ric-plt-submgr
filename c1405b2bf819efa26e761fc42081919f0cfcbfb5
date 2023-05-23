@@ -16,6 +16,52 @@
       "message": "Kindly review and merge.",
       "revId": "c1405b2bf819efa26e761fc42081919f0cfcbfb5",
       "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "c342b447_40b1f292",
+        "filename": "pkg/control/control.go",
+        "patchSetId": 1
+      },
+      "lineNbr": 454,
+      "author": {
+        "id": 1000108
+      },
+      "writtenOn": "2023-05-23T14:18:50Z",
+      "side": 1,
+      "message": "let\u0027s have a different debug message if we deny subscriptions because of \"no E2 connection\" vs \"under reset\". \"No e2 connections\" is wrong if the request is denied because of under E2 reset",
+      "range": {
+        "startLine": 453,
+        "startChar": 54,
+        "endLine": 454,
+        "endChar": 44
+      },
+      "revId": "c1405b2bf819efa26e761fc42081919f0cfcbfb5",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "3a5d8dac_ab02f71d",
+        "filename": "pkg/control/e2if_state.go",
+        "patchSetId": 1
+      },
+      "lineNbr": 131,
+      "author": {
+        "id": 1000108
+      },
+      "writtenOn": "2023-05-23T14:18:50Z",
+      "side": 1,
+      "message": "is there any code that removes the \"UNDER_RESET\" entry in NbIdStatusMap ?",
+      "range": {
+        "startLine": 131,
+        "startChar": 26,
+        "endLine": 131,
+        "endChar": 31
+      },
+      "revId": "c1405b2bf819efa26e761fc42081919f0cfcbfb5",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
     }
   ]
 }
