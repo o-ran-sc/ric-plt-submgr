@@ -90,6 +90,30 @@
     {
       "unresolved": true,
       "key": {
+        "uuid": "ecfdefc9_b639ad60",
+        "filename": "pkg/control/e2if_state.go",
+        "patchSetId": 2
+      },
+      "lineNbr": 124,
+      "author": {
+        "id": 1000108
+      },
+      "writtenOn": "2023-05-29T08:38:44Z",
+      "side": 1,
+      "message": "@naman, did you address this one?",
+      "parentUuid": "2d1eb73e_aa5137b0",
+      "range": {
+        "startLine": 124,
+        "startChar": 12,
+        "endLine": 124,
+        "endChar": 45
+      },
+      "revId": "ef0097ebe60d930380feb9db9f7ded7cae318311",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
+    },
+    {
+      "unresolved": true,
+      "key": {
         "uuid": "9c7acbda_1617e88c",
         "filename": "pkg/control/e2if_state.go",
         "patchSetId": 2

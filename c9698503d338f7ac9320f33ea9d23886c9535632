@@ -65,6 +65,30 @@
       "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
     },
     {
+      "unresolved": false,
+      "key": {
+        "uuid": "cfa63a6f_7387a28c",
+        "filename": "pkg/control/e2if_state.go",
+        "patchSetId": 4
+      },
+      "lineNbr": 131,
+      "author": {
+        "id": 1000108
+      },
+      "writtenOn": "2023-05-29T08:38:44Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "d05e2b9d_ec74ccde",
+      "range": {
+        "startLine": 131,
+        "startChar": 25,
+        "endLine": 131,
+        "endChar": 38
+      },
+      "revId": "c9698503d338f7ac9320f33ea9d23886c9535632",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
+    },
+    {
       "unresolved": true,
       "key": {
         "uuid": "d8cbd9d2_cd066f6b",
@@ -78,6 +102,30 @@
       "writtenOn": "2023-05-23T14:32:22Z",
       "side": 1,
       "message": "typo",
+      "range": {
+        "startLine": 627,
+        "startChar": 31,
+        "endLine": 627,
+        "endChar": 33
+      },
+      "revId": "c9698503d338f7ac9320f33ea9d23886c9535632",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "37c9fece_4ad974d5",
+        "filename": "pkg/control/registry.go",
+        "patchSetId": 4
+      },
+      "lineNbr": 627,
+      "author": {
+        "id": 1000108
+      },
+      "writtenOn": "2023-05-29T08:38:44Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "d8cbd9d2_cd066f6b",
       "range": {
         "startLine": 627,
         "startChar": 31,
