@@ -175,6 +175,30 @@
       },
       "revId": "c1405b2bf819efa26e761fc42081919f0cfcbfb5",
       "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "7f7a3922_62123fa7",
+        "filename": "pkg/control/e2if_state.go",
+        "patchSetId": 1
+      },
+      "lineNbr": 131,
+      "author": {
+        "id": 1001361
+      },
+      "writtenOn": "2023-05-29T09:30:27Z",
+      "side": 1,
+      "message": "added the code for fix.",
+      "parentUuid": "346c35c8_f6479719",
+      "range": {
+        "startLine": 131,
+        "startChar": 26,
+        "endLine": 131,
+        "endChar": 31
+      },
+      "revId": "c1405b2bf819efa26e761fc42081919f0cfcbfb5",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
     }
   ]
 }
