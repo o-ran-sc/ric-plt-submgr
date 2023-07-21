@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "6df0d7a9_ca36b5ba",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1000108
+      },
+      "writtenOn": "2023-07-21T12:57:10Z",
+      "side": 1,
+      "message": "both old committers are not in the project anymore and can\u0027t therefore vote. I merge this now.",
+      "revId": "9c5f77fb9f857f07de8c7e77d4bb84793ef27e30",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
+    }
+  ]
+}
