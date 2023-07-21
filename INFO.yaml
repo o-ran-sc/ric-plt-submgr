@@ -34,20 +34,21 @@ repositories:
     - ric-plt/submgr
 committers:
     - <<: *oran_ric_plt_submgr_ptl
-    - name: 'Manoj Manoj'
-      email: 'manoj.1.manoj@nokia.com'
+    - name: 'Sangama Gunasekaran'
+      email: 'sangama.gunasekaran@nokia.com'
       company: 'nokia'
-      id: 'manoj1'
-      timezone: 'Unknown/Unknown'
-    - name: 'Appalanaidu Chandaka'
-      email: 'appalanaidu.chandaka@nokia.com'
-      company: 'nokia'
-      id: 'appalanaidu8'
+      id: 'maheshgu'
       timezone: 'Unknown/Unknown'
 tsc:
     # yamllint disable rule:line-length
     approval: 'https://lists.o-ran-sc.org/g/main/topic/toc_oran_sc_new_repo_and/44124573?p=,,,100,0,0,0::recentpostdate%2Fsticky,,,100,2,0,44124573'
     changes:
+        - type: 'promotion'
+          name: 'Sangama Gunasekaran'
+        - type: 'removal'
+          name: 'Manoj Manoj'
+        - type: 'removal'
+          name: 'Appalanaidu Chandaka'
         - type: 'promotion'
           name: 'Anssi Mannila'
           link: 'https://lists.o-ran-sc.org/g/main/topic/toc_oran_sc_new_repo_and/44124573?p=,,,100,0,0,0::recentpostdate%2Fsticky,,,100,2,0,44124573'
