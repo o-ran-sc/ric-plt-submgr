@@ -34,6 +34,16 @@ repositories:
     - ric-plt/submgr
 committers:
     - <<: *oran_ric_plt_submgr_ptl
+    - name: 'Sumit Ranjan Dash'
+      email: 'sumit.ranjan_dash@nokia.com'
+      company: 'nokia'
+      id: 'sranjand'
+      timezone: 'Unknown/Unknown'
+    - name: 'Aditya Verma'
+      email: 'aditya.3.verma@nokia.com'
+      company: 'nokia'
+      id: 'aditverm'
+      timezone: 'Unknown/Unknown'
     - name: 'Sangama Gunasekaran'
       email: 'sangama.gunasekaran@nokia.com'
       company: 'nokia'
@@ -43,6 +53,10 @@ tsc:
     # yamllint disable rule:line-length
     approval: 'https://lists.o-ran-sc.org/g/main/topic/toc_oran_sc_new_repo_and/44124573?p=,,,100,0,0,0::recentpostdate%2Fsticky,,,100,2,0,44124573'
     changes:
+        - type: 'promotion'
+          name: 'Sumit Ranjan Dash'
+        - type: 'promotion'
+          name: 'Aditya Verma'
         - type: 'promotion'
           name: 'Sangama Gunasekaran'
         - type: 'removal'
