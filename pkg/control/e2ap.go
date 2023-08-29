@@ -55,6 +55,10 @@ func (e *E2ap) SetASN1DebugPrintStatus(logLevel int) {
 	e2ap_wrapper.SetASN1DebugPrintStatus(logLevel)
 }
 
+func (e *E2ap) SetE2IEOrderCheck(ieOrderCheck bool) {
+	e2ap_wrapper.SetE2IEOrderCheck(ieOrderCheck)
+}
+
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
