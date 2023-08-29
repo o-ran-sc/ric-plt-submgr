@@ -52,10 +52,11 @@ import "C"
 import (
 	"bytes"
 	"fmt"
-	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/conv"
-	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
 	"strings"
 	"unsafe"
+
+	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/conv"
+	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
 )
 
 const cLogBufferMaxSize = 40960
@@ -729,6 +730,7 @@ func (e2apMsg *e2apMsgPackerSubscriptionResponse) UnPack(msg *e2ap.PackedData) (
 	if err := e2apMsg.e2apMessagePacker.unpacktopdu(msg); err != nil {
 		return err, e2apMsg.msgG
 	}
+
 	errorNro := C.getRICSubscriptionResponseData(e2apMsg.e2apMessagePacker.pdu, e2apMsg.msgC)
 	if err := e2apMsg.checkerr(errorNro); err != nil {
 		return err, e2apMsg.msgG
@@ -1211,6 +1213,13 @@ func SetASN1DebugPrintStatus(logLevel int) {
 		//fmt.Println("ASN1 debug prints OFF")
 		C.allowASN1DebugPrints(false)
 	}
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+func SetE2IEOrderCheck(ieOrderCheck bool) {
+	C.allowOutOfOrderIEMsg(C.bool(ieOrderCheck))
 }
 
 //-----------------------------------------------------------------------------

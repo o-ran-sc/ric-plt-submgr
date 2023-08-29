@@ -287,7 +287,11 @@ enum e2err {
     e2err_RICSubscriptionDeleteRequiredRANfunctionIDMissing,
     e2err_RICSubscriptionDeleteRequiredRICcauseMissing,
     e2err_RICSubscriptionDeleteRequiredEncodeFail,
-    e2err_RICSubscriptionDeleteRequiredAllocE2AP_PDUFail
+    e2err_RICSubscriptionDeleteRequiredAllocE2AP_PDUFail,
+    e2err_RICsubscriptionResponseRICrequestIDWrongOrder,
+    e2err_RICsubscriptionResponseRANfunctionIDWrongOrder,
+    e2err_RICsubscriptionResponseRICaction_Admitted_ListWrongOrder,
+    e2err_RICsubscriptionResponseRICaction_NotAdmitted_ListWrongOrder,
 };
 
 static const char* const E2ErrorStrings[] = {
@@ -349,6 +353,10 @@ static const char* const E2ErrorStrings[] = {
     "e2err_RICSubscriptionDeleteRequiredRICcauseMissing",
     "e2err_RICSubscriptionDeleteRequiredEncodeFail",
     "e2err_RICSubscriptionDeleteRequiredAllocE2AP_PDUFail",
+    "e2err_RICsubscriptionResponseRICrequestIDWrongOrder",
+    "e2err_RICsubscriptionResponseRANfunctionIDWrongOrder",
+    "e2err_RICsubscriptionResponseRICaction_Admitted_ListWrongOrder",
+    "e2err_RICsubscriptionResponseRICaction_NotAdmitted_ListWrongOrder",
 };
 
 typedef struct {
@@ -436,6 +444,8 @@ typedef struct {
 
 void allowASN1DebugPrints(bool);
 
+void allowOutOfOrderIEMsg(bool);
+
 const char* getE2ErrorString(uint64_t);
 
 typedef void* e2ap_pdu_ptr_t;
@@ -447,6 +457,7 @@ uint64_t packRICSubscriptionDeleteRequest(size_t*, byte*, char*,RICSubscriptionD
 uint64_t packRICSubscriptionDeleteResponse(size_t*, byte*, char*,RICSubscriptionDeleteResponse_t*);
 uint64_t packRICSubscriptionDeleteFailure(size_t*, byte*, char*,RICSubscriptionDeleteFailure_t*);
 uint64_t packRICSubscriptionDeleteRequired(size_t*, byte*, char*,RICSubsDeleteRequired_t*);
+uint64_t packRICSubscriptionResponseUnordered(size_t*, byte* pDataBuffer, char*, RICSubscriptionResponse_t*);
 
 e2ap_pdu_ptr_t* unpackE2AP_pdu(const size_t, const byte*, char*, E2MessageInfo_t*);
 uint64_t getRICSubscriptionRequestData(e2ap_pdu_ptr_t*, RICSubscriptionRequest_t*);

@@ -880,6 +880,60 @@ func TestSubReqAndSubDelOk(t *testing.T) {
 	mainCtrl.VerifyCounterValues(t)
 }
 
+func TestSubReqAndSubDelOkOutofOrderIEs(t *testing.T) {
+	CaseBegin("TestSubReqAndSubDelOkOutofOrderIEs")
+
+	mainCtrl.c.e2ap.SetE2IEOrderCheck(false)
+	// Init counter check
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cSubReqFromXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cSubRespFromE2, 1},
+		Counter{cSubRespToXapp, 1},
+		Counter{cSubDelReqFromXapp, 1},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelRespFromE2, 1},
+		Counter{cSubDelRespToXapp, 1},
+	})
+
+	cretrans := xappConn1.SendSubsReq(t, nil, nil)
+	if cretrans == nil {
+		t.Logf("Could not send SubsReq")
+		t.FailNow()
+	}
+	crereq, cremsg := e2termConn1.RecvSubsReq(t)
+	if crereq == nil || cremsg == nil {
+		t.Logf("Could not recieve SubsReq")
+		t.FailNow()
+	}
+
+	e2termConn1.SendSubsResp(t, crereq, cremsg)
+
+	mainCtrl.c.e2ap.SetE2IEOrderCheck(false)
+
+	e2SubsId := xappConn1.RecvSubsResp(t, cretrans)
+	resp, err := xapp.Subscription.QuerySubscriptions()
+	assert.Equal(t, resp[0].SubscriptionID, int64(e2SubsId))
+	assert.Equal(t, resp[0].Meid, "RAN_NAME_1")
+	assert.Equal(t, resp[0].ClientEndpoint, []string{"localhost:13560"})
+
+	deltrans := xappConn1.SendSubsDelReq(t, nil, e2SubsId)
+	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+
+	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
+	xappConn1.RecvSubsDelResp(t, deltrans)
+
+	//Wait that subs is cleaned
+	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
+
+	xappConn1.TestMsgChanEmpty(t)
+	xappConn2.TestMsgChanEmpty(t)
+	e2termConn1.TestMsgChanEmpty(t)
+	mainCtrl.wait_registry_empty(t, 10)
+
+	mainCtrl.VerifyCounterValues(t)
+	mainCtrl.c.e2ap.SetE2IEOrderCheck(true)
+}
 //-----------------------------------------------------------------------------
 // TestSubReqRetransmission
 //
