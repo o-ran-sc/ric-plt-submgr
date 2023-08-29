@@ -20,8 +20,9 @@
 package e2ap_tests
 
 import (
-	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
 	"testing"
+
+	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/e2ap"
 )
 
 //-----------------------------------------------------------------------------

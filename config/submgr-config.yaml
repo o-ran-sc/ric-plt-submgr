@@ -26,3 +26,4 @@
   "readSubsFromDb": "true"
   "dbTryCount": 200
   "dbRetryForever": "true"
+  "checkE2IEOrder": true

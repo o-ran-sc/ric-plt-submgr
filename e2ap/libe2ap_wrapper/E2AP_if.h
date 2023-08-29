@@ -287,7 +287,11 @@ enum e2err {
     e2err_RICSubscriptionDeleteRequiredRANfunctionIDMissing,
     e2err_RICSubscriptionDeleteRequiredRICcauseMissing,
     e2err_RICSubscriptionDeleteRequiredEncodeFail,
-    e2err_RICSubscriptionDeleteRequiredAllocE2AP_PDUFail
+    e2err_RICSubscriptionDeleteRequiredAllocE2AP_PDUFail,
+    e2err_RICsubscriptionResponseRICrequestIDWrongOrder,
+    e2err_RICsubscriptionResponseRANfunctionIDWrongOrder,
+    e2err_RICsubscriptionResponseRICaction_Admitted_ListWrongOrder,
+    e2err_RICsubscriptionResponseRICaction_NotAdmitted_ListWrongOrder,
 };
 
 static const char* const E2ErrorStrings[] = {
@@ -349,6 +353,10 @@ static const char* const E2ErrorStrings[] = {
     "e2err_RICSubscriptionDeleteRequiredRICcauseMissing",
     "e2err_RICSubscriptionDeleteRequiredEncodeFail",
     "e2err_RICSubscriptionDeleteRequiredAllocE2AP_PDUFail",
+    "e2err_RICsubscriptionResponseRICrequestIDWrongOrder",
+    "e2err_RICsubscriptionResponseRANfunctionIDWrongOrder",
+    "e2err_RICsubscriptionResponseRICaction_Admitted_ListWrongOrder",
+    "e2err_RICsubscriptionResponseRICaction_NotAdmitted_ListWrongOrder",
 };
 
 typedef struct {
@@ -435,6 +443,8 @@ typedef struct {
 // Function declarations
 
 void allowASN1DebugPrints(bool);
+
+void allowOutOfOrderIEMsg(uint8_t);
 
 const char* getE2ErrorString(uint64_t);
 
