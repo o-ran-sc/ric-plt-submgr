@@ -16,6 +16,24 @@
       "message": "the first version of this was reviewed by Anssi",
       "revId": "45259fb354d1ef55c5fab1b60b741d48e5d017b0",
       "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "c3ca3615_806376d8",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1001896
+      },
+      "writtenOn": "2023-09-11T09:52:05Z",
+      "side": 1,
+      "message": "The initial changes diff was sent over email to Anssi and both the patch sets contain original changes and the changes suggested by Anssi.",
+      "parentUuid": "43d6c7d0_a99d2cdc",
+      "revId": "45259fb354d1ef55c5fab1b60b741d48e5d017b0",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
     }
   ]
 }
