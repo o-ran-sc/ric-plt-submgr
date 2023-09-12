@@ -1,0 +1,44 @@
+{
+  "comments": [
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "b66a7fdb_f3a7bb11",
+        "filename": "e2ap/libe2ap_wrapper/E2AP_if.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 389,
+      "author": {
+        "id": 1000108
+      },
+      "writtenOn": "2023-09-12T12:39:52Z",
+      "side": 1,
+      "message": "this isn\u0027t actually too much different from the ordered reponse. As far as I can see it\u0027s the ordering of ric request id and ran function ID. \n\nbest to extract these code blocks into separate small functions and call them in the order that checkIEOrder requires. This way the rest of  the function remains the same as in the original one.",
+      "range": {
+        "startLine": 389,
+        "startChar": 19,
+        "endLine": 389,
+        "endChar": 43
+      },
+      "revId": "0ccb6304c93aad9ad8fb03a9f05ae64e8749b2c2",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "3221f93c_43beee9f",
+        "filename": "pkg/control/control.go",
+        "patchSetId": 3
+      },
+      "lineNbr": 75,
+      "author": {
+        "id": 1000108
+      },
+      "writtenOn": "2023-09-12T12:39:52Z",
+      "side": 1,
+      "message": "maybe this is a good place to mention that it accepts the IEs in other order, but also changes the order for packing of RICrequestId and RANFunctionID in packRICSubscriptionResponse()\n\nNow thinking of it, maybe it\u0027s best to put these behind different config parameters. one for reading and the other called \"IEOrderStyle\u003d \n\n  0 : default\n  1 : RICrequestID and RANfunctionID switched.",
+      "revId": "0ccb6304c93aad9ad8fb03a9f05ae64e8749b2c2",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
+    }
+  ]
+}
