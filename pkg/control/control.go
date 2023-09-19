@@ -690,7 +690,11 @@ func (c *Control) handleSubscriptionRequest(trans *TransactionXapp, subReqMsg *e
 	}
 
 	xapp.Logger.Error("XAPP-SubReq E2 subscription failed: %s", idstring(err, trans, subs))
-	c.registry.RemoveFromSubscription(subs, trans, waitRouteCleanup_ms, c)
+	// If policy type subscription fails we cannot remove it only internally. Once subscription has been created
+	// successfully, it must be deleted on both sides.
+	if subs.PolicyUpdate == false {
+		c.registry.RemoveFromSubscription(subs, trans, waitRouteCleanup_ms, c)
+	}
 
 	return nil, &errorInfo, err
 }
@@ -1126,6 +1130,14 @@ func (c *Control) handleSubscriptionCreate(subs *Subscription, parentTrans *Tran
 			subRfMsg, valid = subs.SetCachedResponse(event, true)
 			subs.SubRespRcvd = true
 		case *e2ap.E2APSubscriptionFailure:
+			if subs.PolicyUpdate == false {
+				subRfMsg, valid = subs.SetCachedResponse(event, false)
+			} else {
+				// In policy update case where subscription has already been created successfully in Gnb
+				// we cannot delete subscription internally in submgr
+				subRfMsg, valid = subs.SetCachedResponse(event, true)
+			}
+
 			subRfMsg, valid = subs.SetCachedResponse(event, false)
 			xapp.Logger.Debug("SUBS-SubReq: internal delete due failure event(%s) %s", typeofSubsMessage(event), idstring(nil, trans, subs, parentTrans))
 		case *SubmgrRestartTestEvent:
@@ -1150,6 +1162,9 @@ func (c *Control) handleSubscriptionCreate(subs *Subscription, parentTrans *Tran
 	} else {
 		xapp.Logger.Debug("SUBS-SubReq: Handling (cached response %s) %s", typeofSubsMessage(subRfMsg), idstring(nil, trans, subs, parentTrans))
 	}
+	xapp.Logger.Debug("subs.PolicyUpdate: %v", subs.PolicyUpdate)
+	xapp.Logger.Debug("subs: %v", subs)
+
 	if valid == false {
 		removeSubscriptionFromDb = true
 	}
