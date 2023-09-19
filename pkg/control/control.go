@@ -198,9 +198,9 @@ func (c *Control) SymptomDataHandler(w http.ResponseWriter, r *http.Request) {
 	xapp.Resource.SendSymptomDataJson(w, r, subscriptions, "platform/subscriptions.json")
 }
 
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 //
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 func (c *Control) RESTQueryHandler() (models.SubscriptionList, error) {
 	xapp.Logger.Debug("RESTQueryHandler() called")
 
@@ -209,9 +209,9 @@ func (c *Control) RESTQueryHandler() (models.SubscriptionList, error) {
 	return c.registry.QueryHandler()
 }
 
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 //
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 func (c *Control) ReadE2Subscriptions() error {
 	var err error
 	var subIds []uint32
@@ -233,9 +233,9 @@ func (c *Control) ReadE2Subscriptions() error {
 	return err
 }
 
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 //
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 func (c *Control) ReadRESTSubscriptions() error {
 
 	xapp.Logger.Debug("ReadRESTSubscriptions()")
@@ -265,9 +265,9 @@ func (c *Control) ReadRESTSubscriptions() error {
 	return err
 }
 
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 //
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 func (c *Control) ReadConfigParameters(f string) {
 
 	xapp.Logger.Debug("ReadConfigParameters")
@@ -350,9 +350,9 @@ func (c *Control) ReadConfigParameters(f string) {
 	xapp.Logger.Debug("waitRouteCleanup= %v", waitRouteCleanup_ms)
 }
 
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 //
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 func (c *Control) HandleUncompletedSubscriptions(register map[uint32]*Subscription) {
 
 	xapp.Logger.Debug("HandleUncompletedSubscriptions. len(register) = %v", len(register))
@@ -380,9 +380,9 @@ func (c *Control) Run() {
 	xapp.Run(c)
 }
 
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 //
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 func (c *Control) GetOrCreateRestSubscription(p *models.SubscriptionParams, md5sum string, xAppRmrEndpoint string, xAppServiceName string) (*RESTSubscription, string, error) {
 
 	var restSubId string
@@ -435,9 +435,9 @@ func (c *Control) GetOrCreateRestSubscription(p *models.SubscriptionParams, md5s
 	return restSubscription, restSubId, nil
 }
 
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 //
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 func (c *Control) RESTSubscriptionHandler(params interface{}) (*models.SubscriptionResponse, int) {
 
 	c.CntRecvMsg++
@@ -518,9 +518,9 @@ func (c *Control) RESTSubscriptionHandler(params interface{}) (*models.Subscript
 	return &subResp, common.SubscribeCreatedCode
 }
 
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 //
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 func (c *Control) GetE2SubscriptionDirectives(p *models.SubscriptionParams) (*E2SubscriptionDirectives, error) {
 
 	e2SubscriptionDirectives := &E2SubscriptionDirectives{}
@@ -605,9 +605,9 @@ func (c *Control) processSubscriptionRequests(restSubscription *RESTSubscription
 	}
 }
 
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 //
-//------------------------------------------------------------------
+// ------------------------------------------------------------------
 func (c *Control) SubscriptionProcessingStartDelay() {
 	if c.UTTesting == true {
 		// This is temporary fix for the UT problem that notification arrives before subscription response
@@ -618,9 +618,9 @@ func (c *Control) SubscriptionProcessingStartDelay() {
 	}
 }
 
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 //
-//------------------------------------------------------------------
+// ------------------------------------------------------------------
 func (c *Control) handleSubscriptionRequest(trans *TransactionXapp, subReqMsg *e2ap.E2APSubscriptionRequest, meid *string,
 	restSubId string, e2SubscriptionDirectives *E2SubscriptionDirectives) (*e2ap.E2APSubscriptionResponse, *ErrorInfo, error) {
 
@@ -690,14 +690,18 @@ func (c *Control) handleSubscriptionRequest(trans *TransactionXapp, subReqMsg *e
 	}
 
 	xapp.Logger.Error("XAPP-SubReq E2 subscription failed: %s", idstring(err, trans, subs))
-	c.registry.RemoveFromSubscription(subs, trans, waitRouteCleanup_ms, c)
+	// If policy type subscription fails we cannot remove it only internally. Once subscription has been created
+	// successfully, it must be deleted on both sides.
+	if subs.PolicyUpdate == false {
+		c.registry.RemoveFromSubscription(subs, trans, waitRouteCleanup_ms, c)
+	}
 
 	return nil, &errorInfo, err
 }
 
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 //
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 func (c *Control) sendUnsuccesfullResponseNotification(restSubId *string, restSubscription *RESTSubscription, xAppEventInstanceID int64, err error,
 	clientEndpoint *models.SubscriptionParamsClientEndpoint, trans *TransactionXapp, errorInfo *ErrorInfo) {
 
@@ -741,9 +745,9 @@ func (c *Control) sendUnsuccesfullResponseNotification(restSubId *string, restSu
 	}
 }
 
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 //
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 func (c *Control) sendSuccesfullResponseNotification(restSubId *string, restSubscription *RESTSubscription, xAppEventInstanceID int64, e2EventInstanceID int64,
 	clientEndpoint *models.SubscriptionParamsClientEndpoint, trans *TransactionXapp, errorInfo *ErrorInfo) {
 
@@ -779,9 +783,9 @@ func (c *Control) sendSuccesfullResponseNotification(restSubId *string, restSubs
 	}
 }
 
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 //
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 func (c *Control) RESTSubscriptionDeleteHandler(restSubId string) int {
 
 	c.CntRecvMsg++
@@ -832,9 +836,9 @@ func (c *Control) RESTSubscriptionDeleteHandler(restSubId string) int {
 	return common.UnsubscribeNoContentCode
 }
 
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 //
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 func (c *Control) SubscriptionDeleteHandler(restSubId *string, endPoint *string, meid *string, instanceId uint32, waitRouteCleanupTime time.Duration) (int64, error) {
 
 	var xAppEventInstanceID int64
@@ -956,9 +960,9 @@ func (c *Control) Consume(msg *xapp.RMRParams) (err error) {
 	return
 }
 
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 // handle from XAPP Subscription Request
-//------------------------------------------------------------------
+// ------------------------------------------------------------------
 func (c *Control) handleXAPPSubscriptionRequest(params *xapp.RMRParams) {
 	xapp.Logger.Debug("MSG from XAPP: %s", params.String())
 	c.UpdateCounter(cSubReqFromXapp)
@@ -995,9 +999,9 @@ func (c *Control) handleXAPPSubscriptionRequest(params *xapp.RMRParams) {
 	c.wakeSubscriptionRequest(subs, trans)
 }
 
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 // Wake Subscription Request to E2node
-//------------------------------------------------------------------
+// ------------------------------------------------------------------
 func (c *Control) wakeSubscriptionRequest(subs *Subscription, trans *TransactionXapp) {
 
 	e2SubscriptionDirectives, err := c.GetE2SubscriptionDirectives(nil)
@@ -1036,9 +1040,9 @@ func (c *Control) wakeSubscriptionRequest(subs *Subscription, trans *Transaction
 	xapp.Logger.Debug("XAPP-SubReq: failed %s", idstring(err, trans, subs))
 }
 
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 // handle from XAPP Subscription Delete Request
-//------------------------------------------------------------------
+// ------------------------------------------------------------------
 func (c *Control) handleXAPPSubscriptionDeleteRequest(params *xapp.RMRParams) {
 	xapp.Logger.Debug("MSG from XAPP: %s", params.String())
 	c.UpdateCounter(cSubDelReqFromXapp)
@@ -1104,9 +1108,9 @@ func (c *Control) handleXAPPSubscriptionDeleteRequest(params *xapp.RMRParams) {
 	}
 }
 
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 // SUBS CREATE Handling
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 func (c *Control) handleSubscriptionCreate(subs *Subscription, parentTrans *TransactionXapp, e2SubscriptionDirectives *E2SubscriptionDirectives, waitRouteCleanupTime time.Duration) {
 
 	var event interface{} = nil
@@ -1126,6 +1130,14 @@ func (c *Control) handleSubscriptionCreate(subs *Subscription, parentTrans *Tran
 			subRfMsg, valid = subs.SetCachedResponse(event, true)
 			subs.SubRespRcvd = true
 		case *e2ap.E2APSubscriptionFailure:
+			if subs.PolicyUpdate == false {
+				subRfMsg, valid = subs.SetCachedResponse(event, false)
+			} else {
+				// In policy update case where subscription has already been created successfully in Gnb
+				// we cannot delete subscription internally in submgr
+				subRfMsg, valid = subs.SetCachedResponse(event, true)
+			}
+
 			subRfMsg, valid = subs.SetCachedResponse(event, false)
 			xapp.Logger.Debug("SUBS-SubReq: internal delete due failure event(%s) %s", typeofSubsMessage(event), idstring(nil, trans, subs, parentTrans))
 		case *SubmgrRestartTestEvent:
@@ -1150,6 +1162,9 @@ func (c *Control) handleSubscriptionCreate(subs *Subscription, parentTrans *Tran
 	} else {
 		xapp.Logger.Debug("SUBS-SubReq: Handling (cached response %s) %s", typeofSubsMessage(subRfMsg), idstring(nil, trans, subs, parentTrans))
 	}
+	xapp.Logger.Debug("subs.PolicyUpdate: %v", subs.PolicyUpdate)
+	xapp.Logger.Debug("subs: %v", subs)
+
 	if valid == false {
 		removeSubscriptionFromDb = true
 	}
@@ -1197,9 +1212,9 @@ func (c *Control) handleSubscriptionDelete(subs *Subscription, parentTrans *Tran
 	parentTrans.SendEvent(nil, 0)
 }
 
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 // send to E2T Subscription Request
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 func (c *Control) sendE2TSubscriptionRequest(subs *Subscription, trans *TransactionSubs, parentTrans *TransactionXapp, e2SubscriptionDirectives *E2SubscriptionDirectives) interface{} {
 	var err error
 	var event interface{} = nil
@@ -1302,9 +1317,9 @@ func (c *Control) sendE2TSubscriptionDeleteRequest(subs *Subscription, trans *Tr
 	return event
 }
 
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 // handle from E2T Subscription Response
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 func (c *Control) handleE2TSubscriptionResponse(params *xapp.RMRParams) {
 	xapp.Logger.Debug("MSG from E2T: %s", params.String())
 	c.UpdateCounter(cSubRespFromE2)
@@ -1334,9 +1349,9 @@ func (c *Control) handleE2TSubscriptionResponse(params *xapp.RMRParams) {
 	return
 }
 
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 // handle from E2T Subscription Failure
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 func (c *Control) handleE2TSubscriptionFailure(params *xapp.RMRParams) {
 	xapp.Logger.Debug("MSG from E2T: %s", params.String())
 	c.UpdateCounter(cSubFailFromE2)
@@ -1364,9 +1379,9 @@ func (c *Control) handleE2TSubscriptionFailure(params *xapp.RMRParams) {
 	return
 }
 
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 // handle from E2T Subscription Delete Response
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 func (c *Control) handleE2TSubscriptionDeleteResponse(params *xapp.RMRParams) {
 	xapp.Logger.Debug("MSG from E2T: %s", params.String())
 	c.UpdateCounter(cSubDelRespFromE2)
@@ -1394,9 +1409,9 @@ func (c *Control) handleE2TSubscriptionDeleteResponse(params *xapp.RMRParams) {
 	return
 }
 
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 // handle from E2T Subscription Delete Failure
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 func (c *Control) handleE2TSubscriptionDeleteFailure(params *xapp.RMRParams) {
 	xapp.Logger.Debug("MSG from E2T: %s", params.String())
 	c.UpdateCounter(cSubDelFailFromE2)
@@ -1424,9 +1439,9 @@ func (c *Control) handleE2TSubscriptionDeleteFailure(params *xapp.RMRParams) {
 	return
 }
 
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 //
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 func typeofSubsMessage(v interface{}) string {
 	if v == nil {
 		return "NIL"
@@ -1449,9 +1464,9 @@ func typeofSubsMessage(v interface{}) string {
 	}
 }
 
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 //
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 func (c *Control) WriteSubscriptionToDb(subs *Subscription) error {
 	xapp.Logger.Debug("WriteSubscriptionToDb() subId = %v", subs.ReqId.InstanceId)
 	err := c.WriteSubscriptionToSdl(subs.ReqId.InstanceId, subs)
@@ -1462,9 +1477,9 @@ func (c *Control) WriteSubscriptionToDb(subs *Subscription) error {
 	return nil
 }
 
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 //
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 func (c *Control) UpdateSubscriptionInDB(subs *Subscription, removeSubscriptionFromDb bool) error {
 
 	if removeSubscriptionFromDb == true {
@@ -1481,9 +1496,9 @@ func (c *Control) UpdateSubscriptionInDB(subs *Subscription, removeSubscriptionF
 	return nil
 }
 
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 //
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 func (c *Control) RemoveSubscriptionFromDb(subs *Subscription) {
 	xapp.Logger.Debug("RemoveSubscriptionFromDb() subId = %v", subs.ReqId.InstanceId)
 	err := c.RemoveSubscriptionFromSdl(subs.ReqId.InstanceId)
@@ -1492,9 +1507,9 @@ func (c *Control) RemoveSubscriptionFromDb(subs *Subscription) {
 	}
 }
 
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 //
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 func (c *Control) WriteRESTSubscriptionToDb(restSubId string, restSubs *RESTSubscription) {
 	xapp.Logger.Debug("WriteRESTSubscriptionToDb() restSubId = %s", restSubId)
 	err := c.WriteRESTSubscriptionToSdl(restSubId, restSubs)
@@ -1503,9 +1518,9 @@ func (c *Control) WriteRESTSubscriptionToDb(restSubId string, restSubs *RESTSubs
 	}
 }
 
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 //
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 func (c *Control) UpdateRESTSubscriptionInDB(restSubId string, restSubs *RESTSubscription, removeRestSubscriptionFromDb bool) {
 
 	if removeRestSubscriptionFromDb == true {
@@ -1516,9 +1531,9 @@ func (c *Control) UpdateRESTSubscriptionInDB(restSubId string, restSubs *RESTSub
 	}
 }
 
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 //
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 func (c *Control) RemoveRESTSubscriptionFromDb(restSubId string) {
 	xapp.Logger.Debug("RemoveRESTSubscriptionFromDb() restSubId = %s", restSubId)
 	err := c.RemoveRESTSubscriptionFromSdl(restSubId)
@@ -1638,9 +1653,9 @@ func (c *Control) PrintRESTSubscriptionRequest(p *models.SubscriptionParams) {
 	}
 }
 
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 // handle from E2T Subscription Delete Required
-//-------------------------------------------------------------------
+// -------------------------------------------------------------------
 func (c *Control) handleE2TSubscriptionDeleteRequired(params *xapp.RMRParams) {
 	xapp.Logger.Info("MSG from E2T: %s", params.String())
 	c.UpdateCounter(cSubDelRequFromE2)
@@ -1675,10 +1690,10 @@ func (c *Control) handleE2TSubscriptionDeleteRequired(params *xapp.RMRParams) {
 	}
 }
 
-//-----------------------------------------------------------------
+// -----------------------------------------------------------------
 // Initiate RIC Subscription Delete Request after receiving
 // RIC Subscription Delete Required from E2T
-//-----------------------------------------------------------------
+// -----------------------------------------------------------------
 func (c *Control) SendSubscriptionDeleteReqToE2T(subs *Subscription, params *xapp.RMRParams) {
 	xapp.Logger.Debug("MSG TO E2T: %s", params.String())
 	c.UpdateCounter(cSubDelReqToE2)
