@@ -21,6 +21,7 @@ package control
 
 import (
 	"encoding/json"
+        "fmt"
 	"strings"
 	"testing"
 	"time"
@@ -32,6 +33,7 @@ import (
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 	"github.com/stretchr/testify/assert"
 )
+
 
 // In below test cases there is done only one retry for E2 messages
 // In Helm chart retry count is currently 2 By default. Retry count
@@ -5430,6 +5432,117 @@ func TestRESTSubReqPolicyChangeAndSubDelOk(t *testing.T) {
 	params.SetSubscriptionID(&restSubId)
 	params.SetTimeToWait("w200ms")
 	restSubId, e2SubsId = createSubscription(t, xappConn1, e2termConn1, params)
+
+	// Del
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+
+	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
+
+	// Wait that subs is cleaned
+	waitSubsCleanup(t, e2SubsId, 10)
+	mainCtrl.VerifyCounterValues(t)
+	mainCtrl.VerifyAllClean(t)
+}
+
+//-----------------------------------------------------------------------------
+// TestRESTSubReqPolicyChangeNokAndSubDelOk
+//
+//   stub                             stub
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//     |                 |              |
+//     | RESTSubReq      |              |
+//     |---------------->|              |
+//     |                 |              |
+//     |     RESTSubResp |              |
+//     |<----------------|              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |      SubResp |
+//     |                 |<-------------|
+//     |                 |              |
+//     |       RESTNotif |              |
+//     |<----------------|              |
+//     |                 |              |
+//     | RESTSubReq      |              |
+//     |---------------->|              |
+//     |                 |              |
+//     |     RESTSubResp |              |
+//     |<----------------|              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |      SubFail |
+//     |                 |<-------------|
+//     |                 |              |
+//     |       RESTNotif |              |
+//     |<----------------|              |
+//     |                 |              |
+//     | RESTSubDelReq   |              |
+//     |---------------->|              |
+//     |                 |              |
+//     |                 | SubDelReq    |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |   SubDelResp |
+//     |                 |<-------------|
+//     |                 |              |
+//     |  RESTSubDelResp |              |
+//     |<----------------|              |
+//
+//-----------------------------------------------------------------------------
+
+func TestRESTSubReqPolicyChangeNokAndSubDelOk(t *testing.T) {
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 2},
+		Counter{cRestSubRespToXapp, 2},
+		Counter{cSubReqToE2, 2},
+		Counter{cSubRespFromE2, 1},
+		Counter{cSubFailFromE2, 1},
+		Counter{cRestSubNotifToXapp, 1},
+		Counter{cRestSubFailNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelRespFromE2, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+	})
+
+	const subReqCount int = 1
+	const e2Timeout int64 = 1
+	const e2RetryCount int64 = 0
+	const routingNeeded bool = false
+
+	// Req
+	params := xappConn1.GetRESTSubsReqPolicyParams(subReqCount)
+	params.SetSubscriptionDirectives(e2Timeout, e2RetryCount, routingNeeded)
+	restSubId, e2SubsId := createSubscription(t, xappConn1, e2termConn1, params)
+	fmt.Printf("restSubId: %v", restSubId)
+
+	// Policy change
+	// GetRESTSubsReqPolicyParams sets some counters on tc side.
+	params = xappConn1.GetRESTSubsReqPolicyParams(subReqCount)
+	params.SetSubscriptionDirectives(e2Timeout, e2RetryCount, routingNeeded)
+	params.SetSubscriptionID(&restSubId)
+	params.SetTimeToWait("w200ms")
+
+	restSubId = xappConn1.SendRESTSubsReq(t, params)
+	fmt.Printf("restSubId: %v", restSubId)
+
+	crereq, cremsg := e2termConn1.RecvSubsReq(t)
+	xappConn1.ExpectRESTNotificationNok(t, restSubId, "allFail")
+
+	// Gnb sends RICSubscriptionFailure
+	fparams := &teststube2ap.E2StubSubsFailParams{}
+	fparams.Set(crereq)
+	fparams.SetCauseVal(0, 1, 5) // CauseRIC / function-resource-limit
+	e2termConn1.SendSubsFail(t, fparams, cremsg)
+
+	instanceId := xappConn1.WaitRESTNotification(t, restSubId)
+	xapp.Logger.Debug("TEST: REST notification received e2SubsId=%v", instanceId)
 
 	// Del
 	xappConn1.SendRESTSubsDelReq(t, &restSubId)
