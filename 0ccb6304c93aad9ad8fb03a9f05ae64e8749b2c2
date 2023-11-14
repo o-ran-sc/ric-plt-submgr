@@ -24,6 +24,30 @@
       "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
     },
     {
+      "unresolved": false,
+      "key": {
+        "uuid": "07ae2943_3727a4bf",
+        "filename": "e2ap/libe2ap_wrapper/E2AP_if.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 389,
+      "author": {
+        "id": 1000108
+      },
+      "writtenOn": "2023-11-14T08:30:00Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "b66a7fdb_f3a7bb11",
+      "range": {
+        "startLine": 389,
+        "startChar": 19,
+        "endLine": 389,
+        "endChar": 43
+      },
+      "revId": "0ccb6304c93aad9ad8fb03a9f05ae64e8749b2c2",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
+    },
+    {
       "unresolved": true,
       "key": {
         "uuid": "3221f93c_43beee9f",
@@ -37,6 +61,24 @@
       "writtenOn": "2023-09-12T12:39:52Z",
       "side": 1,
       "message": "maybe this is a good place to mention that it accepts the IEs in other order, but also changes the order for packing of RICrequestId and RANFunctionID in packRICSubscriptionResponse()\n\nNow thinking of it, maybe it\u0027s best to put these behind different config parameters. one for reading and the other called \"IEOrderStyle\u003d \n\n  0 : default\n  1 : RICrequestID and RANfunctionID switched.",
+      "revId": "0ccb6304c93aad9ad8fb03a9f05ae64e8749b2c2",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "ece1ef63_b366cf61",
+        "filename": "pkg/control/control.go",
+        "patchSetId": 3
+      },
+      "lineNbr": 75,
+      "author": {
+        "id": 1000108
+      },
+      "writtenOn": "2023-11-14T08:30:00Z",
+      "side": 1,
+      "message": "still open, right?",
+      "parentUuid": "3221f93c_43beee9f",
       "revId": "0ccb6304c93aad9ad8fb03a9f05ae64e8749b2c2",
       "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
     }
