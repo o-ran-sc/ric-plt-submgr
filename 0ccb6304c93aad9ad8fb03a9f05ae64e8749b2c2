@@ -81,6 +81,24 @@
       "parentUuid": "3221f93c_43beee9f",
       "revId": "0ccb6304c93aad9ad8fb03a9f05ae64e8749b2c2",
       "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "4cdadff4_bed071c9",
+        "filename": "pkg/control/control.go",
+        "patchSetId": 3
+      },
+      "lineNbr": 75,
+      "author": {
+        "id": 1001896
+      },
+      "writtenOn": "2023-11-21T11:48:58Z",
+      "side": 1,
+      "message": "The function packRICSubscriptionResponse() gets called for unit testing only to send Subscription Response. I think this new parameter is not required.",
+      "parentUuid": "3221f93c_43beee9f",
+      "revId": "0ccb6304c93aad9ad8fb03a9f05ae64e8749b2c2",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
     }
   ]
 }
