@@ -72,6 +72,7 @@ var checkE2State string
 var readSubsFromDb string
 var dbRetryForever string
 var dbTryCount int
+var e2IEOrderCheckValue uint8
 
 type Control struct {
 	*xapp.RMRClient
@@ -348,6 +349,11 @@ func (c *Control) ReadConfigParameters(f string) {
 		xapp.Logger.Debug("WARNING: Using hard coded default value for waitRouteCleanup_ms")
 	}
 	xapp.Logger.Debug("waitRouteCleanup= %v", waitRouteCleanup_ms)
+
+	viper.SetDefault("controls.checkE2IEOrder", 1)
+	e2IEOrderCheckValue = uint8(viper.GetUint("controls.checkE2IEOrder"))
+	c.e2ap.SetE2IEOrderCheck(e2IEOrderCheckValue)
+	xapp.Logger.Debug("e2IEOrderCheck= %v", e2IEOrderCheckValue)
 }
 
 //-------------------------------------------------------------------
