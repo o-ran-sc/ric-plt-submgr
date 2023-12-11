@@ -61,6 +61,8 @@ typedef uint16_t RANFunctionID_t; // 0..4095
 
 typedef uint64_t RICActionID_t; // 0..255
 
+typedef long TransactionID_t;
+
 enum RICActionType_t {
      RICActionType_report,
      RICActionType_insert,
@@ -300,6 +302,8 @@ enum e2err {
     e2err_RICsubscriptionDeleteFailureRICrequestIDWrongOrder,
     e2err_RICsubscriptionDeleteFailureRANfunctionIDWrongOrder,
     e2err_RICsubscriptionDeleteFailureRICcauseWrongOrder
+    e2err_RICE2RanErrorIndicationEncodeFail,
+    e2err_RICE2RanErrorIndicationAllocE2AP_PDUFail
 };
 
 static const char* const E2ErrorStrings[] = {
@@ -368,6 +372,8 @@ static const char* const E2ErrorStrings[] = {
     "e2err_RICsubscriptionFailureRICrequestIDWrongOrder",
     "e2err_RICsubscriptionFailureRANfunctionIDWrongOrder",
     "e2err_RICsubscriptionFailureCauseWrongOrder",
+    "e2err_RICE2RanErrorIndicationEncodeFail",
+    "e2err_RICE2RanErrorIndicationAllocE2AP_PDUFail",
 };
 
 typedef struct {
@@ -389,6 +395,7 @@ extern const uint64_t cE2UnsuccessfulOutcome;
 extern const uint64_t cRICSubscriptionRequest;
 extern const uint64_t cRICSubscriptionDeleteRequest;
 extern const uint64_t cRICSubscriptionDeleteRequired;
+extern const uint64_t cRICE2RanErrorIndication;
 
 // Successful outcome
 extern const uint64_t cRICSubscriptionResponse;
@@ -450,6 +457,19 @@ typedef struct {
 
 } RICSubsDeleteRequired_t;
 
+typedef struct {
+    bool isTransactionIdPresent;
+    TransactionID_t transactionId;
+    bool isRicRequestIdPresent;
+    RICRequestID_t ricRequestID;
+    bool isRanFunctionIdPresent;
+    RANFunctionID_t ranFunctionID;
+    bool isCausePresent;
+    RICCause_t cause;
+    bool criticalityDiagnosticsPresent;
+    CriticalityDiagnostics__t criticalityDiagnostics;
+} RICErrorIndication_t;
+
 //////////////////////////////////////////////////////////////////////
 // Function declarations
 
@@ -468,6 +488,7 @@ uint64_t packRICSubscriptionDeleteRequest(size_t*, byte*, char*,RICSubscriptionD
 uint64_t packRICSubscriptionDeleteResponse(size_t*, byte*, char*,RICSubscriptionDeleteResponse_t*);
 uint64_t packRICSubscriptionDeleteFailure(size_t*, byte*, char*,RICSubscriptionDeleteFailure_t*);
 uint64_t packRICSubscriptionDeleteRequired(size_t*, byte*, char*,RICSubsDeleteRequired_t*);
+uint64_t packRICE2RanErrorIndication(size_t*, byte*, char*,RICErrorIndication_t*);
 
 e2ap_pdu_ptr_t* unpackE2AP_pdu(const size_t, const byte*, char*, E2MessageInfo_t*);
 uint64_t getRICSubscriptionRequestData(e2ap_pdu_ptr_t*, RICSubscriptionRequest_t*);
@@ -477,6 +498,7 @@ uint64_t getRICSubscriptionDeleteRequestData(e2ap_pdu_ptr_t*, RICSubscriptionDel
 uint64_t getRICSubscriptionDeleteResponseData(e2ap_pdu_ptr_t*, RICSubscriptionDeleteResponse_t*);
 uint64_t getRICSubscriptionDeleteFailureData(e2ap_pdu_ptr_t*, RICSubscriptionDeleteFailure_t*);
 uint64_t getRICSubscriptionDeleteRequiredData(e2ap_pdu_ptr_t*, RICSubsDeleteRequired_t*);
+uint64_t getRICE2RanErrorIndicationData(e2ap_pdu_ptr_t*, RICErrorIndication_t*);
 
 #if DEBUG
 bool TestRICSubscriptionRequest();
