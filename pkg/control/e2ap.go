@@ -291,3 +291,16 @@ func (c *E2ap) PackSubscriptionDeleteRequired(req *e2ap.SubscriptionDeleteRequir
 	}
 	return xapp.RIC_SUB_DEL_REQUIRED, packedData, nil
 }
+
+// -----------------------------------------------------------------------------
+// Changes to support "RIC_E2_RAN_ERROR_INDICATION"
+// -----------------------------------------------------------------------------
+func (e *E2ap) UnpackErrorIndicationFromE2Node(payload []byte) (*e2ap.E2APErrorIndication, error) {
+	fmt.Println("Inside UnpackErrorIndicationFromE2Node")
+	e2RanErrorIndication := packerif.NewPackerErrorIndication()
+	err, errorIndication := e2RanErrorIndication.UnPack(&e2ap.PackedData{payload})
+	if err != nil {
+		return nil, fmt.Errorf("%s buf[%s]", err.Error(), hex.EncodeToString(payload))
+	}
+	return errorIndication, nil
+}
