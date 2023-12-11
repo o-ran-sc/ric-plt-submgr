@@ -671,6 +671,9 @@ func (c *Control) handleSubscriptionRequest(trans *TransactionXapp, subReqMsg *e
 		case *e2ap.E2APSubscriptionFailure:
 			err = fmt.Errorf("RICSubscriptionFailure. E2NodeCause: (Cause:%v, Value %v)", themsg.Cause.Content, themsg.Cause.Value)
 			errorInfo.SetInfo(err.Error(), models.SubscriptionInstanceErrorSourceE2Node, "")
+		case *e2ap.E2APErrorIndication:
+			err = fmt.Errorf("RICE2RanErrorIndication. E2NodeCause: (Cause:%v, Value %v)", themsg.Cause.Content, themsg.Cause.Value)
+			errorInfo.SetInfo(err.Error(), models.SubscriptionInstanceErrorSourceE2Node, "")
 		case *PackSubscriptionRequestErrortEvent:
 			err = fmt.Errorf("E2 RICSubscriptionRequest pack failure")
 			errorInfo = themsg.ErrorInfo
@@ -960,6 +963,8 @@ func (c *Control) Consume(msg *xapp.RMRParams) (err error) {
 		go c.handleE2TSubscriptionDeleteFailure(msg)
 	case xapp.RIC_SUB_DEL_REQUIRED:
 		go c.handleE2TSubscriptionDeleteRequired(msg)
+	case xapp.RIC_E2_RAN_ERROR_INDICATION:
+		go c.handleE2RanErrorIndication(msg)
 	default:
 		xapp.Logger.Debug("Unknown Message Type '%d', discarding", msg.Mtype)
 	}
@@ -1144,6 +1149,8 @@ func (c *Control) handleSubscriptionCreate(subs *Subscription, parentTrans *Tran
 				subRfMsg, valid = subs.SetCachedResponse(event, true)
 			}
 			xapp.Logger.Debug("SUBS-SubReq: internal delete due failure event(%s) %s", typeofSubsMessage(event), idstring(nil, trans, subs, parentTrans))
+		case *e2ap.E2APErrorIndication:
+			subRfMsg, valid = subs.SetCachedResponse(event, false)
 		case *SubmgrRestartTestEvent:
 			// This is used to simulate that no response has been received and after restart, subscriptions are restored from db
 			xapp.Logger.Debug("Test restart flag is active. Dropping this transaction to test restart case")
@@ -1463,6 +1470,8 @@ func typeofSubsMessage(v interface{}) string {
 		return "SubDelResp"
 	case *e2ap.E2APSubscriptionDeleteFailure:
 		return "SubDelFail"
+	case *e2ap.E2APErrorIndication:
+		return "RicE2RanErrorIndication"
 	default:
 		return "Unknown"
 	}
@@ -1692,6 +1701,59 @@ func (c *Control) handleE2TSubscriptionDeleteRequired(params *xapp.RMRParams) {
 		// Sending Subscription Delete Request to E2T
 		c.SendSubscriptionDeleteReq(subsTobeRemove, true)
 	}
+}
+
+//-------------------------------------------------------------------
+// handle from E2T Error Indication
+//-------------------------------------------------------------------
+func (c *Control) handleE2RanErrorIndication(params *xapp.RMRParams) {
+	xapp.Logger.Debug("Received ErrorIndication from E2T")
+	xapp.Logger.Error("MSG from E2T: %s", params.String())
+
+	c.UpdateCounter(cErrorIndicationFromE2Node)
+
+	errorIndication, err := c.e2ap.UnpackErrorIndicationFromE2Node(params.Payload)
+	if err != nil {
+		xapp.Logger.Error("MSG-ErrorIndication From E2Node %s", idstring(err, params))
+		return
+	}
+
+	subs, err := c.registry.GetSubscriptionFirstMatch([]uint32{errorIndication.RequestId.InstanceId})
+	if err != nil {
+		xapp.Logger.Error("Unknown/Invalid InstanceId from E2Node. Dropping ErrorIndication from E2Node.")
+		xapp.Logger.Error("MSG-ErrorIndication From E2Node: %s", idstring(err, params))
+		if errorIndication.IsCausePresent == true {
+			xapp.Logger.Debug("Cause is present in received ErrorIndication Message - Content: %v, Value: %v", errorIndication.Cause.Content, errorIndication.Cause.Value)
+		}
+		return
+	}
+
+	trans := subs.GetTransaction()
+	if trans == nil {
+		err = fmt.Errorf("Ongoing transaction not found")
+		xapp.Logger.Error("MSG-SubFail: %s", idstring(err, params, subs))
+		if errorIndication.IsCausePresent == true {
+			xapp.Logger.Debug("Cause is present in received ErrorIndication Message - Content: %v, Value: %v", errorIndication.Cause.Content, errorIndication.Cause.Value)
+		}
+		return
+	}
+
+	if errorIndication.IsCausePresent == true {
+		xapp.Logger.Debug("Cause present in ErrorIndication is: Content: %v, Value: %v", errorIndication.Cause.Content, errorIndication.Cause.Value)
+		if (errorIndication.Cause.Content == e2ap.E2AP_CauseContent_Misc && (errorIndication.Cause.Value == e2ap.E2AP_CauseValue_CauseMisc_hardware_failure ||
+			errorIndication.Cause.Value == e2ap.E2AP_CauseValue_CauseMisc_om_intervention)) ||
+			(errorIndication.Cause.Content == e2ap.E2AP_CauseContent_E2node && errorIndication.Cause.Value == e2ap.E2AP_CauseValue_CauseE2node_e2node_component_unknown) {
+
+			sendOk, timedOut := trans.SendEvent(errorIndication, e2tRecvMsgTimeout)
+			if sendOk == false {
+				err = fmt.Errorf("Passing event to transaction failed: sendOk(%t) timedOut(%t)", sendOk, timedOut)
+				xapp.Logger.Error("MSG-ErrorIndication: %s", idstring(err, trans, subs))
+			}
+		} else {
+			xapp.Logger.Debug("Cause present in ErrorIndication is not serious problem. Retrying SubReq Procedure")
+		}
+	}
+	return
 }
 
 //-----------------------------------------------------------------
