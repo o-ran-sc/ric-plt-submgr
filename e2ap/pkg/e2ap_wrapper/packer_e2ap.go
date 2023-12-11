@@ -46,6 +46,9 @@ package e2ap_wrapper
 // void initSubsDeleteRequired(RICSubsDeleteRequired_t *data){
 //	 bzero(data,sizeof(RICSubsDeleteRequired_t));
 // }
+// void initRicE2RanErrorIndication(RICErrorIndication_t *data){
+//   bzero(data,sizeof(RICErrorIndication_t));
+// }
 //
 import "C"
 
@@ -465,6 +468,10 @@ func (item *e2apEntryCriticalityDiagnostic) get(data *e2ap.CriticalityDiagnostic
 	data.ProcCritPresent = (bool)(item.entry.procedureCriticalityPresent)
 	data.ProcCrit = (uint8)(item.entry.procedureCriticality)
 
+	data.IsRicReqPresent = (bool)(item.entry.ricRequestorIDPresent)
+	data.RequestId.Id = (uint32)(item.entry.ricRequestorID.ricRequestorID)
+	data.RequestId.InstanceId = (uint32)(item.entry.ricRequestorID.ricInstanceID)
+
 	if item.entry.iEsCriticalityDiagnosticsPresent == true {
 		conlen := (int)(item.entry.criticalityDiagnosticsIELength)
 		data.CriticalityDiagnosticsIEList.Items = make([]e2ap.CriticalityDiagnosticsIEListItem, conlen)
@@ -474,6 +481,52 @@ func (item *e2apEntryCriticalityDiagnostic) get(data *e2ap.CriticalityDiagnostic
 			data.CriticalityDiagnosticsIEList.Items[i].TypeOfError = (uint8)(item.entry.criticalityDiagnosticsIEListItem[i].typeOfError)
 		}
 	}
+	return nil
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type e2apEntryCause struct {
+	entry *C.RICCause_t
+}
+
+func (item *e2apEntryCause) set(data *e2ap.Cause) error {
+
+	item.entry.content = (C.uchar)(data.Content)
+	item.entry.causeVal = (C.uchar)(data.Value)
+
+	return nil
+}
+
+func (item *e2apEntryCause) get(data *e2ap.Cause) error {
+
+	data.Content = (uint8)(item.entry.content)
+	data.Value = (uint8)(item.entry.causeVal)
+
+	return nil
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type e2apEntryRicRequestId struct {
+	entry *C.RICRequestID_t
+}
+
+func (item *e2apEntryRicRequestId) set(data *e2ap.RequestId) error {
+
+	item.entry.ricRequestorID = (C.uint32_t)(data.Id)
+	item.entry.ricInstanceID = (C.uint32_t)(data.InstanceId)
+
+	return nil
+}
+
+func (item *e2apEntryRicRequestId) get(data *e2ap.RequestId) error {
+
+	data.Id = (uint32)(item.entry.ricRequestorID)
+	data.InstanceId = (uint32)(item.entry.ricInstanceID)
+
 	return nil
 }
 
@@ -1205,6 +1258,141 @@ func (e2apMsg *e2apMsgPackerSubscriptionDeleteRequired) String() string {
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
+type e2apMsgPackerErrorIndication struct {
+	e2apMessagePacker
+	msgC *C.RICErrorIndication_t
+	msgG *e2ap.E2APErrorIndication
+}
+
+func (e2apMsg *e2apMsgPackerErrorIndication) init() {
+	e2apMsg.e2apMessagePacker.init(C.E2MessageInfo_t{C.cE2InitiatingMessage, C.cRICE2RanErrorIndication})
+	e2apMsg.msgC = &C.RICErrorIndication_t{}
+	e2apMsg.msgG = &e2ap.E2APErrorIndication{}
+	C.initRicE2RanErrorIndication(e2apMsg.msgC)
+}
+
+func (e2apMsg *e2apMsgPackerErrorIndication) Pack(data *e2ap.E2APErrorIndication) (error, *e2ap.PackedData) {
+	e2apMsg.init()
+	defer e2apMsg.fini()
+	e2apMsg.msgG = data
+
+	e2apMsg.msgC.isRicRequestIdPresent = false
+	if e2apMsg.msgG.IsReqIdPresent {
+		e2apMsg.msgC.isRicRequestIdPresent = true
+		if err := (&e2apEntryRicRequestId{entry: &e2apMsg.msgC.ricRequestID}).set(&e2apMsg.msgG.RequestId); err != nil {
+			return err, nil
+		}
+	}
+
+	e2apMsg.msgC.isCausePresent = false
+	if e2apMsg.msgG.IsCausePresent {
+		e2apMsg.msgC.isCausePresent = true
+		if err := (&e2apEntryCause{entry: &e2apMsg.msgC.cause}).set(&e2apMsg.msgG.Cause); err != nil {
+			return err, nil
+		}
+	}
+
+	e2apMsg.msgC.criticalityDiagnosticsPresent = false
+	if e2apMsg.msgG.CriticalityDiagnostics.Present {
+		e2apMsg.msgC.criticalityDiagnosticsPresent = true
+		if err := (&e2apEntryCriticalityDiagnostic{entry: &e2apMsg.msgC.criticalityDiagnostics}).set(&e2apMsg.msgG.CriticalityDiagnostics); err != nil {
+			return err, nil
+		}
+	}
+
+	errorNro := C.packRICE2RanErrorIndication(&e2apMsg.plen, (*C.uchar)(e2apMsg.p), (*C.char)(unsafe.Pointer(&e2apMsg.lb[0])), e2apMsg.msgC)
+	if err := e2apMsg.checkerr(errorNro); err != nil {
+		return err, nil
+	}
+
+	fmt.Printf("After Completed packRICE2RanErrorIndication\n")
+	fmt.Printf("e2apMsg.msgC.isRicRequestIdPresent is %t\n", e2apMsg.msgC.isRicRequestIdPresent)
+
+	return nil, e2apMsg.packeddata()
+}
+
+func (e2apMsg *e2apMsgPackerErrorIndication) UnPack(msg *e2ap.PackedData) (error, *e2ap.E2APErrorIndication) {
+	e2apMsg.init()
+	defer e2apMsg.fini()
+
+	if err := e2apMsg.e2apMessagePacker.unpacktopdu(msg); err != nil {
+		return err, e2apMsg.msgG
+	}
+
+	errorNro := C.getRICE2RanErrorIndicationData(e2apMsg.e2apMessagePacker.pdu, e2apMsg.msgC)
+	if err := e2apMsg.checkerr(errorNro); err != nil {
+		return err, e2apMsg.msgG
+	}
+
+	fmt.Println("Completed getRICE2RanErrorIndicationData")
+
+	fmt.Printf("e2apMsg.msgC.isRicRequestIdPresent = %t\n", e2apMsg.msgC.isRicRequestIdPresent)
+
+	if e2apMsg.msgC.isRicRequestIdPresent == true {
+		e2apMsg.msgG.IsReqIdPresent = true
+		if err := (&e2apEntryRicRequestId{entry: &e2apMsg.msgC.ricRequestID}).get(&e2apMsg.msgG.RequestId); err != nil {
+			return err, e2apMsg.msgG
+		}
+	}
+
+	fmt.Printf("e2apMsg.msgC.isCausePresent = %t\n", e2apMsg.msgC.isCausePresent)
+
+	if e2apMsg.msgC.isCausePresent == true {
+		e2apMsg.msgG.IsCausePresent = true
+		if err := (&e2apEntryCause{entry: &e2apMsg.msgC.cause}).get(&e2apMsg.msgG.Cause); err != nil {
+			return err, e2apMsg.msgG
+		}
+	}
+
+	if e2apMsg.msgC.criticalityDiagnosticsPresent == true {
+		e2apMsg.msgG.CriticalityDiagnostics.Present = true
+		if err := (&e2apEntryCriticalityDiagnostic{entry: &e2apMsg.msgC.criticalityDiagnostics}).get(&e2apMsg.msgG.CriticalityDiagnostics); err != nil {
+			return err, e2apMsg.msgG
+		}
+	}
+
+	return nil, e2apMsg.msgG
+}
+
+func (e2apMsg *e2apMsgPackerErrorIndication) String() string {
+	var b bytes.Buffer
+	fmt.Fprintln(&b, "ricE2RanErrorIndication.")
+	fmt.Fprintln(&b, "  ricRequestID.")
+	fmt.Fprintln(&b, "    ricRequestorID =", e2apMsg.msgC.ricRequestID.ricRequestorID)
+	fmt.Fprintln(&b, "    ricInstanceID =", e2apMsg.msgC.ricRequestID.ricInstanceID)
+	fmt.Fprintln(&b, "  ranFunctionID =", e2apMsg.msgC.ranFunctionID)
+	//fmt.Fprintln(&b, "  ricActionNotAdmittedList.")
+	fmt.Fprintln(&b, "    cause.content =", e2apMsg.msgC.cause.content)
+	fmt.Fprintln(&b, "    cause.causeVal =", e2apMsg.msgC.cause.causeVal)
+
+	/* NOT SUPPORTED
+	if e2apMsg.msgC.criticalityDiagnosticsPresent {
+		fmt.Fprintln(&b, "  criticalityDiagnosticsPresent =", e2apMsg.msgC.criticalityDiagnosticsPresent)
+		fmt.Fprintln(&b, "    criticalityDiagnostics.")
+		fmt.Fprintln(&b, "    procedureCodePresent =", e2apMsg.msgC.criticalityDiagnostics.procedureCodePresent)
+		fmt.Fprintln(&b, "      procedureCode =", e2apMsg.msgC.criticalityDiagnostics.procedureCode)
+		fmt.Fprintln(&b, "    triggeringMessagePresent =", e2apMsg.msgC.criticalityDiagnostics.triggeringMessagePresent)
+		fmt.Fprintln(&b, "      triggeringMessage =", e2apMsg.msgC.criticalityDiagnostics.triggeringMessage)
+		fmt.Fprintln(&b, "    procedureCriticalityPresent=", e2apMsg.msgC.criticalityDiagnostics.procedureCriticalityPresent)
+		fmt.Fprintln(&b, "      procedureCriticality =", e2apMsg.msgC.criticalityDiagnostics.procedureCriticality)
+		fmt.Fprintln(&b, "    iEsCriticalityDiagnosticsPresent =", e2apMsg.msgC.criticalityDiagnostics.iEsCriticalityDiagnosticsPresent)
+		fmt.Fprintln(&b, "      criticalityDiagnosticsIELength =", e2apMsg.msgC.criticalityDiagnostics.criticalityDiagnosticsIELength)
+		var index2 uint16
+		index2 = 0
+		for (C.ushort)(index2) < e2apMsg.msgC.criticalityDiagnostics.criticalityDiagnosticsIELength {
+			fmt.Fprintln(&b, "      criticalityDiagnosticsIEListItem[index2].iECriticality =", e2apMsg.msgC.criticalityDiagnostics.criticalityDiagnosticsIEListItem[index2].iECriticality)
+			fmt.Fprintln(&b, "      criticalityDiagnosticsIEListItem[index2].iE_ID =", e2apMsg.msgC.criticalityDiagnostics.criticalityDiagnosticsIEListItem[index2].iE_ID)
+			fmt.Fprintln(&b, "      criticalityDiagnosticsIEListItem[index2].typeOfError =", e2apMsg.msgC.criticalityDiagnostics.criticalityDiagnosticsIEListItem[index2].typeOfError)
+			index2++
+		}
+	}
+	*/
+	return b.String()
+}
+
+//-----------------------------------------------------------------------------
+//
+//----------------------------------------------------------------------------
 func SetASN1DebugPrintStatus(logLevel int) {
 	if logLevel >= 4 {
 		//fmt.Println("ASN1 debug prints ON")
@@ -1255,6 +1443,12 @@ func (*cppasn1E2APPacker) NewPackerSubscriptionDeleteFailure() e2ap.E2APMsgPacke
 // Changes to support "RIC_SUB_DEL_REQUIRED"
 func (*cppasn1E2APPacker) NewPackerSubscriptionDeleteRequired() e2ap.E2APMsgPackerSubscriptionDeleteRequiredIf {
 	return &e2apMsgPackerSubscriptionDeleteRequired{}
+}
+
+// Changes to support "RIC_E2_RAN_ERROR_INDICATION"
+func (*cppasn1E2APPacker) NewPackerErrorIndication() e2ap.E2APMsgPackerErrorIndicationIf {
+	fmt.Println("Inside NewPackerErrorIndication")
+	return &e2apMsgPackerErrorIndication{}
 }
 
 func NewAsn1E2Packer() e2ap.E2APPackerIf {

@@ -146,6 +146,7 @@ func ut_test_init() func() {
 	rt.AddRoute(12022, e2term2src.String(), -1, mainsrc.String())
 	rt.AddRoute(12021, mainsrc.String(), -1, xapp2src.String()+";"+xapp1src.String())
 	rt.AddRoute(12022, mainsrc.String(), -1, xapp2src.String()+";"+xapp1src.String())
+	//rt.AddRoute(12006, e2term1src.String(), -1, mainsrc.String())
 	rt.AddRoute(teststubPortSeed, "", -1, xapp2src.String()+";"+xapp1src.String()+";"+e2term1src.String()+";"+e2term2src.String()+";"+dummysrc.String())
 
 	rt.AddMeid(e2term1src.String(), []string{"RAN_NAME_1", "RAN_NAME_2"})

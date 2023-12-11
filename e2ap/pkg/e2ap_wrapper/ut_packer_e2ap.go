@@ -31,6 +31,7 @@ const (
 	SUB_DEL_REQ     int = 4
 	SUB_DEL_RESP    int = 5
 	SUB_DEL_FAILURE int = 6
+	RIC_E2_RAN_ERROR_INDICATION int = 7
 )
 
 //-----------------------------------------------------------------------------
@@ -46,6 +47,7 @@ var allowAction = map[int]bool{
 	SUB_DEL_REQ:     true,
 	SUB_DEL_RESP:    true,
 	SUB_DEL_FAILURE: true,
+	RIC_E2_RAN_ERROR_INDICATION: true,
 }
 
 func AllowE2apToProcess(mtype int, actionFail bool) {
@@ -257,6 +259,24 @@ func (e2apMsg *utMsgPackerSubscriptionDeleteRequired) UnPack(msg *e2ap.PackedDat
 }
 
 //-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type utMsgPackerRicE2RanErrorIndication struct {
+	e2apMsgPackerErrorIndication
+}
+
+func (e2apMsg *utMsgPackerRicE2RanErrorIndication) init() {
+}
+
+func (e2apMsg *utMsgPackerRicE2RanErrorIndication) UnPack(msg *e2ap.PackedData) (error, *e2ap.E2APErrorIndication) {
+	if allowAction[RIC_E2_RAN_ERROR_INDICATION] {
+		errIndication := origPackerif.NewPackerErrorIndication()
+		return errIndication.UnPack(msg)
+	}
+	return fmt.Errorf("Error: Set to be fail by UT"), nil
+}
+
+//-----------------------------------------------------------------------------
 // Public E2AP packer creators
 //-----------------------------------------------------------------------------
 
@@ -288,6 +308,10 @@ func (*utAsn1E2APPacker) NewPackerSubscriptionDeleteFailure() e2ap.E2APMsgPacker
 
 func (p *utAsn1E2APPacker) NewPackerSubscriptionDeleteRequired() e2ap.E2APMsgPackerSubscriptionDeleteRequiredIf {
 	return &utMsgPackerSubscriptionDeleteRequired{}
+}
+
+func (*utAsn1E2APPacker) NewPackerErrorIndication() e2ap.E2APMsgPackerErrorIndicationIf {
+	return &utMsgPackerRicE2RanErrorIndication{}
 }
 
 func NewUtAsn1E2APPacker() e2ap.E2APPackerIf {
