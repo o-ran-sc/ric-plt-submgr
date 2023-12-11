@@ -44,6 +44,7 @@ const (
 	cE2StateChangedToUp     string = "E2StateChangedToUp"
 	cE2StateChangedToDown   string = "E2StateChangedToDown"
 	cE2StateUnderReset      string = "E2StateChangedToUnderReset"
+    cErrorIndicationFromE2Node  string = "ErrorIndicationFromE2Node"
 )
 
 func GetMetricsOpts() []xapp.CounterOpts {
@@ -95,6 +96,9 @@ func GetMetricsOpts() []xapp.CounterOpts {
 		{Name: cE2StateChangedToUp, Help: "The total number of E2 interface change connected state"},
 		{Name: cE2StateChangedToDown, Help: "The total number of E2 interface change disconnected state"},
 		{Name: cE2StateUnderReset, Help: "The total number of E2 interface change under reset state"},
+
+		// ErrorIndication From E2Node counter
+		{Name: cErrorIndicationFromE2Node, Help: "The total number of ErrorIndication from E2Node"},
 	}
 }
 

@@ -192,6 +192,790 @@ func TestRESTSubReqE2ConnBreak(t *testing.T) {
 }
 
 //-----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+// TestReportRESTSubReqE2NodeSendsErrorIndicationWithCauseHwFailure
+//
+//	stub                             stub
+//
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//
+//	|                 |                |
+//	| RESTSubReq      |                |
+//	|---------------->|                |
+//	|     RESTSubResp |                |
+//	|<----------------|                |
+//	|                 | SubReq         |
+//	|                 |--------------->|
+//	|                 | ErrorIndication|
+//	|                 |<---------------|
+//	|                 |                |
+//	|                 |                |
+//	|      RESTNotif(unsuccessful)     |
+//	|<----------------|                |
+//	|                 |                |
+//	|                 |                |
+//
+// -----------------------------------------------------------------------------
+func TestReportRESTSubReqE2NodeSendsErrorIndicationWithCauseHwFailure(t *testing.T) {
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 1},
+		Counter{cRestSubRespToXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cErrorIndicationFromE2Node, 1},
+		Counter{cRestSubFailNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+	})
+
+	// Req
+	const subReqCount int = 1
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
+	restSubId := xappConn1.SendRESTSubsReq(t, params)
+
+	crereq, cremsg := e2termConn1.RecvSubsReq(t)
+	xappConn1.ExpectRESTNotification(t, restSubId)
+
+	e2termConn1.SendErrorIndication(t, crereq, cremsg)
+
+	e2SubsId := xappConn1.WaitRESTNotification(t, restSubId)
+
+	fmt.Printf("e2SubsId: %v\n", e2SubsId)
+
+	//For Cleanup. Next testcase should start freshly.
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+
+	waitSubsCleanup(t, e2SubsId, 10)
+	mainCtrl.VerifyCounterValues(t)
+	mainCtrl.VerifyAllClean(t)
+}
+
+// -----------------------------------------------------------------------------
+// TestPolicyRESTSubReqE2NodeSendsErrorIndicationWithCauseHwFailure
+//
+//	stub                             stub
+//
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//
+//	|                 |                |
+//	| RESTSubReq      |                |
+//	|---------------->|                |
+//	|     RESTSubResp |                |
+//	|<----------------|                |
+//	|                 | SubReq         |
+//	|                 |--------------->|
+//	|                 | ErrorIndication|
+//	|                 |<---------------|
+//	|                 |                |
+//	|                 |                |
+//	|      RESTNotif(unsuccessful)     |
+//	|<----------------|                |
+//	|                 |                |
+//	|                 |                |
+//
+// -----------------------------------------------------------------------------
+func TestPolicyRESTSubReqE2NodeSendsErrorIndicationWithCauseHwFailure(t *testing.T) {
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 1},
+		Counter{cRestSubRespToXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cErrorIndicationFromE2Node, 1},
+		Counter{cRestSubFailNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+	})
+
+	// Req
+	const subReqCount int = 1
+	params := xappConn1.GetRESTSubsReqPolicyParams(subReqCount)
+	restSubId := xappConn1.SendRESTSubsReq(t, params)
+
+	crereq, cremsg := e2termConn1.RecvSubsReq(t)
+	xappConn1.ExpectRESTNotification(t, restSubId)
+
+	//e2termConn1.SendSubsResp(t, crereq, cremsg)
+	e2termConn1.SendErrorIndication(t, crereq, cremsg)
+
+	e2SubsId := xappConn1.WaitRESTNotification(t, restSubId)
+
+	fmt.Printf("e2SubsId: %v\n", e2SubsId)
+
+	//For Cleanup. Next testcase should start freshly.
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+
+	waitSubsCleanup(t, e2SubsId, 10)
+	mainCtrl.VerifyCounterValues(t)
+	mainCtrl.VerifyAllClean(t)
+}
+
+// -----------------------------------------------------------------------------
+// TestReportRESTSubReqE2NodeSendsErrorIndicationWithInvalidInstanceId
+//
+//	stub                             stub
+//
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//
+//			|                 |                |
+//			| RESTSubReq      |                |
+//			|---------------->|                |
+//			|     RESTSubResp |                |
+//			|<----------------|                |
+//			|                 | SubReq         |
+//			|                 |--------------->|
+//			|                 | ErrorIndication|
+//			|                 |<---------------|
+//			|                 |                |
+//			|                 |                |
+//			|      ErrorIndication Dropped     |
+//			|                 |                |
+//			|                 |                |
+//			|                 | SubReq         |
+//			|                 |--------------->|
+//			|                 | SubResp        |
+//			|                 |<---------------|
+//		    | RestNotifToXapp |                |
+//	        |<----------------|                |
+//		    |                 |                |
+//		    |                 |                |
+//		    | RESTSubDelReq   |                |
+//		    |---------------->|                |
+//		    |                 |                |
+//		    |  RESTSubDelResp |                |
+//		    |<----------------|                |
+//		    |                 | SubDelReq      |
+//		    |                 | -------------->|
+//			|                 |                |
+//	        |                 | SubDelResp     |
+//	        |                 |<---------------|
+//
+// -----------------------------------------------------------------------------
+func TestReportRESTSubReqE2NodeSendsErrorIndicationWithInvalidInstanceId(t *testing.T) {
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 1},
+		Counter{cRestSubRespToXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cErrorIndicationFromE2Node, 1},
+		Counter{cSubReqTimerExpiry, 1},
+		Counter{cSubReReqToE2, 1},
+		Counter{cSubRespFromE2, 1},
+		Counter{cRestSubNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelRespFromE2, 1},
+	})
+
+	// Req
+	const subReqCount int = 1
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
+	restSubId := xappConn1.SendRESTSubsReq(t, params)
+
+	crereq, cremsg := e2termConn1.RecvSubsReq(t)
+	xappConn1.ExpectRESTNotification(t, restSubId)
+
+	e2termConn1.SendErrorIndicationWithInvalidInstanceId(t, crereq, cremsg)
+
+	crereq, cremsg = e2termConn1.RecvSubsReq(t)
+	e2termConn1.SendSubsResp(t, crereq, cremsg)
+	e2SubsId := xappConn1.WaitRESTNotification(t, restSubId)
+
+	// Del
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
+
+	// Wait that subs is cleaned
+
+	mainCtrl.wait_registry_empty(t, 10)
+	waitSubsCleanup(t, e2SubsId, 10)
+	mainCtrl.VerifyCounterValues(t)
+	mainCtrl.VerifyAllClean(t)
+}
+
+// -----------------------------------------------------------------------------
+// TestPolicyRESTSubReqE2NodeSendsErrorIndicationWithInvalidInstanceId
+//
+//	stub                             stub
+//
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//
+//			|                 |                |
+//			| RESTSubReq      |                |
+//			|---------------->|                |
+//			|     RESTSubResp |                |
+//			|<----------------|                |
+//			|                 | SubReq         |
+//			|                 |--------------->|
+//			|                 | ErrorIndication|
+//			|                 |<---------------|
+//			|                 |                |
+//			|                 |                |
+//			|      ErrorIndication Dropped     |
+//			|                 |                |
+//			|                 |                |
+//			|                 | SubReq         |
+//			|                 |--------------->|
+//			|                 | SubResp        |
+//			|                 |<---------------|
+//		    | RestNotifToXapp |                |
+//	        |<----------------|                |
+//		    |                 |                |
+//		    |                 |                |
+//		    | RESTSubDelReq   |                |
+//		    |---------------->|                |
+//		    |                 |                |
+//		    |  RESTSubDelResp |                |
+//		    |<----------------|                |
+//		    |                 | SubDelReq      |
+//		    |                 | -------------->|
+//			|                 |                |
+//	        |                 | SubDelResp     |
+//	        |                 |<---------------|
+//
+// -----------------------------------------------------------------------------
+func TestPolicyRESTSubReqE2NodeSendsErrorIndicationWithInvalidInstanceId(t *testing.T) {
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 1},
+		Counter{cRestSubRespToXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cErrorIndicationFromE2Node, 1},
+		Counter{cSubReqTimerExpiry, 1},
+		Counter{cSubReReqToE2, 1},
+		Counter{cSubRespFromE2, 1},
+		Counter{cRestSubNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelRespFromE2, 1},
+	})
+
+	// Req
+	const subReqCount int = 1
+	params := xappConn1.GetRESTSubsReqPolicyParams(subReqCount)
+	restSubId := xappConn1.SendRESTSubsReq(t, params)
+
+	crereq, cremsg := e2termConn1.RecvSubsReq(t)
+	xappConn1.ExpectRESTNotification(t, restSubId)
+
+	e2termConn1.SendErrorIndicationWithInvalidInstanceId(t, crereq, cremsg)
+
+	crereq, cremsg = e2termConn1.RecvSubsReq(t)
+	e2termConn1.SendSubsResp(t, crereq, cremsg)
+	e2SubsId := xappConn1.WaitRESTNotification(t, restSubId)
+
+	// Del
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
+
+	// Wait that subs is cleaned
+
+	mainCtrl.wait_registry_empty(t, 10)
+	waitSubsCleanup(t, e2SubsId, 10)
+	mainCtrl.VerifyCounterValues(t)
+	mainCtrl.VerifyAllClean(t)
+}
+
+// -----------------------------------------------------------------------------
+// TestReportRESTSubReqE2NodeSendsErrorIndicationWithValidInstanceIdButCauseIsNeitherUnspecifiedOrHWFailure
+//
+//	stub                             stub
+//
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//
+//			|                 |                |
+//			| RESTSubReq      |                |
+//			|---------------->|                |
+//			|     RESTSubResp |                |
+//			|<----------------|                |
+//			|                 | SubReq         |
+//			|                 |--------------->|
+//			|                 | ErrorIndication|
+//			|                 |<---------------|
+//			|                 |                |
+//			|                 |                |
+//	ErrorIndication Dropped With Diff Cause    | Cause = excessive_actions
+//			|                 |                |
+//			|                 |                |
+//			|                 | SubReq         |
+//			|                 |--------------->|
+//			|                 | SubResp        |
+//			|                 |<---------------|
+//		    | RestNotifToXapp |                |
+//	        |<----------------|                |
+//		    |                 |                |
+//		    |                 |                |
+//		    | RESTSubDelReq   |                |
+//		    |---------------->|                |
+//		    |                 |                |
+//		    |  RESTSubDelResp |                |
+//		    |<----------------|                |
+//		    |                 | SubDelReq      |
+//		    |                 | -------------->|
+//			|                 |                |
+//	        |                 | SubDelResp     |
+//	        |                 |<---------------|
+//
+// -----------------------------------------------------------------------------
+func TestReportRESTSubReqE2NodeSendsErrorIndicationWithValidInstanceIdButCauseIsNeitherUnspecifiedOrHWFailure(t *testing.T) {
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 1},
+		Counter{cRestSubRespToXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cErrorIndicationFromE2Node, 1},
+		Counter{cSubReqTimerExpiry, 1},
+		Counter{cSubReReqToE2, 1},
+		Counter{cSubRespFromE2, 1},
+		Counter{cRestSubNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelRespFromE2, 1},
+	})
+
+	// Req
+	const subReqCount int = 1
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
+	restSubId := xappConn1.SendRESTSubsReq(t, params)
+
+	crereq, cremsg := e2termConn1.RecvSubsReq(t)
+	xappConn1.ExpectRESTNotification(t, restSubId)
+
+	e2termConn1.SendErrorIndicationWithDiffCause(t, crereq, cremsg)
+
+	crereq, cremsg = e2termConn1.RecvSubsReq(t)
+	e2termConn1.SendSubsResp(t, crereq, cremsg)
+	e2SubsId := xappConn1.WaitRESTNotification(t, restSubId)
+
+	// Del
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
+
+	// Wait that subs is cleaned
+
+	mainCtrl.wait_registry_empty(t, 10)
+	waitSubsCleanup(t, e2SubsId, 10)
+	mainCtrl.VerifyCounterValues(t)
+	mainCtrl.VerifyAllClean(t)
+}
+
+// -----------------------------------------------------------------------------
+// TestPolicyRESTSubReqE2NodeSendsErrorIndicationWithValidInstanceIdButCauseIsNeitherUnspecifiedOrHWFailure
+//
+//	stub                             stub
+//
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//
+//			|                 |                |
+//			| RESTSubReq      |                |
+//			|---------------->|                |
+//			|     RESTSubResp |                |
+//			|<----------------|                |
+//			|                 | SubReq         |
+//			|                 |--------------->|
+//			|                 | ErrorIndication|
+//			|                 |<---------------|
+//			|                 |                |
+//			|                 |                |
+//	ErrorIndication Dropped With Diff Cause    | Cause = excessive_actions
+//			|                 |                |
+//			|                 |                |
+//			|                 | SubReq         |
+//			|                 |--------------->|
+//			|                 | SubResp        |
+//			|                 |<---------------|
+//		    | RestNotifToXapp |                |
+//	        |<----------------|                |
+//		    |                 |                |
+//		    |                 |                |
+//		    | RESTSubDelReq   |                |
+//		    |---------------->|                |
+//		    |                 |                |
+//		    |  RESTSubDelResp |                |
+//		    |<----------------|                |
+//		    |                 | SubDelReq      |
+//		    |                 | -------------->|
+//			|                 |                |
+//	        |                 | SubDelResp     |
+//	        |                 |<---------------|
+//
+// -----------------------------------------------------------------------------
+func TestPolicyRESTSubReqE2NodeSendsErrorIndicationWithValidInstanceIdButCauseIsNeitherUnspecifiedOrHWFailure(t *testing.T) {
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 1},
+		Counter{cRestSubRespToXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cErrorIndicationFromE2Node, 1},
+		Counter{cSubReqTimerExpiry, 1},
+		Counter{cSubReReqToE2, 1},
+		Counter{cSubRespFromE2, 1},
+		Counter{cRestSubNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelRespFromE2, 1},
+	})
+
+	// Req
+	const subReqCount int = 1
+	params := xappConn1.GetRESTSubsReqPolicyParams(subReqCount)
+	restSubId := xappConn1.SendRESTSubsReq(t, params)
+
+	crereq, cremsg := e2termConn1.RecvSubsReq(t)
+	xappConn1.ExpectRESTNotification(t, restSubId)
+
+	e2termConn1.SendErrorIndicationWithDiffCause(t, crereq, cremsg)
+
+	crereq, cremsg = e2termConn1.RecvSubsReq(t)
+	e2termConn1.SendSubsResp(t, crereq, cremsg)
+	e2SubsId := xappConn1.WaitRESTNotification(t, restSubId)
+
+	// Del
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
+
+	// Wait that subs is cleaned
+
+	mainCtrl.wait_registry_empty(t, 10)
+	waitSubsCleanup(t, e2SubsId, 10)
+	mainCtrl.VerifyCounterValues(t)
+	mainCtrl.VerifyAllClean(t)
+}
+
+//-----------------------------------------------------------------------------
+// TestRESTReportSubReqUnpackErrorIndicationDecodeFail
+//
+//   stub                             stub
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//     |                 |              |
+//     | RestSubReq      |              |
+//     |---------------->|              |
+//     |                 |              |
+//     |     RESTSubResp |              |
+//     |<----------------|              |
+//     |                 |              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |ErrorIndication | ASN.1 decode fails
+//     |                 |<-------------| Decode failed. More data needed. This will result timer expiry and resending
+//     |                 |              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |ErrorIndication | Valid InstanceId and Cause
+//     |                 |<-------------|
+//     | RESTNotif (fail)|              |
+//     |<----------------|              |
+//     |                 |              |
+//     |           [SUBS DELETE]        |
+//     |                 |              |
+//
+//-----------------------------------------------------------------------------
+
+func TestRESTReportSubReqUnpackErrorIndicationDecodeFail(t *testing.T) {
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 1},
+		Counter{cRestSubRespToXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cSubReqTimerExpiry, 1},
+		Counter{cSubReReqToE2, 1},
+		Counter{cErrorIndicationFromE2Node, 2},
+		Counter{cRestSubFailNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+	})
+
+	const subReqCount int = 1
+
+	// Req
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
+	restSubId := xappConn1.SendRESTSubsReq(t, params)
+
+	crereq, cremsg := e2termConn1.RecvSubsReq(t)
+	// Decode of this response fails which will result resending original request
+	e2termConn1.SendInvalidE2Asn1Resp(t, cremsg, xapp.RIC_E2_RAN_ERROR_INDICATION)
+
+	crereq, cremsg = e2termConn1.RecvSubsReq(t)
+
+	xappConn1.ExpectRESTNotificationNok(t, restSubId, "allFail")
+
+	e2termConn1.SendErrorIndication(t, crereq, cremsg)
+
+	e2SubsId := xappConn1.WaitRESTNotification(t, restSubId)
+
+	xapp.Logger.Debug("TEST: REST notification received e2SubsId=%v", e2SubsId)
+
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+
+	// Wait that subs is cleaned
+	mainCtrl.wait_subs_clean(t, crereq.RequestId.InstanceId, 10)
+
+	xappConn1.TestMsgChanEmpty(t)
+	e2termConn1.TestMsgChanEmpty(t)
+	mainCtrl.wait_registry_empty(t, 10)
+	mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyCounterValues(t)
+}
+
+//-----------------------------------------------------------------------------
+// TestRESTPolicySubReqUnpackErrorIndicationDecodeFail
+//
+//   stub                             stub
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//     |                 |              |
+//     | RestSubReq      |              |
+//     |---------------->|              |
+//     |                 |              |
+//     |     RESTSubResp |              |
+//     |<----------------|              |
+//     |                 |              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |ErrorIndication | ASN.1 decode fails
+//     |                 |<-------------| Decode failed. More data needed. This will result timer expiry and resending
+//     |                 |              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |ErrorIndication | Valid InstanceId and Cause
+//     |                 |<-------------|
+//     | RESTNotif (fail)|              |
+//     |<----------------|              |
+//     |                 |              |
+//     |           [SUBS DELETE]        |
+//     |                 |              |
+//
+//-----------------------------------------------------------------------------
+
+func TestRESTPolicySubReqUnpackErrorIndicationDecodeFail(t *testing.T) {
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 1},
+		Counter{cRestSubRespToXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cSubReqTimerExpiry, 1},
+		Counter{cSubReReqToE2, 1},
+		Counter{cErrorIndicationFromE2Node, 2},
+		Counter{cRestSubFailNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+	})
+
+	const subReqCount int = 1
+
+	// Req
+	params := xappConn1.GetRESTSubsReqPolicyParams(subReqCount)
+	restSubId := xappConn1.SendRESTSubsReq(t, params)
+
+	crereq, cremsg := e2termConn1.RecvSubsReq(t)
+	// Decode of this response fails which will result resending original request
+	e2termConn1.SendInvalidE2Asn1Resp(t, cremsg, xapp.RIC_E2_RAN_ERROR_INDICATION)
+
+	crereq, cremsg = e2termConn1.RecvSubsReq(t)
+
+	xappConn1.ExpectRESTNotificationNok(t, restSubId, "allFail")
+
+	e2termConn1.SendErrorIndication(t, crereq, cremsg)
+
+	e2SubsId := xappConn1.WaitRESTNotification(t, restSubId)
+
+	xapp.Logger.Debug("TEST: REST notification received e2SubsId=%v", e2SubsId)
+
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+
+	// Wait that subs is cleaned
+	mainCtrl.wait_subs_clean(t, crereq.RequestId.InstanceId, 10)
+
+	xappConn1.TestMsgChanEmpty(t)
+	e2termConn1.TestMsgChanEmpty(t)
+	mainCtrl.wait_registry_empty(t, 10)
+	mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyCounterValues(t)
+}
+
+/*
+
+// This testcase is working as expected, but breaking TestRESTSubscriptionDeleteAfterE2ConnectionBreak with Unexpected Rest Notification received. Commenting this case for now.
+
+
+//-----------------------------------------------------------------------------
+// TestTimeoutForRESTReportSubReqE2NodeSendsErrorIndicationWithReqIdAndCause
+//
+//   stub                             stub
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//     |                 |              |
+//     | RestSubReq      |              |
+//     |---------------->|              |
+//     |                 |              |
+//     |     RESTSubResp |              |
+//     |<----------------|              |
+//     |                 |              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |ErrorIndication | RequestId Present and Cause is Trivial.
+//     |                 |<-------------|
+//     |                 |              |
+//     |                 |              |
+//     |                 |              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |ErrorIndication | RequestId Present and Cause is Trivial.
+//     |                 |<-------------|
+//     |       RESTNotif |              |
+//     |       unsuccess |              |
+//     |<----------------|              |
+//     |                 |              |
+//     |            [SUBS DELETE]       |
+//     |                 |              |
+func TestTimeoutForRESTReportSubReqE2NodeSendsErrorIndicationWithReqIdAndCause(t *testing.T) {
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 1},
+		Counter{cRestSubRespToXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cErrorIndicationFromE2Node, 2},
+		Counter{cSubReqTimerExpiry, 2},
+		Counter{cSubReReqToE2, 1},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelRespFromE2, 1},
+		Counter{cRestSubFailNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+	})
+
+	// Req
+	const subReqCount int = 1
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
+	restSubId := xappConn1.SendRESTSubsReq(t, params)
+
+	crereq, cremsg := e2termConn1.RecvSubsReq(t)
+	xappConn1.ExpectRESTNotification(t, restSubId)
+	e2termConn1.SendErrorIndicationWithDiffCause(t, crereq, cremsg)
+
+	crereq, cremsg = e2termConn1.RecvSubsReq(t)
+	e2termConn1.SendErrorIndicationWithDiffCause(t, crereq, cremsg)
+
+	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+	xappConn1.ExpectRESTNotificationNok(t, restSubId, "allFail")
+	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
+	xappConn1.WaitRESTNotification(t, restSubId)
+
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+	// Wait that subs is cleaned
+
+	//xappConn1.SendRESTSubsDelReq(t, &restSubId)
+	//delreq, delmsg = e2termConn1.RecvSubsDelReq(t)
+	//e2termConn1.SendSubsDelResp(t, delreq, delmsg)
+
+	mainCtrl.wait_registry_empty(t, 10)
+	waitSubsCleanup(t, delreq.RequestId.InstanceId, 10)
+	//waitSubsCleanup(t, e2SubIds, 10)
+	mainCtrl.VerifyCounterValues(t)
+	mainCtrl.VerifyAllClean(t)
+}*/
+
+//-----------------------------------------------------------------------------
+// TestRESTReportSubReqE2NodeSendsErrorIndicationAndNotifyToXapp
+//
+//   stub                             stub
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//     |                 |              |
+//     | RestSubReq      |              |
+//     |---------------->|              |
+//     |                 |              |
+//     |     RESTSubResp |              |
+//     |<----------------|              |
+//     |                 |              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |ErrorIndication | RequestId Present and Cause is Trivial.
+//     |                 |<-------------|
+//     |                 |              |
+//     |                 |              |
+//     |                 |              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |ErrorIndication | RequestId Present and Cause is HW Failure.
+//     |                 |<-------------|
+//     |       RESTNotif |              |
+//     |       unsuccess |              |
+//     |<----------------|              |
+//     |                 |              |
+//     |            [SUBS DELETE]       |
+//     |                 |              |
+
+func TestRESTReportSubReqE2NodeSendsErrorIndicationAndNotifyToXapp(t *testing.T) {
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 1},
+		Counter{cRestSubRespToXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cErrorIndicationFromE2Node, 2},
+		Counter{cSubReqTimerExpiry, 1},
+		Counter{cSubReReqToE2, 1},
+		Counter{cRestSubFailNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+	})
+
+	// Req
+	const subReqCount int = 1
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
+	restSubId := xappConn1.SendRESTSubsReq(t, params)
+
+	crereq, cremsg := e2termConn1.RecvSubsReq(t)
+	xappConn1.ExpectRESTNotification(t, restSubId)
+	e2termConn1.SendErrorIndicationWithDiffCause(t, crereq, cremsg)
+
+	crereq, cremsg = e2termConn1.RecvSubsReq(t)
+	e2termConn1.SendErrorIndication(t, crereq, cremsg)
+
+	e2SubsId := xappConn1.WaitRESTNotification(t, restSubId)
+
+	fmt.Printf("e2SubsId: %v\n", e2SubsId)
+
+	//For Cleanup. Next testcase should start freshly.
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+
+	waitSubsCleanup(t, e2SubsId, 10)
+	mainCtrl.VerifyCounterValues(t)
+	mainCtrl.VerifyAllClean(t)
+}
+
+// -----------------------------------------------------------------------------
 // TestRESTSubscriptionDeleteAfterE2ConnectionBreak
 //
 //   stub                             stub
