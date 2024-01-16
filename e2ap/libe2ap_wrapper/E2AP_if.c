@@ -402,32 +402,39 @@ uint64_t packRICSubscriptionFailure(size_t* pDataBufferSize, byte* pDataBuffer, 
         pE2AP_PDU->choice.unsuccessfulOutcome.value.present = UnsuccessfulOutcome__value_PR_RICsubscriptionFailure;
 
         // RICrequestID
-        RICsubscriptionFailure_IEs_t* pRICsubscriptionFailure_IEs = calloc(1, sizeof(RICsubscriptionFailure_IEs_t));
-        if (pRICsubscriptionFailure_IEs) {
-            pRICsubscriptionFailure_IEs->id = ProtocolIE_ID_id_RICrequestID;
-            pRICsubscriptionFailure_IEs->criticality = Criticality_reject;
-            pRICsubscriptionFailure_IEs->value.present = RICsubscriptionFailure_IEs__value_PR_RICrequestID;
-            pRICsubscriptionFailure_IEs->value.choice.RICrequestID.ricRequestorID = pRICSubscriptionFailure->ricRequestID.ricRequestorID;
-            pRICsubscriptionFailure_IEs->value.choice.RICrequestID.ricInstanceID = pRICSubscriptionFailure->ricRequestID.ricInstanceID;
-            ASN_SEQUENCE_ADD(&pE2AP_PDU->choice.unsuccessfulOutcome.value.choice.RICsubscriptionFailure.protocolIEs.list, pRICsubscriptionFailure_IEs);
+        RICsubscriptionFailure_IEs_t* pRICsubscriptionFailure_IEs_RICrequestID = calloc(1, sizeof(RICsubscriptionFailure_IEs_t));
+        if (pRICsubscriptionFailure_IEs_RICrequestID) {
+            pRICsubscriptionFailure_IEs_RICrequestID->id = ProtocolIE_ID_id_RICrequestID;
+            pRICsubscriptionFailure_IEs_RICrequestID->criticality = Criticality_reject;
+            pRICsubscriptionFailure_IEs_RICrequestID->value.present = RICsubscriptionFailure_IEs__value_PR_RICrequestID;
+            pRICsubscriptionFailure_IEs_RICrequestID->value.choice.RICrequestID.ricRequestorID = pRICSubscriptionFailure->ricRequestID.ricRequestorID;
+            pRICsubscriptionFailure_IEs_RICrequestID->value.choice.RICrequestID.ricInstanceID = pRICSubscriptionFailure->ricRequestID.ricInstanceID;
         }
         else
             return e2err_RICSubscriptionFailureAllocRICrequestIDFail;
 
         // RANfunctionID
-        pRICsubscriptionFailure_IEs = calloc(1, sizeof(RICsubscriptionFailure_IEs_t));
-        if (pRICsubscriptionFailure_IEs) {
-            pRICsubscriptionFailure_IEs->id = ProtocolIE_ID_id_RANfunctionID;
-            pRICsubscriptionFailure_IEs->criticality = Criticality_reject;
-            pRICsubscriptionFailure_IEs->value.present = RICsubscriptionFailure_IEs__value_PR_RANfunctionID;
-            pRICsubscriptionFailure_IEs->value.choice.RANfunctionID = pRICSubscriptionFailure->ranFunctionID;
-            ASN_SEQUENCE_ADD(&pE2AP_PDU->choice.unsuccessfulOutcome.value.choice.RICsubscriptionFailure.protocolIEs.list, pRICsubscriptionFailure_IEs);
+        RICsubscriptionFailure_IEs_t* pRICsubscriptionFailure_IEs_RANfunctionID = calloc(1, sizeof(RICsubscriptionFailure_IEs_t));
+        if (pRICsubscriptionFailure_IEs_RANfunctionID) {
+            pRICsubscriptionFailure_IEs_RANfunctionID->id = ProtocolIE_ID_id_RANfunctionID;
+            pRICsubscriptionFailure_IEs_RANfunctionID->criticality = Criticality_reject;
+            pRICsubscriptionFailure_IEs_RANfunctionID->value.present = RICsubscriptionFailure_IEs__value_PR_RANfunctionID;
+            pRICsubscriptionFailure_IEs_RANfunctionID->value.choice.RANfunctionID = pRICSubscriptionFailure->ranFunctionID;
         }
         else
             return e2err_RICSubscriptionFailureAllocRANfunctionIDFail;
 
+        // Check if Out of order IE messages to be packed, add RANFunctionID IE before RICRequestID
+        if (checkIEOrder) {
+            ASN_SEQUENCE_ADD(&pE2AP_PDU->choice.unsuccessfulOutcome.value.choice.RICsubscriptionFailure.protocolIEs.list, pRICsubscriptionFailure_IEs_RICrequestID);
+            ASN_SEQUENCE_ADD(&pE2AP_PDU->choice.unsuccessfulOutcome.value.choice.RICsubscriptionFailure.protocolIEs.list, pRICsubscriptionFailure_IEs_RANfunctionID);
+        } else {
+            ASN_SEQUENCE_ADD(&pE2AP_PDU->choice.unsuccessfulOutcome.value.choice.RICsubscriptionFailure.protocolIEs.list, pRICsubscriptionFailure_IEs_RANfunctionID);
+            ASN_SEQUENCE_ADD(&pE2AP_PDU->choice.unsuccessfulOutcome.value.choice.RICsubscriptionFailure.protocolIEs.list, pRICsubscriptionFailure_IEs_RICrequestID);
+        }
+
         // Cause
-        pRICsubscriptionFailure_IEs = calloc(1, sizeof(RICsubscriptionFailure_IEs_t));
+        RICsubscriptionFailure_IEs_t* pRICsubscriptionFailure_IEs = calloc(1, sizeof(RICsubscriptionFailure_IEs_t));
         if (pRICsubscriptionFailure_IEs) {
             pRICsubscriptionFailure_IEs->id = ProtocolIE_ID_id_Cause;
             pRICsubscriptionFailure_IEs->criticality = Criticality_reject;
@@ -535,29 +542,36 @@ uint64_t packRICSubscriptionDeleteResponse(size_t* pDataBufferSize, byte* pDataB
         pE2AP_PDU->choice.successfulOutcome.value.present = SuccessfulOutcome__value_PR_RICsubscriptionDeleteResponse;
 
         // RICrequestID
-        RICsubscriptionDeleteResponse_IEs_t* pRICsubscriptionDeleteResponse_IEs = calloc(1, sizeof(RICsubscriptionDeleteResponse_IEs_t));
-        if (pRICsubscriptionDeleteResponse_IEs) {
-            pRICsubscriptionDeleteResponse_IEs->id = ProtocolIE_ID_id_RICrequestID;
-            pRICsubscriptionDeleteResponse_IEs->criticality = Criticality_reject;
-            pRICsubscriptionDeleteResponse_IEs->value.present = RICsubscriptionDeleteResponse_IEs__value_PR_RICrequestID;
-            pRICsubscriptionDeleteResponse_IEs->value.choice.RICrequestID.ricRequestorID = pRICSubscriptionDeleteResponse->ricRequestID.ricRequestorID;
-            pRICsubscriptionDeleteResponse_IEs->value.choice.RICrequestID.ricInstanceID = pRICSubscriptionDeleteResponse->ricRequestID.ricInstanceID;
-            ASN_SEQUENCE_ADD(&pE2AP_PDU->choice.successfulOutcome.value.choice.RICsubscriptionDeleteResponse.protocolIEs.list, pRICsubscriptionDeleteResponse_IEs);
+        RICsubscriptionDeleteResponse_IEs_t* pRICsubscriptionDeleteResponse_IEs_RICrequestID = calloc(1, sizeof(RICsubscriptionDeleteResponse_IEs_t));
+        if (pRICsubscriptionDeleteResponse_IEs_RICrequestID) {
+            pRICsubscriptionDeleteResponse_IEs_RICrequestID->id = ProtocolIE_ID_id_RICrequestID;
+            pRICsubscriptionDeleteResponse_IEs_RICrequestID->criticality = Criticality_reject;
+            pRICsubscriptionDeleteResponse_IEs_RICrequestID->value.present = RICsubscriptionDeleteResponse_IEs__value_PR_RICrequestID;
+            pRICsubscriptionDeleteResponse_IEs_RICrequestID->value.choice.RICrequestID.ricRequestorID = pRICSubscriptionDeleteResponse->ricRequestID.ricRequestorID;
+            pRICsubscriptionDeleteResponse_IEs_RICrequestID->value.choice.RICrequestID.ricInstanceID = pRICSubscriptionDeleteResponse->ricRequestID.ricInstanceID;
         }
         else
             return e2err_RICSubscriptionDeleteResponseAllocRICrequestIDFail;
 
         // RANfunctionID
-        pRICsubscriptionDeleteResponse_IEs = calloc(1, sizeof(RICsubscriptionDeleteResponse_IEs_t));
-        if (pRICsubscriptionDeleteResponse_IEs) {
-            pRICsubscriptionDeleteResponse_IEs->id = ProtocolIE_ID_id_RANfunctionID;
-            pRICsubscriptionDeleteResponse_IEs->criticality = Criticality_reject;
-            pRICsubscriptionDeleteResponse_IEs->value.present = RICsubscriptionDeleteResponse_IEs__value_PR_RANfunctionID;
-            pRICsubscriptionDeleteResponse_IEs->value.choice.RANfunctionID = pRICSubscriptionDeleteResponse->ranFunctionID;
-            ASN_SEQUENCE_ADD(&pE2AP_PDU->choice.successfulOutcome.value.choice.RICsubscriptionDeleteResponse.protocolIEs.list, pRICsubscriptionDeleteResponse_IEs);
+        RICsubscriptionDeleteResponse_IEs_t* pRICsubscriptionDeleteResponse_IEs_RANfunctionID = calloc(1, sizeof(RICsubscriptionDeleteResponse_IEs_t));
+        if (pRICsubscriptionDeleteResponse_IEs_RANfunctionID) {
+            pRICsubscriptionDeleteResponse_IEs_RANfunctionID->id = ProtocolIE_ID_id_RANfunctionID;
+            pRICsubscriptionDeleteResponse_IEs_RANfunctionID->criticality = Criticality_reject;
+            pRICsubscriptionDeleteResponse_IEs_RANfunctionID->value.present = RICsubscriptionDeleteResponse_IEs__value_PR_RANfunctionID;
+            pRICsubscriptionDeleteResponse_IEs_RANfunctionID->value.choice.RANfunctionID = pRICSubscriptionDeleteResponse->ranFunctionID;
         }
         else
             return e2err_RICSubscriptionDeleteResponseAllocRANfunctionIDFail;
+
+        // // Check if Out of order IE messages to be packed, add RANFunctionID IE before RICRequestID
+        if (checkIEOrder) {
+            ASN_SEQUENCE_ADD(&pE2AP_PDU->choice.successfulOutcome.value.choice.RICsubscriptionDeleteResponse.protocolIEs.list, pRICsubscriptionDeleteResponse_IEs_RICrequestID);
+            ASN_SEQUENCE_ADD(&pE2AP_PDU->choice.successfulOutcome.value.choice.RICsubscriptionDeleteResponse.protocolIEs.list, pRICsubscriptionDeleteResponse_IEs_RANfunctionID);
+        } else {
+            ASN_SEQUENCE_ADD(&pE2AP_PDU->choice.successfulOutcome.value.choice.RICsubscriptionDeleteResponse.protocolIEs.list, pRICsubscriptionDeleteResponse_IEs_RANfunctionID);
+            ASN_SEQUENCE_ADD(&pE2AP_PDU->choice.successfulOutcome.value.choice.RICsubscriptionDeleteResponse.protocolIEs.list, pRICsubscriptionDeleteResponse_IEs_RICrequestID);
+        }
 
         if (E2encode(pE2AP_PDU, pDataBufferSize, pDataBuffer, pLogBuffer))
             return e2err_OK;
@@ -579,32 +593,39 @@ uint64_t packRICSubscriptionDeleteFailure(size_t* pDataBufferSize, byte* pDataBu
         pE2AP_PDU->choice.unsuccessfulOutcome.value.present = UnsuccessfulOutcome__value_PR_RICsubscriptionDeleteFailure;
 
         // RICrequestID
-        RICsubscriptionDeleteFailure_IEs_t* pRICsubscriptionDeleteFailure_IEs = calloc(1, sizeof(RICsubscriptionDeleteFailure_IEs_t));
-        if (pRICsubscriptionDeleteFailure_IEs) {
-            pRICsubscriptionDeleteFailure_IEs->id = ProtocolIE_ID_id_RICrequestID;
-            pRICsubscriptionDeleteFailure_IEs->criticality = Criticality_reject;
-            pRICsubscriptionDeleteFailure_IEs->value.present = RICsubscriptionDeleteFailure_IEs__value_PR_RICrequestID;
-            pRICsubscriptionDeleteFailure_IEs->value.choice.RICrequestID.ricRequestorID = pRICSubscriptionDeleteFailure->ricRequestID.ricRequestorID;
-            pRICsubscriptionDeleteFailure_IEs->value.choice.RICrequestID.ricInstanceID = pRICSubscriptionDeleteFailure->ricRequestID.ricInstanceID;
-            ASN_SEQUENCE_ADD(&pE2AP_PDU->choice.unsuccessfulOutcome.value.choice.RICsubscriptionDeleteFailure.protocolIEs.list, pRICsubscriptionDeleteFailure_IEs);
+        RICsubscriptionDeleteFailure_IEs_t* pRICsubscriptionDeleteFailure_IEs_RICrequestID = calloc(1, sizeof(RICsubscriptionDeleteFailure_IEs_t));
+        if (pRICsubscriptionDeleteFailure_IEs_RICrequestID) {
+            pRICsubscriptionDeleteFailure_IEs_RICrequestID->id = ProtocolIE_ID_id_RICrequestID;
+            pRICsubscriptionDeleteFailure_IEs_RICrequestID->criticality = Criticality_reject;
+            pRICsubscriptionDeleteFailure_IEs_RICrequestID->value.present = RICsubscriptionDeleteFailure_IEs__value_PR_RICrequestID;
+            pRICsubscriptionDeleteFailure_IEs_RICrequestID->value.choice.RICrequestID.ricRequestorID = pRICSubscriptionDeleteFailure->ricRequestID.ricRequestorID;
+            pRICsubscriptionDeleteFailure_IEs_RICrequestID->value.choice.RICrequestID.ricInstanceID = pRICSubscriptionDeleteFailure->ricRequestID.ricInstanceID;
         }
         else
             return e2err_RICSubscriptionDeleteFailureAllocRICrequestIDFail;
 
         // RANfunctionID
-        pRICsubscriptionDeleteFailure_IEs = calloc(1, sizeof(RICsubscriptionDeleteFailure_IEs_t));
-        if (pRICsubscriptionDeleteFailure_IEs) {
-            pRICsubscriptionDeleteFailure_IEs->id = ProtocolIE_ID_id_RANfunctionID;
-            pRICsubscriptionDeleteFailure_IEs->criticality = Criticality_reject;
-            pRICsubscriptionDeleteFailure_IEs->value.present = RICsubscriptionDeleteFailure_IEs__value_PR_RANfunctionID;
-            pRICsubscriptionDeleteFailure_IEs->value.choice.RANfunctionID = pRICSubscriptionDeleteFailure->ranFunctionID;
-            ASN_SEQUENCE_ADD(&pE2AP_PDU->choice.unsuccessfulOutcome.value.choice.RICsubscriptionDeleteFailure.protocolIEs.list, pRICsubscriptionDeleteFailure_IEs);
+        RICsubscriptionDeleteFailure_IEs_t* pRICsubscriptionDeleteFailure_IEs_RANfunctionID = calloc(1, sizeof(RICsubscriptionDeleteFailure_IEs_t));
+        if (pRICsubscriptionDeleteFailure_IEs_RANfunctionID) {
+            pRICsubscriptionDeleteFailure_IEs_RANfunctionID->id = ProtocolIE_ID_id_RANfunctionID;
+            pRICsubscriptionDeleteFailure_IEs_RANfunctionID->criticality = Criticality_reject;
+            pRICsubscriptionDeleteFailure_IEs_RANfunctionID->value.present = RICsubscriptionDeleteFailure_IEs__value_PR_RANfunctionID;
+            pRICsubscriptionDeleteFailure_IEs_RANfunctionID->value.choice.RANfunctionID = pRICSubscriptionDeleteFailure->ranFunctionID;
         }
         else
             return e2err_RICSubscriptionDeleteFailureAllocRANfunctionIDFail;
 
+        // Check if Out of order IE messages to be packed, add RANFunctionID IE before RICRequestID
+        if (checkIEOrder) {
+            ASN_SEQUENCE_ADD(&pE2AP_PDU->choice.unsuccessfulOutcome.value.choice.RICsubscriptionDeleteFailure.protocolIEs.list, pRICsubscriptionDeleteFailure_IEs_RICrequestID);
+            ASN_SEQUENCE_ADD(&pE2AP_PDU->choice.unsuccessfulOutcome.value.choice.RICsubscriptionDeleteFailure.protocolIEs.list, pRICsubscriptionDeleteFailure_IEs_RANfunctionID);
+        } else {
+            ASN_SEQUENCE_ADD(&pE2AP_PDU->choice.unsuccessfulOutcome.value.choice.RICsubscriptionDeleteFailure.protocolIEs.list, pRICsubscriptionDeleteFailure_IEs_RANfunctionID);
+            ASN_SEQUENCE_ADD(&pE2AP_PDU->choice.unsuccessfulOutcome.value.choice.RICsubscriptionDeleteFailure.protocolIEs.list, pRICsubscriptionDeleteFailure_IEs_RICrequestID);
+        }
+
         // Cause
-        pRICsubscriptionDeleteFailure_IEs = calloc(1, sizeof(RICsubscriptionDeleteFailure_IEs_t));
+        RICsubscriptionFailure_IEs_t* pRICsubscriptionDeleteFailure_IEs = calloc(1, sizeof(RICsubscriptionDeleteFailure_IEs_t));
         if (pRICsubscriptionDeleteFailure_IEs) {
             pRICsubscriptionDeleteFailure_IEs->id = ProtocolIE_ID_id_Cause;
             pRICsubscriptionDeleteFailure_IEs->criticality = Criticality_reject;
@@ -1013,65 +1034,79 @@ uint64_t getRICSubscriptionFailureData(e2ap_pdu_ptr_t* pE2AP_PDU_pointer, RICSub
     RICsubscriptionFailure_t *asnRicSubscriptionFailure = &pE2AP_PDU->choice.unsuccessfulOutcome.value.choice.RICsubscriptionFailure;
     RICsubscriptionFailure_IEs_t* pRICsubscriptionFailure_IEs;
 
-    // RICrequestID
-    if (asnRicSubscriptionFailure->protocolIEs.list.count > 0 &&
-        asnRicSubscriptionFailure->protocolIEs.list.array[0]->id == ProtocolIE_ID_id_RICrequestID) {
-        pRICsubscriptionFailure_IEs = asnRicSubscriptionFailure->protocolIEs.list.array[0];
-        pRICSubscriptionFailure->ricRequestID.ricRequestorID = pRICsubscriptionFailure_IEs->value.choice.RICrequestID.ricRequestorID;
-        pRICSubscriptionFailure->ricRequestID.ricInstanceID = pRICsubscriptionFailure_IEs->value.choice.RICrequestID.ricInstanceID;
-    }
-    else {
-        ASN_STRUCT_FREE(asn_DEF_E2AP_PDU, pE2AP_PDU);
-        return e2err_RICsubscriptionFailureRICrequestIDMissing;
+    bool foundRICrequestID = false;
+    bool foundRANfunctionID = false;
+    bool foundCause = false;
+
+    for (int i = 0; i < asnRicSubscriptionFailure->protocolIEs.list.count; i++) {
+        if (asnRicSubscriptionFailure->protocolIEs.list.array[i]->id == ProtocolIE_ID_id_RICrequestID) {
+            if (checkIEOrder && i != 0) {
+                ASN_STRUCT_FREE(asn_DEF_E2AP_PDU, pE2AP_PDU);
+                return e2err_RICsubscriptionFailureRICrequestIDWrongOrder;
+            }
+            pRICsubscriptionFailure_IEs = asnRicSubscriptionFailure->protocolIEs.list.array[i];
+            pRICSubscriptionFailure->ricRequestID.ricRequestorID = pRICsubscriptionFailure_IEs->value.choice.RICrequestID.ricRequestorID;
+            pRICSubscriptionFailure->ricRequestID.ricInstanceID = pRICsubscriptionFailure_IEs->value.choice.RICrequestID.ricInstanceID;
+            foundRICrequestID = true;
+        }
+        else if (asnRicSubscriptionFailure->protocolIEs.list.array[i]->id == ProtocolIE_ID_id_RANfunctionID) {
+            if (checkIEOrder && i != 1) {
+                ASN_STRUCT_FREE(asn_DEF_E2AP_PDU, pE2AP_PDU);
+                return e2err_RICsubscriptionFailureRANfunctionIDWrongOrder;
+            }
+            pRICsubscriptionFailure_IEs = asnRicSubscriptionFailure->protocolIEs.list.array[i];
+            pRICSubscriptionFailure->ranFunctionID = pRICsubscriptionFailure_IEs->value.choice.RANfunctionID;
+            foundRANfunctionID = true;
+        }
+        else if (asnRicSubscriptionFailure->protocolIEs.list.array[i]->id == ProtocolIE_ID_id_Cause) {
+            if (checkIEOrder && i != 2) {
+                ASN_STRUCT_FREE(asn_DEF_E2AP_PDU, pE2AP_PDU);
+                return e2err_RICsubscriptionFailureCauseWrongOrder;
+            }
+            pRICsubscriptionFailure_IEs = asnRicSubscriptionFailure->protocolIEs.list.array[i];
+            if (pRICsubscriptionFailure_IEs->value.choice.Cause.present == Cause_PR_ricRequest) {
+                pRICSubscriptionFailure->cause.content = Cause_PR_ricRequest;
+                pRICSubscriptionFailure->cause.causeVal =
+                pRICsubscriptionFailure_IEs->value.choice.Cause.choice.ricRequest;
+            }
+            else if (pRICsubscriptionFailure_IEs->value.choice.Cause.present == Cause_PR_ricService) {
+                pRICSubscriptionFailure->cause.content = Cause_PR_ricService;
+                pRICSubscriptionFailure->cause.causeVal =
+                pRICsubscriptionFailure_IEs->value.choice.Cause.choice.ricService;
+            }
+            else if (pRICsubscriptionFailure_IEs->value.choice.Cause.present == Cause_PR_e2Node) {
+                pRICSubscriptionFailure->cause.content = Cause_PR_e2Node;
+                pRICSubscriptionFailure->cause.causeVal =
+                pRICsubscriptionFailure_IEs->value.choice.Cause.choice.e2Node;
+            }
+            else if (pRICsubscriptionFailure_IEs->value.choice.Cause.present == Cause_PR_transport) {
+                pRICSubscriptionFailure->cause.content = Cause_PR_transport;
+                pRICSubscriptionFailure->cause.causeVal =
+                pRICsubscriptionFailure_IEs->value.choice.Cause.choice.transport;
+            }
+            else if (pRICsubscriptionFailure_IEs->value.choice.Cause.present == Cause_PR_protocol) {
+                pRICSubscriptionFailure->cause.content = Cause_PR_protocol;
+                pRICSubscriptionFailure->cause.causeVal =
+                pRICsubscriptionFailure_IEs->value.choice.Cause.choice.protocol;
+            }
+            else if(pRICsubscriptionFailure_IEs->value.choice.Cause.present == Cause_PR_misc) {
+                pRICSubscriptionFailure->cause.content = Cause_PR_misc;
+                pRICSubscriptionFailure->cause.causeVal =
+                pRICsubscriptionFailure_IEs->value.choice.Cause.choice.misc;
+            }
+            foundCause = true;
+        }
     }
 
-    // RANfunctionID
-    if (asnRicSubscriptionFailure->protocolIEs.list.count > 1 &&
-        asnRicSubscriptionFailure->protocolIEs.list.array[1]->id == ProtocolIE_ID_id_RANfunctionID) {
-        pRICsubscriptionFailure_IEs = asnRicSubscriptionFailure->protocolIEs.list.array[1];
-        pRICSubscriptionFailure->ranFunctionID = pRICsubscriptionFailure_IEs->value.choice.RANfunctionID;
+    if (!foundRICrequestID) {
+        ASN_STRUCT_FREE(asn_DEF_E2AP_PDU, pE2AP_PDU);
+		return e2err_RICsubscriptionFailureRICrequestIDMissing;
     }
-    else {
+    if (!foundRANfunctionID) {
         ASN_STRUCT_FREE(asn_DEF_E2AP_PDU, pE2AP_PDU);
         return e2err_RICsubscriptionFailureRANfunctionIDMissing;
     }
-
-    // Cause
-    if (asnRicSubscriptionFailure->protocolIEs.list.count > 2 &&
-        asnRicSubscriptionFailure->protocolIEs.list.array[2]->id == ProtocolIE_ID_id_Cause) {
-        pRICsubscriptionFailure_IEs = asnRicSubscriptionFailure->protocolIEs.list.array[2];
-        if (pRICsubscriptionFailure_IEs->value.choice.Cause.present == Cause_PR_ricRequest) {
-            pRICSubscriptionFailure->cause.content = Cause_PR_ricRequest;
-            pRICSubscriptionFailure->cause.causeVal =
-              pRICsubscriptionFailure_IEs->value.choice.Cause.choice.ricRequest;
-        }
-        else if (pRICsubscriptionFailure_IEs->value.choice.Cause.present == Cause_PR_ricService) {
-            pRICSubscriptionFailure->cause.content = Cause_PR_ricService;
-            pRICSubscriptionFailure->cause.causeVal =
-              pRICsubscriptionFailure_IEs->value.choice.Cause.choice.ricService;
-        }
-        else if (pRICsubscriptionFailure_IEs->value.choice.Cause.present == Cause_PR_e2Node) {
-            pRICSubscriptionFailure->cause.content = Cause_PR_e2Node;
-            pRICSubscriptionFailure->cause.causeVal =
-              pRICsubscriptionFailure_IEs->value.choice.Cause.choice.e2Node;
-        }
-        else if (pRICsubscriptionFailure_IEs->value.choice.Cause.present == Cause_PR_transport) {
-            pRICSubscriptionFailure->cause.content = Cause_PR_transport;
-            pRICSubscriptionFailure->cause.causeVal =
-              pRICsubscriptionFailure_IEs->value.choice.Cause.choice.transport;
-        }
-        else if (pRICsubscriptionFailure_IEs->value.choice.Cause.present == Cause_PR_protocol) {
-            pRICSubscriptionFailure->cause.content = Cause_PR_protocol;
-            pRICSubscriptionFailure->cause.causeVal =
-              pRICsubscriptionFailure_IEs->value.choice.Cause.choice.protocol;
-        }
-        else if(pRICsubscriptionFailure_IEs->value.choice.Cause.present == Cause_PR_misc) {
-            pRICSubscriptionFailure->cause.content = Cause_PR_misc;
-            pRICSubscriptionFailure->cause.causeVal =
-              pRICsubscriptionFailure_IEs->value.choice.Cause.choice.misc;
-        }
-    }
-    else {
+    if (!foundCause) {
         ASN_STRUCT_FREE(asn_DEF_E2AP_PDU, pE2AP_PDU);
         return e2err_RICsubscriptionFailureCauseMissing;
     }
@@ -1122,28 +1157,41 @@ uint64_t getRICSubscriptionDeleteResponseData(e2ap_pdu_ptr_t* pE2AP_PDU_pointer,
     RICsubscriptionDeleteResponse_t *asnRicSubscriptionDeleteResponse = &pE2AP_PDU->choice.successfulOutcome.value.choice.RICsubscriptionDeleteResponse;
     RICsubscriptionDeleteResponse_IEs_t* pRICsubscriptionDeleteResponse_IEs;
 
-    // RICrequestID
-    if (asnRicSubscriptionDeleteResponse->protocolIEs.list.count > 0 &&
-        asnRicSubscriptionDeleteResponse->protocolIEs.list.array[0]->id == ProtocolIE_ID_id_RICrequestID) {
-        pRICsubscriptionDeleteResponse_IEs = asnRicSubscriptionDeleteResponse->protocolIEs.list.array[0];
-        pRICSubscriptionDeleteResponse->ricRequestID.ricRequestorID = pRICsubscriptionDeleteResponse_IEs->value.choice.RICrequestID.ricRequestorID;
-        pRICSubscriptionDeleteResponse->ricRequestID.ricInstanceID = pRICsubscriptionDeleteResponse_IEs->value.choice.RICrequestID.ricInstanceID;
+    bool ricRequestIDFound = false;
+    bool ranFunctionIDFound = false;
+
+    for (int i = 0; i < asnRicSubscriptionDeleteResponse->protocolIEs.list.count; i++) {
+        pRICsubscriptionDeleteResponse_IEs = asnRicSubscriptionDeleteResponse->protocolIEs.list.array[i];
+
+        if (pRICsubscriptionDeleteResponse_IEs->id == ProtocolIE_ID_id_RICrequestID) {
+            if (checkIEOrder && i != 0) {
+                ASN_STRUCT_FREE(asn_DEF_E2AP_PDU, pE2AP_PDU);
+                return e2err_RICsubscriptionDeleteResponseRICrequestIDWrongOrder;
+            }
+            pRICSubscriptionDeleteResponse->ricRequestID.ricRequestorID = pRICsubscriptionDeleteResponse_IEs->value.choice.RICrequestID.ricRequestorID;
+            pRICSubscriptionDeleteResponse->ricRequestID.ricInstanceID = pRICsubscriptionDeleteResponse_IEs->value.choice.RICrequestID.ricInstanceID;
+            ricRequestIDFound = true;
+        }
+        else if (pRICsubscriptionDeleteResponse_IEs->id == ProtocolIE_ID_id_RANfunctionID) {
+            if (checkIEOrder && i != 1) {
+                ASN_STRUCT_FREE(asn_DEF_E2AP_PDU, pE2AP_PDU);
+                return e2err_RICsubscriptionDeleteResponseRANfunctionIDWrongOrder;
+            }
+            pRICSubscriptionDeleteResponse->ranFunctionID = pRICsubscriptionDeleteResponse_IEs->value.choice.RANfunctionID;
+            ranFunctionIDFound = true;
+        }
     }
-    else {
+
+    if (!ricRequestIDFound) {
         ASN_STRUCT_FREE(asn_DEF_E2AP_PDU, pE2AP_PDU);
         return e2err_RICsubscriptionDeleteResponseRICrequestIDMissing;
     }
 
-    // RANfunctionID
-    if (asnRicSubscriptionDeleteResponse->protocolIEs.list.count > 1 &&
-        asnRicSubscriptionDeleteResponse->protocolIEs.list.array[1]->id == ProtocolIE_ID_id_RANfunctionID) {
-        pRICsubscriptionDeleteResponse_IEs = asnRicSubscriptionDeleteResponse->protocolIEs.list.array[1];
-        pRICSubscriptionDeleteResponse->ranFunctionID = pRICsubscriptionDeleteResponse_IEs->value.choice.RANfunctionID;
-    }
-    else {
+    if (!ranFunctionIDFound) {
         ASN_STRUCT_FREE(asn_DEF_E2AP_PDU, pE2AP_PDU);
         return e2err_RICsubscriptionDeleteResponseRANfunctionIDMissing;
     }
+
     ASN_STRUCT_FREE(asn_DEF_E2AP_PDU, pE2AP_PDU);
     return e2err_OK;
 }
@@ -1156,68 +1204,81 @@ uint64_t getRICSubscriptionDeleteFailureData(e2ap_pdu_ptr_t* pE2AP_PDU_pointer, 
     RICsubscriptionDeleteFailure_t *asnRicSubscriptionDeleteFailure = &pE2AP_PDU->choice.unsuccessfulOutcome.value.choice.RICsubscriptionDeleteFailure;
     RICsubscriptionDeleteFailure_IEs_t* pRICsubscriptionDeleteFailure_IEs;
 
-    // RICrequestID
-    if (asnRicSubscriptionDeleteFailure->protocolIEs.list.count > 0 &&
-        asnRicSubscriptionDeleteFailure->protocolIEs.list.array[0]->id == ProtocolIE_ID_id_RICrequestID) {
-        pRICsubscriptionDeleteFailure_IEs = asnRicSubscriptionDeleteFailure->protocolIEs.list.array[0];
-        pRICSubscriptionDeleteFailure->ricRequestID.ricRequestorID = pRICsubscriptionDeleteFailure_IEs->value.choice.RICrequestID.ricRequestorID;
-        pRICSubscriptionDeleteFailure->ricRequestID.ricInstanceID = pRICsubscriptionDeleteFailure_IEs->value.choice.RICrequestID.ricInstanceID;
-    }
-    else {
-        ASN_STRUCT_FREE(asn_DEF_E2AP_PDU, pE2AP_PDU);
-        return e2err_RICsubscriptionDeleteFailureRICrequestIDMissing;
+    bool foundRICrequestID = false;
+    bool foundRANfunctionID = false;
+    bool foundCause = false;
+
+    for (int i = 0; i < asnRicSubscriptionDeleteFailure->protocolIEs.list.count; i++) {
+        if (asnRicSubscriptionDeleteFailure->protocolIEs.list.array[i]->id == ProtocolIE_ID_id_RICrequestID) {
+            if (checkIEOrder && i != 0) {
+                ASN_STRUCT_FREE(asn_DEF_E2AP_PDU, pE2AP_PDU);
+                return e2err_RICsubscriptionDeleteFailureRICrequestIDWrongOrder;
+            }
+            pRICsubscriptionDeleteFailure_IEs = asnRicSubscriptionDeleteFailure->protocolIEs.list.array[i];
+            pRICSubscriptionDeleteFailure->ricRequestID.ricRequestorID = pRICsubscriptionDeleteFailure_IEs->value.choice.RICrequestID.ricRequestorID;
+            pRICSubscriptionDeleteFailure->ricRequestID.ricInstanceID = pRICsubscriptionDeleteFailure_IEs->value.choice.RICrequestID.ricInstanceID;
+            foundRICrequestID = true;
+        } else if (asnRicSubscriptionDeleteFailure->protocolIEs.list.array[i]->id == ProtocolIE_ID_id_RANfunctionID) {
+             if (checkIEOrder && i != 1) {
+                ASN_STRUCT_FREE(asn_DEF_E2AP_PDU, pE2AP_PDU);
+                return e2err_RICsubscriptionDeleteFailureRANfunctionIDWrongOrder;
+            }
+            pRICsubscriptionDeleteFailure_IEs = asnRicSubscriptionDeleteFailure->protocolIEs.list.array[i];
+            pRICSubscriptionDeleteFailure->ranFunctionID = pRICsubscriptionDeleteFailure_IEs->value.choice.RANfunctionID;
+            foundRANfunctionID = true;
+        } else if (asnRicSubscriptionDeleteFailure->protocolIEs.list.array[i]->id == ProtocolIE_ID_id_Cause) {
+            if (checkIEOrder && i != 2) {
+                ASN_STRUCT_FREE(asn_DEF_E2AP_PDU, pE2AP_PDU);
+                return e2err_RICsubscriptionDeleteFailureRICcauseWrongOrder;
+            }
+            pRICsubscriptionDeleteFailure_IEs = asnRicSubscriptionDeleteFailure->protocolIEs.list.array[i];
+            if (pRICsubscriptionDeleteFailure_IEs->value.choice.Cause.present == Cause_PR_ricRequest) {
+                pRICSubscriptionDeleteFailure->cause.content = Cause_PR_ricRequest;
+                pRICSubscriptionDeleteFailure->cause.causeVal =
+                pRICsubscriptionDeleteFailure_IEs->value.choice.Cause.choice.ricRequest;
+            }
+            else if (pRICsubscriptionDeleteFailure_IEs->value.choice.Cause.present == Cause_PR_ricService) {
+                pRICSubscriptionDeleteFailure->cause.content = Cause_PR_ricService;
+                pRICSubscriptionDeleteFailure->cause.causeVal =
+                pRICsubscriptionDeleteFailure_IEs->value.choice.Cause.choice.ricService;
+            }
+            else if (pRICsubscriptionDeleteFailure_IEs->value.choice.Cause.present == Cause_PR_e2Node) {
+                pRICSubscriptionDeleteFailure->cause.content = Cause_PR_e2Node;
+                pRICSubscriptionDeleteFailure->cause.causeVal =
+                pRICsubscriptionDeleteFailure_IEs->value.choice.Cause.choice.e2Node;
+            }
+            else if (pRICsubscriptionDeleteFailure_IEs->value.choice.Cause.present == Cause_PR_transport) {
+                pRICSubscriptionDeleteFailure->cause.content = Cause_PR_transport;
+                pRICSubscriptionDeleteFailure->cause.causeVal =
+                pRICsubscriptionDeleteFailure_IEs->value.choice.Cause.choice.transport;
+            }
+            else if (pRICsubscriptionDeleteFailure_IEs->value.choice.Cause.present == Cause_PR_protocol) {
+                pRICSubscriptionDeleteFailure->cause.content = Cause_PR_protocol;
+                pRICSubscriptionDeleteFailure->cause.causeVal =
+                pRICsubscriptionDeleteFailure_IEs->value.choice.Cause.choice.protocol;
+            }
+            else if(pRICsubscriptionDeleteFailure_IEs->value.choice.Cause.present == Cause_PR_misc) {
+                pRICSubscriptionDeleteFailure->cause.content = Cause_PR_misc;
+                pRICSubscriptionDeleteFailure->cause.causeVal =
+                pRICsubscriptionDeleteFailure_IEs->value.choice.Cause.choice.misc;
+            }
+            foundCause = true;
+        }
     }
 
-    // RANfunctionID
-    if (asnRicSubscriptionDeleteFailure->protocolIEs.list.count > 1 &&
-        asnRicSubscriptionDeleteFailure->protocolIEs.list.array[1]->id == ProtocolIE_ID_id_RANfunctionID) {
-        pRICsubscriptionDeleteFailure_IEs = asnRicSubscriptionDeleteFailure->protocolIEs.list.array[1];
-        pRICSubscriptionDeleteFailure->ranFunctionID = pRICsubscriptionDeleteFailure_IEs->value.choice.RANfunctionID;
+    if (!foundRICrequestID) {
+        ASN_STRUCT_FREE(asn_DEF_E2AP_PDU, pE2AP_PDU);
+		return e2err_RICsubscriptionDeleteFailureRICrequestIDMissing;
     }
-    else {
+    if (!foundRANfunctionID) {
         ASN_STRUCT_FREE(asn_DEF_E2AP_PDU, pE2AP_PDU);
         return e2err_RICsubscriptionDeleteFailureRANfunctionIDMissing;
     }
-
-    // Cause
-    if (asnRicSubscriptionDeleteFailure->protocolIEs.list.count > 2 &&
-        asnRicSubscriptionDeleteFailure->protocolIEs.list.array[2]->id == ProtocolIE_ID_id_Cause) {
-        pRICsubscriptionDeleteFailure_IEs = asnRicSubscriptionDeleteFailure->protocolIEs.list.array[2];
-        if (pRICsubscriptionDeleteFailure_IEs->value.choice.Cause.present == Cause_PR_ricRequest) {
-            pRICSubscriptionDeleteFailure->cause.content = Cause_PR_ricRequest;
-            pRICSubscriptionDeleteFailure->cause.causeVal =
-              pRICsubscriptionDeleteFailure_IEs->value.choice.Cause.choice.ricRequest;
-        }
-        else if (pRICsubscriptionDeleteFailure_IEs->value.choice.Cause.present == Cause_PR_ricService) {
-            pRICSubscriptionDeleteFailure->cause.content = Cause_PR_ricService;
-            pRICSubscriptionDeleteFailure->cause.causeVal =
-              pRICsubscriptionDeleteFailure_IEs->value.choice.Cause.choice.ricService;
-        }
-        else if (pRICsubscriptionDeleteFailure_IEs->value.choice.Cause.present == Cause_PR_e2Node) {
-            pRICSubscriptionDeleteFailure->cause.content = Cause_PR_e2Node;
-            pRICSubscriptionDeleteFailure->cause.causeVal =
-              pRICsubscriptionDeleteFailure_IEs->value.choice.Cause.choice.e2Node;
-        }
-        else if (pRICsubscriptionDeleteFailure_IEs->value.choice.Cause.present == Cause_PR_transport) {
-            pRICSubscriptionDeleteFailure->cause.content = Cause_PR_transport;
-            pRICSubscriptionDeleteFailure->cause.causeVal =
-              pRICsubscriptionDeleteFailure_IEs->value.choice.Cause.choice.transport;
-        }
-        else if (pRICsubscriptionDeleteFailure_IEs->value.choice.Cause.present == Cause_PR_protocol) {
-            pRICSubscriptionDeleteFailure->cause.content = Cause_PR_protocol;
-            pRICSubscriptionDeleteFailure->cause.causeVal =
-              pRICsubscriptionDeleteFailure_IEs->value.choice.Cause.choice.protocol;
-        }
-        else if(pRICsubscriptionDeleteFailure_IEs->value.choice.Cause.present == Cause_PR_misc) {
-            pRICSubscriptionDeleteFailure->cause.content = Cause_PR_misc;
-            pRICSubscriptionDeleteFailure->cause.causeVal =
-              pRICsubscriptionDeleteFailure_IEs->value.choice.Cause.choice.misc;
-        }
-    }
-    else {
+    if (!foundCause) {
         ASN_STRUCT_FREE(asn_DEF_E2AP_PDU, pE2AP_PDU);
         return e2err_RICsubscriptionDeleteFailureRICcauseMissing;
     }
+
     // CriticalityDiagnostics, OPTIONAL
 
     ASN_STRUCT_FREE(asn_DEF_E2AP_PDU, pE2AP_PDU);

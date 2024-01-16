@@ -947,8 +947,6 @@ func TestSubReqAndSubDelOkOutofOrderIEs(t *testing.T) {
 
 	e2termConn1.SendSubsResp(t, crereq, cremsg)
 
-	mainCtrl.c.e2ap.SetE2IEOrderCheck(0)
-
 	e2SubsId := xappConn1.RecvSubsResp(t, cretrans)
 	resp, _ := xapp.Subscription.QuerySubscriptions()
 	assert.Equal(t, resp[0].SubscriptionID, int64(e2SubsId))
@@ -1606,6 +1604,64 @@ func TestSubReqSubFailRespInSubmgr(t *testing.T) {
 }
 
 //-----------------------------------------------------------------------------
+// TestSubReqSubFailRespInSubmgrOutofOrderIEs
+//
+//   stub                          stub
+// +-------+     +---------+    +---------+
+// | xapp  |     | submgr  |    | e2term  |
+// +-------+     +---------+    +---------+
+//     |              |              |
+//     |  SubReq      |              |
+//     |------------->|              |
+//     |              |              |
+//     |              | SubReq       |
+//     |              |------------->|
+//     |              |              |
+//     |              |      SubFail | (Out of Order IEs)
+//     |              |<-------------|
+//     |              |              |
+//     |      SubFail |              |
+//     |<-------------|              |
+//     |              |              |
+//
+//-----------------------------------------------------------------------------
+
+func TestSubReqSubFailRespInSubmgrOutofOrderIEs(t *testing.T) {
+	CaseBegin("TestSubReqSubFailRespInSubmgrOutofOrderIEs start")
+
+	mainCtrl.c.e2ap.SetE2IEOrderCheck(0)
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cSubReqFromXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cSubFailFromE2, 1},
+		Counter{cSubFailToXapp, 1},
+	})
+
+	// Xapp: Send SubsReq
+	cretrans := xappConn1.SendSubsReq(t, nil, nil)
+
+	// E2t: Receive SubsReq and send SubsFail (first)
+	crereq1, cremsg1 := e2termConn1.RecvSubsReq(t)
+	fparams1 := &teststube2ap.E2StubSubsFailParams{}
+	fparams1.Set(crereq1)
+	e2termConn1.SendSubsFail(t, fparams1, cremsg1)
+
+	// Xapp: Receive SubsFail
+	e2SubsId := xappConn1.RecvSubsFail(t, cretrans)
+
+	// Wait that subs is cleaned
+	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
+
+	xappConn1.TestMsgChanEmpty(t)
+	xappConn2.TestMsgChanEmpty(t)
+	e2termConn1.TestMsgChanEmpty(t)
+	mainCtrl.wait_registry_empty(t, 10)
+
+	mainCtrl.VerifyCounterValues(t)
+	mainCtrl.c.e2ap.SetE2IEOrderCheck(1)
+}
+
+//-----------------------------------------------------------------------------
 // TestSubDelReqRetryInSubmgr
 //
 //   stub                          stub
@@ -1789,6 +1845,75 @@ func TestSubDelReqSubDelFailRespInSubmgr(t *testing.T) {
 	mainCtrl.wait_registry_empty(t, 10)
 
 	mainCtrl.VerifyCounterValues(t)
+}
+
+//-----------------------------------------------------------------------------
+// TestSubDelReqSubDelFailRespInSubmgrOutofOrderIEs
+//
+//   stub                          stub
+// +-------+     +---------+    +---------+
+// | xapp  |     | submgr  |    | e2term  |
+// +-------+     +---------+    +---------+
+//     |              |              |
+//     |         [SUBS CREATE]       |
+//     |              |              |
+//     |              |              |
+//     |  SubDelReq   |              |
+//     |------------->|              |
+//     |              |              |
+//     |              | SubDelReq    |
+//     |              |------------->|
+//     |              |              |
+//     |              |   SubDelFail | (Out of Order IEs)
+//     |              |<-------------|
+//     |              |              |
+//     |   SubDelResp |              |
+//     |<-------------|              |
+//     |              |              |
+//
+//-----------------------------------------------------------------------------
+
+func TestSubDelReqSubDelFailRespInSubmgrOutofOrderIEs(t *testing.T) {
+	CaseBegin("TestSubReqSubDelFailRespInSubmgr start")
+
+	mainCtrl.c.e2ap.SetE2IEOrderCheck(0)
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cSubReqFromXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cSubRespFromE2, 1},
+		Counter{cSubRespToXapp, 1},
+		Counter{cSubDelReqFromXapp, 1},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelFailFromE2, 1},
+		Counter{cSubDelRespToXapp, 1},
+	})
+
+	// Subs Create
+	cretrans := xappConn1.SendSubsReq(t, nil, nil)
+	crereq, cremsg := e2termConn1.RecvSubsReq(t)
+	e2termConn1.SendSubsResp(t, crereq, cremsg)
+	e2SubsId := xappConn1.RecvSubsResp(t, cretrans)
+
+	// Xapp: Send SubsDelReq
+	deltrans := xappConn1.SendSubsDelReq(t, nil, e2SubsId)
+
+	// E2t: Send receive SubsDelReq and send SubsDelFail
+	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+	e2termConn1.SendSubsDelFail(t, delreq, delmsg)
+
+	// Xapp: Receive SubsDelResp
+	xappConn1.RecvSubsDelResp(t, deltrans)
+
+	// Wait that subs is cleaned
+	mainCtrl.wait_subs_clean(t, e2SubsId, 10)
+
+	xappConn1.TestMsgChanEmpty(t)
+	xappConn2.TestMsgChanEmpty(t)
+	e2termConn1.TestMsgChanEmpty(t)
+	mainCtrl.wait_registry_empty(t, 10)
+
+	mainCtrl.VerifyCounterValues(t)
+	mainCtrl.c.e2ap.SetE2IEOrderCheck(1)
 }
 
 //-----------------------------------------------------------------------------

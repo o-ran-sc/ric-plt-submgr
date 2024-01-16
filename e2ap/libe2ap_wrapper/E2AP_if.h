@@ -292,6 +292,14 @@ enum e2err {
     e2err_RICsubscriptionResponseRANfunctionIDWrongOrder,
     e2err_RICsubscriptionResponseRICaction_Admitted_ListWrongOrder,
     e2err_RICsubscriptionResponseRICaction_NotAdmitted_ListWrongOrder,
+    e2err_RICsubscriptionFailureRICrequestIDWrongOrder,
+    e2err_RICsubscriptionFailureRANfunctionIDWrongOrder,
+    e2err_RICsubscriptionFailureCauseWrongOrder,
+    e2err_RICsubscriptionDeleteResponseRICrequestIDWrongOrder,
+    e2err_RICsubscriptionDeleteResponseRANfunctionIDWrongOrder,
+    e2err_RICsubscriptionDeleteFailureRICrequestIDWrongOrder,
+    e2err_RICsubscriptionDeleteFailureRANfunctionIDWrongOrder,
+    e2err_RICsubscriptionDeleteFailureRICcauseWrongOrder
 };
 
 static const char* const E2ErrorStrings[] = {
@@ -357,6 +365,9 @@ static const char* const E2ErrorStrings[] = {
     "e2err_RICsubscriptionResponseRANfunctionIDWrongOrder",
     "e2err_RICsubscriptionResponseRICaction_Admitted_ListWrongOrder",
     "e2err_RICsubscriptionResponseRICaction_NotAdmitted_ListWrongOrder",
+    "e2err_RICsubscriptionFailureRICrequestIDWrongOrder",
+    "e2err_RICsubscriptionFailureRANfunctionIDWrongOrder",
+    "e2err_RICsubscriptionFailureCauseWrongOrder",
 };
 
 typedef struct {
