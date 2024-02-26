@@ -61,6 +61,7 @@ const uint64_t cE2UnsuccessfulOutcome = 3;
 const uint64_t cRICSubscriptionRequest = 1;
 const uint64_t cRICSubscriptionDeleteRequest = 2;
 const uint64_t cRICSubscriptionDeleteRequired = 3;
+const uint64_t cRICE2RanErrorIndication = 4;
 
 // Successful outcome
 const uint64_t cRICSubscriptionResponse = 1;
@@ -723,6 +724,17 @@ e2ap_pdu_ptr_t* unpackE2AP_pdu(const size_t dataBufferSize, const byte* dataBuff
                                     pE2AP_PDU->choice.initiatingMessage.value.present);
                             return 0;
                         }
+            }else if (pE2AP_PDU->choice.initiatingMessage.procedureCode == ProcedureCode_id_ErrorIndication) {
+                printf("ProcedureCode is ProcedureCode_id_ErrorIndication present\n");
+                if (pE2AP_PDU->choice.initiatingMessage.value.present == InitiatingMessage__value_PR_ErrorIndication) {
+                    pMessageInfo->messageType = cE2InitiatingMessage;
+                    pMessageInfo->messageId = cRICE2RanErrorIndication;
+                    return (e2ap_pdu_ptr_t*)pE2AP_PDU;
+                }
+                else {
+                    sprintf(pLogBuffer,"Error. Not supported initiatingMessage MessageId = %u",pE2AP_PDU->choice.initiatingMessage.value.present);
+                    return 0;
+                }
             }
             else {
                 sprintf(pLogBuffer,"Error. Procedure not supported. ProcedureCode = %li",pE2AP_PDU->choice.initiatingMessage.procedureCode);
@@ -1438,4 +1450,164 @@ uint64_t getRICSubscriptionDeleteRequiredData(e2ap_pdu_ptr_t *pE2AP_PDU_pointer,
         ASN_STRUCT_FREE(asn_DEF_E2AP_PDU, pE2AP_PDU);
         return e2err_OK;
     }
+
+    //////////////////////////////////////////////////////////////////////
+uint64_t packRICE2RanErrorIndication(size_t* pDataBufferSize, byte* pDataBuffer, char* pLogBuffer, RICErrorIndication_t* pRICE2RanErrorIndication) {
+    E2AP_PDU_t* pE2AP_PDU = calloc(1, sizeof(E2AP_PDU_t));
+    if(pE2AP_PDU)
+	{
+        pE2AP_PDU->present = E2AP_PDU_PR_initiatingMessage;
+        pE2AP_PDU->choice.initiatingMessage.procedureCode = ProcedureCode_id_ErrorIndication;
+        pE2AP_PDU->choice.initiatingMessage.criticality = Criticality_reject;
+        pE2AP_PDU->choice.initiatingMessage.value.present = InitiatingMessage__value_PR_ErrorIndication;
+
+        // RICrequestID
+        ErrorIndication_IEs_t* pRICE2RanErrorIndication_IEs = calloc(1, sizeof(ErrorIndication_IEs_t));
+        printf("pRICE2RanErrorIndication->isRicRequestIdPresent is %s\n", pRICE2RanErrorIndication->isRicRequestIdPresent == true ? "true" : "false");
+        if (pRICE2RanErrorIndication->isRicRequestIdPresent == true) {
+
+        if (pRICE2RanErrorIndication_IEs) {
+            pRICE2RanErrorIndication_IEs->id = ProtocolIE_ID_id_RICrequestID;
+                printf("Inside RicRequestID ProtocolID\n");
+                pRICE2RanErrorIndication_IEs->criticality = Criticality_reject;
+                pRICE2RanErrorIndication_IEs->value.present = ErrorIndication_IEs__value_PR_RICrequestID;
+                pRICE2RanErrorIndication_IEs->value.choice.RICrequestID.ricRequestorID = pRICE2RanErrorIndication->ricRequestID.ricRequestorID;
+                pRICE2RanErrorIndication_IEs->value.choice.RICrequestID.ricInstanceID = pRICE2RanErrorIndication->ricRequestID.ricInstanceID;
+                printf("After Assigning to pRICE2RanErrorIndication_IEs->value.choice.RICrequestID.ricRequestorID: %ld\n", pRICE2RanErrorIndication_IEs->value.choice.RICrequestID.ricRequestorID);
+                printf("After Assigning to pRICE2RanErrorIndication_IEs->value.choice.RICrequestID.ricInstanceID: %ld\n", pRICE2RanErrorIndication_IEs->value.choice.RICrequestID.ricInstanceID);
+                
+                ASN_SEQUENCE_ADD(&pE2AP_PDU->choice.initiatingMessage.value.choice.ErrorIndication.protocolIEs.list, pRICE2RanErrorIndication_IEs);
+            }
+        }
+        // RANfunctionID
+        printf("pRICE2RanErrorIndication->isRanFunctionIdPresent is %s\n", pRICE2RanErrorIndication->isRanFunctionIdPresent == true ? "true" : "false");
+        if (pRICE2RanErrorIndication->isRanFunctionIdPresent == true) {
+        pRICE2RanErrorIndication_IEs = calloc(1, sizeof(ErrorIndication_IEs_t));
+        if (pRICE2RanErrorIndication_IEs) {
+            pRICE2RanErrorIndication_IEs->id = ProtocolIE_ID_id_RANfunctionID;
+                pRICE2RanErrorIndication_IEs->criticality = Criticality_reject;
+                pRICE2RanErrorIndication_IEs->value.present = ErrorIndication_IEs__value_PR_RANfunctionID;
+                pRICE2RanErrorIndication_IEs->value.choice.RANfunctionID = pRICE2RanErrorIndication->ranFunctionID;
+                ASN_SEQUENCE_ADD(&pE2AP_PDU->choice.initiatingMessage.value.choice.ErrorIndication.protocolIEs.list, pRICE2RanErrorIndication_IEs);
+            }
+        }
+        // Cause
+        printf("pRICE2RanErrorIndication->isCausePresent is %s\n", pRICE2RanErrorIndication->isCausePresent == true ? "true" : "false");
+        if (pRICE2RanErrorIndication->isCausePresent == true) {
+        pRICE2RanErrorIndication_IEs = calloc(1, sizeof(RICsubscriptionFailure_IEs_t));
+        if (pRICE2RanErrorIndication_IEs) {
+            pRICE2RanErrorIndication_IEs->id = ProtocolIE_ID_id_Cause;
+                printf("Inside Cause ProtocolID\n");
+                pRICE2RanErrorIndication_IEs->criticality = Criticality_reject;
+                pRICE2RanErrorIndication_IEs->value.present = ErrorIndication_IEs__value_PR_Cause;
+                if (pRICE2RanErrorIndication->cause.content == Cause_PR_ricRequest) {
+                    pRICE2RanErrorIndication_IEs->value.choice.Cause.present = Cause_PR_ricRequest;
+                    pRICE2RanErrorIndication_IEs->value.choice.Cause.choice.ricRequest =
+                    pRICE2RanErrorIndication->cause.causeVal;
+                }
+                else if (pRICE2RanErrorIndication->cause.content == Cause_PR_ricService) {
+                    pRICE2RanErrorIndication_IEs->value.choice.Cause.present = Cause_PR_ricService;
+                    pRICE2RanErrorIndication_IEs->value.choice.Cause.choice.ricService =
+                    pRICE2RanErrorIndication->cause.causeVal;
+                }
+                else if (pRICE2RanErrorIndication->cause.content == Cause_PR_e2Node) {
+                    pRICE2RanErrorIndication_IEs->value.choice.Cause.present = Cause_PR_e2Node;
+                    pRICE2RanErrorIndication_IEs->value.choice.Cause.choice.e2Node =
+                    pRICE2RanErrorIndication->cause.causeVal;
+                }
+                else if (pRICE2RanErrorIndication->cause.content == Cause_PR_transport) {
+                    pRICE2RanErrorIndication_IEs->value.choice.Cause.present = Cause_PR_transport;
+                    pRICE2RanErrorIndication_IEs->value.choice.Cause.choice.transport =
+                    pRICE2RanErrorIndication->cause.causeVal;
+                }
+                else if (pRICE2RanErrorIndication->cause.content == Cause_PR_protocol) {
+                    pRICE2RanErrorIndication_IEs->value.choice.Cause.present = Cause_PR_protocol;
+                    pRICE2RanErrorIndication_IEs->value.choice.Cause.choice.protocol =
+                    pRICE2RanErrorIndication->cause.causeVal;
+                }
+                else if (pRICE2RanErrorIndication->cause.content == Cause_PR_misc) {
+                    pRICE2RanErrorIndication_IEs->value.choice.Cause.present = Cause_PR_misc;
+                    pRICE2RanErrorIndication_IEs->value.choice.Cause.choice.misc =
+                    pRICE2RanErrorIndication->cause.causeVal;
+                }
+                ASN_SEQUENCE_ADD(&pE2AP_PDU->choice.initiatingMessage.value.choice.ErrorIndication.protocolIEs.list, pRICE2RanErrorIndication_IEs);
+            }
+        }
+        // CriticalityDiagnostics, OPTIONAL. Not used in RIC
+
+        
+        if (E2encode(pE2AP_PDU, pDataBufferSize, pDataBuffer, pLogBuffer))
+            return e2err_OK;
+        else
+            return e2err_RICE2RanErrorIndicationEncodeFail;
+
+    }
+    else
+        return e2err_RICE2RanErrorIndicationAllocE2AP_PDUFail;
+}
+
+
+//////////////////////////////////////////////////////////////////////
+uint64_t getRICE2RanErrorIndicationData(e2ap_pdu_ptr_t* pE2AP_PDU_pointer, RICErrorIndication_t* pRICE2RanErrorIndication) {
+    E2AP_PDU_t* pE2AP_PDU = (E2AP_PDU_t*)pE2AP_PDU_pointer;
+
+    ErrorIndication_t *asnRicE2RanErrorIndication = &pE2AP_PDU->choice.initiatingMessage.value.choice.ErrorIndication;
+    ErrorIndication_IEs_t* pRICE2RanErrorIndication_IEs;
+
+    for (int i = 0; i < asnRicE2RanErrorIndication->protocolIEs.list.count; i++) {
+
+        pRICE2RanErrorIndication_IEs = asnRicE2RanErrorIndication->protocolIEs.list.array[i];
+        if (asnRicE2RanErrorIndication->protocolIEs.list.array[i]->id == ProtocolIE_ID_id_RICrequestID) {
+
+            if (pRICE2RanErrorIndication_IEs->value.present == ErrorIndication_IEs__value_PR_RICrequestID) {
+                printf("Inside ErrorIndication_IEs__value_PR_RICrequestID\n");
+                pRICE2RanErrorIndication->isRicRequestIdPresent = true;
+                pRICE2RanErrorIndication->ricRequestID.ricRequestorID = pRICE2RanErrorIndication_IEs->value.choice.RICrequestID.ricRequestorID;
+                pRICE2RanErrorIndication->ricRequestID.ricInstanceID = pRICE2RanErrorIndication_IEs->value.choice.RICrequestID.ricInstanceID;
+            }
+            else {
+                printf("ErrorIndication_IEs__value_PR_RICrequestID is not present\n");
+                pRICE2RanErrorIndication->isRicRequestIdPresent = false;
+            }
+        }
+
+        if (asnRicE2RanErrorIndication->protocolIEs.list.array[i]->id == ProtocolIE_ID_id_Cause) {
+            printf("Inside ProtocolIE_ID_id_Cause\n");
+            if (pRICE2RanErrorIndication_IEs->value.present == ErrorIndication_IEs__value_PR_Cause) {
+                pRICE2RanErrorIndication->isCausePresent = true;
+                if (pRICE2RanErrorIndication_IEs->value.choice.Cause.present == Cause_PR_ricRequest) {
+                    pRICE2RanErrorIndication->cause.content = Cause_PR_ricRequest;
+                    pRICE2RanErrorIndication->cause.causeVal = pRICE2RanErrorIndication_IEs->value.choice.Cause.choice.ricRequest;
+                }
+                else if (pRICE2RanErrorIndication_IEs->value.choice.Cause.present == Cause_PR_ricService) {
+                    pRICE2RanErrorIndication->cause.content = Cause_PR_ricService;
+                    pRICE2RanErrorIndication->cause.causeVal = pRICE2RanErrorIndication_IEs->value.choice.Cause.choice.ricService;
+                }
+                else if (pRICE2RanErrorIndication_IEs->value.choice.Cause.present == Cause_PR_e2Node) {
+                    pRICE2RanErrorIndication->cause.content = Cause_PR_e2Node;
+                    pRICE2RanErrorIndication->cause.causeVal = pRICE2RanErrorIndication_IEs->value.choice.Cause.choice.e2Node;
+                }
+                else if (pRICE2RanErrorIndication_IEs->value.choice.Cause.present == Cause_PR_transport) {
+                    pRICE2RanErrorIndication->cause.content = Cause_PR_transport;
+                    pRICE2RanErrorIndication->cause.causeVal = pRICE2RanErrorIndication_IEs->value.choice.Cause.choice.transport;
+                }
+                else if (pRICE2RanErrorIndication_IEs->value.choice.Cause.present == Cause_PR_protocol) {
+                    pRICE2RanErrorIndication->cause.content = Cause_PR_protocol;
+                    pRICE2RanErrorIndication->cause.causeVal = pRICE2RanErrorIndication_IEs->value.choice.Cause.choice.protocol;
+                }
+                else if(pRICE2RanErrorIndication_IEs->value.choice.Cause.present == Cause_PR_misc) {
+                    pRICE2RanErrorIndication->cause.content = Cause_PR_misc;
+                    pRICE2RanErrorIndication->cause.causeVal = pRICE2RanErrorIndication_IEs->value.choice.Cause.choice.misc;
+                }
+            }
+            else {
+                printf("ErrorIndication_IEs__value_PR_Cause is not present\n");
+                pRICE2RanErrorIndication->isCausePresent = false;
+            }
+        }
+    }
+
+    ASN_STRUCT_FREE(asn_DEF_E2AP_PDU, pE2AP_PDU);
+    return e2err_OK;
+}
 

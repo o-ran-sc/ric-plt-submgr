@@ -114,27 +114,29 @@ func TestRESTSubReqAfterE2ConnBreak(t *testing.T) {
 //-----------------------------------------------------------------------------
 // TestRESTSubReqE2ConnBreak
 //
-//   stub                             stub
+//	stub                             stub
+//
 // +-------+        +---------+    +---------+
 // | xapp  |        | submgr  |    | e2term  |
 // +-------+        +---------+    +---------+
-//     |                 |              |
-//     | RESTSubReq      |              |
-//     |---------------->|              |
-//     |     RESTSubResp |              |
-//     |<----------------|              |
-//     |                 | SubReq       |
-//     |                 |------------->|
-//     |                 |      SubResp |
-//     |                 |<-------------|
-//     |                 |              |
-//     |         [E2 Conn. DOWN]        |
-//     |        [Int. SUBS DELETE]      |
-//     |                 |              |
-//     |      RESTNotif(unsuccessful)   |
-//     |<----------------|              |
-//     |                 |              |
-//     |                 |              |
+//
+//	|                 |              |
+//	| RESTSubReq      |              |
+//	|---------------->|              |
+//	|     RESTSubResp |              |
+//	|<----------------|              |
+//	|                 | SubReq       |
+//	|                 |------------->|
+//	|                 |      SubResp |
+//	|                 |<-------------|
+//	|                 |              |
+//	|         [E2 Conn. DOWN]        |
+//	|        [Int. SUBS DELETE]      |
+//	|                 |              |
+//	|      RESTNotif(unsuccessful)   |
+//	|<----------------|              |
+//	|                 |              |
+//	|                 |              |
 //
 //-----------------------------------------------------------------------------
 func TestRESTSubReqE2ConnBreak(t *testing.T) {
@@ -192,25 +194,810 @@ func TestRESTSubReqE2ConnBreak(t *testing.T) {
 }
 
 //-----------------------------------------------------------------------------
-// TestRESTSubscriptionDeleteAfterE2ConnectionBreak
+// TestReportRESTSubReqE2NodeSendsErrorIndicationWithCauseHwFailure
+//
+//	stub                             stub
+//
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//
+//	|                 |                |
+//	| RESTSubReq      |                |
+//	|---------------->|                |
+//	|     RESTSubResp |                |
+//	|<----------------|                |
+//	|                 | SubReq         |
+//	|                 |--------------->|
+//	|                 | ErrorIndication|
+//	|                 |<---------------|
+//	|                 |                |
+//	|                 |                |
+//	|      RESTNotif(unsuccessful)     |
+//	|<----------------|                |
+//	|                 |                |
+//	|                 |                |
+//
+//-----------------------------------------------------------------------------
+func TestReportRESTSubReqE2NodeSendsErrorIndicationWithCauseHwFailure(t *testing.T) {
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 1},
+		Counter{cRestSubRespToXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cErrorIndicationFromE2Node, 1},
+		Counter{cRestSubFailNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+	})
+
+	// Req
+	const subReqCount int = 1
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
+	restSubId := xappConn1.SendRESTSubsReq(t, params)
+
+	crereq, cremsg := e2termConn1.RecvSubsReq(t)
+	xappConn1.ExpectRESTNotification(t, restSubId)
+
+	e2termConn1.SendErrorIndication(t, crereq, cremsg)
+
+	e2SubsId := xappConn1.WaitRESTNotification(t, restSubId)
+
+	fmt.Printf("e2SubsId: %v\n", e2SubsId)
+
+	//For Cleanup. Next testcase should start freshly.
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+
+	waitSubsCleanup(t, e2SubsId, 10)
+	mainCtrl.VerifyCounterValues(t)
+	mainCtrl.VerifyAllClean(t)
+}
+
+//-----------------------------------------------------------------------------
+// TestPolicyRESTSubReqE2NodeSendsErrorIndicationWithCauseHwFailure
+//
+//	stub                             stub
+//
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//
+//	|                 |                |
+//	| RESTSubReq      |                |
+//	|---------------->|                |
+//	|     RESTSubResp |                |
+//	|<----------------|                |
+//	|                 | SubReq         |
+//	|                 |--------------->|
+//	|                 | ErrorIndication|
+//	|                 |<---------------|
+//	|                 |                |
+//	|                 |                |
+//	|      RESTNotif(unsuccessful)     |
+//	|<----------------|                |
+//	|                 |                |
+//	|                 |                |
+//
+//-----------------------------------------------------------------------------
+func TestPolicyRESTSubReqE2NodeSendsErrorIndicationWithCauseHwFailure(t *testing.T) {
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 1},
+		Counter{cRestSubRespToXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cErrorIndicationFromE2Node, 1},
+		Counter{cRestSubFailNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+	})
+
+	// Req
+	const subReqCount int = 1
+	params := xappConn1.GetRESTSubsReqPolicyParams(subReqCount)
+	restSubId := xappConn1.SendRESTSubsReq(t, params)
+
+	crereq, cremsg := e2termConn1.RecvSubsReq(t)
+	xappConn1.ExpectRESTNotification(t, restSubId)
+
+	//e2termConn1.SendSubsResp(t, crereq, cremsg)
+	e2termConn1.SendErrorIndication(t, crereq, cremsg)
+
+	e2SubsId := xappConn1.WaitRESTNotification(t, restSubId)
+
+	fmt.Printf("e2SubsId: %v\n", e2SubsId)
+
+	//For Cleanup. Next testcase should start freshly.
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+
+	waitSubsCleanup(t, e2SubsId, 10)
+	mainCtrl.VerifyCounterValues(t)
+	mainCtrl.VerifyAllClean(t)
+}
+
+//-----------------------------------------------------------------------------
+// TestReportRESTSubReqE2NodeSendsErrorIndicationWithInvalidInstanceId
+//
+//	stub                             stub
+//
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//
+//			|                 |                |
+//			| RESTSubReq      |                |
+//			|---------------->|                |
+//			|     RESTSubResp |                |
+//			|<----------------|                |
+//			|                 | SubReq         |
+//			|                 |--------------->|
+//			|                 | ErrorIndication|
+//			|                 |<---------------|
+//			|                 |                |
+//			|                 |                |
+//			|      ErrorIndication Dropped     |
+//			|                 |                |
+//			|                 |                |
+//			|                 | SubReq         |
+//			|                 |--------------->|
+//			|                 | SubResp        |
+//			|                 |<---------------|
+//		    | RestNotifToXapp |                |
+//	        |<----------------|                |
+//		    |                 |                |
+//		    |                 |                |
+//		    | RESTSubDelReq   |                |
+//		    |---------------->|                |
+//		    |                 |                |
+//		    |  RESTSubDelResp |                |
+//		    |<----------------|                |
+//		    |                 | SubDelReq      |
+//		    |                 | -------------->|
+//			|                 |                |
+//	        |                 | SubDelResp     |
+//	        |                 |<---------------|
+//
+//-----------------------------------------------------------------------------
+func TestReportRESTSubReqE2NodeSendsErrorIndicationWithInvalidInstanceId(t *testing.T) {
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 1},
+		Counter{cRestSubRespToXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cErrorIndicationFromE2Node, 1},
+		Counter{cSubReqTimerExpiry, 1},
+		Counter{cSubReReqToE2, 1},
+		Counter{cSubRespFromE2, 1},
+		Counter{cRestSubNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelRespFromE2, 1},
+	})
+
+	// Req
+	const subReqCount int = 1
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
+	restSubId := xappConn1.SendRESTSubsReq(t, params)
+
+	crereq, cremsg := e2termConn1.RecvSubsReq(t)
+	xappConn1.ExpectRESTNotification(t, restSubId)
+
+	e2termConn1.SendErrorIndicationWithInvalidInstanceId(t, crereq, cremsg)
+
+	crereq, cremsg = e2termConn1.RecvSubsReq(t)
+	e2termConn1.SendSubsResp(t, crereq, cremsg)
+	e2SubsId := xappConn1.WaitRESTNotification(t, restSubId)
+
+	// Del
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
+
+	// Wait that subs is cleaned
+
+	mainCtrl.wait_registry_empty(t, 10)
+	waitSubsCleanup(t, e2SubsId, 10)
+	mainCtrl.VerifyCounterValues(t)
+	mainCtrl.VerifyAllClean(t)
+}
+
+//-----------------------------------------------------------------------------
+// TestPolicyRESTSubReqE2NodeSendsErrorIndicationWithInvalidInstanceId
+//
+//	stub                             stub
+//
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//
+//			|                 |                |
+//			| RESTSubReq      |                |
+//			|---------------->|                |
+//			|     RESTSubResp |                |
+//			|<----------------|                |
+//			|                 | SubReq         |
+//			|                 |--------------->|
+//			|                 | ErrorIndication|
+//			|                 |<---------------|
+//			|                 |                |
+//			|                 |                |
+//			|      ErrorIndication Dropped     |
+//			|                 |                |
+//			|                 |                |
+//			|                 | SubReq         |
+//			|                 |--------------->|
+//			|                 | SubResp        |
+//			|                 |<---------------|
+//		    | RestNotifToXapp |                |
+//	        |<----------------|                |
+//		    |                 |                |
+//		    |                 |                |
+//		    | RESTSubDelReq   |                |
+//		    |---------------->|                |
+//		    |                 |                |
+//		    |  RESTSubDelResp |                |
+//		    |<----------------|                |
+//		    |                 | SubDelReq      |
+//		    |                 | -------------->|
+//			|                 |                |
+//	        |                 | SubDelResp     |
+//	        |                 |<---------------|
+//
+//-----------------------------------------------------------------------------
+func TestPolicyRESTSubReqE2NodeSendsErrorIndicationWithInvalidInstanceId(t *testing.T) {
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 1},
+		Counter{cRestSubRespToXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cErrorIndicationFromE2Node, 1},
+		Counter{cSubReqTimerExpiry, 1},
+		Counter{cSubReReqToE2, 1},
+		Counter{cSubRespFromE2, 1},
+		Counter{cRestSubNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelRespFromE2, 1},
+	})
+
+	// Req
+	const subReqCount int = 1
+	params := xappConn1.GetRESTSubsReqPolicyParams(subReqCount)
+	restSubId := xappConn1.SendRESTSubsReq(t, params)
+
+	crereq, cremsg := e2termConn1.RecvSubsReq(t)
+	xappConn1.ExpectRESTNotification(t, restSubId)
+
+	e2termConn1.SendErrorIndicationWithInvalidInstanceId(t, crereq, cremsg)
+
+	crereq, cremsg = e2termConn1.RecvSubsReq(t)
+	e2termConn1.SendSubsResp(t, crereq, cremsg)
+	e2SubsId := xappConn1.WaitRESTNotification(t, restSubId)
+
+	// Del
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
+
+	// Wait that subs is cleaned
+
+	mainCtrl.wait_registry_empty(t, 10)
+	waitSubsCleanup(t, e2SubsId, 10)
+	mainCtrl.VerifyCounterValues(t)
+	mainCtrl.VerifyAllClean(t)
+}
+
+//-----------------------------------------------------------------------------
+// TestReportRESTSubReqE2NodeSendsErrorIndicationWithValidInstanceIdButCauseIsNeitherUnspecifiedOrHWFailure
+//
+//	stub                             stub
+//
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//
+//			|                 |                |
+//			| RESTSubReq      |                |
+//			|---------------->|                |
+//			|     RESTSubResp |                |
+//			|<----------------|                |
+//			|                 | SubReq         |
+//			|                 |--------------->|
+//			|                 | ErrorIndication|
+//			|                 |<---------------|
+//			|                 |                |
+//			|                 |                |
+//	ErrorIndication Dropped With Diff Cause    | Cause = excessive_actions
+//			|                 |                |
+//			|                 |                |
+//			|                 | SubReq         |
+//			|                 |--------------->|
+//			|                 | SubResp        |
+//			|                 |<---------------|
+//		    | RestNotifToXapp |                |
+//	        |<----------------|                |
+//		    |                 |                |
+//		    |                 |                |
+//		    | RESTSubDelReq   |                |
+//		    |---------------->|                |
+//		    |                 |                |
+//		    |  RESTSubDelResp |                |
+//		    |<----------------|                |
+//		    |                 | SubDelReq      |
+//		    |                 | -------------->|
+//			|                 |                |
+//	        |                 | SubDelResp     |
+//	        |                 |<---------------|
+//
+//-----------------------------------------------------------------------------
+func TestReportRESTSubReqE2NodeSendsErrorIndicationWithValidInstanceIdButCauseIsNeitherUnspecifiedOrHWFailure(t *testing.T) {
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 1},
+		Counter{cRestSubRespToXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cErrorIndicationFromE2Node, 1},
+		Counter{cSubReqTimerExpiry, 1},
+		Counter{cSubReReqToE2, 1},
+		Counter{cSubRespFromE2, 1},
+		Counter{cRestSubNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelRespFromE2, 1},
+	})
+
+	// Req
+	const subReqCount int = 1
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
+	restSubId := xappConn1.SendRESTSubsReq(t, params)
+
+	crereq, cremsg := e2termConn1.RecvSubsReq(t)
+	xappConn1.ExpectRESTNotification(t, restSubId)
+
+	e2termConn1.SendErrorIndicationWithDiffCause(t, crereq, cremsg)
+
+	crereq, cremsg = e2termConn1.RecvSubsReq(t)
+	e2termConn1.SendSubsResp(t, crereq, cremsg)
+	e2SubsId := xappConn1.WaitRESTNotification(t, restSubId)
+
+	// Del
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
+
+	// Wait that subs is cleaned
+
+	mainCtrl.wait_registry_empty(t, 10)
+	waitSubsCleanup(t, e2SubsId, 10)
+	mainCtrl.VerifyCounterValues(t)
+	mainCtrl.VerifyAllClean(t)
+}
+
+//-----------------------------------------------------------------------------
+// TestPolicyRESTSubReqE2NodeSendsErrorIndicationWithValidInstanceIdButCauseIsNeitherUnspecifiedOrHWFailure
+//
+//	stub                             stub
+//
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//
+//			|                 |                |
+//			| RESTSubReq      |                |
+//			|---------------->|                |
+//			|     RESTSubResp |                |
+//			|<----------------|                |
+//			|                 | SubReq         |
+//			|                 |--------------->|
+//			|                 | ErrorIndication|
+//			|                 |<---------------|
+//			|                 |                |
+//			|                 |                |
+//	ErrorIndication Dropped With Diff Cause    | Cause = excessive_actions
+//			|                 |                |
+//			|                 |                |
+//			|                 | SubReq         |
+//			|                 |--------------->|
+//			|                 | SubResp        |
+//			|                 |<---------------|
+//		    | RestNotifToXapp |                |
+//	        |<----------------|                |
+//		    |                 |                |
+//		    |                 |                |
+//		    | RESTSubDelReq   |                |
+//		    |---------------->|                |
+//		    |                 |                |
+//		    |  RESTSubDelResp |                |
+//		    |<----------------|                |
+//		    |                 | SubDelReq      |
+//		    |                 | -------------->|
+//			|                 |                |
+//	        |                 | SubDelResp     |
+//	        |                 |<---------------|
+//
+//-----------------------------------------------------------------------------
+func TestPolicyRESTSubReqE2NodeSendsErrorIndicationWithValidInstanceIdButCauseIsNeitherUnspecifiedOrHWFailure(t *testing.T) {
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 1},
+		Counter{cRestSubRespToXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cErrorIndicationFromE2Node, 1},
+		Counter{cSubReqTimerExpiry, 1},
+		Counter{cSubReReqToE2, 1},
+		Counter{cSubRespFromE2, 1},
+		Counter{cRestSubNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelRespFromE2, 1},
+	})
+
+	// Req
+	const subReqCount int = 1
+	params := xappConn1.GetRESTSubsReqPolicyParams(subReqCount)
+	restSubId := xappConn1.SendRESTSubsReq(t, params)
+
+	crereq, cremsg := e2termConn1.RecvSubsReq(t)
+	xappConn1.ExpectRESTNotification(t, restSubId)
+
+	e2termConn1.SendErrorIndicationWithDiffCause(t, crereq, cremsg)
+
+	crereq, cremsg = e2termConn1.RecvSubsReq(t)
+	e2termConn1.SendSubsResp(t, crereq, cremsg)
+	e2SubsId := xappConn1.WaitRESTNotification(t, restSubId)
+
+	// Del
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
+
+	// Wait that subs is cleaned
+
+	mainCtrl.wait_registry_empty(t, 10)
+	waitSubsCleanup(t, e2SubsId, 10)
+	mainCtrl.VerifyCounterValues(t)
+	mainCtrl.VerifyAllClean(t)
+}
+
+//-----------------------------------------------------------------------------
+// TestRESTReportSubReqUnpackErrorIndicationDecodeFail
 //
 //   stub                             stub
 // +-------+        +---------+    +---------+
 // | xapp  |        | submgr  |    | e2term  |
 // +-------+        +---------+    +---------+
 //     |                 |              |
-//     |            [SUBS CREATE]       |
-//     |                 |              |
-//     |           [E2 Conn. DOWN]      |
-//     |                 |              |
-//     | RESTSubDelReq   |              |
+//     | RestSubReq      |              |
 //     |---------------->|              |
 //     |                 |              |
-//     |  RESTSubDelResp |              |
+//     |     RESTSubResp |              |
 //     |<----------------|              |
 //     |                 |              |
-//     |  [No valid subscription found] |
+//     |                 | SubReq       |
+//     |                 |------------->|
 //     |                 |              |
+//     |                 |ErrorIndication | ASN.1 decode fails
+//     |                 |<-------------| Decode failed. More data needed. This will result timer expiry and resending
+//     |                 |              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |ErrorIndication | Valid InstanceId and Cause
+//     |                 |<-------------|
+//     | RESTNotif (fail)|              |
+//     |<----------------|              |
+//     |                 |              |
+//     |           [SUBS DELETE]        |
+//     |                 |              |
+//
+//-----------------------------------------------------------------------------
+
+func TestRESTReportSubReqUnpackErrorIndicationDecodeFail(t *testing.T) {
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 1},
+		Counter{cRestSubRespToXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cSubReqTimerExpiry, 1},
+		Counter{cSubReReqToE2, 1},
+		Counter{cErrorIndicationFromE2Node, 2},
+		Counter{cRestSubFailNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+	})
+
+	const subReqCount int = 1
+
+	// Req
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
+	restSubId := xappConn1.SendRESTSubsReq(t, params)
+
+	crereq, cremsg := e2termConn1.RecvSubsReq(t)
+	// Decode of this response fails which will result resending original request
+	e2termConn1.SendInvalidE2Asn1Resp(t, cremsg, xapp.RIC_E2_RAN_ERROR_INDICATION)
+
+	crereq, cremsg = e2termConn1.RecvSubsReq(t)
+
+	xappConn1.ExpectRESTNotificationNok(t, restSubId, "allFail")
+
+	e2termConn1.SendErrorIndication(t, crereq, cremsg)
+
+	e2SubsId := xappConn1.WaitRESTNotification(t, restSubId)
+
+	xapp.Logger.Debug("TEST: REST notification received e2SubsId=%v", e2SubsId)
+
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+
+	// Wait that subs is cleaned
+	mainCtrl.wait_subs_clean(t, crereq.RequestId.InstanceId, 10)
+
+	xappConn1.TestMsgChanEmpty(t)
+	e2termConn1.TestMsgChanEmpty(t)
+	mainCtrl.wait_registry_empty(t, 10)
+	mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyCounterValues(t)
+}
+
+//-----------------------------------------------------------------------------
+// TestRESTPolicySubReqUnpackErrorIndicationDecodeFail
+//
+//   stub                             stub
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//     |                 |              |
+//     | RestSubReq      |              |
+//     |---------------->|              |
+//     |                 |              |
+//     |     RESTSubResp |              |
+//     |<----------------|              |
+//     |                 |              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |ErrorIndication | ASN.1 decode fails
+//     |                 |<-------------| Decode failed. More data needed. This will result timer expiry and resending
+//     |                 |              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |ErrorIndication | Valid InstanceId and Cause
+//     |                 |<-------------|
+//     | RESTNotif (fail)|              |
+//     |<----------------|              |
+//     |                 |              |
+//     |           [SUBS DELETE]        |
+//     |                 |              |
+//
+//-----------------------------------------------------------------------------
+
+func TestRESTPolicySubReqUnpackErrorIndicationDecodeFail(t *testing.T) {
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 1},
+		Counter{cRestSubRespToXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cSubReqTimerExpiry, 1},
+		Counter{cSubReReqToE2, 1},
+		Counter{cErrorIndicationFromE2Node, 2},
+		Counter{cRestSubFailNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+	})
+
+	const subReqCount int = 1
+
+	// Req
+	params := xappConn1.GetRESTSubsReqPolicyParams(subReqCount)
+	restSubId := xappConn1.SendRESTSubsReq(t, params)
+
+	crereq, cremsg := e2termConn1.RecvSubsReq(t)
+	// Decode of this response fails which will result resending original request
+	e2termConn1.SendInvalidE2Asn1Resp(t, cremsg, xapp.RIC_E2_RAN_ERROR_INDICATION)
+
+	crereq, cremsg = e2termConn1.RecvSubsReq(t)
+
+	xappConn1.ExpectRESTNotificationNok(t, restSubId, "allFail")
+
+	e2termConn1.SendErrorIndication(t, crereq, cremsg)
+
+	e2SubsId := xappConn1.WaitRESTNotification(t, restSubId)
+
+	xapp.Logger.Debug("TEST: REST notification received e2SubsId=%v", e2SubsId)
+
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+
+	// Wait that subs is cleaned
+	mainCtrl.wait_subs_clean(t, crereq.RequestId.InstanceId, 10)
+
+	xappConn1.TestMsgChanEmpty(t)
+	e2termConn1.TestMsgChanEmpty(t)
+	mainCtrl.wait_registry_empty(t, 10)
+	mainCtrl.VerifyAllClean(t)
+	mainCtrl.VerifyCounterValues(t)
+}
+
+/*
+
+// This testcase is working as expected, but breaking TestRESTSubscriptionDeleteAfterE2ConnectionBreak with Unexpected Rest Notification received. Commenting this case for now.
+
+
+//-----------------------------------------------------------------------------
+// TestTimeoutForRESTReportSubReqE2NodeSendsErrorIndicationWithReqIdAndCause
+//
+//   stub                             stub
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//     |                 |              |
+//     | RestSubReq      |              |
+//     |---------------->|              |
+//     |                 |              |
+//     |     RESTSubResp |              |
+//     |<----------------|              |
+//     |                 |              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |ErrorIndication | RequestId Present and Cause is Trivial.
+//     |                 |<-------------|
+//     |                 |              |
+//     |                 |              |
+//     |                 |              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |ErrorIndication | RequestId Present and Cause is Trivial.
+//     |                 |<-------------|
+//     |       RESTNotif |              |
+//     |       unsuccess |              |
+//     |<----------------|              |
+//     |                 |              |
+//     |            [SUBS DELETE]       |
+//     |                 |              |
+func TestTimeoutForRESTReportSubReqE2NodeSendsErrorIndicationWithReqIdAndCause(t *testing.T) {
+
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 1},
+		Counter{cRestSubRespToXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cErrorIndicationFromE2Node, 2},
+		Counter{cSubReqTimerExpiry, 2},
+		Counter{cSubReReqToE2, 1},
+		Counter{cSubDelReqToE2, 1},
+		Counter{cSubDelRespFromE2, 1},
+		Counter{cRestSubFailNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+	})
+
+	// Req
+	const subReqCount int = 1
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
+	restSubId := xappConn1.SendRESTSubsReq(t, params)
+
+	crereq, cremsg := e2termConn1.RecvSubsReq(t)
+	xappConn1.ExpectRESTNotification(t, restSubId)
+	e2termConn1.SendErrorIndicationWithDiffCause(t, crereq, cremsg)
+
+	crereq, cremsg = e2termConn1.RecvSubsReq(t)
+	e2termConn1.SendErrorIndicationWithDiffCause(t, crereq, cremsg)
+
+	delreq, delmsg := e2termConn1.RecvSubsDelReq(t)
+	xappConn1.ExpectRESTNotificationNok(t, restSubId, "allFail")
+	e2termConn1.SendSubsDelResp(t, delreq, delmsg)
+	xappConn1.WaitRESTNotification(t, restSubId)
+
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+	// Wait that subs is cleaned
+
+	//xappConn1.SendRESTSubsDelReq(t, &restSubId)
+	//delreq, delmsg = e2termConn1.RecvSubsDelReq(t)
+	//e2termConn1.SendSubsDelResp(t, delreq, delmsg)
+
+	mainCtrl.wait_registry_empty(t, 10)
+	waitSubsCleanup(t, delreq.RequestId.InstanceId, 10)
+	//waitSubsCleanup(t, e2SubIds, 10)
+	mainCtrl.VerifyCounterValues(t)
+	mainCtrl.VerifyAllClean(t)
+}*/
+
+//-----------------------------------------------------------------------------
+// TestRESTReportSubReqE2NodeSendsErrorIndicationAndNotifyToXapp
+//
+//   stub                             stub
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//     |                 |              |
+//     | RestSubReq      |              |
+//     |---------------->|              |
+//     |                 |              |
+//     |     RESTSubResp |              |
+//     |<----------------|              |
+//     |                 |              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |ErrorIndication | RequestId Present and Cause is Trivial.
+//     |                 |<-------------|
+//     |                 |              |
+//     |                 |              |
+//     |                 |              |
+//     |                 | SubReq       |
+//     |                 |------------->|
+//     |                 |              |
+//     |                 |ErrorIndication | RequestId Present and Cause is HW Failure.
+//     |                 |<-------------|
+//     |       RESTNotif |              |
+//     |       unsuccess |              |
+//     |<----------------|              |
+//     |                 |              |
+//     |            [SUBS DELETE]       |
+//     |                 |              |
+
+func TestRESTReportSubReqE2NodeSendsErrorIndicationAndNotifyToXapp(t *testing.T) {
+	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
+		Counter{cRestSubReqFromXapp, 1},
+		Counter{cRestSubRespToXapp, 1},
+		Counter{cSubReqToE2, 1},
+		Counter{cErrorIndicationFromE2Node, 2},
+		Counter{cSubReqTimerExpiry, 1},
+		Counter{cSubReReqToE2, 1},
+		Counter{cRestSubFailNotifToXapp, 1},
+		Counter{cRestSubDelReqFromXapp, 1},
+		Counter{cRestSubDelRespToXapp, 1},
+	})
+
+	// Req
+	const subReqCount int = 1
+	params := xappConn1.GetRESTSubsReqReportParams(subReqCount)
+	restSubId := xappConn1.SendRESTSubsReq(t, params)
+
+	crereq, cremsg := e2termConn1.RecvSubsReq(t)
+	xappConn1.ExpectRESTNotification(t, restSubId)
+	e2termConn1.SendErrorIndicationWithDiffCause(t, crereq, cremsg)
+
+	crereq, cremsg = e2termConn1.RecvSubsReq(t)
+	e2termConn1.SendErrorIndication(t, crereq, cremsg)
+
+	e2SubsId := xappConn1.WaitRESTNotification(t, restSubId)
+
+	fmt.Printf("e2SubsId: %v\n", e2SubsId)
+
+	//For Cleanup. Next testcase should start freshly.
+	xappConn1.SendRESTSubsDelReq(t, &restSubId)
+
+	waitSubsCleanup(t, e2SubsId, 10)
+	mainCtrl.VerifyCounterValues(t)
+	mainCtrl.VerifyAllClean(t)
+}
+
+//-----------------------------------------------------------------------------
+// TestRESTSubscriptionDeleteAfterE2ConnectionBreak
+//
+//	stub                             stub
+//
+// +-------+        +---------+    +---------+
+// | xapp  |        | submgr  |    | e2term  |
+// +-------+        +---------+    +---------+
+//
+//	|                 |              |
+//	|            [SUBS CREATE]       |
+//	|                 |              |
+//	|           [E2 Conn. DOWN]      |
+//	|                 |              |
+//	| RESTSubDelReq   |              |
+//	|---------------->|              |
+//	|                 |              |
+//	|  RESTSubDelResp |              |
+//	|<----------------|              |
+//	|                 |              |
+//	|  [No valid subscription found] |
+//	|                 |              |
 //
 //-----------------------------------------------------------------------------
 func TestRESTSubscriptionDeleteAfterE2ConnectionBreak(t *testing.T) {
@@ -274,20 +1061,22 @@ func TestRESTSubscriptionDeleteAfterE2ConnectionBreak(t *testing.T) {
 // TestRESTOtherE2ConnectionChanges
 //
 
-//   stub                             stub
+//	stub                             stub
+//
 // +-------+        +---------+    +---------+
 // | xapp  |        | submgr  |    | e2term  |
 // +-------+        +---------+    +---------+
-//     |                 |              |
-//     |            [SUBS CREATE]       |
-//     |                 |              |
-//     |  [E2 CONNECTED_SETUP_FAILED]   |
-//     |         [E2 CONNECTING]        |
-//     |        [E2 SHUTTING_DOWN]      |
-//     |          [E2 SHUT_DOWN]        |
-//     |                 |              |
-//     |            [SUBS DELETE]       |
-//     |                 |              |
+//
+//	|                 |              |
+//	|            [SUBS CREATE]       |
+//	|                 |              |
+//	|  [E2 CONNECTED_SETUP_FAILED]   |
+//	|         [E2 CONNECTING]        |
+//	|        [E2 SHUTTING_DOWN]      |
+//	|          [E2 SHUT_DOWN]        |
+//	|                 |              |
+//	|            [SUBS DELETE]       |
+//	|                 |              |
 //
 //-----------------------------------------------------------------------------
 func TestRESTOtherE2ConnectionChanges(t *testing.T) {
@@ -338,41 +1127,43 @@ func TestRESTOtherE2ConnectionChanges(t *testing.T) {
 //-----------------------------------------------------------------------------
 // TestRESTSubReqAndDeleteOkWithE2apUtWrapper
 //
-//   stub                             stub          stub
+//	stub                             stub          stub
+//
 // +-------+        +---------+    +---------+   +---------+
 // | xapp  |        | submgr  |    | e2term  |   |  rtmgr  |
 // +-------+        +---------+    +---------+   +---------+
-//     |                 |              |             |
-//     | RESTSubReq      |              |             |
-//     |---------------->|              |             |
-//     |                 | RouteCreate  |             |
-//     |                 |--------------------------->|  // The order of these events may vary
-//     |                 |              |             |
-//     |     RESTSubResp |              |             |  // The order of these events may vary
-//     |<----------------|              |             |
-//     |                 | RouteResponse|             |
-//     |                 |<---------------------------|  // The order of these events may vary
-//     |                 |              |             |
-//     |                 | SubReq       |             |
-//     |                 |------------->|             |  // The order of these events may vary
-//     |                 |              |             |
-//     |                 |      SubResp |             |
-//     |                 |<-------------|             |
-//     |      RESTNotif1 |              |             |
-//     |<----------------|              |             |
-//     |                 |              |             |
-//     | RESTSubDelReq   |              |             |
-//     |---------------->|              |             |
-//     |                 | SubDelReq    |             |
-//     |                 |------------->|             |
-//     |                 |              |             |
-//     |   RESTSubDelResp|              |             |
-//     |<----------------|              |             |
-//     |                 |              |             |
-//     |                 |   SubDelResp |             |
-//     |                 |<-------------|             |
-//     |                 |              |             |
-//     |                 |              |             |
+//
+//	|                 |              |             |
+//	| RESTSubReq      |              |             |
+//	|---------------->|              |             |
+//	|                 | RouteCreate  |             |
+//	|                 |--------------------------->|  // The order of these events may vary
+//	|                 |              |             |
+//	|     RESTSubResp |              |             |  // The order of these events may vary
+//	|<----------------|              |             |
+//	|                 | RouteResponse|             |
+//	|                 |<---------------------------|  // The order of these events may vary
+//	|                 |              |             |
+//	|                 | SubReq       |             |
+//	|                 |------------->|             |  // The order of these events may vary
+//	|                 |              |             |
+//	|                 |      SubResp |             |
+//	|                 |<-------------|             |
+//	|      RESTNotif1 |              |             |
+//	|<----------------|              |             |
+//	|                 |              |             |
+//	| RESTSubDelReq   |              |             |
+//	|---------------->|              |             |
+//	|                 | SubDelReq    |             |
+//	|                 |------------->|             |
+//	|                 |              |             |
+//	|   RESTSubDelResp|              |             |
+//	|<----------------|              |             |
+//	|                 |              |             |
+//	|                 |   SubDelResp |             |
+//	|                 |<-------------|             |
+//	|                 |              |             |
+//	|                 |              |             |
 //
 //-----------------------------------------------------------------------------
 func TestRESTSubReqAndDeleteOkWithE2apUtWrapper(t *testing.T) {
@@ -388,36 +1179,38 @@ func TestRESTSubReqAndDeleteOkWithE2apUtWrapper(t *testing.T) {
 //-----------------------------------------------------------------------------
 // TestRESTSubReqAndE1apDeleteReqPackingError
 //
-//   stub                             stub          stub
+//	stub                             stub          stub
+//
 // +-------+        +---------+    +---------+   +---------+
 // | xapp  |        | submgr  |    | e2term  |   |  rtmgr  |
 // +-------+        +---------+    +---------+   +---------+
-//     |                 |              |             |
-//     | RESTSubReq      |              |             |
-//     |---------------->|              |             |
-//     |                 | RouteCreate  |             |
-//     |                 |--------------------------->|  // The order of these events may vary
-//     |                 |              |             |
-//     |     RESTSubResp |              |             |  // The order of these events may vary
-//     |<----------------|              |             |
-//     |                 | RouteResponse|             |
-//     |                 |<---------------------------|  // The order of these events may vary
-//     |                 |              |             |
-//     |                 | SubReq       |             |
-//     |                 |------------->|             |  // The order of these events may vary
-//     |                 |              |             |
-//     |                 |      SubResp |             |
-//     |                 |<-------------|             |
-//     |      RESTNotif1 |              |             |
-//     |<----------------|              |             |
-//     |                 |              |             |
-//     | RESTSubDelReq   |              |             |
-//     |---------------->|              |             |
-//     |                 |              |             |
-//     |   RESTSubDelResp|              |             |
-//     |<----------------|              |             |
-//     |                 |              |             |
-//     |                 |              |             |
+//
+//	|                 |              |             |
+//	| RESTSubReq      |              |             |
+//	|---------------->|              |             |
+//	|                 | RouteCreate  |             |
+//	|                 |--------------------------->|  // The order of these events may vary
+//	|                 |              |             |
+//	|     RESTSubResp |              |             |  // The order of these events may vary
+//	|<----------------|              |             |
+//	|                 | RouteResponse|             |
+//	|                 |<---------------------------|  // The order of these events may vary
+//	|                 |              |             |
+//	|                 | SubReq       |             |
+//	|                 |------------->|             |  // The order of these events may vary
+//	|                 |              |             |
+//	|                 |      SubResp |             |
+//	|                 |<-------------|             |
+//	|      RESTNotif1 |              |             |
+//	|<----------------|              |             |
+//	|                 |              |             |
+//	| RESTSubDelReq   |              |             |
+//	|---------------->|              |             |
+//	|                 |              |             |
+//	|   RESTSubDelResp|              |             |
+//	|<----------------|              |             |
+//	|                 |              |             |
+//	|                 |              |             |
 //
 //-----------------------------------------------------------------------------
 func TestRESTSubReqAndE1apDeleteReqPackingError(t *testing.T) {
@@ -624,30 +1417,32 @@ func TestSubReqAndRouteUpdateNok(t *testing.T) {
 //-----------------------------------------------------------------------------
 // TestSubDelReqAndRouteDeleteNok
 //
-//   stub                          stub
+//	stub                          stub
+//
 // +-------+     +---------+    +---------+    +---------+
 // | xapp  |     | submgr  |    | e2term  |    |  rtmgr  |
 // +-------+     +---------+    +---------+    +---------+
-//     |              |              |              |
-//     |         [SUBS CREATE]       |              |
-//     |              |              |              |
-//     |              |              |              |
-//     |              |              |              |
-//     | SubDelReq    |              |              |
-//     |------------->|              |              |
-//     |              |  SubDelReq   |              |
-//     |              |------------->|              |
-//     |              |  SubDelRsp   |              |
-//     |              |<-------------|              |
-//     |  SubDelRsp   |              |              |
-//     |<-------------|              |              |
-//     |              | RouteDelete  |              |
-//     |              |---------------------------->|
-//     |              |              |              |
-//     |              | RouteDelete  |              |
-//     |              |  status:400  |              |
-//     |              |<----------------------------|
-//     |              |              |              |
+//
+//	|              |              |              |
+//	|         [SUBS CREATE]       |              |
+//	|              |              |              |
+//	|              |              |              |
+//	|              |              |              |
+//	| SubDelReq    |              |              |
+//	|------------->|              |              |
+//	|              |  SubDelReq   |              |
+//	|              |------------->|              |
+//	|              |  SubDelRsp   |              |
+//	|              |<-------------|              |
+//	|  SubDelRsp   |              |              |
+//	|<-------------|              |              |
+//	|              | RouteDelete  |              |
+//	|              |---------------------------->|
+//	|              |              |              |
+//	|              | RouteDelete  |              |
+//	|              |  status:400  |              |
+//	|              |<----------------------------|
+//	|              |              |              |
 func TestSubDelReqAndRouteDeleteNok(t *testing.T) {
 	CaseBegin("TestSubDelReqAndRouteDeleteNok")
 
@@ -695,52 +1490,55 @@ func TestSubDelReqAndRouteDeleteNok(t *testing.T) {
 
 //-----------------------------------------------------------------------------
 // TestSubMergeDelAndRouteUpdateNok
-//   stub                          stub
+//
+//	stub                          stub
+//
 // +-------+     +-------+     +---------+    +---------+
 // | xapp2 |     | xapp1 |     | submgr  |    | e2term  |
 // +-------+     +-------+     +---------+    +---------+
-//     |             |              |              |
-//     |             |              |              |
-//     |             |              |              |
-//     |             | SubReq1      |              |
-//     |             |------------->|              |
-//     |             |              |              |
-//     |             |              | SubReq1      |
-//     |             |              |------------->|
-//     |             |              |    SubResp1  |
-//     |             |              |<-------------|
-//     |             |    SubResp1  |              |
-//     |             |<-------------|              |
-//     |             |              |              |
-//     |          SubReq2           |              |
-//     |--------------------------->|              |
-//     |             |              |              |
-//     |          SubResp2          |              |
-//     |<---------------------------|              |
-//     |             |              |              |
-//     |             | SubDelReq 1  |              |
-//     |             |------------->|              |
-//     |             |              | RouteUpdate  |
-//     |             |              |-----> rtmgr  |
-//     |             |              |              |
-//     |             |              | RouteUpdate  |
-//     |             |              |  status:400  |
-//     |             |              |<----- rtmgr  |
-//     |             |              |              |
-//     |             | SubDelResp 1 |              |
-//     |             |<-------------|              |
-//     |             |              |              |
-//     |         SubDelReq 2        |              |
-//     |--------------------------->|              |
-//     |             |              |              |
-//     |             |              | SubDelReq 2  |
-//     |             |              |------------->|
-//     |             |              |              |
-//     |             |              | SubDelReq 2  |
-//     |             |              |------------->|
-//     |             |              |              |
-//     |         SubDelResp 2       |              |
-//     |<---------------------------|              |
+//
+//	|             |              |              |
+//	|             |              |              |
+//	|             |              |              |
+//	|             | SubReq1      |              |
+//	|             |------------->|              |
+//	|             |              |              |
+//	|             |              | SubReq1      |
+//	|             |              |------------->|
+//	|             |              |    SubResp1  |
+//	|             |              |<-------------|
+//	|             |    SubResp1  |              |
+//	|             |<-------------|              |
+//	|             |              |              |
+//	|          SubReq2           |              |
+//	|--------------------------->|              |
+//	|             |              |              |
+//	|          SubResp2          |              |
+//	|<---------------------------|              |
+//	|             |              |              |
+//	|             | SubDelReq 1  |              |
+//	|             |------------->|              |
+//	|             |              | RouteUpdate  |
+//	|             |              |-----> rtmgr  |
+//	|             |              |              |
+//	|             |              | RouteUpdate  |
+//	|             |              |  status:400  |
+//	|             |              |<----- rtmgr  |
+//	|             |              |              |
+//	|             | SubDelResp 1 |              |
+//	|             |<-------------|              |
+//	|             |              |              |
+//	|         SubDelReq 2        |              |
+//	|--------------------------->|              |
+//	|             |              |              |
+//	|             |              | SubDelReq 2  |
+//	|             |              |------------->|
+//	|             |              |              |
+//	|             |              | SubDelReq 2  |
+//	|             |              |------------->|
+//	|             |              |              |
+//	|         SubDelResp 2       |              |
+//	|<---------------------------|              |
 //
 //-----------------------------------------------------------------------------
 func TestSubMergeDelAndRouteUpdateNok(t *testing.T) {
@@ -808,35 +1606,37 @@ func TestSubMergeDelAndRouteUpdateNok(t *testing.T) {
 //-----------------------------------------------------------------------------
 // TestSubReqAndSubDelOk
 //
-//   stub                          stub
+//	stub                          stub
+//
 // +-------+     +---------+    +---------+
 // | xapp  |     | submgr  |    | e2term  |
 // +-------+     +---------+    +---------+
-//     |              |              |
-//     | SubReq       |              |
-//     |------------->|              |
-//     |              |              |
-//     |              | SubReq       |
-//     |              |------------->|
-//     |              |              |
-//     |              |      SubResp |
-//     |              |<-------------|
-//     |              |              |
-//     |      SubResp |              |
-//     |<-------------|              |
-//     |              |              |
-//     |              |              |
-//     | SubDelReq    |              |
-//     |------------->|              |
-//     |              |              |
-//     |              | SubDelReq    |
-//     |              |------------->|
-//     |              |              |
-//     |              |   SubDelResp |
-//     |              |<-------------|
-//     |              |              |
-//     |   SubDelResp |              |
-//     |<-------------|              |
+//
+//	|              |              |
+//	| SubReq       |              |
+//	|------------->|              |
+//	|              |              |
+//	|              | SubReq       |
+//	|              |------------->|
+//	|              |              |
+//	|              |      SubResp |
+//	|              |<-------------|
+//	|              |              |
+//	|      SubResp |              |
+//	|<-------------|              |
+//	|              |              |
+//	|              |              |
+//	| SubDelReq    |              |
+//	|------------->|              |
+//	|              |              |
+//	|              | SubDelReq    |
+//	|              |------------->|
+//	|              |              |
+//	|              |   SubDelResp |
+//	|              |<-------------|
+//	|              |              |
+//	|   SubDelResp |              |
+//	|<-------------|              |
 //
 //-----------------------------------------------------------------------------
 func TestSubReqAndSubDelOk(t *testing.T) {
@@ -976,29 +1776,31 @@ func TestSubReqAndSubDelOkOutofOrderIEs(t *testing.T) {
 //-----------------------------------------------------------------------------
 // TestSubReqRetransmission
 //
-//   stub                          stub
+//	stub                          stub
+//
 // +-------+     +---------+    +---------+
 // | xapp  |     | submgr  |    | e2term  |
 // +-------+     +---------+    +---------+
-//     |              |              |
-//     |  SubReq      |              |
-//     |------------->|              |
-//     |              |              |
-//     |              | SubReq       |
-//     |              |------------->|
-//     |              |              |
-//     |  SubReq      |              |
-//     | (retrans)    |              |
-//     |------------->|              |
-//     |              |              |
-//     |              |      SubResp |
-//     |              |<-------------|
-//     |              |              |
-//     |      SubResp |              |
-//     |<-------------|              |
-//     |              |              |
-//     |         [SUBS DELETE]       |
-//     |              |              |
+//
+//	|              |              |
+//	|  SubReq      |              |
+//	|------------->|              |
+//	|              |              |
+//	|              | SubReq       |
+//	|              |------------->|
+//	|              |              |
+//	|  SubReq      |              |
+//	| (retrans)    |              |
+//	|------------->|              |
+//	|              |              |
+//	|              |      SubResp |
+//	|              |<-------------|
+//	|              |              |
+//	|      SubResp |              |
+//	|<-------------|              |
+//	|              |              |
+//	|         [SUBS DELETE]       |
+//	|              |              |
 //
 //-----------------------------------------------------------------------------
 func TestSubReqRetransmission(t *testing.T) {
@@ -1037,30 +1839,32 @@ func TestSubReqRetransmission(t *testing.T) {
 //-----------------------------------------------------------------------------
 // TestSubDelReqRetransmission
 //
-//   stub                          stub
+//	stub                          stub
+//
 // +-------+     +---------+    +---------+
 // | xapp  |     | submgr  |    | e2term  |
 // +-------+     +---------+    +---------+
-//     |              |              |
-//     |         [SUBS CREATE]       |
-//     |              |              |
-//     |              |              |
-//     | SubDelReq    |              |
-//     |------------->|              |
-//     |              |              |
-//     |              | SubDelReq    |
-//     |              |------------->|
-//     |              |              |
-//     | SubDelReq    |              |
-//     | (same sub)   |              |
-//     | (same xid)   |              |
-//     |------------->|              |
-//     |              |              |
-//     |              |   SubDelResp |
-//     |              |<-------------|
-//     |              |              |
-//     |   SubDelResp |              |
-//     |<-------------|              |
+//
+//	|              |              |
+//	|         [SUBS CREATE]       |
+//	|              |              |
+//	|              |              |
+//	| SubDelReq    |              |
+//	|------------->|              |
+//	|              |              |
+//	|              | SubDelReq    |
+//	|              |------------->|
+//	|              |              |
+//	| SubDelReq    |              |
+//	| (same sub)   |              |
+//	| (same xid)   |              |
+//	|------------->|              |
+//	|              |              |
+//	|              |   SubDelResp |
+//	|              |<-------------|
+//	|              |              |
+//	|   SubDelResp |              |
+//	|<-------------|              |
 //
 //-----------------------------------------------------------------------------
 func TestSubDelReqRetransmission(t *testing.T) {
@@ -1263,41 +2067,43 @@ func TestSubReqAndSubDelOkTwoParallel(t *testing.T) {
 // TestSameSubsDiffRan
 // Same subscription to different RANs
 //
-//   stub                          stub
+//	stub                          stub
+//
 // +-------+     +---------+    +---------+
 // | xapp  |     | submgr  |    | e2term  |
 // +-------+     +---------+    +---------+
-//     |              |              |
-//     |              |              |
-//     |              |              |
-//     | SubReq(r1)   |              |
-//     |------------->|              |
-//     |              |              |
-//     |              | SubReq(r1)   |
-//     |              |------------->|
-//     |              |              |
-//     |              | SubResp(r1)  |
-//     |              |<-------------|
-//     |              |              |
-//     | SubResp(r1)  |              |
-//     |<-------------|              |
-//     |              |              |
-//     | SubReq(r2)   |              |
-//     |------------->|              |
-//     |              |              |
-//     |              | SubReq(r2)   |
-//     |              |------------->|
-//     |              |              |
-//     |              | SubResp(r2)  |
-//     |              |<-------------|
-//     |              |              |
-//     | SubResp(r2)  |              |
-//     |<-------------|              |
-//     |              |              |
-//     |       [SUBS r1 DELETE]      |
-//     |              |              |
-//     |       [SUBS r2 DELETE]      |
-//     |              |              |
+//
+//	|              |              |
+//	|              |              |
+//	|              |              |
+//	| SubReq(r1)   |              |
+//	|------------->|              |
+//	|              |              |
+//	|              | SubReq(r1)   |
+//	|              |------------->|
+//	|              |              |
+//	|              | SubResp(r1)  |
+//	|              |<-------------|
+//	|              |              |
+//	| SubResp(r1)  |              |
+//	|<-------------|              |
+//	|              |              |
+//	| SubReq(r2)   |              |
+//	|------------->|              |
+//	|              |              |
+//	|              | SubReq(r2)   |
+//	|              |------------->|
+//	|              |              |
+//	|              | SubResp(r2)  |
+//	|              |<-------------|
+//	|              |              |
+//	| SubResp(r2)  |              |
+//	|<-------------|              |
+//	|              |              |
+//	|       [SUBS r1 DELETE]      |
+//	|              |              |
+//	|       [SUBS r2 DELETE]      |
+//	|              |              |
 //
 //-----------------------------------------------------------------------------
 func TestSameSubsDiffRan(t *testing.T) {
@@ -1419,27 +2225,29 @@ func TestSubReqRetryInSubmgr(t *testing.T) {
 //-----------------------------------------------------------------------------
 // TestSubReqTwoRetriesNoRespSubDelRespInSubmgr
 //
-//   stub                          stub
+//	stub                          stub
+//
 // +-------+     +---------+    +---------+
 // | xapp  |     | submgr  |    | e2term  |
 // +-------+     +---------+    +---------+
-//     |              |              |
-//     |  SubReq      |              |
-//     |------------->|              |
-//     |              |              |
-//     |              | SubReq       |
-//     |              |------------->|
-//     |              |              |
-//     |              |              |
-//     |              | SubReq       |
-//     |              |------------->|
-//     |              |              |
-//     |              | SubDelReq    |
-//     |              |------------->|
-//     |              |              |
-//     |              |   SubDelResp |
-//     |              |<-------------|
-//     |              |              |
+//
+//	|              |              |
+//	|  SubReq      |              |
+//	|------------->|              |
+//	|              |              |
+//	|              | SubReq       |
+//	|              |------------->|
+//	|              |              |
+//	|              |              |
+//	|              | SubReq       |
+//	|              |------------->|
+//	|              |              |
+//	|              | SubDelReq    |
+//	|              |------------->|
+//	|              |              |
+//	|              |   SubDelResp |
+//	|              |<-------------|
+//	|              |              |
 //
 //-----------------------------------------------------------------------------
 func TestSubReqRetryNoRespSubDelRespInSubmgr(t *testing.T) {
@@ -1919,46 +2727,48 @@ func TestSubDelReqSubDelFailRespInSubmgrOutofOrderIEs(t *testing.T) {
 //-----------------------------------------------------------------------------
 // TestSubReqAndSubDelOkSameAction
 //
-//   stub                          stub
+//	stub                          stub
+//
 // +-------+     +-------+     +---------+    +---------+
 // | xapp2 |     | xapp1 |     | submgr  |    | e2term  |
 // +-------+     +-------+     +---------+    +---------+
-//     |             |              |              |
-//     |             |              |              |
-//     |             |              |              |
-//     |             | SubReq1      |              |
-//     |             |------------->|              |
-//     |             |              |              |
-//     |             |              | SubReq1      |
-//     |             |              |------------->|
-//     |             |              |    SubResp1  |
-//     |             |              |<-------------|
-//     |             |    SubResp1  |              |
-//     |             |<-------------|              |
-//     |             |              |              |
-//     |          SubReq2           |              |
-//     |--------------------------->|              |
-//     |             |              |              |
-//     |          SubResp2          |              |
-//     |<---------------------------|              |
-//     |             |              |              |
-//     |             | SubDelReq 1  |              |
-//     |             |------------->|              |
-//     |             |              |              |
-//     |             | SubDelResp 1 |              |
-//     |             |<-------------|              |
-//     |             |              |              |
-//     |         SubDelReq 2        |              |
-//     |--------------------------->|              |
-//     |             |              |              |
-//     |             |              | SubDelReq 2  |
-//     |             |              |------------->|
-//     |             |              |              |
-//     |             |              | SubDelReq 2  |
-//     |             |              |------------->|
-//     |             |              |              |
-//     |         SubDelResp 2       |              |
-//     |<---------------------------|              |
+//
+//	|             |              |              |
+//	|             |              |              |
+//	|             |              |              |
+//	|             | SubReq1      |              |
+//	|             |------------->|              |
+//	|             |              |              |
+//	|             |              | SubReq1      |
+//	|             |              |------------->|
+//	|             |              |    SubResp1  |
+//	|             |              |<-------------|
+//	|             |    SubResp1  |              |
+//	|             |<-------------|              |
+//	|             |              |              |
+//	|          SubReq2           |              |
+//	|--------------------------->|              |
+//	|             |              |              |
+//	|          SubResp2          |              |
+//	|<---------------------------|              |
+//	|             |              |              |
+//	|             | SubDelReq 1  |              |
+//	|             |------------->|              |
+//	|             |              |              |
+//	|             | SubDelResp 1 |              |
+//	|             |<-------------|              |
+//	|             |              |              |
+//	|         SubDelReq 2        |              |
+//	|--------------------------->|              |
+//	|             |              |              |
+//	|             |              | SubDelReq 2  |
+//	|             |              |------------->|
+//	|             |              |              |
+//	|             |              | SubDelReq 2  |
+//	|             |              |------------->|
+//	|             |              |              |
+//	|         SubDelResp 2       |              |
+//	|<---------------------------|              |
 //
 //-----------------------------------------------------------------------------
 func TestSubReqAndSubDelOkSameAction(t *testing.T) {
@@ -2020,45 +2830,47 @@ func TestSubReqAndSubDelOkSameAction(t *testing.T) {
 //-----------------------------------------------------------------------------
 // TestSubReqAndSubDelOkSameActionParallel
 //
-//   stub          stub                          stub
+//	stub          stub                          stub
+//
 // +-------+     +-------+     +---------+    +---------+
 // | xapp2 |     | xapp1 |     | submgr  |    | e2term  |
 // +-------+     +-------+     +---------+    +---------+
-//     |             |              |              |
-//     |             |              |              |
-//     |             |              |              |
-//     |             | SubReq1      |              |
-//     |             |------------->|              |
-//     |             |              |              |
-//     |             |              | SubReq1      |
-//     |             |              |------------->|
-//     |          SubReq2           |              |
-//     |--------------------------->|              |
-//     |             |              |    SubResp1  |
-//     |             |              |<-------------|
-//     |             |    SubResp1  |              |
-//     |             |<-------------|              |
-//     |             |              |              |
-//     |          SubResp2          |              |
-//     |<---------------------------|              |
-//     |             |              |              |
-//     |             | SubDelReq 1  |              |
-//     |             |------------->|              |
-//     |             |              |              |
-//     |             | SubDelResp 1 |              |
-//     |             |<-------------|              |
-//     |             |              |              |
-//     |         SubDelReq 2        |              |
-//     |--------------------------->|              |
-//     |             |              |              |
-//     |             |              | SubDelReq 2  |
-//     |             |              |------------->|
-//     |             |              |              |
-//     |             |              | SubDelReq 2  |
-//     |             |              |------------->|
-//     |             |              |              |
-//     |         SubDelResp 2       |              |
-//     |<---------------------------|              |
+//
+//	|             |              |              |
+//	|             |              |              |
+//	|             |              |              |
+//	|             | SubReq1      |              |
+//	|             |------------->|              |
+//	|             |              |              |
+//	|             |              | SubReq1      |
+//	|             |              |------------->|
+//	|          SubReq2           |              |
+//	|--------------------------->|              |
+//	|             |              |    SubResp1  |
+//	|             |              |<-------------|
+//	|             |    SubResp1  |              |
+//	|             |<-------------|              |
+//	|             |              |              |
+//	|          SubResp2          |              |
+//	|<---------------------------|              |
+//	|             |              |              |
+//	|             | SubDelReq 1  |              |
+//	|             |------------->|              |
+//	|             |              |              |
+//	|             | SubDelResp 1 |              |
+//	|             |<-------------|              |
+//	|             |              |              |
+//	|         SubDelReq 2        |              |
+//	|--------------------------->|              |
+//	|             |              |              |
+//	|             |              | SubDelReq 2  |
+//	|             |              |------------->|
+//	|             |              |              |
+//	|             |              | SubDelReq 2  |
+//	|             |              |------------->|
+//	|             |              |              |
+//	|         SubDelResp 2       |              |
+//	|<---------------------------|              |
 //
 //-----------------------------------------------------------------------------
 func TestSubReqAndSubDelOkSameActionParallel(t *testing.T) {
@@ -2104,28 +2916,30 @@ func TestSubReqAndSubDelOkSameActionParallel(t *testing.T) {
 //-----------------------------------------------------------------------------
 // TestSubReqAndSubDelNokSameActionParallel
 //
-//   stub          stub                          stub
+//	stub          stub                          stub
+//
 // +-------+     +-------+     +---------+    +---------+
 // | xapp2 |     | xapp1 |     | submgr  |    | e2term  |
 // +-------+     +-------+     +---------+    +---------+
-//     |             |              |              |
-//     |             |              |              |
-//     |             |              |              |
-//     |             | SubReq1      |              |
-//     |             |------------->|              |
-//     |             |              |              |
-//     |             |              | SubReq1      |
-//     |             |              |------------->|
-//     |          SubReq2           |              |
-//     |--------------------------->|              |
-//     |             |              |    SubFail1  |
-//     |             |              |<-------------|
-//     |             |              |              |
-//     |             |    SubFail1  |              |
-//     |             |<-------------|              |
-//     |             |              |              |
-//     |          SubFail2          |              |
-//     |<---------------------------|              |
+//
+//	|             |              |              |
+//	|             |              |              |
+//	|             |              |              |
+//	|             | SubReq1      |              |
+//	|             |------------->|              |
+//	|             |              |              |
+//	|             |              | SubReq1      |
+//	|             |              |------------->|
+//	|          SubReq2           |              |
+//	|--------------------------->|              |
+//	|             |              |    SubFail1  |
+//	|             |              |<-------------|
+//	|             |              |              |
+//	|             |    SubFail1  |              |
+//	|             |<-------------|              |
+//	|             |              |              |
+//	|          SubFail2          |              |
+//	|<---------------------------|              |
 //
 //-----------------------------------------------------------------------------
 func TestSubReqAndSubDelNokSameActionParallel(t *testing.T) {
@@ -2168,30 +2982,32 @@ func TestSubReqAndSubDelNokSameActionParallel(t *testing.T) {
 //-----------------------------------------------------------------------------
 // TestSubReqAndSubDelNoAnswerSameActionParallel
 //
-//   stub          stub                          stub
+//	stub          stub                          stub
+//
 // +-------+     +-------+     +---------+    +---------+
 // | xapp2 |     | xapp1 |     | submgr  |    | e2term  |
 // +-------+     +-------+     +---------+    +---------+
-//     |             |              |              |
-//     |             |              |              |
-//     |             |              |              |
-//     |             | SubReq1      |              |
-//     |             |------------->|              |
-//     |             |              |              |
-//     |             |              | SubReq1      |
-//     |             |              |------------->|
-//     |             | SubReq2      |              |
-//     |--------------------------->|              |
-//     |             |              |              |
-//     |             |              | SubReq1      |
-//     |             |              |------------->|
-//     |             |              |              |
-//     |             |              |              |
-//     |             |              | SubDelReq    |
-//     |             |              |------------->|
-//     |             |              |              |
-//     |             |              |   SubDelResp |
-//     |             |              |<-------------|
+//
+//	|             |              |              |
+//	|             |              |              |
+//	|             |              |              |
+//	|             | SubReq1      |              |
+//	|             |------------->|              |
+//	|             |              |              |
+//	|             |              | SubReq1      |
+//	|             |              |------------->|
+//	|             | SubReq2      |              |
+//	|--------------------------->|              |
+//	|             |              |              |
+//	|             |              | SubReq1      |
+//	|             |              |------------->|
+//	|             |              |              |
+//	|             |              |              |
+//	|             |              | SubDelReq    |
+//	|             |              |------------->|
+//	|             |              |              |
+//	|             |              |   SubDelResp |
+//	|             |              |<-------------|
 //
 //-----------------------------------------------------------------------------
 func TestSubReqAndSubDelNoAnswerSameActionParallel(t *testing.T) {
@@ -2230,35 +3046,37 @@ func TestSubReqAndSubDelNoAnswerSameActionParallel(t *testing.T) {
 //-----------------------------------------------------------------------------
 // TestSubReqPolicyAndSubDelOk
 //
-//   stub                          stub
+//	stub                          stub
+//
 // +-------+     +---------+    +---------+
 // | xapp  |     | submgr  |    | e2term  |
 // +-------+     +---------+    +---------+
-//     |              |              |
-//     | SubReq       |              |
-//     |------------->|              |
-//     |              |              |
-//     |              | SubReq       |
-//     |              |------------->|
-//     |              |              |
-//     |              |      SubResp |
-//     |              |<-------------|
-//     |              |              |
-//     |      SubResp |              |
-//     |<-------------|              |
-//     |              |              |
-//     |              |              |
-//     | SubDelReq    |              |
-//     |------------->|              |
-//     |              |              |
-//     |              | SubDelReq    |
-//     |              |------------->|
-//     |              |              |
-//     |              |   SubDelResp |
-//     |              |<-------------|
-//     |              |              |
-//     |   SubDelResp |              |
-//     |<-------------|              |
+//
+//	|              |              |
+//	| SubReq       |              |
+//	|------------->|              |
+//	|              |              |
+//	|              | SubReq       |
+//	|              |------------->|
+//	|              |              |
+//	|              |      SubResp |
+//	|              |<-------------|
+//	|              |              |
+//	|      SubResp |              |
+//	|<-------------|              |
+//	|              |              |
+//	|              |              |
+//	| SubDelReq    |              |
+//	|------------->|              |
+//	|              |              |
+//	|              | SubDelReq    |
+//	|              |------------->|
+//	|              |              |
+//	|              |   SubDelResp |
+//	|              |<-------------|
+//	|              |              |
+//	|   SubDelResp |              |
+//	|<-------------|              |
 //
 //-----------------------------------------------------------------------------
 func TestSubReqPolicyAndSubDelOk(t *testing.T) {
@@ -2371,38 +3189,40 @@ func TestSubReqPolicyChangeAndSubDelOk(t *testing.T) {
 //-----------------------------------------------------------------------------
 // TestSubReqAndSubDelOkTwoE2termParallel
 //
-//   stub                          stub           stub
+//	stub                          stub           stub
+//
 // +-------+     +---------+    +---------+    +---------+
 // | xapp  |     | submgr  |    | e2term1 |    | e2term2 |
 // +-------+     +---------+    +---------+    +---------+
-//     |              |              |              |
-//     |              |              |              |
-//     |              |              |              |
-//     | SubReq1      |              |              |
-//     |------------->|              |              |
-//     |              |              |              |
-//     |              | SubReq1      |              |
-//     |              |------------->|              |
-//     |              |              |              |
-//     | SubReq2      |              |              |
-//     |------------->|              |              |
-//     |              |              |              |
-//     |              | SubReq2      |              |
-//     |              |---------------------------->|
-//     |              |              |              |
-//     |              |    SubResp1  |              |
-//     |              |<-------------|              |
-//     |    SubResp1  |              |              |
-//     |<-------------|              |              |
-//     |              |    SubResp2  |              |
-//     |              |<----------------------------|
-//     |    SubResp2  |              |              |
-//     |<-------------|              |              |
-//     |              |              |              |
-//     |        [SUBS 1 DELETE]      |              |
-//     |              |              |              |
-//     |        [SUBS 2 DELETE]      |              |
-//     |              |              |              |
+//
+//	|              |              |              |
+//	|              |              |              |
+//	|              |              |              |
+//	| SubReq1      |              |              |
+//	|------------->|              |              |
+//	|              |              |              |
+//	|              | SubReq1      |              |
+//	|              |------------->|              |
+//	|              |              |              |
+//	| SubReq2      |              |              |
+//	|------------->|              |              |
+//	|              |              |              |
+//	|              | SubReq2      |              |
+//	|              |---------------------------->|
+//	|              |              |              |
+//	|              |    SubResp1  |              |
+//	|              |<-------------|              |
+//	|    SubResp1  |              |              |
+//	|<-------------|              |              |
+//	|              |    SubResp2  |              |
+//	|              |<----------------------------|
+//	|    SubResp2  |              |              |
+//	|<-------------|              |              |
+//	|              |              |              |
+//	|        [SUBS 1 DELETE]      |              |
+//	|              |              |              |
+//	|        [SUBS 2 DELETE]      |              |
+//	|              |              |              |
 //
 //-----------------------------------------------------------------------------
 func TestSubReqAndSubDelOkTwoE2termParallel(t *testing.T) {
@@ -2451,35 +3271,37 @@ func TestSubReqAndSubDelOkTwoE2termParallel(t *testing.T) {
 //-----------------------------------------------------------------------------
 // TestSubReqInsertAndSubDelOk
 //
-//   stub                          stub
+//	stub                          stub
+//
 // +-------+     +---------+    +---------+
 // | xapp  |     | submgr  |    | e2term  |
 // +-------+     +---------+    +---------+
-//     |              |              |
-//     | SubReq       |              |
-//     |------------->|              |
-//     |              |              |
-//     |              | SubReq       |
-//     |              |------------->|
-//     |              |              |
-//     |              |      SubResp |
-//     |              |<-------------|
-//     |              |              |
-//     |      SubResp |              |
-//     |<-------------|              |
-//     |              |              |
-//     |              |              |
-//     | SubDelReq    |              |
-//     |------------->|              |
-//     |              |              |
-//     |              | SubDelReq    |
-//     |              |------------->|
-//     |              |              |
-//     |              |   SubDelResp |
-//     |              |<-------------|
-//     |              |              |
-//     |   SubDelResp |              |
-//     |<-------------|              |
+//
+//	|              |              |
+//	| SubReq       |              |
+//	|------------->|              |
+//	|              |              |
+//	|              | SubReq       |
+//	|              |------------->|
+//	|              |              |
+//	|              |      SubResp |
+//	|              |<-------------|
+//	|              |              |
+//	|      SubResp |              |
+//	|<-------------|              |
+//	|              |              |
+//	|              |              |
+//	| SubDelReq    |              |
+//	|------------->|              |
+//	|              |              |
+//	|              | SubDelReq    |
+//	|              |------------->|
+//	|              |              |
+//	|              |   SubDelResp |
+//	|              |<-------------|
+//	|              |              |
+//	|   SubDelResp |              |
+//	|<-------------|              |
 //
 //-----------------------------------------------------------------------------
 func TestSubReqInsertAndSubDelOk(t *testing.T) {
@@ -2514,34 +3336,36 @@ func TestSubReqInsertAndSubDelOk(t *testing.T) {
 // This case simulates case where xApp restarts and starts sending same
 // subscription requests which have already subscribed successfully
 
-//   stub                          stub
+//	stub                          stub
+//
 // +-------+     +---------+    +---------+
 // | xapp  |     | submgr  |    | e2term  |
 // +-------+     +---------+    +---------+
-//     |              |              |
-//     |  SubReq      |              |
-//     |------------->|              |
-//     |              |              |
-//     |              | SubReq       |
-//     |              |------------->|
-//     |              |              |
-//     |              |      SubResp |
-//     |              |<-------------|
-//     |              |              |
-//     |      SubResp |              |
-//     |<-------------|              |
-//     |              |              |
-//     | xApp restart |              |
-//     |              |              |
-//     |  SubReq      |              |
-//     | (retrans with same xApp generated subid but diff xid)
-//     |------------->|              |
-//     |              |              |
-//     |      SubResp |              |
-//     |<-------------|              |
-//     |              |              |
-//     |         [SUBS DELETE]       |
-//     |              |              |
+//
+//	|              |              |
+//	|  SubReq      |              |
+//	|------------->|              |
+//	|              |              |
+//	|              | SubReq       |
+//	|              |------------->|
+//	|              |              |
+//	|              |      SubResp |
+//	|              |<-------------|
+//	|              |              |
+//	|      SubResp |              |
+//	|<-------------|              |
+//	|              |              |
+//	| xApp restart |              |
+//	|              |              |
+//	|  SubReq      |              |
+//	| (retrans with same xApp generated subid but diff xid)
+//	|------------->|              |
+//	|              |              |
+//	|      SubResp |              |
+//	|<-------------|              |
+//	|              |              |
+//	|         [SUBS DELETE]       |
+//	|              |              |
 //
 //-----------------------------------------------------------------------------
 func TestSubReqRetransmissionWithSameSubIdDiffXid(t *testing.T) {
@@ -2841,16 +3665,18 @@ func TestSubReqAndSubDelOkSameActionWithRestartsInMiddle(t *testing.T) {
 //-----------------------------------------------------------------------------
 // Test debug GET and POST requests
 //
-//   curl
+//	curl
+//
 // +-------+     +---------+
 // | user  |     | submgr  |
 // +-------+     +---------+
-//     |              |
-//     | GET/POST Req |
-//     |------------->|
-//     |         Resp |
-//     |<-------------|
-//     |              |
+//
+//	|              |
+//	| GET/POST Req |
+//	|------------->|
+//	|         Resp |
+//	|<-------------|
+//	|              |
 func TestGetSubscriptions(t *testing.T) {
 
 	mainCtrl.SendGetRequest(t, "localhost:8088", "/ric/v1/subscriptions")
@@ -3167,31 +3993,33 @@ func TestDelViaxAppSubsIf(t *testing.T) {
 //-----------------------------------------------------------------------------
 // TestRESTSubReqAndRouteNok
 //
-//   stub                             stub
+//	stub                             stub
+//
 // +-------+        +---------+    +---------+
 // | xapp  |        | submgr  |    | rtmgr   |
 // +-------+        +---------+    +---------+
-//     |                 |              |
-//     | RESTSubReq      |              |
-//     |---------------->|              |
-//     |                 |              |
-//     |     RESTSubResp |              |
-//     |<----------------|              |
-//     |                 | RouteCreate  |
-//     |                 |------------->|
-//     |                 | RouteCreate  |
-//     |                 |  status:400  |
-//     |                 |(Bad request) |
-//     |                 |<-------------|
-//     |       RESTNotif |              |
-//     |<----------------|              |
-//     |                 |              |
-//     |          [SUBS INT DELETE]     |
-//     |                 |              |
-//     | RESTSubDelReq   |              |
-//     |---------------->|              |
-//     |  RESTSubDelResp |              |
-//     |<----------------|              |
+//
+//	|                 |              |
+//	| RESTSubReq      |              |
+//	|---------------->|              |
+//	|                 |              |
+//	|     RESTSubResp |              |
+//	|<----------------|              |
+//	|                 | RouteCreate  |
+//	|                 |------------->|
+//	|                 | RouteCreate  |
+//	|                 |  status:400  |
+//	|                 |(Bad request) |
+//	|                 |<-------------|
+//	|       RESTNotif |              |
+//	|<----------------|              |
+//	|                 |              |
+//	|          [SUBS INT DELETE]     |
+//	|                 |              |
+//	| RESTSubDelReq   |              |
+//	|---------------->|              |
+//	|  RESTSubDelResp |              |
+//	|<----------------|              |
 //
 //-----------------------------------------------------------------------------
 func TestRESTSubReqAndRouteNok(t *testing.T) {
@@ -3233,48 +4061,50 @@ func TestRESTSubReqAndRouteNok(t *testing.T) {
 //-----------------------------------------------------------------------------
 // TestRESTSubReqAndRouteUpdateNok
 //
-//   stub        stub                         stub           stub
+//	stub        stub                         stub           stub
+//
 // +-------+   +-------+    +---------+    +---------+    +---------+
 // | xapp1 |   | xapp2 |    | submgr  |    | rtmgr   |    | e2term  |
 // +-------+   +-------+    +---------+    +---------+    +---------+
-//     |           |             |              |              |
-//     | RESTSubReq1             |              |              |
-//     |------------------------>|              |              |
-//     |     RESTSubResp2        |              |              |
-//     |<------------------------|              |              |
-//     |           |             |              |              |
-//     |           |             | RouteCreate  |              |
-//     |           |             |------------->|              |
-//     |           |             | CreateResp   |              |
-//     |           |             |<-------------|              |
-//     |           |             | SubReq       |              |
-//     |           |             |---------------------------->|
-//     |           |             |      SubResp |              |
-//     |           |             |<----------------------------|
-//     |      RESTNotif1         |              |              |
-//     |<------------------------|              |              |
-//     |           |             |              |              |
-//     |           | RESTSubReq2 |              |              |
-//     |           |------------>|              |              |
-//     |           | RESTSubResp2|              |              |
-//     |           |<------------|              |              |
-//     |           |             | RouteUpdate  |              |
-//     |           |             |------------->|              |
-//     |           |             | RouteUpdate  |              |
-//     |           |             |  status:400  |              |
-//     |           |             |(Bad request) |              |
-//     |           |             |<-------------|              |
-//     |           | RESTNotif2(unsuccessful)   |              |
-//     |           |<------------|              |              |
-//     |           |             |              |              |
-//     |          [SUBS INT DELETE]             |              |
-//     |           |             |              |              |
-//     | RESTSubDelReq1          |              |              |
-//     |------------------------>|              |              |
-//     |  RESTSubDelResp1        |              |              |
-//     |<------------------------|              |              |
-//     |           |             |              |              |
-//     |           |             |        [SUBS DELETE]        |
+//
+//	|           |             |              |              |
+//	| RESTSubReq1             |              |              |
+//	|------------------------>|              |              |
+//	|     RESTSubResp2        |              |              |
+//	|<------------------------|              |              |
+//	|           |             |              |              |
+//	|           |             | RouteCreate  |              |
+//	|           |             |------------->|              |
+//	|           |             | CreateResp   |              |
+//	|           |             |<-------------|              |
+//	|           |             | SubReq       |              |
+//	|           |             |---------------------------->|
+//	|           |             |      SubResp |              |
+//	|           |             |<----------------------------|
+//	|      RESTNotif1         |              |              |
+//	|<------------------------|              |              |
+//	|           |             |              |              |
+//	|           | RESTSubReq2 |              |              |
+//	|           |------------>|              |              |
+//	|           | RESTSubResp2|              |              |
+//	|           |<------------|              |              |
+//	|           |             | RouteUpdate  |              |
+//	|           |             |------------->|              |
+//	|           |             | RouteUpdate  |              |
+//	|           |             |  status:400  |              |
+//	|           |             |(Bad request) |              |
+//	|           |             |<-------------|              |
+//	|           | RESTNotif2(unsuccessful)   |              |
+//	|           |<------------|              |              |
+//	|           |             |              |              |
+//	|          [SUBS INT DELETE]             |              |
+//	|           |             |              |              |
+//	| RESTSubDelReq1          |              |              |
+//	|------------------------>|              |              |
+//	|  RESTSubDelResp1        |              |              |
+//	|<------------------------|              |              |
+//	|           |             |              |              |
+//	|           |             |        [SUBS DELETE]        |
 //
 //-----------------------------------------------------------------------------
 func TestRESTSubReqAndRouteUpdateNok(t *testing.T) {
@@ -3677,44 +4507,47 @@ func TestRESTSubReqRetransmissionV2(t *testing.T) {
 }
 
 //-----------------------------------------------------------------------------
-//   stub                             stub          stub
+//
+//	stub                             stub          stub
+//
 // +-------+        +---------+    +---------+   +---------+
 // | xapp  |        | submgr  |    | e2term  |   |  rtmgr  |
 // +-------+        +---------+    +---------+   +---------+
-//     |                 |              |             |
-//     | RESTSubReq      |              |             |
-//     |---------------->|              |             |
-//     |     RESTSubResp |              |             |
-//     |<----------------|              |             |
-//     |                 | RouteCreate  |             |
-//     |                 |--------------------------->|
-//     |                 | RouteResponse|             |
-//     |                 |<---------------------------|  // The order of these events may vary
-//     |                 | SubReq       |             |
-//     |                 |------------->|             |  // The order of these events may vary
-//     |                 |      SubResp |             |
-//     |                 |<-------------|             |
-//     |      RESTNotif1 |              |             |
-//     |<----------------|              |             |
-//     | RESTSubReq      |              |             |
-//     | [RETRANS, with RESTsubsId]     |             |
-//     |---------------->|              |             |
-//     |      RESTNotif1 |              |             |
-//     |<----------------|              |             |
-//     | RESTSubReq      |              |             |
-//     | [RETRANS, without RESTsubsId]  |             |
-//     |---------------->|              |             |
-//     |      RESTNotif1 |              |             |
-//     |<----------------|              |             |
-//     | RESTSubDelReq   |              |             |
-//     |---------------->|              |             |
-//     |                 | SubDelReq    |             |
-//     |                 |------------->|             |
-//     |   RESTSubDelResp|              |             |
-//     |<----------------|              |             |
-//     |                 |   SubDelResp |             |
-//     |                 |<-------------|             |
-//     |                 |              |             |
+//
+//	|                 |              |             |
+//	| RESTSubReq      |              |             |
+//	|---------------->|              |             |
+//	|     RESTSubResp |              |             |
+//	|<----------------|              |             |
+//	|                 | RouteCreate  |             |
+//	|                 |--------------------------->|
+//	|                 | RouteResponse|             |
+//	|                 |<---------------------------|  // The order of these events may vary
+//	|                 | SubReq       |             |
+//	|                 |------------->|             |  // The order of these events may vary
+//	|                 |      SubResp |             |
+//	|                 |<-------------|             |
+//	|      RESTNotif1 |              |             |
+//	|<----------------|              |             |
+//	| RESTSubReq      |              |             |
+//	| [RETRANS, with RESTsubsId]     |             |
+//	|---------------->|              |             |
+//	|      RESTNotif1 |              |             |
+//	|<----------------|              |             |
+//	| RESTSubReq      |              |             |
+//	| [RETRANS, without RESTsubsId]  |             |
+//	|---------------->|              |             |
+//	|      RESTNotif1 |              |             |
+//	|<----------------|              |             |
+//	| RESTSubDelReq   |              |             |
+//	|---------------->|              |             |
+//	|                 | SubDelReq    |             |
+//	|                 |------------->|             |
+//	|   RESTSubDelResp|              |             |
+//	|<----------------|              |             |
+//	|                 |   SubDelResp |             |
+//	|                 |<-------------|             |
+//	|                 |              |             |
 //
 //-----------------------------------------------------------------------------
 func TestRESTSubReqRetransmissionV3(t *testing.T) {
@@ -4010,69 +4843,72 @@ func TestRESTSubReqRetransmissionV5(t *testing.T) {
 }
 
 //-----------------------------------------------------------------------------
-//   stub                             stub          stub
+//
+//	stub                             stub          stub
+//
 // +-------+        +---------+    +---------+   +---------+
 // | xapp  |        | submgr  |    | e2term  |   |  rtmgr  |
 // +-------+        +---------+    +---------+   +---------+
-//     |                 |              |             |
-//     | RESTSubReq      |              |             |
-//     |---------------->|              |             |
-//     |     RESTSubResp |              |             |
-//     |<----------------|              |             |
-//     |                 | RouteCreate  |             |
-//     |                 |--------------------------->|
-//     |                 | RouteResponse|             |
-//     |                 |<---------------------------|
-//     |                 | SubReq       |             |
-//     |                 |------------->|             |
-//     |                 |      SubResp |             |
-//     |                 |<-------------|             |
-//     |      RESTNotif1 |              |             |
-//     |<----------------|              |             |
-//     | RESTSubReq      |              |             |
-//     | [with RestSUbsId + one additional e2 subDetail]
-//     |---------------->|              |             |
-//     |      RESTNotif1 |              |             |
-//     | [for initial e2 subDetail]     |             |
-//     |<----------------|              |             |
-//     |                 | RouteCreate  |             |
-//     |                 |--------------------------->|
-//     |                 | RouteResponse|             |
-//     |                 |<---------------------------|
-//     |                 | SubReq       |             |
-//     |                 |------------->|             |
-//     |                 |      SubResp |             |
-//     |                 |<-------------|             |
-//     |      RESTNotif1 |              |             |
-//     |<----------------|              |             |
-//     | RESTSubDelReq   |              |             |
-//     |---------------->|              |             |
-//     |   RESTSubDelResp|              |             |
-//     |<----------------|              |             |
-//     |                 | SubDelReq    |             |
-//     |                 |------------->|             |
-//     |                 |   SubDelResp |             |
-//     |                 |<-------------|             |
-//     |                 | SubDelReq    |             |
-//     |                 |------------->|             |
-//     |                 |   SubDelResp |             |
-//     |                 |<-------------|             |
-//     | RESTSubReq      |              |             |
-//     | [with RESTsubsId initial request]            |
-//     |---------------->|              |             |
-//     |     RESTSubResp |              |             |
-//     |<----------------|              |             |
-//     |                 | RouteCreate  |             |
-//     |                 |--------------------------->|
-//     |                 | RouteResponse|             |
-//     |                 |<---------------------------|
-//     |                 | SubReq       |             |
-//     |                 |------------->|             |
-//     |                 |      SubResp |             |
-//     |                 |<-------------|             |
-//     |      RESTNotif1 |              |             |
-//     |<----------------|              |             |
-//     |                 |              |             |
+//
+//	|                 |              |             |
+//	| RESTSubReq      |              |             |
+//	|---------------->|              |             |
+//	|     RESTSubResp |              |             |
+//	|<----------------|              |             |
+//	|                 | RouteCreate  |             |
+//	|                 |--------------------------->|
+//	|                 | RouteResponse|             |
+//	|                 |<---------------------------|
+//	|                 | SubReq       |             |
+//	|                 |------------->|             |
+//	|                 |      SubResp |             |
+//	|                 |<-------------|             |
+//	|      RESTNotif1 |              |             |
+//	|<----------------|              |             |
+//	| RESTSubReq      |              |             |
+//	| [with RestSUbsId + one additional e2 subDetail]
+//	|---------------->|              |             |
+//	|      RESTNotif1 |              |             |
+//	| [for initial e2 subDetail]     |             |
+//	|<----------------|              |             |
+//	|                 | RouteCreate  |             |
+//	|                 |--------------------------->|
+//	|                 | RouteResponse|             |
+//	|                 |<---------------------------|
+//	|                 | SubReq       |             |
+//	|                 |------------->|             |
+//	|                 |      SubResp |             |
+//	|                 |<-------------|             |
+//	|      RESTNotif1 |              |             |
+//	|<----------------|              |             |
+//	| RESTSubDelReq   |              |             |
+//	|---------------->|              |             |
+//	|   RESTSubDelResp|              |             |
+//	|<----------------|              |             |
+//	|                 | SubDelReq    |             |
+//	|                 |------------->|             |
+//	|                 |   SubDelResp |             |
+//	|                 |<-------------|             |
+//	|                 | SubDelReq    |             |
+//	|                 |------------->|             |
+//	|                 |   SubDelResp |             |
+//	|                 |<-------------|             |
+//	| RESTSubReq      |              |             |
+//	| [with RESTsubsId initial request]            |
+//	|---------------->|              |             |
+//	|     RESTSubResp |              |             |
+//	|<----------------|              |             |
+//	|                 | RouteCreate  |             |
+//	|                 |--------------------------->|
+//	|                 | RouteResponse|             |
+//	|                 |<---------------------------|
+//	|                 | SubReq       |             |
+//	|                 |------------->|             |
+//	|                 |      SubResp |             |
+//	|                 |<-------------|             |
+//	|      RESTNotif1 |              |             |
+//	|<----------------|              |             |
+//	|                 |              |             |
 //
 //-----------------------------------------------------------------------------
 func TestRESTSubReqRetransmissionV6(t *testing.T) {
@@ -4215,30 +5051,32 @@ func TestRESTSubDelReqRetransmission(t *testing.T) {
 //-----------------------------------------------------------------------------
 // TestRESTSubReqDelReq
 //
-//   stub                             stub
+//	stub                             stub
+//
 // +-------+        +---------+    +---------+
 // | xapp  |        | submgr  |    | e2term  |
 // +-------+        +---------+    +---------+
-//     |                 |              |
-//     | RESTSubReq      |              |
-//     |---------------->|              |
-//     |                 |              |
-//     |     RESTSubResp |              |
-//     |<----------------|              |
-//     |                 | SubReq       |
-//     |                 |------------->|
-//     | RESTSubDelReq   |              |
-//     |---------------->|              |
-//     |  RESTSubDelResp |              |
-//     |     unsuccess   |              |
-//     |<----------------|              |
-//     |                 |      SubResp |
-//     |                 |<-------------|
-//     |      RESTNotif1 |              |
-//     |<----------------|              |
-//     |                 |              |
-//     |            [SUBS DELETE]       |
-//     |                 |              |
+//
+//	|                 |              |
+//	| RESTSubReq      |              |
+//	|---------------->|              |
+//	|                 |              |
+//	|     RESTSubResp |              |
+//	|<----------------|              |
+//	|                 | SubReq       |
+//	|                 |------------->|
+//	| RESTSubDelReq   |              |
+//	|---------------->|              |
+//	|  RESTSubDelResp |              |
+//	|     unsuccess   |              |
+//	|<----------------|              |
+//	|                 |      SubResp |
+//	|                 |<-------------|
+//	|      RESTNotif1 |              |
+//	|<----------------|              |
+//	|                 |              |
+//	|            [SUBS DELETE]       |
+//	|                 |              |
 //
 //-----------------------------------------------------------------------------
 func TestRESTSubReqDelReq(t *testing.T) {
@@ -4689,39 +5527,41 @@ func TestREST2eTermNotRespondingToSubReq(t *testing.T) {
 //-----------------------------------------------------------------------------
 // TestRESTSubReqTwoRetriesNoRespSubDelRespInSubmgr
 //
-//   stub                             stub
+//	stub                             stub
+//
 // +-------+        +---------+    +---------+
 // | xapp  |        | submgr  |    | e2term  |
 // +-------+        +---------+    +---------+
-//     |                 |              |
-//     | RESTSubReq      |              |
-//     |---------------->|              |
-//     |                 |              |
-//     |     RESTSubResp |              |
-//     |<----------------|              |
-//     |                 | SubReq       |
-//     |                 |------------->|
-//     |                 |              |
-//     |                 |              |
-//     |                 | SubReq       |
-//     |                 |------------->|
-//     |                 |              |
-//     |                 | SubDelReq    |
-//     |                 |------------->|
-//     |                 |              |
-//     |                 |              |
-//     |                 | SubDelReq    |
-//     |                 |------------->|
-//     |                 |              |
-//     |                 |              |
-//     |                 |   SubDelResp |
-//     |                 |<-------------|
-//     |       RESTNotif |              |
-//     |       unsuccess |              |
-//     |<----------------|              |
-//     |                 |              |
-//     |            [SUBS DELETE]       |
-//     |                 |              |
+//
+//	|                 |              |
+//	| RESTSubReq      |              |
+//	|---------------->|              |
+//	|                 |              |
+//	|     RESTSubResp |              |
+//	|<----------------|              |
+//	|                 | SubReq       |
+//	|                 |------------->|
+//	|                 |              |
+//	|                 |              |
+//	|                 | SubReq       |
+//	|                 |------------->|
+//	|                 |              |
+//	|                 | SubDelReq    |
+//	|                 |------------->|
+//	|                 |              |
+//	|                 |              |
+//	|                 | SubDelReq    |
+//	|                 |------------->|
+//	|                 |              |
+//	|                 |              |
+//	|                 |   SubDelResp |
+//	|                 |<-------------|
+//	|       RESTNotif |              |
+//	|       unsuccess |              |
+//	|<----------------|              |
+//	|                 |              |
+//	|            [SUBS DELETE]       |
+//	|                 |              |
 //
 //-----------------------------------------------------------------------------
 func TestRESTSubReqTwoRetriesNoRespAtAllInSubmgr(t *testing.T) {
@@ -4915,28 +5755,30 @@ func TestRESTSubReqPartialResp(t *testing.T) {
 //-----------------------------------------------------------------------------
 // TestRESTSubDelReqRetryInSubmgr
 //
-//   stub                             stub
+//	stub                             stub
+//
 // +-------+        +---------+    +---------+
 // | xapp  |        | submgr  |    | e2term  |
 // +-------+        +---------+    +---------+
-//     |                 |              |
-//     |            [SUBS CREATE]       |
-//     |                 |              |
-//     |                 |              |
-//     | RESTSubDelReq   |              |
-//     |---------------->|              |
-//     |                 |              |
-//     |  RESTSubDelResp |              |
-//     |<----------------|              |
-//     |                 | SubDelReq    |
-//     |                 |------------->|
-//     |                 |              |
-//     |                 | SubDelReq    |
-//     |                 |------------->|
-//     |                 |              |
-//     |                 |   SubDelResp |
-//     |                 |<-------------|
-//     |                 |              |
+//
+//	|                 |              |
+//	|            [SUBS CREATE]       |
+//	|                 |              |
+//	|                 |              |
+//	| RESTSubDelReq   |              |
+//	|---------------->|              |
+//	|                 |              |
+//	|  RESTSubDelResp |              |
+//	|<----------------|              |
+//	|                 | SubDelReq    |
+//	|                 |------------->|
+//	|                 |              |
+//	|                 | SubDelReq    |
+//	|                 |------------->|
+//	|                 |              |
+//	|                 |   SubDelResp |
+//	|                 |<-------------|
+//	|                 |              |
 //
 //-----------------------------------------------------------------------------
 func TestRESTSubDelReqRetryInSubmgr(t *testing.T) {
@@ -5199,50 +6041,51 @@ func TestRESTSubReqAndSubDelOkSameAction(t *testing.T) {
 //-----------------------------------------------------------------------------
 // TestSubReqAndSubDelOkSameActionParallel
 //
-//   stub          stub                          stub
+//	stub          stub                          stub
+//
 // +-------+     +-------+     +---------+    +---------+
 // | xapp2 |     | xapp1 |     | submgr  |    | e2term  |
 // +-------+     +-------+     +---------+    +---------+
-//     |             |              |              |
-//     |             |              |              |
-//     |             |              |              |
-//     |             | SubReq1      |              |
-//     |             |------------->|              |
-//     |             |              |              |
-//     |             |              | SubReq1      |
-//     |             |              |------------->|
-//     |          SubReq2           |              |
-//     |--------------------------->|              |
-//     |             |              |    SubResp1  |
-//     |             |              |<-------------|
-//     |             |    SubResp1  |              |
-//     |             |<-------------|              |
-//     |             |              | SubReq2      |
-//     |             |              |------------->|
-//     |             |              |              |
-//     |             |              |    SubResp2  |
-//     |             |              |<-------------|
-//     |          SubResp2          |              |
-//     |<---------------------------|              |
-//     |             |              |              |
-//     |             | SubDelReq 1  |              |
-//     |             |------------->|              |
-//     |             |              |              |
-//     |             | SubDelResp 1 |              |
-//     |             |<-------------|              |
-//     |             |              |              |
-//     |         SubDelReq 2        |              |
-//     |--------------------------->|              |
-//     |             |              |              |
-//     |             |              | SubDelReq 2  |
-//     |             |              |------------->|
-//     |             |              |              |
-//     |             |              | SubDelReq 2  |
-//     |             |              |------------->|
-//     |             |              |              |
-//     |         SubDelResp 2       |              |
-//     |<---------------------------|              |
 //
+//	|             |              |              |
+//	|             |              |              |
+//	|             |              |              |
+//	|             | SubReq1      |              |
+//	|             |------------->|              |
+//	|             |              |              |
+//	|             |              | SubReq1      |
+//	|             |              |------------->|
+//	|          SubReq2           |              |
+//	|--------------------------->|              |
+//	|             |              |    SubResp1  |
+//	|             |              |<-------------|
+//	|             |    SubResp1  |              |
+//	|             |<-------------|              |
+//	|             |              | SubReq2      |
+//	|             |              |------------->|
+//	|             |              |              |
+//	|             |              |    SubResp2  |
+//	|             |              |<-------------|
+//	|          SubResp2          |              |
+//	|<---------------------------|              |
+//	|             |              |              |
+//	|             | SubDelReq 1  |              |
+//	|             |------------->|              |
+//	|             |              |              |
+//	|             | SubDelResp 1 |              |
+//	|             |<-------------|              |
+//	|             |              |              |
+//	|         SubDelReq 2        |              |
+//	|--------------------------->|              |
+//	|             |              |              |
+//	|             |              | SubDelReq 2  |
+//	|             |              |------------->|
+//	|             |              |              |
+//	|             |              | SubDelReq 2  |
+//	|             |              |------------->|
+//	|             |              |              |
+//	|         SubDelResp 2       |              |
+//	|<---------------------------|              |
 func TestRESTSubReqAndSubDelOkSameActionParallel(t *testing.T) {
 
 	mainCtrl.CounterValuesToBeVeriefied(t, CountersToBeAdded{
@@ -6199,55 +7042,57 @@ func TestRESTSubReqAndSubDelOkWithRestartInMiddle(t *testing.T) {
 //-----------------------------------------------------------------------------
 // TestRESTSubReqAndSubDelOkSameActionWithRestartsInMiddle
 //
-//   stub                             stub
+//	stub                             stub
+//
 // +-------+     +-------+        +---------+    +---------+
 // | xapp2 |     | xapp1 |        | submgr  |    | e2term  |
 // +-------+     +-------+        +---------+    +---------+
-//     |             |                 |              |
-//     |             | RESTSubReq1     |              |
-//     |             |---------------->|              |
-//     |             |                 |              |
-//     |             |    RESTSubResp1 |              |
-//     |             |<----------------|              |
-//     |             |                 |              |
-//     |             |                 | SubReq1      |
-//     |             |                 |------------->|
-//     |             |                 |    SubResp1  |
-//     |             |                 |<-------------|
-//     |             |      RESTNotif1 |              |
-//     |             |<----------------|              |
-//     |             |                 |              |
-//     | RESTSubReq2                   |              |
-//     |------------------------------>|              |
-//     |             |                 |              |
-//     |                  RESTSubResp2 |              |
-//     |<------------------------------|              |
-//     |             |                 |              |
-//     |             |      RESTNotif2 |              |
-//     |<------------------------------|              |
-//     |             |                 |              |
-//     |             |           Submgr restart       |
-//     |             |                 |              |
-//     |             | RESTSubDelReq1  |              |
-//     |             |---------------->|              |
-//     |             |                 |              |
-//     |             | RESTSubDelResp1 |              |
-//     |             |<----------------|              |
-//     |             |                 |              |
-//     |             |           Submgr restart       |
-//     |             |                 |              |
-//     | RESTSubDelReq2                |              |
-//     |------------------------------>|              |
-//     |             |                 |              |
-//     |               RESTSubDelResp2 |              |
-//     |<------------------------------|              |
-//     |             |                 |              |
-//     |             |                 | SubDelReq2   |
-//     |             |                 |------------->|
-//     |             |                 |              |
-//     |             |                 |  SubDelResp2 |
-//     |             |                 |<-------------|
-//     |             |                 |              |
+//
+//	|             |                 |              |
+//	|             | RESTSubReq1     |              |
+//	|             |---------------->|              |
+//	|             |                 |              |
+//	|             |    RESTSubResp1 |              |
+//	|             |<----------------|              |
+//	|             |                 |              |
+//	|             |                 | SubReq1      |
+//	|             |                 |------------->|
+//	|             |                 |    SubResp1  |
+//	|             |                 |<-------------|
+//	|             |      RESTNotif1 |              |
+//	|             |<----------------|              |
+//	|             |                 |              |
+//	| RESTSubReq2                   |              |
+//	|------------------------------>|              |
+//	|             |                 |              |
+//	|                  RESTSubResp2 |              |
+//	|<------------------------------|              |
+//	|             |                 |              |
+//	|             |      RESTNotif2 |              |
+//	|<------------------------------|              |
+//	|             |                 |              |
+//	|             |           Submgr restart       |
+//	|             |                 |              |
+//	|             | RESTSubDelReq1  |              |
+//	|             |---------------->|              |
+//	|             |                 |              |
+//	|             | RESTSubDelResp1 |              |
+//	|             |<----------------|              |
+//	|             |                 |              |
+//	|             |           Submgr restart       |
+//	|             |                 |              |
+//	| RESTSubDelReq2                |              |
+//	|------------------------------>|              |
+//	|             |                 |              |
+//	|               RESTSubDelResp2 |              |
+//	|<------------------------------|              |
+//	|             |                 |              |
+//	|             |                 | SubDelReq2   |
+//	|             |                 |------------->|
+//	|             |                 |              |
+//	|             |                 |  SubDelResp2 |
+//	|             |                 |<-------------|
+//	|             |                 |              |
 //
 //-----------------------------------------------------------------------------
 func TestRESTSubReqAndSubDelOkSameActionWithRestartsInMiddle(t *testing.T) {
@@ -7892,38 +8737,40 @@ func TestRESTUnpackSubscriptionFailureDecodeFail(t *testing.T) {
 //-----------------------------------------------------------------------------
 // TestRESTUnpackSubscriptionResponseUnknownInstanceId
 //
-//   stub                             stub
+//	stub                             stub
+//
 // +-------+        +---------+    +---------+
 // | xapp  |        | submgr  |    | e2term  |
 // +-------+        +---------+    +---------+
-//     |                 |              |
-//     | RestSubReq      |              |
-//     |---------------->|              |
-//     |                 |              |
-//     |     RESTSubResp |              |
-//     |<----------------|              |
-//     |                 |              |
-//     |                 | SubReq       |
-//     |                 |------------->|
-//     |                 |              |
-//     |                 |      SubFail | Unknown instanceId
-//     |                 |<-------------| No valid subscription found with subIds [0]. This will result timer expiry and resending
-//     |                 |              |
-//     |                 | SubReq       |
-//     |                 |------------->|
-//     |                 |              |
-//     |                 |      SubFail | Duplicated action
-//     |                 |<-------------|No valid subscription found with subIds [0]. This will result timer expiry and sending delete
-//     | RESTNotif (fail)|              |
-//     |<----------------|              |
-//     |                 | SubDelReq    |
-//     |                 |------------->|
-//     |                 |              |
-//     |                 |   SubDelResp |
-//     |                 |<-------------|
-//     |                 |              |
-//     |           [SUBS DELETE]        |
-//     |                 |              |
+//
+//	|                 |              |
+//	| RestSubReq      |              |
+//	|---------------->|              |
+//	|                 |              |
+//	|     RESTSubResp |              |
+//	|<----------------|              |
+//	|                 |              |
+//	|                 | SubReq       |
+//	|                 |------------->|
+//	|                 |              |
+//	|                 |      SubFail | Unknown instanceId
+//	|                 |<-------------| No valid subscription found with subIds [0]. This will result timer expiry and resending
+//	|                 |              |
+//	|                 | SubReq       |
+//	|                 |------------->|
+//	|                 |              |
+//	|                 |      SubFail | Duplicated action
+//	|                 |<-------------|No valid subscription found with subIds [0]. This will result timer expiry and sending delete
+//	| RESTNotif (fail)|              |
+//	|<----------------|              |
+//	|                 | SubDelReq    |
+//	|                 |------------->|
+//	|                 |              |
+//	|                 |   SubDelResp |
+//	|                 |<-------------|
+//	|                 |              |
+//	|           [SUBS DELETE]        |
+//	|                 |              |
 //
 //-----------------------------------------------------------------------------
 func TestRESTUnpackSubscriptionFailureUnknownInstanceId(t *testing.T) {
@@ -8856,9 +9703,11 @@ func TestPolicyUpdateRESTSubReqAndSubDelOkWithRestartInMiddle(t *testing.T) {
 	mainCtrl.VerifyAllClean(t)
 }
 
-////////////////////////////////////////////////////////////////////////////////////
-//   Services for UT cases
-////////////////////////////////////////////////////////////////////////////////////
+// //////////////////////////////////////////////////////////////////////////////////
+//
+//	Services for UT cases
+//
+// //////////////////////////////////////////////////////////////////////////////////
 const subReqCount int = 1
 const host string = "localhost"
 

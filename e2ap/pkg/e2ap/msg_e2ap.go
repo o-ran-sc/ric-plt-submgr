@@ -20,8 +20,9 @@
 package e2ap
 
 import (
-	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/conv"
 	"strconv"
+
+	"gerrit.o-ran-sc.org/r/ric-plt/e2ap/pkg/conv"
 )
 
 //-----------------------------------------------------------------------------
@@ -131,6 +132,22 @@ func (rid *RequestId) String() string {
 //
 //-----------------------------------------------------------------------------
 type FunctionId uint16
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type RanFunctionID struct {
+	isRanFuncIdPresent bool
+	FunctionId         uint16
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type TransactionId struct {
+	transactionIdPresent bool
+	transactionID        uint32
+}
 
 //-----------------------------------------------------------------------------
 //
@@ -334,6 +351,43 @@ const (
 	E2AP_CauseValue_RICrequest_unspecified                                    uint8 = 13
 )
 
+// CauseRICservice ENUMERATED, E2AP-v02.00
+const (
+	E2AP_CauseValue_RICservice_ran_function_not_supported uint8 = 0
+	E2AP_CauseValue_RICservice_excessive_functions        uint8 = 1
+	E2AP_CauseValue_RICservice_ric_resource_limit         uint8 = 2
+)
+
+// CauseE2node ENUMERATED, E2AP-v02.00
+const (
+	E2AP_CauseValue_CauseE2node_e2node_component_unknown uint8 = 0
+)
+
+// CauseTransport ENUMERATED, E2AP-v02.00
+const (
+	E2AP_CauseValue_CauseTransport_unspecified                    uint8 = 0
+	E2AP_CauseValue_CauseTransport_transport_resource_unavailable uint8 = 1
+)
+
+// CauseProtocol ENUMERATED, E2AP-v02.00
+const (
+	E2AP_CauseValue_CauseProtocol_transfer_syntax_error                             uint8 = 0
+	E2AP_CauseValue_CauseProtocol_abstract_syntax_error_reject                      uint8 = 1
+	E2AP_CauseValue_CauseProtocol_abstract_syntax_error_ignore_and_notify           uint8 = 2
+	E2AP_CauseValue_CauseProtocol_message_not_compatible_with_receiver_state        uint8 = 3
+	E2AP_CauseValue_CauseProtocol_semantic_error                                    uint8 = 4
+	E2AP_CauseValue_CauseProtocol_abstract_syntax_error_falsely_constructed_message uint8 = 5
+	E2AP_CauseValue_CauseProtocol_unspecified                                       uint8 = 6
+)
+
+// CauseMisc ENUMERATED, E2AP-v02.00
+const (
+	E2AP_CauseValue_CauseMisc_control_processing_overload uint8 = 0
+	E2AP_CauseValue_CauseMisc_hardware_failure            uint8 = 1
+	E2AP_CauseValue_CauseMisc_om_intervention             uint8 = 2
+	E2AP_CauseValue_CauseMisc_unspecified                 uint8 = 3
+)
+
 type Cause struct {
 	Content uint8
 	Value   uint8
@@ -401,5 +455,7 @@ type CriticalityDiagnostics struct {
 	TrigMsg         uint64
 	ProcCritPresent bool
 	ProcCrit        uint8 //Crit
+	IsRicReqPresent bool
+	RequestId
 	CriticalityDiagnosticsIEList
 }

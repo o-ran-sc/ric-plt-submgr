@@ -55,3 +55,16 @@ type E2APSubscriptionFailure struct {
 	Cause
 	CriticalityDiagnostics
 }
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+type E2APErrorIndication struct {
+	TransactionId
+	IsReqIdPresent bool
+	RequestId
+	RanFunctionID
+	IsCausePresent bool
+	Cause
+	CriticalityDiagnostics
+}
