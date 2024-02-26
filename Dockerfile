@@ -25,7 +25,7 @@
 ###########################################################
 FROM nexus3.o-ran-sc.org:10002/o-ran-sc/bldr-ubuntu20-c-go:1.0.0 as submgrcore
 
-ARG GOVERSION="1.18.5"
+ARG GOVERSION="1.21.6"
 RUN wget -nv https://dl.google.com/go/go${GOVERSION}.linux-amd64.tar.gz \
      && tar -xf go${GOVERSION}.linux-amd64.tar.gz \
      && mv go /opt/go/${GOVERSION} \
@@ -115,11 +115,9 @@ RUN cd e2ap && go test -v ./pkg/conv
 RUN cd e2ap && go test -v ./pkg/e2ap_wrapper
 
 # test formating (not important)
-RUN cd e2ap && test -z "$(gofmt -l pkg/conv/*.go)"
-RUN cd e2ap && test -z "$(gofmt -l pkg/e2ap_wrapper/*.go)"
-RUN cd e2ap && test -z "$(gofmt -l pkg/e2ap/*.go)"
-RUN cd e2ap && test -z "$(gofmt -l pkg/e2ap/e2ap_tests/*.go)"
-
+RUN cd e2ap
+RUN test -z "$(gofmt -l pkg/conv/*.go)" && test -z "$(gofmt -l pkg/e2ap_wrapper/*.go)" \
+    && test -z "$(gofmt -l pkg/e2ap/*.go)" && test -z "$(gofmt -l pkg/e2ap/e2ap_tests/*.go)"
 
 ###########################################################
 #
