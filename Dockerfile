@@ -25,7 +25,7 @@
 ###########################################################
 FROM nexus3.o-ran-sc.org:10002/o-ran-sc/bldr-ubuntu20-c-go:1.0.0 as submgrcore
 
-ARG GOVERSION="1.18.5"
+ARG GOVERSION="1.21.6"
 RUN wget -nv https://dl.google.com/go/go${GOVERSION}.linux-amd64.tar.gz \
      && tar -xf go${GOVERSION}.linux-amd64.tar.gz \
      && mv go /opt/go/${GOVERSION} \
