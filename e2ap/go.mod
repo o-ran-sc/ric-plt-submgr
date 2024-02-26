@@ -1,4 +1,4 @@
-go 1.12
+go 1.21
 
 module gerrit.o-ran-sc.org/r/ric-plt/e2ap
 

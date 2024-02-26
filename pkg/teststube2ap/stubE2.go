@@ -313,6 +313,165 @@ func (tc *E2Stub) SendSubsResp(t *testing.T, req *e2ap.E2APSubscriptionRequest, 
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
+func (tc *E2Stub) SendErrorIndication(t *testing.T, req *e2ap.E2APSubscriptionRequest, msg *xapp.RMRParams) {
+	tc.Debug("SendErrorIndication")
+	ricE2RanErrorIndication := e2asnpacker.NewPackerErrorIndication()
+
+	//---------------------------------
+	// e2term activity: Send Error Indication
+	//---------------------------------
+	resp := &e2ap.E2APErrorIndication{}
+
+	resp.IsReqIdPresent = true
+	resp.RequestId.Id = req.RequestId.Id
+	resp.RequestId.InstanceId = req.RequestId.InstanceId
+
+	fmt.Println("resp.RequestId.Id: %d\n", resp.RequestId.Id)
+	fmt.Println("resp.RequestId.InstanceId: %d\n", resp.RequestId.InstanceId)
+
+	//Cause is optional IE in ErrorIndication Message
+	resp.IsCausePresent = true
+	resp.Cause.Content = e2ap.E2AP_CauseContent_Misc
+	resp.Cause.Value = e2ap.E2AP_CauseValue_CauseMisc_hardware_failure
+
+	fmt.Println("resp.Cause.Content: %d\n", resp.Cause.Content)
+	fmt.Println("resp.Cause.Value: %d\n", resp.Cause.Value)
+
+	packerr, packedMsg := ricE2RanErrorIndication.Pack(resp)
+	if packerr != nil {
+		tc.TestError(t, "pack NOK %s", packerr.Error())
+	}
+
+	fmt.Println("packedMsg: %v", packedMsg)
+
+	tc.Debug("%s", ricE2RanErrorIndication.String())
+
+	params := &xapp.RMRParams{}
+	params.Mtype = xapp.RIC_E2_RAN_ERROR_INDICATION
+	//params.SubId = msg.SubId
+	params.SubId = -1
+	params.Payload = packedMsg.Buf
+	params.PayloadLen = len(packedMsg.Buf)
+	params.Meid = msg.Meid
+	//params.Xid = msg.Xid
+	params.Mbuf = nil
+
+	tc.Debug("SEND Error Indication to SubMgr: %s", params.String())
+	snderr := tc.SendWithRetry(params, false, 5)
+	if snderr != nil {
+		tc.TestError(t, "RMR SEND FAILED: %s", snderr.Error())
+	}
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+func (tc *E2Stub) SendErrorIndicationWithInvalidInstanceId(t *testing.T, req *e2ap.E2APSubscriptionRequest, msg *xapp.RMRParams) {
+	tc.Debug("SendErrorIndicationWithInvalidInstanceId")
+	ricE2RanErrorIndication := e2asnpacker.NewPackerErrorIndication()
+
+	//---------------------------------
+	// e2term activity: Send Error Indication
+	//---------------------------------
+	resp := &e2ap.E2APErrorIndication{}
+
+	resp.IsReqIdPresent = true
+	resp.RequestId.Id = req.RequestId.Id
+	resp.RequestId.InstanceId = 10
+
+	fmt.Println("resp.RequestId.Id: %d\n", resp.RequestId.Id)
+	fmt.Println("resp.RequestId.InstanceId: %d\n", resp.RequestId.InstanceId)
+
+	//Cause is optional IE in ErrorIndication Message
+	resp.IsCausePresent = true
+	resp.Cause.Content = e2ap.E2AP_CauseContent_RICrequest
+	resp.Cause.Value = e2ap.E2AP_CauseValue_RICrequest_unspecified
+
+	fmt.Println("resp.Cause.Content: %d\n", resp.Cause.Content)
+	fmt.Println("resp.Cause.Value: %d\n", resp.Cause.Value)
+
+	packerr, packedMsg := ricE2RanErrorIndication.Pack(resp)
+	if packerr != nil {
+		tc.TestError(t, "pack NOK %s", packerr.Error())
+	}
+
+	fmt.Println("packedMsg: %v", packedMsg)
+
+	tc.Debug("%s", ricE2RanErrorIndication.String())
+
+	params := &xapp.RMRParams{}
+	params.Mtype = xapp.RIC_E2_RAN_ERROR_INDICATION
+	//params.SubId = msg.SubId
+	params.SubId = -1
+	params.Payload = packedMsg.Buf
+	params.PayloadLen = len(packedMsg.Buf)
+	params.Meid = msg.Meid
+	//params.Xid = msg.Xid
+	params.Mbuf = nil
+
+	tc.Debug("SEND Error Indication to SubMgr: %s", params.String())
+	snderr := tc.SendWithRetry(params, false, 5)
+	if snderr != nil {
+		tc.TestError(t, "RMR SEND FAILED: %s", snderr.Error())
+	}
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+func (tc *E2Stub) SendErrorIndicationWithDiffCause(t *testing.T, req *e2ap.E2APSubscriptionRequest, msg *xapp.RMRParams) {
+	tc.Debug("SendErrorIndication")
+	ricE2RanErrorIndication := e2asnpacker.NewPackerErrorIndication()
+
+	//---------------------------------
+	// e2term activity: Send Error Indication
+	//---------------------------------
+	resp := &e2ap.E2APErrorIndication{}
+
+	resp.IsReqIdPresent = true
+	resp.RequestId.Id = req.RequestId.Id
+	resp.RequestId.InstanceId = req.RequestId.InstanceId
+
+	fmt.Println("resp.RequestId.Id: %d\n", resp.RequestId.Id)
+	fmt.Println("resp.RequestId.InstanceId: %d\n", resp.RequestId.InstanceId)
+
+	//Cause is optional IE in ErrorIndication Message
+	resp.IsCausePresent = true
+	resp.Cause.Content = e2ap.E2AP_CauseContent_RICrequest
+	resp.Cause.Value = e2ap.E2AP_CauseValue_RICrequest_excessive_actions
+
+	fmt.Println("resp.Cause.Content: %d\n", resp.Cause.Content)
+	fmt.Println("resp.Cause.Value: %d\n", resp.Cause.Value)
+
+	packerr, packedMsg := ricE2RanErrorIndication.Pack(resp)
+	if packerr != nil {
+		tc.TestError(t, "pack NOK %s", packerr.Error())
+	}
+
+	fmt.Println("packedMsg: %v", packedMsg)
+
+	tc.Debug("%s", ricE2RanErrorIndication.String())
+
+	params := &xapp.RMRParams{}
+	params.Mtype = xapp.RIC_E2_RAN_ERROR_INDICATION
+	//params.SubId = msg.SubId
+	params.SubId = -1
+	params.Payload = packedMsg.Buf
+	params.PayloadLen = len(packedMsg.Buf)
+	params.Meid = msg.Meid
+	//params.Xid = msg.Xid
+	params.Mbuf = nil
+
+	tc.Debug("SEND Error Indication to SubMgr: %s", params.String())
+	snderr := tc.SendWithRetry(params, false, 5)
+	if snderr != nil {
+		tc.TestError(t, "RMR SEND FAILED: %s", snderr.Error())
+	}
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
 func (tc *E2Stub) SendPartialSubsResp(t *testing.T, req *e2ap.E2APSubscriptionRequest, msg *xapp.RMRParams, actionNotAdmittedList e2ap.ActionNotAdmittedList) {
 	tc.Debug("SendPartialSubsResp")
 

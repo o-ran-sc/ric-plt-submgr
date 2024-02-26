@@ -85,6 +85,15 @@ type E2APMsgPackerSubscriptionDeleteRequiredIf interface {
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
+type E2APMsgPackerErrorIndicationIf interface {
+	Pack(*E2APErrorIndication) (error, *PackedData)
+	UnPack(msg *PackedData) (error, *E2APErrorIndication)
+	String() string
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
 type E2APPackerIf interface {
 	NewPackerSubscriptionRequest() E2APMsgPackerSubscriptionRequestIf
 	NewPackerSubscriptionResponse() E2APMsgPackerSubscriptionResponseIf
@@ -93,6 +102,7 @@ type E2APPackerIf interface {
 	NewPackerSubscriptionDeleteResponse() E2APMsgPackerSubscriptionDeleteResponseIf
 	NewPackerSubscriptionDeleteFailure() E2APMsgPackerSubscriptionDeleteFailureIf
 	NewPackerSubscriptionDeleteRequired() E2APMsgPackerSubscriptionDeleteRequiredIf
+	NewPackerErrorIndication() E2APMsgPackerErrorIndicationIf
 	//UnPack(*PackedData) (error, interface{})
 	//Pack(interface{}, *PackedData) (error, *PackedData)
 }
