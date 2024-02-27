@@ -23,9 +23,9 @@
 ###########################################################
 #
 ###########################################################
-FROM nexus3.o-ran-sc.org:10002/o-ran-sc/bldr-ubuntu20-c-go:1.0.0 as submgrcore
+FROM nexus3.o-ran-sc.org:10002/o-ran-sc/bldr-ubuntu22-c-go:1.0.0 as submgrcore
 
-ARG GOVERSION="1.18.5"
+ARG GOVERSION="1.20.7"
 RUN wget -nv https://dl.google.com/go/go${GOVERSION}.linux-amd64.tar.gz \
      && tar -xf go${GOVERSION}.linux-amd64.tar.gz \
      && mv go /opt/go/${GOVERSION} \
@@ -65,7 +65,7 @@ RUN export GOBIN=/usr/local/bin/ ; \
 #
 # RMR
 #
-ARG RMRVERSION=4.9.4
+ARG RMRVERSION=4.9.0
 ARG RMRLIBURL=https://packagecloud.io/o-ran-sc/release/packages/debian/stretch/rmr_${RMRVERSION}_amd64.deb/download.deb
 ARG RMRDEVURL=https://packagecloud.io/o-ran-sc/release/packages/debian/stretch/rmr-dev_${RMRVERSION}_amd64.deb/download.deb
 RUN wget --content-disposition ${RMRLIBURL} && dpkg -i rmr_${RMRVERSION}_amd64.deb
@@ -111,15 +111,12 @@ RUN cd e2ap/libe2ap_wrapper && \
     ldconfig
 
 # unittest
-RUN cd e2ap && go test -v ./pkg/conv
-RUN cd e2ap && go test -v ./pkg/e2ap_wrapper
+RUN cd e2ap && go test -v ./pkg/conv && go test -v ./pkg/e2ap_wrapper
 
 # test formating (not important)
-RUN cd e2ap && test -z "$(gofmt -l pkg/conv/*.go)"
-RUN cd e2ap && test -z "$(gofmt -l pkg/e2ap_wrapper/*.go)"
-RUN cd e2ap && test -z "$(gofmt -l pkg/e2ap/*.go)"
-RUN cd e2ap && test -z "$(gofmt -l pkg/e2ap/e2ap_tests/*.go)"
-
+RUN cd e2ap
+RUN test -z "$(gofmt -l pkg/conv/*.go)" && test -z "$(gofmt -l pkg/e2ap_wrapper/*.go)" \
+    && test -z "$(gofmt -l pkg/e2ap/*.go)" && test -z "$(gofmt -l pkg/e2ap/e2ap_tests/*.go)"
 
 ###########################################################
 #
@@ -184,11 +181,8 @@ ENV RMR_SEED_RT=/opt/submgr/test/uta_rtg.rt
 #
 # go tests. comment out ipv6 localhost if exist when tests are executed.
 #
-RUN sed -r  "s/^(::1.*)/#\1/" /etc/hosts  > /etc/hosts.new \
-    && cat /etc/hosts.new > /etc/hosts \
-    && cat /etc/hosts  \
-    && go test -failfast -test.coverprofile /tmp/submgr_cover.out -count=1 -v ./pkg/control \
-    && go tool cover -html=/tmp/submgr_cover.out -o /tmp/submgr_cover.html    
+RUN go test -failfast -test.coverprofile /tmp/submgr_cover.out -count=1 -v ./pkg/control \
+    && go tool cover -html=/tmp/submgr_cover.out -o /tmp/submgr_cover.html
 
 # test formating (not important)
 RUN test -z "$(gofmt -l pkg/control/*.go)"
