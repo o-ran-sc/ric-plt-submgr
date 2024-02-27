@@ -182,12 +182,9 @@ ENV RMR_SEED_RT=/opt/submgr/test/uta_rtg.rt
 #RUN RMR_VCTL_FILE=/opt/submgr/level go test -test.coverprofile /tmp/submgr_cover.out -count=1 -v ./pkg/control 
 
 #
-# go tests. comment out ipv6 localhost if exist when tests are executed.
+# go tests.
 #
-RUN sed -r  "s/^(::1.*)/#\1/" /etc/hosts  > /etc/hosts.new \
-    && cat /etc/hosts.new > /etc/hosts \
-    && cat /etc/hosts  \
-    && go test -failfast -test.coverprofile /tmp/submgr_cover.out -count=1 -v ./pkg/control \
+RUN go test -failfast -test.coverprofile /tmp/submgr_cover.out -count=1 -v ./pkg/control \
     && go tool cover -html=/tmp/submgr_cover.out -o /tmp/submgr_cover.html    
 
 # test formating (not important)
@@ -214,7 +211,7 @@ RUN ldconfig
 COPY run_submgr.sh /
 RUN chmod 755 /run_submgr.sh
 
-#default config
+#default config 
 COPY config /opt/config
 ENV CFG_FILE=/opt/config/submgr-config.yaml
 ENV RMR_SEED_RT=/opt/config/submgr-uta-rtg.rt
