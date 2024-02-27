@@ -23,9 +23,9 @@
 ###########################################################
 #
 ###########################################################
-FROM nexus3.o-ran-sc.org:10002/o-ran-sc/bldr-ubuntu20-c-go:1.0.0 as submgrcore
+FROM nexus3.o-ran-sc.org:10002/o-ran-sc/bldr-ubuntu22-c-go:1.0.0 as submgrcore
 
-ARG GOVERSION="1.18.5"
+ARG GOVERSION="1.20.7"
 RUN wget -nv https://dl.google.com/go/go${GOVERSION}.linux-amd64.tar.gz \
      && tar -xf go${GOVERSION}.linux-amd64.tar.gz \
      && mv go /opt/go/${GOVERSION} \
@@ -214,7 +214,7 @@ RUN ldconfig
 COPY run_submgr.sh /
 RUN chmod 755 /run_submgr.sh
 
-#default config
+#default config 
 COPY config /opt/config
 ENV CFG_FILE=/opt/config/submgr-config.yaml
 ENV RMR_SEED_RT=/opt/config/submgr-uta-rtg.rt
