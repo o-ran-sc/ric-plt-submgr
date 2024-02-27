@@ -214,7 +214,7 @@ RUN ldconfig
 COPY run_submgr.sh /
 RUN chmod 755 /run_submgr.sh
 
-#default config
+#default config 
 COPY config /opt/config
 ENV CFG_FILE=/opt/config/submgr-config.yaml
 ENV RMR_SEED_RT=/opt/config/submgr-uta-rtg.rt
