@@ -124,7 +124,13 @@ RUN cd e2ap && test -z "$(gofmt -l pkg/e2ap/e2ap_tests/*.go)"
 ###########################################################
 #
 ###########################################################
-FROM submgre2apbuild as submgrbuild
+FROM ubuntu:20.04 as submgrbuild
+#FROM submgre2apbuild as submgrbuild
+COPY --from=submgre2apbuild /manifests /manifests
+COPY --from=submgre2apbuild /usr/local/include/rmr /usr/local/include/
+COPY --from=submgre2apbuild /usr/local/lib/librmr* /usr/local/lib/
+COPY --from=submgre2apbuild /usr/local/lib/libe2ap* /usr/local/lib/
+RUN ldconfig
 #
 #
 #
@@ -182,13 +188,13 @@ ENV RMR_SEED_RT=/opt/submgr/test/uta_rtg.rt
 #RUN RMR_VCTL_FILE=/opt/submgr/level go test -test.coverprofile /tmp/submgr_cover.out -count=1 -v ./pkg/control 
 
 #
-# go tests. comment out ipv6 localhost if exist when tests are executed.
+## go tests. comment out ipv6 localhost if exist when tests are executed.
 #
 RUN sed -r  "s/^(::1.*)/#\1/" /etc/hosts  > /etc/hosts.new \
     && cat /etc/hosts.new > /etc/hosts \
     && cat /etc/hosts  \
     && go test -failfast -test.coverprofile /tmp/submgr_cover.out -count=1 -v ./pkg/control \
-    && go tool cover -html=/tmp/submgr_cover.out -o /tmp/submgr_cover.html    
+    && go tool cover -html=/tmp/submgr_cover.out -o /tmp/submgr_cover.html
 
 # test formating (not important)
 RUN test -z "$(gofmt -l pkg/control/*.go)"
