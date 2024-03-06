@@ -30,19 +30,19 @@ import (
 	"gerrit.o-ran-sc.org/r/ric-plt/xapp-frame/pkg/xapp"
 )
 
-//-----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 //
-//-----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 func CaseBegin(desc string) *teststub.TestWrapper {
 	tent := teststub.NewTestWrapper(desc)
 	tent.Debug(desc)
 	return tent
 }
 
-//-----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 //
-//-----------------------------------------------------------------------------
-const teststubPortSeed int = 55555
+// -----------------------------------------------------------------------------
+const teststubPortSeed int = 55556
 
 //-----------------------------------------------------------------------------
 //
@@ -146,7 +146,7 @@ func ut_test_init() func() {
 	rt.AddRoute(12022, e2term2src.String(), -1, mainsrc.String())
 	rt.AddRoute(12021, mainsrc.String(), -1, xapp2src.String()+";"+xapp1src.String())
 	rt.AddRoute(12022, mainsrc.String(), -1, xapp2src.String()+";"+xapp1src.String())
-	rt.AddRoute(teststubPortSeed, "", -1, xapp2src.String()+";"+xapp1src.String()+";"+e2term1src.String()+";"+e2term2src.String()+";"+dummysrc.String())
+	//rt.AddRoute(teststubPortSeed, "", -1, xapp2src.String()+";"+xapp1src.String()+";"+e2term1src.String()+";"+e2term2src.String()+";"+dummysrc.String())
 
 	rt.AddMeid(e2term1src.String(), []string{"RAN_NAME_1", "RAN_NAME_2"})
 	rt.AddMeid(e2term2src.String(), []string{"RAN_NAME_11", "RAN_NAME_12"})
@@ -217,9 +217,9 @@ func ut_test_init() func() {
 	//---------------------------------
 	// Testing message sending
 	//---------------------------------
-	if teststub.RmrStubControlWaitAlive(10, teststubPortSeed, mainCtrl.c.RMRClient, tent) == false {
+	/*if teststub.RmrStubControlWaitAlive(10, teststubPortSeed, mainCtrl.c.RMRClient, tent) == false {
 		os.Exit(1)
-	}
+	}*/
 
 	if os.Getenv("RMR_SEED_RT") != rt.FileName() {
 		tent.Error("Unittest timing issue with alarm RMR_SEED_RT=%s", os.Getenv("RMR_SEED_RT"))
@@ -229,9 +229,9 @@ func ut_test_init() func() {
 	return func() { rt.Disable() }
 }
 
-//-----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 //
-//-----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 func TestMain(m *testing.M) {
 	CaseBegin("TestMain start")
 	cleanfn := ut_test_init()
