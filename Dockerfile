@@ -119,6 +119,7 @@ RUN cd e2ap && test -z "$(gofmt -l pkg/conv/*.go)"
 RUN cd e2ap && test -z "$(gofmt -l pkg/e2ap_wrapper/*.go)"
 RUN cd e2ap && test -z "$(gofmt -l pkg/e2ap/*.go)"
 RUN cd e2ap && test -z "$(gofmt -l pkg/e2ap/e2ap_tests/*.go)"
+RUN sed -r  "s/^(::1.*)/#\1/" /etc/hosts  > /etc/hosts.new
 
 
 ###########################################################
@@ -172,23 +173,24 @@ ENV CFG_FILE=/opt/submgr/test/config-file.json
 COPY test/uta_rtg.rt test/uta_rtg.rt
 ENV RMR_SEED_RT=/opt/submgr/test/uta_rtg.rt 
 
-#ENV CGO_LDFLAGS="-fsanitize=address"
-#ENV CGO_CFLAGS="-fsanitize=address"
+ENV CGO_LDFLAGS="-fsanitize=address"
+ENV CGO_CFLAGS="-fsanitize=address"
 
 #
 # To get debug from rmr
 #
-#RUN echo 5 >  /opt/submgr/level
-#RUN RMR_VCTL_FILE=/opt/submgr/level go test -test.coverprofile /tmp/submgr_cover.out -count=1 -v ./pkg/control 
+RUN echo 5 >  /opt/submgr/level
+RUN RMR_VCTL_FILE=/opt/submgr/level go test -test.coverprofile /tmp/submgr_cover.out -count=1 -v ./pkg/control \
+    && go tool cover -html=/tmp/submgr_cover.out -o /tmp/submgr_cover.html    
 
 #
 # go tests. comment out ipv6 localhost if exist when tests are executed.
 #
-RUN sed -r  "s/^(::1.*)/#\1/" /etc/hosts  > /etc/hosts.new \
-    && cat /etc/hosts.new > /etc/hosts \
-    && cat /etc/hosts  \
-    && go test -failfast -test.coverprofile /tmp/submgr_cover.out -count=1 -v ./pkg/control \
-    && go tool cover -html=/tmp/submgr_cover.out -o /tmp/submgr_cover.html    
+#COPY --from=submgre2apbuild /etc/hosts.new /etc/hosts
+#COPY --from=submgre2apbuild /etc/hosts.new /etc/hosts.new
+#RUN cat /etc/hosts  
+  #  && go test -failfast -test.coverprofile /tmp/submgr_cover.out -count=1 -v ./pkg/control \
+   # && go tool cover -html=/tmp/submgr_cover.out -o /tmp/submgr_cover.html    
 
 # test formating (not important)
 RUN test -z "$(gofmt -l pkg/control/*.go)"
