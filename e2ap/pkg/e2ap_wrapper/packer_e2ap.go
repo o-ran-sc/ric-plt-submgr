@@ -24,7 +24,6 @@ package e2ap_wrapper
 // #include <c_types.h>
 // #include <E2AP_if.h>
 // #include <strings.h>
-//
 // void initSubsRequest(RICSubscriptionRequest_t *data){
 //   bzero(data,sizeof(RICSubscriptionRequest_t));
 // }
@@ -176,17 +175,24 @@ type e2apEntryActionDefinitionChoice struct {
 
 func (e2Item *e2apEntryActionDefinitionChoice) set(id *e2ap.ActionDefinitionChoice) error {
 	if id.Data.Length > 0 {
-		e2Item.entry.octetString.contentLength = C.size_t(id.Data.Length)
-		C.memcpy(unsafe.Pointer(&e2Item.entry.octetString.data[0]), unsafe.Pointer(&id.Data.Data[0]), C.size_t(e2Item.entry.octetString.contentLength))
+		//e2Item.entry.octetString.contentLength = C.size_t(id.Data.Length)
+		e2Item.entry.dynOctetString.contentLength = C.size_t(id.Data.Length)
+		e2Item.entry.dynOctetString.data = C.allocateMemory(e2Item.entry.dynOctetString.contentLength)
+		if e2Item.entry.dynOctetString.data == nil {
+			return fmt.Errorf("failed to allocate memory")
+		}
+		//C.memcpy(unsafe.Pointer(&e2Item.entry.octetString.data[0]), unsafe.Pointer(&id.Data.Data[0]), C.size_t(e2Item.entry.octetString.contentLength))
+		C.memcpy(unsafe.Pointer(e2Item.entry.dynOctetString.data), unsafe.Pointer(&id.Data.Data[0]), C.size_t(e2Item.entry.dynOctetString.contentLength))
+
 	}
 	return nil
 }
 
 func (e2Item *e2apEntryActionDefinitionChoice) get(id *e2ap.ActionDefinitionChoice) error {
-	id.Data.Length = (uint64)(e2Item.entry.octetString.contentLength)
+	id.Data.Length = (uint64)(e2Item.entry.dynOctetString.contentLength)
 	if id.Data.Length > 0 {
 		id.Data.Data = make([]uint8, id.Data.Length)
-		C.memcpy(unsafe.Pointer(&id.Data.Data[0]), unsafe.Pointer(&e2Item.entry.octetString.data[0]), C.size_t(e2Item.entry.octetString.contentLength))
+		C.memcpy(unsafe.Pointer(&id.Data.Data[0]), unsafe.Pointer(e2Item.entry.dynOctetString.data), C.size_t(e2Item.entry.dynOctetString.contentLength))
 	}
 	return nil
 }
@@ -588,11 +594,24 @@ func (e2apMsg *e2apMsgPackerSubscriptionRequest) init() {
 	C.initSubsRequest(e2apMsg.msgC)
 }
 
+func (e2apMsg *e2apMsgPackerSubscriptionRequest) freeAndsetToNil(){
+    conlen := (int)(e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.contentLength)
+    for i := 0; i < conlen; i++ {
+		ptr:=e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[i].ricActionDefinitionChoice.dynOctetString.data
+		if ptr!= nil {
+        	C.freeMemory(ptr)
+			e2apMsg.msgC.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[i].ricActionDefinitionChoice.dynOctetString.data=nil
+    	}
+	}
+}
+
 func (e2apMsg *e2apMsgPackerSubscriptionRequest) Pack(data *e2ap.E2APSubscriptionRequest) (error, *e2ap.PackedData) {
 
 	e2apMsg.init()
 
 	defer e2apMsg.fini()
+	defer e2apMsg.freeAndsetToNil()
+	e2apMsg.msgG = data
 	e2apMsg.msgG = data
 
 	e2apMsg.msgC.ranFunctionID = (C.uint16_t)(e2apMsg.msgG.FunctionId)
@@ -617,6 +636,7 @@ func (e2apMsg *e2apMsgPackerSubscriptionRequest) Pack(data *e2ap.E2APSubscriptio
 	if err := e2apMsg.checkerr(errorNro); err != nil {
 		return err, nil
 	}
+
 	return nil, e2apMsg.packeddata()
 }
 
@@ -624,16 +644,14 @@ func (e2apMsg *e2apMsgPackerSubscriptionRequest) UnPack(msg *e2ap.PackedData) (e
 
 	e2apMsg.init()
 	defer e2apMsg.fini()
-
+	defer e2apMsg.freeAndsetToNil()
 	if err := e2apMsg.e2apMessagePacker.unpacktopdu(msg); err != nil {
 		return err, e2apMsg.msgG
 	}
-
 	errorNro := C.getRICSubscriptionRequestData(e2apMsg.e2apMessagePacker.pdu, e2apMsg.msgC)
 	if err := e2apMsg.checkerr(errorNro); err != nil {
 		return err, e2apMsg.msgG
 	}
-
 	e2apMsg.msgG.FunctionId = (e2ap.FunctionId)(e2apMsg.msgC.ranFunctionID)
 	if err := (&e2apEntryRequestID{entry: &e2apMsg.msgC.ricRequestID}).get(&e2apMsg.msgG.RequestId); err != nil {
 		return err, e2apMsg.msgG

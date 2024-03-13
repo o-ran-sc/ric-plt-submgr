@@ -61,9 +61,10 @@ bool TestRICSubscriptionRequest() {
 
         // RICactionDefinition, OPTIONAL.
         ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionPresent = true;  // E2AP
-        ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.octetString.contentLength = 2;
-        ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.octetString.data[0] = 1;
-        ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.octetString.data[1] = 2;
+        ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.dynOctetString.contentLength = 2;
+        ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.dynOctetString.data=(uint8_t*)malloc(ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.dynOctetString.contentLength);
+        ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.dynOctetString.data[0] = 1;
+        ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.dynOctetString.data[1] = 2;
 
         // RICsubsequentAction, OPTIONAL
         ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricSubsequentActionPresent = true;  // E2AP
@@ -73,7 +74,7 @@ bool TestRICSubscriptionRequest() {
     }
 
     printRICSubscriptionRequest(&ricSubscriptionRequest);
-
+    index=0;
     uint64_t logBufferSize = 1024;
     char logBuffer[logBufferSize];
     uint64_t dataBufferSize = cDataBufferSize;
@@ -89,6 +90,11 @@ bool TestRICSubscriptionRequest() {
                 if (messageInfo.messageId == cRICSubscriptionRequest) {
                     if ((returnCode = getRICSubscriptionRequestData(pE2AP_PDU, &ricSubscriptionRequest)) == e2err_OK) {
                         printRICSubscriptionRequest(&ricSubscriptionRequest);
+			            while (index < ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.contentLength) {
+			
+			                freeMemory(ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.dynOctetString.data);
+			                index++;
+			            }
                         return true;
                     }
                     else
@@ -105,6 +111,12 @@ bool TestRICSubscriptionRequest() {
     }
     else
         printf("%s",logBuffer);
+     
+    while (index < ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.contentLength) {
+
+        freeMemory(ricSubscriptionRequest.ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.dynOctetString.data);
+		index++;
+    }
 
     return false;
 }
@@ -440,11 +452,11 @@ void printRICSubscriptionRequest(const RICSubscriptionRequest_t* pRICSubscriptio
              pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionPresent);
         if(pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionPresent)
         {
-            printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.octetString.contentLength = %li\n",
-                 pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.octetString.contentLength);
-            printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.octetString.data = ");
-            printDataBuffer(pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.octetString.contentLength,
-                            pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.octetString.data);
+            printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.dynOctetString.contentLength = %li\n",
+                 pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.dynOctetString.contentLength);
+            printf("pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.dynOctetString.data = ");
+            printDataBuffer(pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.dynOctetString.contentLength,
+                            pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.dynOctetString.data);
             printf("\n");
         }
 
@@ -549,3 +561,4 @@ void printRICSubscriptionDeleteFailure(const RICSubscriptionDeleteFailure_t* pRI
 }
 
 #endif
+
