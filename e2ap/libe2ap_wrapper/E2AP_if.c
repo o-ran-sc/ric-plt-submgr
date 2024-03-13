@@ -92,6 +92,18 @@ const char* getE2ErrorString(uint64_t errorCode) {
 }
 
 /////////////////////////////////////////////////////////////////////
+uint8_t* allocateMemory(size_t contentLength) {
+    return (uint8_t* )malloc(contentLength);
+}
+
+/////////////////////////////////////////////////////////////////////
+void freeMemory(uint8_t* data){
+    if(data!=NULL) {
+        free(data);
+    }
+}
+
+/////////////////////////////////////////////////////////////////////
 bool E2encode(E2AP_PDU_t* pE2AP_PDU, size_t* dataBufferSize, byte* dataBuffer, char* pLogBuffer) {
 
     if (debugPrints)
@@ -197,14 +209,14 @@ uint64_t packRICSubscriptionRequest(size_t* pdataBufferSize, byte* pDataBuffer, 
                         pRICaction_ToBeSetup_ItemIEs->value.choice.RICaction_ToBeSetup_Item.ricActionDefinition = calloc(1, sizeof (RICactionDefinition_t));
                         if (pRICaction_ToBeSetup_ItemIEs->value.choice.RICaction_ToBeSetup_Item.ricActionDefinition) {
                             pRICaction_ToBeSetup_ItemIEs->value.choice.RICaction_ToBeSetup_Item.ricActionDefinition->buf =
-                              calloc(1, pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.octetString.contentLength);
+                              calloc(1, pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.dynOctetString.contentLength);
                             if (pRICaction_ToBeSetup_ItemIEs->value.choice.RICaction_ToBeSetup_Item.ricActionDefinition->buf) {
                                 pRICaction_ToBeSetup_ItemIEs->value.choice.RICaction_ToBeSetup_Item.ricActionDefinition->size =
-                                pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.octetString.contentLength;
+                                pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.dynOctetString.contentLength;
                                 memcpy(pRICaction_ToBeSetup_ItemIEs->value.choice.RICaction_ToBeSetup_Item.ricActionDefinition->buf,
-                                       pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.octetString.data,
-                                       pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.octetString.contentLength);
-                            }
+                                       pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.dynOctetString.data,
+                                       pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.dynOctetString.contentLength);
+			    }
                             else
                                 return e2err_RICSubscriptionRequestAllocRICactionDefinitionBufFail;
                         }
@@ -856,9 +868,10 @@ uint64_t getRICSubscriptionRequestData(e2ap_pdu_ptr_t* pE2AP_PDU_pointer, RICSub
             // RICactionDefinition, OPTIONAL
             if (pRICaction_ToBeSetup_ItemIEs->value.choice.RICaction_ToBeSetup_Item.ricActionDefinition)
             {
-                pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.octetString.contentLength =
+                pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.dynOctetString.contentLength =
                 pRICaction_ToBeSetup_ItemIEs->value.choice.RICaction_ToBeSetup_Item.ricActionDefinition->size;
-                memcpy(pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.octetString.data,
+		pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.dynOctetString.data=(uint8_t*)malloc(pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.dynOctetString.contentLength);
+                memcpy(pRICSubscriptionRequest->ricSubscriptionDetails.ricActionToBeSetupItemIEs.ricActionToBeSetupItem[index].ricActionDefinitionChoice.dynOctetString.data,
                        pRICaction_ToBeSetup_ItemIEs->value.choice.RICaction_ToBeSetup_Item.ricActionDefinition->buf,
                        pRICaction_ToBeSetup_ItemIEs->value.choice.RICaction_ToBeSetup_Item.ricActionDefinition->size);
 
@@ -1438,4 +1451,5 @@ uint64_t getRICSubscriptionDeleteRequiredData(e2ap_pdu_ptr_t *pE2AP_PDU_pointer,
         ASN_STRUCT_FREE(asn_DEF_E2AP_PDU, pE2AP_PDU);
         return e2err_OK;
     }
+
 
