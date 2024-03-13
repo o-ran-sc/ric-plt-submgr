@@ -42,7 +42,7 @@ typedef struct { // Octet string in ASN.1 does not have maximum length!
 } OctetString_t;
 
 typedef struct { // Octet string in ASN.1 does not have maximum length!
-    size_t length;
+    size_t contentLength;
     uint8_t* data;
 } DynOctetString_t;
 
@@ -73,7 +73,8 @@ enum RICSubsequentActionType_t {
 };
 
 typedef struct {
-    OctetString_t octetString;   // This element is E2AP spec format
+    //OctetString_t octetString;   // This element is E2AP spec format
+    DynOctetString_t dynOctetString;
 } RICActionDefinitionChoice_t;
 
 enum RICTimeToWait_t {
@@ -461,6 +462,8 @@ const char* getE2ErrorString(uint64_t);
 
 typedef void* e2ap_pdu_ptr_t;
 
+uint8_t* allocateMemory(size_t contentLength);
+void freeMemory(uint8_t* data);
 uint64_t packRICSubscriptionRequest(size_t*, byte*, char*,RICSubscriptionRequest_t*);
 uint64_t packRICSubscriptionResponse(size_t*, byte*, char*,RICSubscriptionResponse_t*);
 uint64_t packRICSubscriptionFailure(size_t*, byte*, char*,RICSubscriptionFailure_t*);
@@ -501,3 +504,4 @@ void printRICSubscriptionDeleteRequired(const RICSubsDeleteRequired_t*);
 #endif
 
 #endif
+
