@@ -184,10 +184,7 @@ ENV RMR_SEED_RT=/opt/submgr/test/uta_rtg.rt
 #
 # go tests. comment out ipv6 localhost if exist when tests are executed.
 #
-RUN sed -r  "s/^(::1.*)/#\1/" /etc/hosts  > /etc/hosts.new \
-    && cat /etc/hosts.new > /etc/hosts \
-    && cat /etc/hosts  \
-    && go test -failfast -test.coverprofile /tmp/submgr_cover.out -count=1 -v ./pkg/control \
+RUN go test -failfast -test.coverprofile /tmp/submgr_cover.out -count=1 -v ./pkg/control \
     && go tool cover -html=/tmp/submgr_cover.out -o /tmp/submgr_cover.html    
 
 # test formating (not important)
