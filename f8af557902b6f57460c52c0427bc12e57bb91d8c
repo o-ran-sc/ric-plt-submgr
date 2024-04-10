@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "d5c5470b_c5084a7d",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1000059
+      },
+      "writtenOn": "2024-04-10T22:01:20Z",
+      "side": 1,
+      "message": "+Verify since the issue is related to Docker\n17:33:15 ERROR: failed to solve: process \"/bin/sh -c sed -r  \\\"s/^(::1.*)/#\\\\1/\\\" /etc/hosts  \u003e /etc/hosts.new     \u0026\u0026 cat /etc/hosts.new \u003e /etc/hosts     \u0026\u0026 cat /etc/hosts      \u0026\u0026 go test -failfast -test.coverprofile /tmp/submgr_cover.out -count\u003d1 -v ./pkg/control     \u0026\u0026 go tool cover -html\u003d/tmp/submgr_cover.out -o /tmp/submgr_cover.html\" did not complete successfully: exit code: 2",
+      "revId": "f8af557902b6f57460c52c0427bc12e57bb91d8c",
+      "serverId": "84e4e190-e623-4c37-9eda-58b1937c1b53"
+    }
+  ]
+}
